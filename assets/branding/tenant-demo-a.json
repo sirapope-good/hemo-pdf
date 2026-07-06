@@ -1,0 +1,23 @@
+{
+  "tenantCode": "tenant-demo-a",
+  "customerId": "hospital-demo-a",
+  "displayName": "โรงพยาบาล Demo A",
+  "header": {
+    "companyLines": [
+      "โรงพยาบาล Demo A",
+      "123 ถนนสุขุมวิท แขวงคลองเตย เขตคลองเตย กรุงเทพฯ 10110",
+      "โทร. 02-000-0001"
+    ],
+    "titleAlignment": "center",
+    "reportCodePrefix": "DEMO-A",
+    "showPageNumber": true
+  },
+  "footer": {
+    "disclaimerText": "เอกสารนี้จัดทำโดยระบบ HemodialysisPro",
+    "showSignatures": true
+  },
+  "style": {
+    "primaryFontFamily": "Sarabun",
+    "accentColor": "#1a5276"
+  }
+}

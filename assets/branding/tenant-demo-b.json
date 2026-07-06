@@ -1,0 +1,23 @@
+{
+  "tenantCode": "tenant-demo-b",
+  "customerId": "hospital-demo-b",
+  "displayName": "โรงพยาบาล Demo B",
+  "header": {
+    "companyLines": [
+      "โรงพยาบาล Demo B",
+      "456 ถนนพหลโยธิน แขวงสามเสนใน เขตพญาไท กรุงเทพฯ 10400",
+      "โทร. 02-000-0002"
+    ],
+    "titleAlignment": "left",
+    "reportCodePrefix": "DEMO-B",
+    "showPageNumber": true
+  },
+  "footer": {
+    "disclaimerText": "HemodialysisPro — Demo Tenant B",
+    "showSignatures": false
+  },
+  "style": {
+    "primaryFontFamily": "Sarabun",
+    "accentColor": "#922b21"
+  }
+}
