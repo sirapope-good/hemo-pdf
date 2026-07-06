@@ -29,6 +29,9 @@ todos:
   - id: followup-hemopro
     content: "Follow-up: เชื่อม @hemo/pdf-client เข้า Hemo-frontend จริง + JWT production"
     status: pending
+  - id: phase6-report-preview
+    content: "Phase 6: ReportDocument schema + POST /api/report/preview + @hemo/report-viewer (แทน Telerik tr-viewer)"
+    status: pending
 isProject: false
 ---
 
@@ -46,6 +49,7 @@ isProject: false
 | Phase 3 | ✅ เสร็จ | templates 02–06 ผ่าน Generic renderer |
 | Phase 4 | ✅ เสร็จ | templates 07–12 + branding guideline |
 | Phase 5 | ✅ เสร็จ (core) | Docker/CI/CORS/rate limit; JWT จริงรอ Hemopro |
+| Phase 6 | ⏳ วางแผนแล้ว | ReportDocument + `@hemo/report-viewer` — ดู [02-FEATURE-PREVIEW-PDF.md](D:\GoodRepo\Hemo-PDF\02-FEATURE-PREVIEW-PDF.md) |
 | Follow-up | ⏳ ค้าง | ฟอนต์ Sarabun, mock DTO ครบ 12, merge เข้า Hemo-frontend |
 
 **Tests:** `dotnet test Hemo.Pdf.sln` — 15 tests ผ่าน  
@@ -279,15 +283,34 @@ Hemo-PDF/
 
 ---
 
-## Follow-up (หลัง Phase 5)
+## Phase 6 — Report Preview (`@hemo/report-viewer`) ⏳
+
+> เอกสารเต็ม: [02-FEATURE-PREVIEW-PDF.md](D:\GoodRepo\Hemo-PDF\02-FEATURE-PREVIEW-PDF.md)  
+> แทนที่ Telerik `tr-viewer` ด้วย **ReportDocument JSON + HTML/CSS**
+
+### เป้าหมาย
+- Preview บนจอเร็ว (JSON แทน generate PDF ทุกครั้ง)
+- Toolbar: zoom, หน้า, print, download
+- Block vocabulary ตรงกับ `Hemo.Pdf.Sections`
+
+### Checklist
+- [ ] `ReportDocument` schema ใน `Hemo.Pdf.Core`
+- [ ] `POST /api/report/preview` + `ReportPreviewService`
+- [ ] `GenericReportDocumentComposer` (template 02–12)
+- [ ] `@hemo/report-viewer` Angular library
+- [ ] Migrate `embedded-hemosheet-report` / `reports.page` จาก Telerik
+
+---
+
+## Follow-up (หลัง Phase 5 / คู่ขนาน Phase 6)
 
 | ลำดับ | งาน | ความสำคัญ |
 |-------|-----|-----------|
 | 1 | Copy ฟอนต์ Sarabun → `assets/fonts/sarabun/` | สูง — ภาษาไทยใน PDF |
 | 2 | Mock DTO JSON ครบ 12 template | กลาง — ทดสอบ manual/Swagger |
-| 3 | Integrate `@hemo/pdf-client` เข้า Hemo-frontend | สูง — E2E จริง |
+| 3 | Integrate `@hemo/pdf-client` + `@hemo/report-viewer` เข้า Hemo-frontend | สูง — E2E + แทน Telerik preview |
 | 4 | ปิด `UseMockServices` + JWT จาก Hemopro | สูง — production |
-| 5 | Dedicated layout ต่อ template (แทน Generic) | กลาง — รอ business finalize ชื่อ/layout |
+| 5 | Dedicated layout ต่อ template (แทน Generic) — PDF + preview คู่กัน | กลาง — รอ business finalize |
 | 6 | `DbBrandingStore` แทน JSON | ต่ำ — ตาม guideline |
 | 7 | Health check dependency (branding path, disk) | ต่ำ |
 | 8 | PDF caching | ต่ำ — optional |
@@ -320,7 +343,7 @@ Swagger: `http://localhost:5090/swagger` → Authorize `dev` → Execute (ใช
 ## สิ่งที่ยังไม่ต้องทำ / รอ business
 
 - เชื่อม DB / EF ของ Hemopro
-- แทนที่ Telerik Report ใน `Wasenshi.HemoDialysisPro.Report.Api`
+- แทนที่ Telerik Report ใน `Wasenshi.HemoDialysisPro.Report.Api` *(preview ใช้ `@hemo/report-viewer`; PDF export ยังใช้ QuestPDF)*
 - Admin UI จัดการ branding
 - Template ชื่อจริง + layout รายละเอียด (รอ business finalize)
 
@@ -335,4 +358,4 @@ Swagger: `http://localhost:5090/swagger` → Authorize `dev` → Execute (ใช
 | Branding | ทีม implement JSON |
 | Signature | mock + guard พร้อม |
 
-**Phase 0–5 implement ครบแล้ว** — งานถัดไปอยู่ใน Follow-up ด้านบน
+**Phase 0–5 implement ครบแล้ว** — งานถัดไป: **Phase 6** (Report Preview) + Follow-up ด้านล่าง

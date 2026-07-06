@@ -24,7 +24,7 @@
 |----|-------|
 | รับข้อมูลรายงาน (DTO) แล้ว render PDF | CRUD ข้อมูลคนไข้ / session (อยู่ที่ HemodialysisPro) |
 | จัดการ branding (หัว/ท้าย) ต่อลูกค้า | Business logic หลักของ dialysis workflow |
-| ให้ Angular service เรียก PDF | Render PDF ฝั่ง browser |
+| ให้ Angular library เรียก PDF API + แสดง preview | Parse PDF binary ฝั่ง browser (ใช้ ReportDocument JSON แทน — ดู [02-FEATURE-PREVIEW-PDF.md](./02-FEATURE-PREVIEW-PDF.md)) |
 | รองรับ 12 Report Template | CRUD / business logic ของ HemodialysisPro (caller ส่ง DTO มาให้) |
 
 ---
@@ -171,13 +171,14 @@ ISectionResolver<IReportHeaderSection>.Resolve(context)
 │  HemodialysisPro        │                             │  Hemo-PDF (repo นี้)          │
 │  ┌───────────────────┐  │  POST /api/pdf/generate     │  ┌───────────────────────┐  │
 │  │ Web.Api           │──┼────────────────────────────►│  │ Hemo.Pdf.Api          │  │
-│  │ - โหลด entity     │  │  (DTO + templateId + tenant)│  │ - render PDF เท่านั้น    │  │
+│  │ - โหลด entity     │  │  (DTO + templateId + tenant)│  │ - PDF + Preview doc   │  │
 │  │ - ตรวจ permission │  │                             │  │ - branding / template │  │
 │  └───────────────────┘  │                             │  └───────────────────────┘  │
-│  ┌───────────────────┐  │  GET /api/pdf/.../preview   │  Port แยก เช่น :5090         │
-│  │ Angular App       │──┼────────────────────────────►│  Deploy แยก container       │
+│  ┌───────────────────┐  │  POST /api/pdf/generate     │  Port แยก เช่น :5090         │
+│  │ Angular App       │──┼  POST /api/report/preview   │  Deploy แยก container       │
 │  │ @hemo/pdf-client  │  │  (JWT + X-Tenant-Code)      │                             │
-│  └───────────────────┘  │                             └─────────────────────────────┘
+│  │ @hemo/report-viewer│ │                             └─────────────────────────────┘
+│  └───────────────────┘  │
 └─────────────────────────┘
 
 Report.Api (Telerik เดิม) ── ไม่เกี่ยวกับ Hemo-PDF — คู่ขนานกัน
@@ -186,8 +187,8 @@ Report.Api (Telerik เดิม) ── ไม่เกี่ยวกับ He
 | ส่วน | ความรับผิดชอบ |
 |------|----------------|
 | **HemodialysisPro Web.Api** | Business logic, โหลดข้อมูล, ตรวจสิทธิ์, ส่ง DTO มา PDF service |
-| **Hemo.Pdf.Api** | รับ DTO → render PDF → คืน `application/pdf` |
-| **Angular** | เรียก PDF API โดยตรง หรือผ่าน Web.Api proxy (เลือกได้) |
+| **Hemo.Pdf.Api** | รับ DTO → render PDF (`application/pdf`) หรือ ReportDocument JSON (`/api/report/preview`) |
+| **Angular** | `@hemo/pdf-client` (print/download) + `@hemo/report-viewer` (preview HTML) |
 | **Hemo-PDF libraries** | Core / Sections / Layouts — อยู่ใน repo เดียวกับ Api |
 
 **ทำไมไม่ embed:** แยก deploy, scale, version และทีมดูแลได้อิสระ — ไม่ปนกับ Telerik Report.Api หรือ business API
@@ -221,8 +222,15 @@ Response: application/pdf
 ```
 
 ```
-GET /api/pdf/{templateId}/{entityId}/preview   ← dev/mock เท่านั้น (ใช้ mock data ใน service)
+POST /api/report/preview
+Content-Type: application/json
+
+Body: เหมือน GeneratePdfRequest
+
+Response: application/json → ReportDocument
 ```
+
+> รายละเอียด schema, Angular viewer, checklist — [02-FEATURE-PREVIEW-PDF.md](./02-FEATURE-PREVIEW-PDF.md)
 
 ### 4.2 Flow การสร้าง PDF
 
@@ -249,6 +257,27 @@ sequenceDiagram
     Web->>PDF: POST /api/pdf/generate (service-to-service)
     PDF-->>Web: application/pdf
     Web-->>UI: application/pdf
+```
+
+### 4.2.1 Flow Report Preview (Phase 6 — แทน Telerik `tr-viewer`)
+
+```mermaid
+sequenceDiagram
+    participant UI as Angular (Hemopro)
+    participant Web as Hemopro Web.Api
+    participant PDF as Hemo.Pdf.Api
+    participant V as report-viewer
+
+    UI->>Web: โหลด Report DTO
+    Web-->>UI: DTO
+    UI->>PDF: POST /api/report/preview (JWT + tenant + DTO)
+    PDF->>PDF: Auth + Branding + DataProvider → ViewModel
+    PDF->>PDF: IReportDocumentComposer → ReportDocument JSON
+    PDF-->>UI: application/json
+    UI->>V: render HTML/CSS + toolbar
+    Note over UI,PDF: กด Print/Download
+    UI->>PDF: POST /api/pdf/generate
+    PDF-->>UI: application/pdf
 ```
 
 ### 4.3 Layer Diagram
@@ -363,13 +392,11 @@ Hemo-PDF/
 │   │   ├── Dockerfile
 │   │   └── appsettings.json                   # HemoPdf:BaseUrl, UseMockServices
 │   │
-│   └── client/                                # Angular library
-│       └── projects/hemo-pdf-client/
-│           ├── src/lib/
-│           │   ├── services/pdf.service.ts
-│           │   ├── models/pdf-request.model.ts
-│           │   └── components/pdf-download-button.component.ts
-│           └── package.json                   # @hemo/pdf-client
+│   └── client/                                # Angular libraries
+│       ├── projects/hemo-pdf-client/          # ✅ print/download API client
+│       │   └── package.json                   # @hemo/pdf-client
+│       └── projects/hemo-report-viewer/       # ⏳ Phase 6 — preview HTML/CSS
+│           └── package.json                   # @hemo/report-viewer
 │
 ├── assets/
 │   ├── fonts/sarabun/
@@ -586,7 +613,9 @@ protected override void ComposeContent(IContainer container, DialysisSessionView
 
 ---
 
-## 8. Angular Client (`@hemo/pdf-client`)
+## 8. Angular Clients
+
+### 8.1 `@hemo/pdf-client` — Print / Download
 
 ออกแบบตาม NSS `pdf-utils.ts` แต่ชี้ไป **Standalone PDF API** โดยตรง:
 
@@ -621,12 +650,30 @@ export class HemoPdfService {
 }
 ```
 
-**Flow ทั่วไป:**
+**Flow ทั่วไป (download / open tab):**
 1. Angular โหลด DTO จาก Hemopro `Web.Api`
 2. ส่ง `POST` ไป `Hemo.Pdf.Api` พร้อม DTO + `tenantCode`
-3. เปิด PDF blob ในแท็บใหม่
+3. เปิด PDF blob ในแท็บใหม่ หรือ download
 
 **Integration**: `npm install @hemo/pdf-client` → ตั้ง `pdfApiUrl` ใน environment
+
+### 8.2 `@hemo/report-viewer` — Preview บนจอ (Phase 6)
+
+แทนที่ Telerik `tr-viewer` (`PRINT_PREVIEW`) — **ไม่ parse PDF** แต่ render `ReportDocument` JSON เป็น HTML/CSS
+
+| หัวข้อ | รายละเอียด |
+|--------|------------|
+| Input | `ReportDocument` จาก `POST /api/report/preview` |
+| Output | A4 page + toolbar (zoom, หน้า, print, download) |
+| Block types | map 1:1 กับ `Hemo.Pdf.Sections` |
+| Print คุณภาพเต็ม | เรียก `@hemo/pdf-client` → `POST /api/pdf/generate` |
+| เอกสารเต็ม | [02-FEATURE-PREVIEW-PDF.md](./02-FEATURE-PREVIEW-PDF.md) |
+
+**Flow preview (แนะนำ):**
+1. Angular โหลด DTO จาก Hemopro `Web.Api`
+2. `POST /api/report/preview` → ได้ JSON (เร็วกว่า generate PDF)
+3. `<hemo-report-viewer [document]="doc" />` ใน modal หรือฝังในหน้า
+4. กด Print/Download → `@hemo/pdf-client`
 
 ---
 
@@ -707,6 +754,19 @@ HemodialysisPro implement `DbBrandingStore` — Hemo-PDF ไม่ผูกก�
 - [ ] Caching (optional): cache PDF ตาม `(templateId, entityId, brandingVersion)`
 - [ ] Health check `/health` + Docker compose แยกจาก Hemopro
 
+### Phase 6 — Report Preview (`@hemo/report-viewer`) ⏳
+
+> รายละเอียดเต็ม: [02-FEATURE-PREVIEW-PDF.md](./02-FEATURE-PREVIEW-PDF.md)
+
+- [ ] `ReportDocument` schema + block types ใน `Hemo.Pdf.Core`
+- [ ] `IReportPreviewService` + `POST /api/report/preview`
+- [ ] `IReportDocumentComposer` คู่กับ `ILayoutComposer` (เริ่ม Generic 02–12)
+- [ ] `@hemo/report-viewer` — viewer + toolbar + block components
+- [ ] CSS mirror `PdfStyleDefaults`; Ionic preview modal (90dvh)
+- [ ] Hemopro: แทน Telerik `tr-viewer` (เริ่ม `embedded-hemosheet-report`)
+
+**Deliverable**: preview บนจอจาก JSON โดยไม่พึ่ง Telerik; print/download ยังใช้ QuestPDF
+
 ---
 
 ## 11. แนวทางทดสอบ
@@ -717,6 +777,7 @@ HemodialysisPro implement `DbBrandingStore` — Hemo-PDF ไม่ผูกก�
 | Unit | Helper | date format, checkbox render |
 | Unit | DataProvider | DTO → ViewModel mapping |
 | Integration | Full pipeline | `GenerateAsync` → PDF bytes + header ถูกต้อง |
+| Integration | Preview pipeline | `PreviewAsync` → `ReportDocument` JSON ต่อ template |
 | Snapshot | Visual regression | เก็บ PDF baseline ต่อ template (optional) |
 
 ---
@@ -732,7 +793,9 @@ HemodialysisPro implement `DbBrandingStore` — Hemo-PDF ไม่ผูกก�
 | `ReportSectionResolver(Kind)` | `SectionResolver(CustomerId, TemplateId)` |
 | `ReportComponentRenderer` | `PdfComponentHelpers` |
 | `InstallPmDialysisComposer` | `BaseReportComposer<T>` + `ContentBlocks` |
-| Next.js `pdf-utils.ts` | Angular `HemoPdfService` |
+| Next.js `pdf-utils.ts` | Angular `HemoPdfService` (`@hemo/pdf-client`) |
+| Telerik `tr-viewer` (Hemopro) | `@hemo/report-viewer` — ReportDocument JSON + HTML/CSS |
+| — | `POST /api/report/preview` (คู่กับ `/api/pdf/generate`) |
 | EF DataProvider | DTO-based DataProvider |
 | Template Snapshot | Caller ส่ง snapshot data ใน DTO (ถ้าต้องการ) |
 

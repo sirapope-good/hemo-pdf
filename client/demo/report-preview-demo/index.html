@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Hemo-PDF Report Preview Demo</title>
+  <style>
+    body { font-family: 'Segoe UI', sans-serif; margin: 0; background: #f0f2f5; }
+    .controls { padding: 1rem; background: #fff; border-bottom: 1px solid #ddd; display: flex; flex-wrap: wrap; gap: 0.5rem; align-items: center; }
+    .controls label { font-size: 0.9rem; }
+    .controls input, .controls select, .controls button { padding: 0.35rem 0.5rem; }
+    #status { padding: 0.5rem 1rem; font-size: 0.9rem; color: #555; }
+    #status.error { color: #b00020; }
+    .canvas { padding: 1rem; display: flex; justify-content: center; }
+    .page { width: 210mm; min-height: 200mm; background: #fff; padding: 10mm; box-shadow: 0 2px 12px rgba(0,0,0,.12); box-sizing: border-box; font-size: 10pt; }
+    .page h2 { text-align: center; margin: 0.5rem 0; }
+    .company { text-align: center; margin-bottom: 0.5rem; }
+    table { width: 100%; border-collapse: collapse; margin: 0.5rem 0; }
+    th, td { border: 1px solid #ccc; padding: 4px 6px; }
+    th { background: #f5f5f5; text-align: left; }
+    .footer { margin-top: 1rem; font-size: 8pt; display: flex; justify-content: space-between; }
+  </style>
+</head>
+<body>
+  <div class="controls">
+    <label>API <input id="apiUrl" type="text" value="http://localhost:5090" size="28" /></label>
+    <label>Tenant <input id="tenant" type="text" value="tenant-demo-a" /></label>
+    <label>Template
+      <select id="template">
+        <option value="template-02-lab-result">template-02-lab-result</option>
+        <option value="template-01-dialysis-session">template-01-dialysis-session</option>
+        <option value="template-04-hemosheet">template-04-hemosheet</option>
+      </select>
+    </label>
+    <button id="loadBtn" type="button">Load preview</button>
+  </div>
+  <div id="status">Start Hemo.Pdf.Api then click Load preview.</div>
+  <div class="canvas"><div id="page" class="page"></div></div>
+
+  <script>
+    const statusEl = document.getElementById('status');
+    const pageEl = document.getElementById('page');
+
+    document.getElementById('loadBtn').addEventListener('click', async () => {
+      const apiUrl = document.getElementById('apiUrl').value.replace(/\/$/, '');
+      const tenantCode = document.getElementById('tenant').value;
+      const reportTemplateId = document.getElementById('template').value;
+      statusEl.className = '';
+      statusEl.textContent = 'Loading…';
+      pageEl.innerHTML = '';
+
+      try {
+        const response = await fetch(apiUrl + '/api/report/preview', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': 'Bearer dev',
+            'X-Tenant-Code': tenantCode,
+          },
+          body: JSON.stringify({
+            reportTemplateId,
+            tenantCode,
+            entityId: 'demo-1',
+            data: { patientName: 'สมชาย ใจดี', value: 42 },
+          }),
+        });
+
+        if (!response.ok) {
+          throw new Error(await response.text() || response.statusText);
+        }
+
+        const doc = await response.json();
+        renderDocument(doc);
+        statusEl.textContent = 'Loaded ' + doc.meta.templateId + ' — use @hemo/report-viewer in Angular apps.';
+      } catch (err) {
+        statusEl.className = 'error';
+        statusEl.textContent = 'Error: ' + err.message;
+      }
+    });
+
+    function renderDocument(doc) {
+      const branding = doc.branding || {};
+      const header = doc.header || {};
+      let html = '';
+
+      if (branding.logoUrl) {
+        html += '<img src="' + branding.logoUrl + '" alt="" style="max-width:90px;display:block;margin:0 auto;" />';
+      }
+      (branding.companyLines || []).forEach((line) => {
+        html += '<div class="company">' + escapeHtml(line) + '</div>';
+      });
+      if (header.title) html += '<h2>' + escapeHtml(header.title) + '</h2>';
+      if (header.reportCode) html += '<div style="text-align:center">' + escapeHtml(header.reportCode) + '</div>';
+
+      const blocks = (doc.pages && doc.pages[0] && doc.pages[0].blocks) || [];
+      blocks.forEach((block) => {
+        html += renderBlock(block);
+      });
+
+      const footer = doc.footer || {};
+      html += '<div class="footer"><div>' + (footer.lines || []).map(escapeHtml).join('<br>') + '</div>';
+      if (footer.pageNumber) {
+        html += '<div>หน้า ' + footer.pageNumber.current + ' / ' + footer.pageNumber.total + '</div>';
+      }
+      html += '</div>';
+
+      pageEl.innerHTML = html;
+    }
+
+    function renderBlock(block) {
+      if (block.type === 'key-value-table') {
+        let rows = (block.rows || []).map((r) => '<tr><th>' + escapeHtml(r.label) + '</th><td>' + escapeHtml(r.value) + '</td></tr>').join('');
+        return (block.title ? '<h3>' + escapeHtml(block.title) + '</h3>' : '') + '<table><tbody>' + rows + '</tbody></table>';
+      }
+      if (block.type === 'patient-info') {
+        let cols = (block.columns || []).map((col) => '<div>' + col.map((f) => '<div><b>' + escapeHtml(f.label) + ':</b> ' + escapeHtml(f.value) + '</div>').join('') + '</div>').join('');
+        return (block.title ? '<h3>' + escapeHtml(block.title) + '</h3>' : '') + '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;border:1px solid #ccc;padding:8px">' + cols + '</div>';
+      }
+      return '';
+    }
+
+    function escapeHtml(value) {
+      return String(value ?? '').replace(/[&<>"']/g, (c) => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+    }
+  </script>
+</body>
+</html>

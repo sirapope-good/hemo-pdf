@@ -254,39 +254,65 @@ Test cases สำคัญ:
 
 จากแพทเทิร์นของ NSS สิ่งที่ควรพิจารณาเมื่อเริ่มโปรเจกต์ใหม่:
 
-### 1. สถาปัตยกรรมที่แนะนำ (ตาม NSS)
+### 1. สถาปัตยกรรมที่แนะนำ (ตาม NSS + ขยาย Preview)
 
-- **Server-side PDF generation** ด้วย QuestPDF (หรือ library ที่เหมาะสม)
+- **Server-side PDF generation** ด้วย QuestPDF — เหมือน NSS (print / download คุณภาพเต็ม)
 - แยก **DataProvider / Composer / Renderer** ต่อประเภทเอกสาร
 - ใช้ **Factory Pattern** สำหรับเลือก renderer
-- Frontend เป็น thin client — fetch blob แล้ว open/download
+- **Preview บนจอ** — แยกจาก NSS: ไม่ parse PDF ฝั่ง browser แต่ใช้ **ReportDocument JSON → HTML/CSS** (แนวเดียวกับ Telerik `PRINT_PREVIEW` ใน Hemopro) — ดู [02-FEATURE-PREVIEW-PDF.md](./02-FEATURE-PREVIEW-PDF.md)
 
-### 2. สิ่งที่ต้องมี
+```
+                    ┌── POST /api/pdf/generate ──► QuestPDF ──► application/pdf (print/download)
+DTO + template ────┤
+                    └── POST /api/report/preview ──► ReportDocument JSON ──► @hemo/report-viewer (หน้าจอ)
+```
 
-- [ ] API endpoint คืน `application/pdf`
-- [ ] Auth + permission บน endpoint
-- [ ] Rate limiting สำหรับ PDF generation
-- [ ] ฟอนต์ไทย (Sarabun หรือเทียบเท่า)
-- [ ] Template/Snapshot system สำหรับ checklist data
-- [ ] `CancellationToken` support
-- [ ] Integration tests สำหรับ PDF endpoint
+### 2. สิ่งที่ต้องมี (สถานะ Phase 0–5)
 
-### 3. สิ่งที่อาจปรับจาก NSS
+- [x] API endpoint คืน `application/pdf`
+- [x] Auth + tenant middleware (mock dev / JWT scaffold)
+- [x] Rate limiting สำหรับ PDF generation
+- [ ] ฟอนต์ไทย (Sarabun) — ไฟล์ยังไม่ copy ลง `assets/fonts/sarabun/`
+- [x] `CancellationToken` support + max PDF 50MB
+- [x] Integration tests สำหรับ PDF endpoint
+- [ ] **Report Preview** — `ReportDocument` schema + `POST /api/report/preview` + `@hemo/report-viewer` (Phase 6)
 
-- เพิ่ม PDF result caching (ServiceReportId เดิม)
-- ใช้ `downloadServiceReportPdf` ใน UI แทน open-in-new-tab ถ้าต้องการ
-- พิจารณา async PDF library ถ้า throughput สูง
-- ทำให้ `reports/page.tsx` ใช้ endpoint เดียวกับ service-reports
+### 3. สิ่งที่ปรับจาก NSS / เพิ่มเติมใน Hemo-PDF
 
-### 4. Tech Stack อ้างอิงจาก NSS
+| หัวข้อ | NSS | Hemo-PDF |
+|--------|-----|----------|
+| Preview UI | เปิด PDF blob ในแท็บใหม่ | **ReportDocument + HTML viewer** (แทน Telerik `tr-viewer`) |
+| Data source | DataProvider query DB | Caller ส่ง DTO (stateless) |
+| Frontend client | `pdf-utils.ts` (open/download) | `@hemo/pdf-client` + `@hemo/report-viewer` |
+| Template count | 6 ReportKind | 12 ReportTemplateId |
 
-| Layer | Technology |
-|-------|------------|
-| PDF Library | QuestPDF 2024.7.2 |
-| Backend | .NET 8, ASP.NET Core |
-| Frontend | Next.js 14, `authFetch`, React Query |
-| Font | Sarabun (TTF) |
-| Pattern | Factory + Strategy, Fluent API layout |
+- เพิ่ม PDF result caching (optional)
+- Dedicated layout ต่อ template (hemosheet ฯลฯ) — คู่กับ preview blocks
+
+### 4. เปรียบเทียบ Preview: Telerik (Hemopro ปัจจุบัน) vs Hemo Report Viewer
+
+| | Telerik `tr-viewer` | `@hemo/report-viewer` (แผน) |
+|--|---------------------|------------------------------|
+| Input | `.trdp` definition + parameters | `ReportDocument` JSON จาก pipeline เดียวกับ PDF |
+| Render | Report.Api → HTML/CSS | Angular components + CSS (mirror `PdfStyleDefaults`) |
+| Toolbar | Kendo viewer (zoom, หน้า, print) | `HemoReportToolbarComponent` — ทำเฉพาะที่ต้องการ |
+| Print คุณภาพเต็ม | export PDF จาก Telerik | `POST /api/pdf/generate` (QuestPDF) |
+| Dependency | Telerik license + jQuery + Kendo | ~20KB Angular components + Sarabun web font |
+| WYSIWYG | ~95–100% (engine เดียวกัน) | ~95% บนจอ; print ใช้ PDF จริง |
+
+**เหตุผลที่ไม่ใช้ iframe/pdf.js:** รายงาน Hemopro เป็น structured form (header, ตาราง, checkbox) — map ตรงกับ `Hemo.Pdf.Sections` ได้ ไม่จำเป็นต้อง parse PDF binary
+
+### 5. Tech Stack อ้างอิง
+
+| Layer | NSS | Hemo-PDF |
+|-------|-----|----------|
+| PDF Library | QuestPDF 2024.7.2 | QuestPDF 2024.7.2 |
+| Backend | .NET 8 | .NET 8 (`Hemo.Pdf.Api` :5090) |
+| Preview | — | ReportDocument JSON + Angular HTML/CSS |
+| PDF client | Next.js `pdf-utils.ts` | `@hemo/pdf-client` |
+| Preview client | — | `@hemo/report-viewer` |
+| Font | Sarabun (TTF) | Sarabun (TTF + `@font-face` ใน viewer) |
+| Pattern | Factory + Strategy | Factory + Strategy + dual output (PDF / Preview) |
 
 ---
 
@@ -310,3 +336,7 @@ Test cases สำคัญ:
 ### Documentation & Tests
 - `REPORT_SYSTEM_GUIDE.md`
 - `NikkisoServiceAPI.Tests/Integration/Reports/ReportGenerationIntegrationTests.cs`
+
+### Hemo-PDF (เพิ่มเติมจาก NSS)
+- [02-FEATURE-PREVIEW-PDF.md](./02-FEATURE-PREVIEW-PDF.md) — Report Preview feature spec
+- [01-IMPLEMENT-PLANNING.md](./01-IMPLEMENT-PLANNING.md) — แผนรวม Phase 0–6

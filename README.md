@@ -26,7 +26,22 @@ curl -X POST http://localhost:5090/api/pdf/generate \
       "sessionDate": "2026-07-06"
     }
   }' --output test.pdf
+
+curl -X POST http://localhost:5090/api/report/preview \
+  -H "Content-Type: application/json" \
+  -H "X-Tenant-Code: tenant-demo-a" \
+  -H "Authorization: Bearer dev" \
+  -d '{
+    "reportTemplateId": "template-02-lab-result",
+    "tenantCode": "tenant-demo-a",
+    "entityId": "test-1",
+    "data": { "patientName": "Test Patient", "value": 42 }
+  }'
 ```
+
+Swagger: `http://localhost:5090/swagger` → `POST /api/report/preview` หรือ `/api/pdf/generate`
+
+**Browser demo (ไม่ต้องมี Angular):** เปิด `client/demo/report-preview-demo/index.html` หลังรัน API
 
 ```bash
 # Run all tests
@@ -41,17 +56,18 @@ docker compose up --build
 ## Architecture
 
 ```
-Angular (@hemo/pdf-client)
-    │ POST /api/pdf/generate + JWT + X-Tenant-Code
+Angular (@hemo/pdf-client + @hemo/report-viewer)
+    │ POST /api/report/preview  → ReportDocument JSON (preview)
+    │ POST /api/pdf/generate    → application/pdf (print)
     ▼
 Hemo.Pdf.Api (Standalone :5090)
-    ├── PdfController
+    ├── ReportPreviewController / PdfController
     ├── TenantMiddleware / MockAuth (dev)
     └── Hemo.Pdf.Application
-            ├── PdfGenerationService
+            ├── ReportPreviewService / PdfGenerationService
             ├── Branding (JSON per tenant)
-            ├── Sections (Header/Footer/Content)
-            └── Layouts (12 templates → QuestPDF)
+            ├── Sections (Header/Footer/Content + Preview mappers)
+            └── Layouts (12 templates → QuestPDF + ReportDocument)
 ```
 
 ## Solution Structure
@@ -66,7 +82,9 @@ src/
 ├── Hemo.Pdf.Layouts/       # 12 report templates
 └── Hemo.Pdf.Rendering/     # QuestPDF
 
-client/projects/hemo-pdf-client/   # @hemo/pdf-client
+client/projects/hemo-pdf-client/      # @hemo/pdf-client (print/download)
+client/projects/hemo-report-viewer/   # @hemo/report-viewer (HTML preview)
+client/demo/report-preview-demo/      # Static browser demo
 assets/branding/                   # tenant-demo-a.json, tenant-demo-b.json
 assets/mock-data/                  # Sample DTOs
 tests/                             # Unit + integration tests
@@ -110,6 +128,38 @@ this.pdfService.generateAndOpen({
 
 Copy sources from `client/projects/hemo-pdf-client/src` into Hemo-frontend or link via path.
 
+## Report Preview (`@hemo/report-viewer`)
+
+```typescript
+import { HEMO_REPORT_VIEWER_CONFIG, HemoReportPreviewService, HemoReportViewerComponent } from '@hemo/report-viewer';
+
+providers: [
+  {
+    provide: HEMO_REPORT_VIEWER_CONFIG,
+    useValue: {
+      pdfApiUrl: 'http://localhost:5090',
+      getAuthToken: () => localStorage.getItem('token'),
+      getTenantCode: () => currentTenantCode,
+    },
+  },
+]
+```
+
+```typescript
+this.previewService.load({
+  reportTemplateId: 'template-02-lab-result',
+  tenantCode: 'tenant-demo-a',
+  entityId: 'test-1',
+  data: { patientName: 'Test' },
+}).subscribe((doc) => { this.document = doc; });
+```
+
+```html
+<hemo-report-viewer [document]="document" (print)="onPrint()" (download)="onDownload()" />
+```
+
+Print/Download ยังใช้ `@hemo/pdf-client` → `POST /api/pdf/generate`
+
 ## Configuration (`appsettings.json`)
 
 | Key | Description |
@@ -127,6 +177,7 @@ Copy sources from `client/projects/hemo-pdf-client/src` into Hemo-frontend or li
 ## Docs
 
 - [01-IMPLEMENT-PLANNING.md](./01-IMPLEMENT-PLANNING.md) — แผนออกแบบโมดูล
+- [02-FEATURE-PREVIEW-PDF.md](./02-FEATURE-PREVIEW-PDF.md) — Report Preview (`@hemo/report-viewer`, แทน Telerik)
 - [0ฺ0-REFERENCE-PLANNING.md](./0ฺ0-REFERENCE-PLANNING.md) — อ้างอิงจาก NSS
 
 ## Related Repos
