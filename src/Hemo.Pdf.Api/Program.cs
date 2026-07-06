@@ -1,0 +1,171 @@
+using Hemo.Pdf.Application;
+using Hemo.Pdf.Api.Auth;
+using Hemo.Pdf.Api.Swagger;
+using Hemo.Pdf.Api.Middleware;
+using Hemo.Pdf.Core.Exceptions;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.Diagnostics;
+using Microsoft.IdentityModel.Tokens;
+using QuestPDF.Infrastructure;
+using System.Security.Claims;
+using System.Threading.RateLimiting;
+
+namespace Hemo.Pdf.Api;
+
+public sealed class Program
+{
+    public static void Main(string[] args)
+    {
+        var builder = WebApplication.CreateBuilder(args);
+
+        QuestPDF.Settings.License = LicenseType.Community;
+
+        builder.Services.AddHemoPdf(builder.Configuration);
+        builder.Services.AddHttpContextAccessor();
+        builder.Services.AddControllers();
+        builder.Services.AddHealthChecks();
+        builder.Services.AddEndpointsApiExplorer();
+        builder.Services.AddSwaggerGen(swagger =>
+        {
+            swagger.AddSecurityDefinition("Bearer", new Microsoft.OpenApi.Models.OpenApiSecurityScheme
+            {
+                Name = "Authorization",
+                Type = Microsoft.OpenApi.Models.SecuritySchemeType.Http,
+                Scheme = "Bearer",
+                BearerFormat = "JWT",
+                In = Microsoft.OpenApi.Models.ParameterLocation.Header,
+                Description = "Development mock: ใส่ค่าอะไรก็ได้ เช่น `dev`",
+            });
+            swagger.AddSecurityRequirement(new Microsoft.OpenApi.Models.OpenApiSecurityRequirement
+            {
+                {
+                    new Microsoft.OpenApi.Models.OpenApiSecurityScheme
+                    {
+                        Reference = new Microsoft.OpenApi.Models.OpenApiReference
+                        {
+                            Type = Microsoft.OpenApi.Models.ReferenceType.SecurityScheme,
+                            Id = "Bearer",
+                        },
+                    },
+                    Array.Empty<string>()
+                },
+            });
+            swagger.OperationFilter<GeneratePdfOperationFilter>();
+        });
+
+        var hemoPdfOptions = builder.Configuration
+            .GetSection(HemoPdfOptions.SectionName)
+            .Get<HemoPdfOptions>() ?? new HemoPdfOptions();
+
+        ConfigureAuthentication(builder, hemoPdfOptions);
+        ConfigureCors(builder, hemoPdfOptions);
+        ConfigureRateLimiting(builder.Services);
+
+        var app = builder.Build();
+
+        app.UseExceptionHandler(errorApp =>
+        {
+            errorApp.Run(async context =>
+            {
+                var exception = context.Features.Get<IExceptionHandlerFeature>()?.Error;
+                if (exception is PdfGenerationForbiddenException forbidden)
+                {
+                    context.Response.StatusCode = StatusCodes.Status403Forbidden;
+                    await context.Response.WriteAsync(forbidden.Message);
+                    return;
+                }
+
+                context.Response.StatusCode = StatusCodes.Status500InternalServerError;
+                await context.Response.WriteAsync("An unexpected error occurred while generating the PDF.");
+            });
+        });
+
+        if (app.Environment.IsDevelopment())
+        {
+            app.UseSwagger();
+            app.UseSwaggerUI();
+        }
+
+        app.UseCors();
+        app.UseAuthentication();
+        app.UseAuthorization();
+        app.UseRateLimiter();
+        app.UseMiddleware<TenantMiddleware>();
+
+        app.MapControllers();
+        app.MapHealthChecks("/health");
+
+        app.Run();
+    }
+
+    private static void ConfigureAuthentication(WebApplicationBuilder builder, HemoPdfOptions options)
+    {
+        var authBuilder = builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme);
+
+        if (builder.Environment.IsDevelopment() && options.UseMockServices)
+        {
+            authBuilder.AddScheme<Microsoft.AspNetCore.Authentication.AuthenticationSchemeOptions, MockAuthHandler>(
+                JwtBearerDefaults.AuthenticationScheme,
+                _ => { });
+            return;
+        }
+
+        var jwt = options.Jwt;
+        authBuilder.AddJwtBearer(jwtOptions =>
+        {
+            jwtOptions.Authority = jwt.Authority;
+            jwtOptions.Audience = jwt.Audience;
+            jwtOptions.TokenValidationParameters = new TokenValidationParameters
+            {
+                ValidateIssuer = !string.IsNullOrWhiteSpace(jwt.Authority),
+                ValidateAudience = !string.IsNullOrWhiteSpace(jwt.Audience),
+                ValidateLifetime = true,
+            };
+        });
+    }
+
+    private static void ConfigureCors(WebApplicationBuilder builder, HemoPdfOptions options)
+    {
+        builder.Services.AddCors(cors =>
+        {
+            cors.AddDefaultPolicy(policy =>
+            {
+                var origins = options.CorsOrigins;
+                if (origins.Length == 0)
+                {
+                    policy.AllowAnyOrigin().AllowAnyHeader().AllowAnyMethod();
+                    return;
+                }
+
+                policy.WithOrigins(origins)
+                    .AllowAnyHeader()
+                    .AllowAnyMethod();
+            });
+        });
+    }
+
+    private static void ConfigureRateLimiting(IServiceCollection services)
+    {
+        services.AddRateLimiter(rateLimiterOptions =>
+        {
+            rateLimiterOptions.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
+
+            rateLimiterOptions.AddPolicy("PdfGeneration", context =>
+            {
+                var partitionKey = context.User.FindFirstValue(ClaimTypes.NameIdentifier)
+                    ?? context.Connection.RemoteIpAddress?.ToString()
+                    ?? "anonymous";
+
+                return RateLimitPartition.GetTokenBucketLimiter(partitionKey, _ => new TokenBucketRateLimiterOptions
+                {
+                    TokenLimit = 10,
+                    TokensPerPeriod = 10,
+                    ReplenishmentPeriod = TimeSpan.FromMinutes(1),
+                    QueueProcessingOrder = QueueProcessingOrder.OldestFirst,
+                    QueueLimit = 3,
+                    AutoReplenishment = true,
+                });
+            });
+        });
+    }
+}
