@@ -1,0 +1,15 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <RootNamespace>Hemo.Pdf.Layouts</RootNamespace>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\Hemo.Pdf.Core\Hemo.Pdf.Core.csproj" />
+    <ProjectReference Include="..\Hemo.Pdf.Branding\Hemo.Pdf.Branding.csproj" />
+    <ProjectReference Include="..\Hemo.Pdf.Sections\Hemo.Pdf.Sections.csproj" />
+    <ProjectReference Include="..\Hemo.Pdf.Rendering\Hemo.Pdf.Rendering.csproj" />
+    <PackageReference Include="QuestPDF" Version="2024.7.2" />
+  </ItemGroup>
+</Project>
