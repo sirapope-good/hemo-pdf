@@ -1,0 +1,11 @@
+{
+  "name": "@hemo/report-viewer",
+  "version": "0.1.0",
+  "description": "Angular report preview viewer for Hemo-PDF ReportDocument JSON",
+  "peerDependencies": {
+    "@angular/common": ">=15.0.0",
+    "@angular/core": ">=15.0.0",
+    "rxjs": ">=7.0.0"
+  },
+  "sideEffects": false
+}
