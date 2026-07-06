@@ -125,4 +125,109 @@ public class PdfApiIntegrationTests : IClassFixture<PdfApiWebApplicationFactory>
 
         return await _client.SendAsync(request);
     }
+
+    [Fact]
+    public async Task Preview_ReturnsJson_WithBlocks()
+    {
+        var response = await PostPreviewAsync("tenant-demo-a", "template-02-lab-result");
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.Equal("application/json", response.Content.Headers.ContentType?.MediaType);
+
+        var json = await response.Content.ReadAsStringAsync();
+        using var document = JsonDocument.Parse(json);
+        var root = document.RootElement;
+
+        Assert.Equal("template-02-lab-result", root.GetProperty("meta").GetProperty("templateId").GetString());
+        Assert.True(root.GetProperty("pages")[0].GetProperty("blocks").GetArrayLength() > 0);
+    }
+
+    [Fact]
+    public async Task Preview_AllTwelveTemplates_ReturnDocument()
+    {
+        var templates = new[]
+        {
+            "template-01-dialysis-session",
+            "template-02-lab-result",
+            "template-03-prescription",
+            "template-04-hemosheet",
+            "template-05-nurse-record",
+            "template-06-doctor-record",
+            "template-07-med-history",
+            "template-08-adequacy",
+            "template-09-assessment",
+            "template-10-admission",
+            "template-11-progress-note",
+            "template-12-summary",
+        };
+
+        foreach (var templateId in templates)
+        {
+            var response = await PostPreviewAsync("tenant-demo-a", templateId);
+            Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+
+            var json = await response.Content.ReadAsStringAsync();
+            using var document = JsonDocument.Parse(json);
+            Assert.Equal(templateId, document.RootElement.GetProperty("meta").GetProperty("templateId").GetString());
+        }
+    }
+
+    [Fact]
+    public async Task Preview_TenantA_And_TenantB_DifferentBranding()
+    {
+        var responseA = await PostPreviewAsync("tenant-demo-a", "template-02-lab-result");
+        var responseB = await PostPreviewAsync("tenant-demo-b", "template-02-lab-result");
+
+        var jsonA = await responseA.Content.ReadAsStringAsync();
+        var jsonB = await responseB.Content.ReadAsStringAsync();
+
+        using var docA = JsonDocument.Parse(jsonA);
+        using var docB = JsonDocument.Parse(jsonB);
+
+        var linesA = docA.RootElement.GetProperty("branding").GetProperty("companyLines").EnumerateArray()
+            .Select(x => x.GetString()).ToArray();
+        var linesB = docB.RootElement.GetProperty("branding").GetProperty("companyLines").EnumerateArray()
+            .Select(x => x.GetString()).ToArray();
+
+        Assert.NotEqual(linesA[0], linesB[0]);
+    }
+
+    [Fact]
+    public async Task Preview_UnsignedRequiredTemplate_Returns403()
+    {
+        var response = await PostPreviewAsync(
+            "tenant-demo-a",
+            "template-01-dialysis-session",
+            new
+            {
+                reportTemplateId = "template-01-dialysis-session",
+                tenantCode = "tenant-demo-a",
+                data = new { patientName = "Test Patient" },
+            });
+
+        Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
+    }
+
+    private async Task<HttpResponseMessage> PostPreviewAsync(string tenantCode, string templateId)
+    {
+        return await PostPreviewAsync(tenantCode, templateId, new
+        {
+            reportTemplateId = templateId,
+            tenantCode,
+            entityId = "test-entity-1",
+            data = new { patientName = "Test Patient", value = 42 },
+        });
+    }
+
+    private async Task<HttpResponseMessage> PostPreviewAsync(
+        string tenantCode,
+        string templateId,
+        object body)
+    {
+        var request = new HttpRequestMessage(HttpMethod.Post, "/api/report/preview");
+        request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", "dev");
+        request.Headers.Add("X-Tenant-Code", tenantCode);
+        request.Content = JsonContent.Create(body);
+
+        return await _client.SendAsync(request);
+    }
 }

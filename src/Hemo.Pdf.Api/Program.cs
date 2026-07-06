@@ -51,6 +51,7 @@ public sealed class Program
                 },
             });
             swagger.OperationFilter<GeneratePdfOperationFilter>();
+            swagger.OperationFilter<ReportPreviewOperationFilter>();
         });
 
         var hemoPdfOptions = builder.Configuration
@@ -76,7 +77,10 @@ public sealed class Program
                 }
 
                 context.Response.StatusCode = StatusCodes.Status500InternalServerError;
-                await context.Response.WriteAsync("An unexpected error occurred while generating the PDF.");
+                var message = context.Request.Path.StartsWithSegments("/api/report")
+                    ? "An unexpected error occurred while building the report preview."
+                    : "An unexpected error occurred while generating the PDF.";
+                await context.Response.WriteAsync(message);
             });
         });
 
