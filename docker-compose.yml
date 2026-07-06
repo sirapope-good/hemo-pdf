@@ -1,0 +1,13 @@
+services:
+  hemo-pdf-api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "5090:5090"
+    environment:
+      ASPNETCORE_ENVIRONMENT: Development
+      HemoPdf__UseMockServices: "true"
+      HemoPdf__BrandingRootPath: "/app/assets/branding"
+    volumes:
+      - ./assets/branding:/app/assets/branding:ro
