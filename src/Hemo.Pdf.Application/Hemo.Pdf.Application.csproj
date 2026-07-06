@@ -1,0 +1,19 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <RootNamespace>Hemo.Pdf.Application</RootNamespace>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\Hemo.Pdf.Core\Hemo.Pdf.Core.csproj" />
+    <ProjectReference Include="..\Hemo.Pdf.Branding\Hemo.Pdf.Branding.csproj" />
+    <ProjectReference Include="..\Hemo.Pdf.Sections\Hemo.Pdf.Sections.csproj" />
+    <ProjectReference Include="..\Hemo.Pdf.Layouts\Hemo.Pdf.Layouts.csproj" />
+    <ProjectReference Include="..\Hemo.Pdf.Rendering\Hemo.Pdf.Rendering.csproj" />
+    <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="8.0.2" />
+    <PackageReference Include="Microsoft.Extensions.Options" Version="8.0.2" />
+    <PackageReference Include="Microsoft.Extensions.Configuration.Abstractions" Version="8.0.0" />
+    <PackageReference Include="Microsoft.Extensions.Configuration.Binder" Version="8.0.2" />
+  </ItemGroup>
+</Project>
