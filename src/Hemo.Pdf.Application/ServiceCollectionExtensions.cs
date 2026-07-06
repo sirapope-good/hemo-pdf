@@ -30,6 +30,7 @@ public static class ServiceCollectionExtensions
 
         services.AddSingleton<IPdfRenderer, QuestPdfRenderer>();
         services.AddScoped<IPdfGenerationService, PdfGenerationService>();
+        services.AddScoped<IReportPreviewService, ReportPreviewService>();
         services.AddScoped<IPdfGenerationGuard, SignatureRequiredGuard>();
 
         services.AddScoped<MockTenantContextAccessor>();
@@ -69,6 +70,12 @@ public static class ServiceCollectionExtensions
                 TemplateRegistration.GetRendererRegistrations(),
                 sp,
                 TemplateRegistration.FallbackRendererType));
+
+        services.AddScoped<IReportPreviewRendererFactory>(sp =>
+            new ReportPreviewRendererFactory(
+                TemplateReportPreviewRendererFactory.CreateRegistrations(),
+                sp,
+                typeof(Layouts.Preview.Generic.GenericReportPreviewRenderer)));
 
         return services;
     }
