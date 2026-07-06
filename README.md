@@ -1,105 +1,138 @@
 # Hemo-PDF
 
-บริการสร้าง PDF แยกสำหรับ **HemodialysisPro** — ออกแบบให้ทำงานเป็น service ของตัวเอง ไม่ปนกับ business API หลัก
+บริการสร้าง PDF แยกสำหรับ **HemodialysisPro** — Standalone ASP.NET Core API + Angular client library
 
----
+## Quick Start
 
-## Hemo-PDF คืออะไร
+```bash
+# Run API (port 5090)
+cd src/Hemo.Pdf.Api
+dotnet run
 
-Repo นี้เป็น **โมดูลเสริม** สำหรับออกเอกสาร PDF ของระบบ HemodialysisPro โดย:
+# Test
+curl http://localhost:5090/health
 
-- รับข้อมูลรายงาน (DTO) จาก HemodialysisPro ผ่าน REST API
-- สร้าง PDF ฝั่ง server ด้วย QuestPDF
-- คืนไฟล์ `application/pdf` ให้ Angular เปิดหรือดาวน์โหลด
-
-HemodialysisPro ยังคงดูแลข้อมูลคนไข้ สิทธิ์การใช้งาน และ workflow หลัก — Hemo-PDF ดูแลเฉพาะเรื่อง **layout, branding และการ render PDF**
-
----
-
-## สถาปัตยกรรมโดยย่อ
-
-```
-┌─────────────────────┐         HTTP          ┌─────────────────────┐
-│  HemodialysisPro    │  POST /api/pdf/...    │  Hemo.Pdf.Api       │
-│  Angular + Web.Api  │ ────────────────────► │  (Standalone)       │
-│  โหลดข้อมูล + DTO   │  JWT + X-Tenant-Code │  Render PDF เท่านั้น │
-└─────────────────────┘                       └─────────────────────┘
-```
-
-| ส่วน | หน้าที่ |
-|------|---------|
-| **Hemo.Pdf.Api** | API หลัก — deploy แยก (เช่น port `5090`) |
-| **Libraries** | Core, Sections, Layouts, Branding, Rendering |
-| **@hemo/pdf-client** | Angular library สำหรับเรียก PDF API |
-
----
-
-## จุดเด่น
-
-- **แยกความรับผิดชอบ** — PDF logic ไม่อยู่ใน `Hemo-backend`
-- **Custom header ต่อลูกค้า** — logo, ชื่อหน่วยงาน, ที่อยู่ ตาม tenant
-- **12 Report Template** — โครงสร้างเนื้อหาแยกจาก branding (dummy ไว้ก่อน รอ finalize ชื่อจริง)
-- **Component นำกลับใช้ได้** — Header, Content, Footer, Helpers แยกชัด
-- **รองรับลายเซ็น** — template ที่ต้อง sign ก่อนออก PDF
-
----
-
-## Tech Stack
-
-| Layer | Technology |
-|-------|------------|
-| PDF Engine | QuestPDF |
-| API | ASP.NET Core (.NET 8) |
-| Client | Angular (`@hemo/pdf-client`) |
-| Font | Sarabun (รองรับภาษาไทย) |
-
----
-
-## โครงสร้างที่วางแผนไว้
-
-```
-Hemo-PDF/
-├── src/
-│   ├── Hemo.Pdf.Api/           # Standalone API
-│   ├── Hemo.Pdf.Core/          # Interfaces & contracts
-│   ├── Hemo.Pdf.Sections/      # Header, Footer, Content blocks
-│   ├── Hemo.Pdf.Layouts/       # Report templates (12 แบบ)
-│   ├── Hemo.Pdf.Branding/      # Tenant branding config
-│   ├── Hemo.Pdf.Rendering/     # QuestPDF implementation
-│   └── client/                 # Angular library
-├── assets/fonts/               # Sarabun
-├── assets/branding/            # Branding JSON ต่อ tenant
-└── docs/
+curl -X POST http://localhost:5090/api/pdf/generate \
+  -H "Content-Type: application/json" \
+  -H "X-Tenant-Code: tenant-demo-a" \
+  -H "Authorization: Bearer dev" \
+  -d '{
+    "reportTemplateId": "template-01-dialysis-session",
+    "tenantCode": "tenant-demo-a",
+    "entityId": "session-1",
+    "data": {
+      "patientName": "สมชาย ใจดี",
+      "patientId": "HN-001234",
+      "sessionDate": "2026-07-06"
+    }
+  }' --output test.pdf
 ```
 
----
+```bash
+# Run all tests
+dotnet test Hemo.Pdf.sln
+```
 
-## เอกสารประกอบ
+```bash
+# Docker
+docker compose up --build
+```
 
-| ไฟล์ | เนื้อหา |
-|------|---------|
-| [HEMO-PDF-SUB-MODULE.md](./HEMO-PDF-SUB-MODULE.md) | แผนออกแบบโมดูล, API contract, phase implement |
-| [ฺIMPLEMENT-PLANNING.md](./ฺIMPLEMENT-PLANNING.md) | สรุประบบ PDF จากโปรเจกต์ NSS (อ้างอิง) |
+## Architecture
 
----
+```
+Angular (@hemo/pdf-client)
+    │ POST /api/pdf/generate + JWT + X-Tenant-Code
+    ▼
+Hemo.Pdf.Api (Standalone :5090)
+    ├── PdfController
+    ├── TenantMiddleware / MockAuth (dev)
+    └── Hemo.Pdf.Application
+            ├── PdfGenerationService
+            ├── Branding (JSON per tenant)
+            ├── Sections (Header/Footer/Content)
+            └── Layouts (12 templates → QuestPDF)
+```
 
-## สถานะปัจจุบัน
+## Solution Structure
 
-อยู่ในขั้น **วางแบบและออกแบบ** — ยังไม่ได้ scaffold code
+```
+src/
+├── Hemo.Pdf.Api/           # Standalone Web API
+├── Hemo.Pdf.Application/   # DI, guards, orchestration
+├── Hemo.Pdf.Core/          # Contracts & models
+├── Hemo.Pdf.Branding/      # Tenant branding store
+├── Hemo.Pdf.Sections/      # Reusable PDF components
+├── Hemo.Pdf.Layouts/       # 12 report templates
+└── Hemo.Pdf.Rendering/     # QuestPDF
 
-ลำดับ implement ที่วางไว้:
+client/projects/hemo-pdf-client/   # @hemo/pdf-client
+assets/branding/                   # tenant-demo-a.json, tenant-demo-b.json
+assets/mock-data/                  # Sample DTOs
+tests/                             # Unit + integration tests
+```
 
-1. Standalone `Hemo.Pdf.Api` + endpoint `POST /api/pdf/generate`
-2. Section system + branding ต่อ tenant (mock ก่อน)
-3. Report template แรก + Angular client
-4. เพิ่ม template จนครบ 12 แบบ
+## Report Templates (12)
 
----
+| ID | Requires Sign |
+|----|---------------|
+| `template-01-dialysis-session` | Yes (dedicated layout) |
+| `template-02-lab-result` … `template-12-summary` | See `ReportTemplates.cs` |
 
-## Repo ที่เกี่ยวข้อง
+## Angular Integration
 
-| Repo | บทบาท |
-|------|--------|
-| [Hemo-backend](../Hemo-backend) | HemodialysisPro API — ส่ง DTO มาให้ PDF service |
-| [Hemo-frontend](../Hemo-frontend) | Angular app — ใช้ `@hemo/pdf-client` |
-| [NSS](../NSS) | แหล่งอ้างอิงแพทเทิร์น PDF (QuestPDF + Factory/Strategy) |
+```typescript
+// app.config.ts or module providers
+import { HEMO_PDF_CONFIG } from '@hemo/pdf-client';
+
+providers: [
+  {
+    provide: HEMO_PDF_CONFIG,
+    useValue: {
+      pdfApiUrl: 'http://localhost:5090',
+      getAuthToken: () => localStorage.getItem('token'),
+      getTenantCode: () => currentTenantCode,
+    },
+  },
+]
+```
+
+```typescript
+import { HemoPdfService, PdfDownloadButtonComponent } from '@hemo/pdf-client';
+
+this.pdfService.generateAndOpen({
+  reportTemplateId: 'template-01-dialysis-session',
+  tenantCode: 'tenant-demo-a',
+  entityId: sessionId,
+  data: reportDto,
+});
+```
+
+Copy sources from `client/projects/hemo-pdf-client/src` into Hemo-frontend or link via path.
+
+## Configuration (`appsettings.json`)
+
+| Key | Description |
+|-----|-------------|
+| `HemoPdf:UseMockServices` | `true` = mock auth + signatures |
+| `HemoPdf:BrandingRootPath` | Path to `assets/branding` |
+| `HemoPdf:Jwt:Authority` | JWT authority (production) |
+| `HemoPdf:CorsOrigins` | Allowed Angular origins |
+
+## Branding
+
+เพิ่มไฟล์ `assets/branding/{tenantCode}.json` — ดูตัวอย่าง `tenant-demo-a.json`  
+อนาคต: `DbBrandingStore` — ดู [docs/BRANDING-GUIDELINE.md](./docs/BRANDING-GUIDELINE.md)
+
+## Docs
+
+- [01-IMPLEMENT-PLANNING.md](./01-IMPLEMENT-PLANNING.md) — แผนออกแบบโมดูล
+- [0ฺ0-REFERENCE-PLANNING.md](./0ฺ0-REFERENCE-PLANNING.md) — อ้างอิงจาก NSS
+
+## Related Repos
+
+| Repo | Role |
+|------|------|
+| Hemo-backend | ส่ง DTO + permission (ไม่ reference QuestPDF) |
+| Hemo-frontend | ใช้ `@hemo/pdf-client` |
+| NSS | แพทเทิร์นอ้างอิง QuestPDF |
