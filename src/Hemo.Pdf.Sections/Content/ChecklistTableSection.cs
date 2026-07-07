@@ -21,59 +21,58 @@ public sealed class ChecklistTableSection : IContentSection
             return;
         }
 
-        container.Column(col =>
+        container.Border(0.5f).Table(table =>
         {
-            col.Spacing(4);
+            table.ColumnsDefinition(columns =>
+            {
+                columns.ConstantColumn(16);
+                columns.RelativeColumn(3);
+                columns.RelativeColumn(2);
+            });
 
             if (!string.IsNullOrWhiteSpace(checklist.Title))
             {
-                col.Item().Text(checklist.Title)
+                table.Cell().ColumnSpan(3)
+                    .Background(PdfSectionMetrics.SectionHeaderBackground)
+                    .Border(0.5f)
+                    .Padding(PdfSectionMetrics.SectionTitlePadding)
+                    .Text(checklist.Title)
                     .FontFamily(PdfStyleDefaults.Body.SectionTitleFontFamily)
                     .FontSize(PdfStyleDefaults.Body.SectionTitleFontSize)
                     .SemiBold();
             }
 
-            col.Item().Table(table =>
+            table.Cell().Border(0.5f).Background(PdfSectionMetrics.SectionHeaderBackground).Padding(PdfSectionMetrics.CellPadding)
+                .Text("")
+                .FontSize(PdfStyleDefaults.Body.DataFontSize);
+            table.Cell().Border(0.5f).Background(PdfSectionMetrics.SectionHeaderBackground).Padding(PdfSectionMetrics.CellPadding)
+                .Text("รายการ")
+                .FontFamily(PdfStyleDefaults.Body.SectionTitleFontFamily)
+                .FontSize(PdfStyleDefaults.Body.DataFontSize)
+                .SemiBold();
+            table.Cell().Border(0.5f).Background(PdfSectionMetrics.SectionHeaderBackground).Padding(PdfSectionMetrics.CellPadding)
+                .Text("หมายเหตุ")
+                .FontFamily(PdfStyleDefaults.Body.SectionTitleFontFamily)
+                .FontSize(PdfStyleDefaults.Body.DataFontSize)
+                .SemiBold();
+
+            foreach (var item in checklist.Items)
             {
-                table.ColumnsDefinition(columns =>
+                table.Cell().Border(0.5f).Padding(PdfSectionMetrics.CellPadding).Row(row =>
                 {
-                    columns.ConstantColumn(20);
-                    columns.RelativeColumn(3);
-                    columns.RelativeColumn(2);
+                    PdfComponentHelpers.RenderCheckbox(row, item.IsChecked, 8f);
                 });
 
-                table.Cell().Border(0.5f).Background("#f0f0f0").Padding(4)
-                    .Text("")
+                table.Cell().Border(0.5f).Padding(PdfSectionMetrics.CellPadding)
+                    .Text(item.Label)
+                    .FontFamily(PdfStyleDefaults.Body.DataFontFamily)
                     .FontSize(PdfStyleDefaults.Body.DataFontSize);
-                table.Cell().Border(0.5f).Background("#f0f0f0").Padding(4)
-                    .Text("รายการ")
-                    .FontFamily(PdfStyleDefaults.Body.SectionTitleFontFamily)
-                    .FontSize(PdfStyleDefaults.Body.DataFontSize)
-                    .SemiBold();
-                table.Cell().Border(0.5f).Background("#f0f0f0").Padding(4)
-                    .Text("หมายเหตุ")
-                    .FontFamily(PdfStyleDefaults.Body.SectionTitleFontFamily)
-                    .FontSize(PdfStyleDefaults.Body.DataFontSize)
-                    .SemiBold();
 
-                foreach (var item in checklist.Items)
-                {
-                    table.Cell().Border(0.5f).Padding(4).Row(row =>
-                    {
-                        PdfComponentHelpers.RenderCheckbox(row, item.IsChecked, 10f);
-                    });
-
-                    table.Cell().Border(0.5f).Padding(4)
-                        .Text(item.Label)
-                        .FontFamily(PdfStyleDefaults.Body.DataFontFamily)
-                        .FontSize(PdfStyleDefaults.Body.DataFontSize);
-
-                    table.Cell().Border(0.5f).Padding(4)
-                        .Text(string.IsNullOrWhiteSpace(item.Notes) ? "—" : item.Notes)
-                        .FontFamily(PdfStyleDefaults.Body.DataFontFamily)
-                        .FontSize(PdfStyleDefaults.Body.DataFontSize);
-                }
-            });
+                table.Cell().Border(0.5f).Padding(PdfSectionMetrics.CellPadding)
+                    .Text(string.IsNullOrWhiteSpace(item.Notes) ? "—" : item.Notes)
+                    .FontFamily(PdfStyleDefaults.Body.DataFontFamily)
+                    .FontSize(PdfStyleDefaults.Body.DataFontSize);
+            }
         });
     }
 }

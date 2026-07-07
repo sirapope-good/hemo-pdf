@@ -1,14 +1,9 @@
 import { Component, Input } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { ReportDocument, ReportBlock, PatientInfoReportBlock, KeyValueTableReportBlock, DataGridReportBlock, ChecklistTableReportBlock, VascularAccessReportBlock, SignatureReportBlock, TextReportBlock } from '../models/report-document.model';
+import { ReportDocument } from '../models/report-document.model';
 import { HemoReportHeaderComponent } from './hemo-report-header.component';
 import { HemoReportFooterComponent } from './hemo-report-footer.component';
-import { KeyValueTableBlockComponent } from './blocks/key-value-table-block.component';
-import { PatientInfoBlockComponent } from './blocks/patient-info-block.component';
-import { DataGridBlockComponent } from './blocks/data-grid-block.component';
-import { ChecklistTableBlockComponent } from './blocks/checklist-table-block.component';
-import { VascularAccessBlockComponent } from './blocks/vascular-access-block.component';
-import { SignatureBlockComponent } from './blocks/signature-block.component';
+import { HemoReportBlockOutletComponent } from './hemo-report-block-outlet.component';
 
 @Component({
   selector: 'hemo-report-page',
@@ -17,28 +12,23 @@ import { SignatureBlockComponent } from './blocks/signature-block.component';
     CommonModule,
     HemoReportHeaderComponent,
     HemoReportFooterComponent,
-    KeyValueTableBlockComponent,
-    PatientInfoBlockComponent,
-    DataGridBlockComponent,
-    ChecklistTableBlockComponent,
-    VascularAccessBlockComponent,
-    SignatureBlockComponent,
+    HemoReportBlockOutletComponent,
   ],
   template: `
     <article class="hemo-report-page">
-      <hemo-report-header [branding]="document.branding" [header]="document.header" />
-      <ng-container *ngFor="let block of pageBlocks">
-        <hemo-patient-info-block *ngIf="block.type === 'patient-info'" [block]="asPatientInfo(block)" />
-        <hemo-key-value-table-block *ngIf="block.type === 'key-value-table'" [block]="asKeyValue(block)" />
-        <hemo-data-grid-block *ngIf="block.type === 'data-grid'" [block]="asDataGrid(block)" />
-        <hemo-checklist-table-block *ngIf="block.type === 'checklist-table'" [block]="asChecklist(block)" />
-        <hemo-vascular-access-block *ngIf="block.type === 'vascular-access'" [block]="asVascularAccess(block)" />
-        <hemo-signature-block *ngIf="block.type === 'signature'" [block]="asSignature(block)" />
-        <section *ngIf="block.type === 'text'" class="hemo-report-block">
-          <p>{{ asText(block).content }}</p>
-        </section>
-      </ng-container>
-      <hemo-report-footer [footer]="document.footer" />
+      <header class="hemo-report-page__header-band">
+        <hemo-report-header [branding]="document.branding" [header]="document.header" />
+      </header>
+
+      <div class="hemo-report-page__content">
+        @for (block of pageBlocks; track $index) {
+          <hemo-report-block-outlet [block]="block" />
+        }
+      </div>
+
+      <footer class="hemo-report-page__footer-band">
+        <hemo-report-footer [footer]="document.footer" />
+      </footer>
     </article>
   `,
 })
@@ -46,35 +36,7 @@ export class HemoReportPageComponent {
   @Input({ required: true }) document!: ReportDocument;
   @Input() pageIndex = 0;
 
-  get pageBlocks(): ReportBlock[] {
+  get pageBlocks() {
     return this.document.pages[this.pageIndex]?.blocks ?? [];
-  }
-
-  asPatientInfo(block: ReportBlock): PatientInfoReportBlock {
-    return block as PatientInfoReportBlock;
-  }
-
-  asKeyValue(block: ReportBlock): KeyValueTableReportBlock {
-    return block as KeyValueTableReportBlock;
-  }
-
-  asDataGrid(block: ReportBlock): DataGridReportBlock {
-    return block as DataGridReportBlock;
-  }
-
-  asChecklist(block: ReportBlock): ChecklistTableReportBlock {
-    return block as ChecklistTableReportBlock;
-  }
-
-  asVascularAccess(block: ReportBlock): VascularAccessReportBlock {
-    return block as VascularAccessReportBlock;
-  }
-
-  asSignature(block: ReportBlock): SignatureReportBlock {
-    return block as SignatureReportBlock;
-  }
-
-  asText(block: ReportBlock): TextReportBlock {
-    return block as TextReportBlock;
   }
 }

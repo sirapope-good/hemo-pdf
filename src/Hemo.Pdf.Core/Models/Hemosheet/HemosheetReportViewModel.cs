@@ -34,6 +34,7 @@ public sealed class HemosheetReportViewModel
     public IList<HemosheetDoctorRecordViewModel> DoctorRecords { get; init; } = [];
     public IList<HemosheetProgressNoteViewModel> ProgressNotes { get; init; } = [];
     public IList<HemosheetMedicineRecordViewModel> MedicineRecords { get; init; } = [];
+    public HemosheetLabsViewModel Labs { get; init; } = new();
     public Dictionary<string, string> SignatureNames { get; init; } = new();
     public HemosheetLayoutContextViewModel LayoutContext { get; set; } = new();
 }
@@ -42,6 +43,7 @@ public sealed class HemosheetPatientViewModel
 {
     public string? Name { get; init; }
     public string? Hn { get; init; }
+    public string? IdentityNumber { get; init; }
     public DateTime? BirthDate { get; init; }
     public string? Sex { get; init; }
     public int? Age { get; init; }
@@ -147,6 +149,27 @@ public sealed class HemosheetMedicineRecordViewModel
     public float? Quantity { get; init; }
 }
 
+public sealed class HemosheetLabsViewModel
+{
+    public string? Hct { get; init; }
+    public string? Hb { get; init; }
+    public string? Plt { get; init; }
+    public string? Wbc { get; init; }
+    public string? Na { get; init; }
+    public string? K { get; init; }
+    public string? Cl { get; init; }
+    public string? Co2 { get; init; }
+    public string? Bun { get; init; }
+    public string? Cr { get; init; }
+    public string? Alb { get; init; }
+    public string? Ca { get; init; }
+    public string? P { get; init; }
+    public string? Mg { get; init; }
+    public string? Hbsag { get; init; }
+    public string? AntiHcv { get; init; }
+    public string? AntiHiv { get; init; }
+}
+
 public enum HemosheetLayoutProfile
 {
     Default = 0,
@@ -204,6 +227,7 @@ public enum HemosheetSectionId
     ProgressNotes,
     NursesInShift,
     Consent,
+    Labs,
     Signatures,
 }
 

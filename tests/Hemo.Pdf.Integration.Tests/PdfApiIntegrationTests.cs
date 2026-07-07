@@ -209,6 +209,8 @@ public class PdfApiIntegrationTests : IClassFixture<PdfApiWebApplicationFactory>
 
     [Theory]
     [InlineData("template-04-hemosheet-hd-av.json", "vascular-access")]
+    [InlineData("template-04-hemosheet-hd-av.json", "checklist-table")]
+    [InlineData("template-04-hemosheet-hd-av.json", "field-grid")]
     [InlineData("template-04-hemosheet-hdf-av.json", "data-grid")]
     [InlineData("template-04-hemosheet-hd-perm.json", "vascular-access")]
     public async Task Preview_HemosheetLayoutVariants_ContainExpectedBlocks(string mockFile, string expectedBlockType)

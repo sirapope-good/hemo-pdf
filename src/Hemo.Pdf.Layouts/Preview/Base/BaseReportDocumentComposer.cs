@@ -7,7 +7,7 @@ namespace Hemo.Pdf.Layouts.Preview.Base;
 
 public abstract class BaseReportDocumentComposer<TViewModel> : IReportDocumentComposer
 {
-    public ReportDocument Compose(object dataModel, PdfReportContext context)
+    public virtual ReportDocument Compose(object dataModel, PdfReportContext context)
     {
         var viewModel = (TViewModel)dataModel;
         var blocks = ComposeContentBlocks(viewModel, context);

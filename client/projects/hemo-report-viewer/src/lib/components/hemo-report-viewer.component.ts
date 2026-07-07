@@ -1,20 +1,30 @@
 import {
   Component,
+  ElementRef,
   EventEmitter,
   Input,
   Output,
+  ViewChild,
+  ViewEncapsulation,
+  afterNextRender,
+  inject,
+  DestroyRef,
   signal,
   computed,
 } from '@angular/core';
-import { CommonModule } from '@angular/common';
+import { CommonModule, DOCUMENT } from '@angular/common';
 import { ReportDocument } from '../models/report-document.model';
 import { HemoReportToolbarComponent } from './hemo-report-toolbar.component';
 import { HemoReportPageComponent } from './hemo-report-page.component';
+
+const A4_WIDTH_MM = 210;
+const MM_TO_PX = 96 / 25.4;
 
 @Component({
   selector: 'hemo-report-viewer',
   standalone: true,
   imports: [CommonModule, HemoReportToolbarComponent, HemoReportPageComponent],
+  encapsulation: ViewEncapsulation.None,
   styleUrls: ['../styles/report-viewer.scss'],
   template: `
     <div class="hemo-report-viewer">
@@ -29,7 +39,7 @@ import { HemoReportPageComponent } from './hemo-report-page.component';
         (print)="print.emit()"
         (download)="download.emit()" />
 
-      <div class="hemo-report-viewer__canvas">
+      <div #canvas class="hemo-report-viewer__canvas">
         <div
           *ngIf="document"
           class="hemo-report-viewer__scale-wrap"
@@ -43,6 +53,11 @@ import { HemoReportPageComponent } from './hemo-report-page.component';
   `,
 })
 export class HemoReportViewerComponent {
+  private readonly destroyRef = inject(DestroyRef);
+  private readonly documentRef = inject(DOCUMENT);
+
+  @ViewChild('canvas', { read: ElementRef }) canvasRef?: ElementRef<HTMLElement>;
+
   @Input() document: ReportDocument | null = null;
   @Input() loading = false;
   @Input() errorMessage: string | null = null;
@@ -50,7 +65,10 @@ export class HemoReportViewerComponent {
   @Output() print = new EventEmitter<void>();
   @Output() download = new EventEmitter<void>();
 
-  readonly scale = signal(1);
+  private readonly zoomFactor = signal(1);
+  private readonly fitScale = signal(1);
+
+  readonly scale = computed(() => +(this.fitScale() * this.zoomFactor()).toFixed(3));
   readonly pageIndex = signal(0);
 
   readonly pageCount = computed(() => {
@@ -58,12 +76,26 @@ export class HemoReportViewerComponent {
     return Math.max(pages, 1);
   });
 
+  constructor() {
+    afterNextRender(() => {
+      this.updateFitScale();
+      const canvas = this.canvasRef?.nativeElement;
+      if (!canvas || typeof ResizeObserver === 'undefined') {
+        return;
+      }
+
+      const observer = new ResizeObserver(() => this.updateFitScale());
+      observer.observe(canvas);
+      this.destroyRef.onDestroy(() => observer.disconnect());
+    });
+  }
+
   zoomIn(): void {
-    this.scale.update((value) => Math.min(2, +(value + 0.1).toFixed(2)));
+    this.zoomFactor.update((value) => Math.min(2, +(value + 0.1).toFixed(2)));
   }
 
   zoomOut(): void {
-    this.scale.update((value) => Math.max(0.5, +(value - 0.1).toFixed(2)));
+    this.zoomFactor.update((value) => Math.max(0.5, +(value - 0.1).toFixed(2)));
   }
 
   prevPage(): void {
@@ -72,5 +104,17 @@ export class HemoReportViewerComponent {
 
   nextPage(): void {
     this.pageIndex.update((index) => Math.min(this.pageCount() - 1, index + 1));
+  }
+
+  private updateFitScale(): void {
+    const canvas = this.canvasRef?.nativeElement;
+    if (!canvas) {
+      return;
+    }
+
+    const pageWidthPx = A4_WIDTH_MM * MM_TO_PX;
+    const horizontalPadding = 32;
+    const available = Math.max(canvas.clientWidth - horizontalPadding, 1);
+    this.fitScale.set(Math.min(1, available / pageWidthPx));
   }
 }

@@ -4,6 +4,7 @@ public sealed class DataGridModel
 {
     public string? Title { get; init; }
     public IReadOnlyList<string> ColumnHeaders { get; init; } = [];
+    public IReadOnlyList<float> ColumnWeights { get; init; } = [];
     public IReadOnlyList<IReadOnlyList<string?>> Rows { get; init; } = [];
 }
 

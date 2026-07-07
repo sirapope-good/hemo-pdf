@@ -18,37 +18,38 @@ public sealed class PatientInfoSection : IContentSection
 
         var info = source.PatientInfo;
 
-        container
-            .PaddingVertical(4)
-            .Border(0.5f)
-            .Padding(8)
-            .Column(col =>
+        container.Border(0.5f).Table(table =>
+        {
+            table.ColumnsDefinition(columns =>
             {
-                col.Spacing(2);
-
-                col.Item().Text("ข้อมูลผู้ป่วย")
-                    .FontFamily(PdfStyleDefaults.Body.SectionTitleFontFamily)
-                    .FontSize(PdfStyleDefaults.Body.SectionTitleFontSize)
-                    .SemiBold();
-
-                col.Item().Row(row =>
-                {
-                    row.RelativeItem().Column(left =>
-                    {
-                        left.Spacing(2);
-                        left.Item().Text(t => PdfTextHelpers.ComposeInlineLabelValue(t, "ชื่อ-สกุล", info.Name));
-                        left.Item().Text(t => PdfTextHelpers.ComposeInlineLabelValue(t, "HN", info.HospitalNumber));
-                        left.Item().Text(t => PdfTextHelpers.ComposeInlineLabelValue(t, "เลขบัตรประชาชน", info.IdentityNumber));
-                    });
-
-                    row.RelativeItem().Column(right =>
-                    {
-                        right.Spacing(2);
-                        right.Item().Text(t => PdfTextHelpers.ComposeInlineLabelValue(t, "วันเกิด", info.DateOfBirth));
-                        right.Item().Text(t => PdfTextHelpers.ComposeInlineLabelValue(t, "เพศ", info.Gender));
-                        right.Item().Text(t => PdfTextHelpers.ComposeInlineLabelValue(t, "หน่วย", info.Unit));
-                    });
-                });
+                columns.RelativeColumn();
+                columns.RelativeColumn();
             });
+
+            table.Cell().ColumnSpan(2)
+                .Background(PdfSectionMetrics.SectionHeaderBackground)
+                .Border(0.5f)
+                .Padding(PdfSectionMetrics.SectionTitlePadding)
+                .Text("ข้อมูลผู้ป่วย")
+                .FontFamily(PdfStyleDefaults.Body.SectionTitleFontFamily)
+                .FontSize(PdfStyleDefaults.Body.SectionTitleFontSize)
+                .SemiBold();
+
+            table.Cell().Border(0.5f).Padding(PdfSectionMetrics.CellPadding).Column(left =>
+            {
+                left.Spacing(1);
+                left.Item().Text(t => PdfTextHelpers.ComposeInlineLabelValue(t, "ชื่อ-สกุล", info.Name));
+                left.Item().Text(t => PdfTextHelpers.ComposeInlineLabelValue(t, "HN", info.HospitalNumber));
+                left.Item().Text(t => PdfTextHelpers.ComposeInlineLabelValue(t, "เลขบัตรประชาชน", info.IdentityNumber));
+            });
+
+            table.Cell().Border(0.5f).Padding(PdfSectionMetrics.CellPadding).Column(right =>
+            {
+                right.Spacing(1);
+                right.Item().Text(t => PdfTextHelpers.ComposeInlineLabelValue(t, "วันเกิด", info.DateOfBirth));
+                right.Item().Text(t => PdfTextHelpers.ComposeInlineLabelValue(t, "เพศ", info.Gender));
+                right.Item().Text(t => PdfTextHelpers.ComposeInlineLabelValue(t, "หน่วย", info.Unit));
+            });
+        });
     }
 }

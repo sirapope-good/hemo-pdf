@@ -2,7 +2,6 @@ using Hemo.Pdf.Core.Constants;
 using Hemo.Pdf.Core.Context;
 using Hemo.Pdf.Core.Models;
 using Hemo.Pdf.Sections.Abstractions;
-using Hemo.Pdf.Sections.Helpers;
 using QuestPDF.Fluent;
 using QuestPDF.Infrastructure;
 
@@ -40,40 +39,39 @@ public sealed class KeyValueTableSection : IContentSection
             return;
         }
 
-        container.Column(col =>
+        container.Border(0.5f).Table(table =>
         {
-            col.Spacing(4);
+            table.ColumnsDefinition(columns =>
+            {
+                columns.RelativeColumn(2);
+                columns.RelativeColumn(3);
+            });
 
             if (!string.IsNullOrWhiteSpace(title))
             {
-                col.Item().Text(title)
+                table.Cell().ColumnSpan(2)
+                    .Background(PdfSectionMetrics.SectionHeaderBackground)
+                    .Border(0.5f)
+                    .Padding(PdfSectionMetrics.SectionTitlePadding)
+                    .Text(title)
                     .FontFamily(PdfStyleDefaults.Body.SectionTitleFontFamily)
                     .FontSize(PdfStyleDefaults.Body.SectionTitleFontSize)
                     .SemiBold();
             }
 
-            col.Item().Table(table =>
+            foreach (var (key, value) in rows)
             {
-                table.ColumnsDefinition(columns =>
-                {
-                    columns.RelativeColumn(2);
-                    columns.RelativeColumn(3);
-                });
+                table.Cell().Border(0.5f).Padding(PdfSectionMetrics.CellPadding)
+                    .Text(key)
+                    .FontFamily(PdfStyleDefaults.Body.DataFontFamily)
+                    .FontSize(PdfStyleDefaults.Body.DataFontSize)
+                    .SemiBold();
 
-                foreach (var (key, value) in rows)
-                {
-                    table.Cell().Border(0.5f).Padding(4)
-                        .Text(key)
-                        .FontFamily(PdfStyleDefaults.Body.DataFontFamily)
-                        .FontSize(PdfStyleDefaults.Body.DataFontSize)
-                        .SemiBold();
-
-                    table.Cell().Border(0.5f).Padding(4)
-                        .Text(string.IsNullOrWhiteSpace(value) ? "—" : value)
-                        .FontFamily(PdfStyleDefaults.Body.DataFontFamily)
-                        .FontSize(PdfStyleDefaults.Body.DataFontSize);
-                }
-            });
+                table.Cell().Border(0.5f).Padding(PdfSectionMetrics.CellPadding)
+                    .Text(string.IsNullOrWhiteSpace(value) ? "—" : value)
+                    .FontFamily(PdfStyleDefaults.Body.DataFontFamily)
+                    .FontSize(PdfStyleDefaults.Body.DataFontSize);
+            }
         });
     }
 }

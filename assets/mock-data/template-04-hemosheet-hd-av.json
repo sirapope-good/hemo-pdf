@@ -48,7 +48,7 @@
   },
   "assessments": {
     "pre": [
-      { "name": "pain", "checked": true, "text": "" },
+      { "name": "pain", "checked": true, "text": "mild" },
       { "name": "chest", "checked": false, "text": "" }
     ],
     "re": [{ "name": "pain", "checked": false, "text": "" }],

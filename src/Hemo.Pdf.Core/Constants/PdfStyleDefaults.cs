@@ -15,13 +15,13 @@ public static class PdfStyleDefaults
         public const float LogoWidth = 90f;
         public const float LogoHeight = 48f;
 
-        public const float CompanyNameFontSize = 12f;
+        public const float CompanyNameFontSize = 8f;
         public const string CompanyNameFontFamily = Fonts.PrimaryLightFamily;
 
-        public const float CompanyDetailFontSize = 8f;
+        public const float CompanyDetailFontSize = 6.5f;
         public const string CompanyDetailFontFamily = Fonts.PrimaryExtraLightFamily;
 
-        public const float TitleFontSize = 14f;
+        public const float TitleFontSize = 10f;
         public const string TitleFontFamily = Fonts.PrimarySemiBoldFamily;
 
         public const float SubtitleFontSize = 10f;
@@ -30,19 +30,19 @@ public static class PdfStyleDefaults
         public const float ReportCodeFontSize = 8f;
         public const string ReportCodeFontFamily = Fonts.PrimaryFamily;
 
-        public const float MetadataFontSize = 8f;
+        public const float MetadataFontSize = 6.5f;
         public const string MetadataFontFamily = Fonts.PrimaryFamily;
     }
 
     public static class Body
     {
-        public const float BaseFontSize = 7.5f;
+        public const float BaseFontSize = 6.5f;
         public const string BaseFontFamily = Fonts.PrimaryFamily;
 
-        public const float SectionTitleFontSize = 10f;
+        public const float SectionTitleFontSize = 7.5f;
         public const string SectionTitleFontFamily = Fonts.PrimarySemiBoldFamily;
 
-        public const float DataFontSize = 7.5f;
+        public const float DataFontSize = 6.5f;
         public const string DataFontFamily = Fonts.PrimaryFamily;
     }
 

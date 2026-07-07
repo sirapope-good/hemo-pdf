@@ -41,6 +41,29 @@ public static class PdfImageHelpers
         return null;
     }
 
+    public static byte[]? LoadLogoFromDataUrl(string? dataUrl)
+    {
+        if (string.IsNullOrWhiteSpace(dataUrl))
+        {
+            return null;
+        }
+
+        var commaIndex = dataUrl.IndexOf(',');
+        if (commaIndex < 0 || !dataUrl.StartsWith("data:", StringComparison.OrdinalIgnoreCase))
+        {
+            return null;
+        }
+
+        try
+        {
+            return Convert.FromBase64String(dataUrl[(commaIndex + 1)..]);
+        }
+        catch
+        {
+            return null;
+        }
+    }
+
     public static void RenderLogo(IContainer container, byte[]? logoBytes, float width, float height)
     {
         if (logoBytes is null or { Length: 0 })

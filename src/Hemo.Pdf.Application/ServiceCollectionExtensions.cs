@@ -2,6 +2,7 @@ using Hemo.Pdf.Application.Guards;
 using Hemo.Pdf.Application.Mock;
 using Hemo.Pdf.Branding;
 using Hemo.Pdf.Core.Abstractions;
+using Hemo.Pdf.Core.Constants;
 using Hemo.Pdf.Core.Factory;
 using Hemo.Pdf.Layouts;
 using Hemo.Pdf.Rendering;
@@ -49,17 +50,23 @@ public static class ServiceCollectionExtensions
         }
 
         services.AddScoped<ConfigurableHeaderSection>();
+        services.AddScoped<HemosheetHeaderSection>();
         services.AddScoped<ConfigurableFooterSection>();
+        services.AddScoped<HemosheetFooterSection>();
 
         services.AddScoped<ISectionResolver<IReportHeaderSection>>(sp =>
             new SectionResolver<IReportHeaderSection>(
-                [],
+                [
+                    ("*", ReportTemplates.Hemosheet, typeof(HemosheetHeaderSection)),
+                ],
                 sp,
                 typeof(ConfigurableHeaderSection)));
 
         services.AddScoped<ISectionResolver<IReportFooterSection>>(sp =>
             new SectionResolver<IReportFooterSection>(
-                [],
+                [
+                    ("*", ReportTemplates.Hemosheet, typeof(HemosheetFooterSection)),
+                ],
                 sp,
                 typeof(ConfigurableFooterSection)));
 

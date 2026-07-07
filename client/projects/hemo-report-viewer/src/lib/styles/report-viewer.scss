@@ -1,20 +1,31 @@
+@import url('https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;600;700&display=swap');
+
 .hemo-report-viewer {
   --hemo-font: 'Sarabun', 'Segoe UI', sans-serif;
-  --hemo-body-size: 7.5pt;
-  --hemo-section-title: 10pt;
-  --hemo-header-title: 14pt;
+  --hemo-body-size: 6.5pt;
+  --hemo-section-title: 7.5pt;
+  --hemo-header-title: 10pt;
   --hemo-page-width: 210mm;
   --hemo-page-min-height: 297mm;
-  --hemo-page-margin: 10mm;
-  --hemo-border: #ccc;
+  --hemo-page-padding: 2mm 4mm;
+  --hemo-border: #333;
+  --hemo-border-width: 0.5pt;
+  --hemo-section-header-bg: #dce6f2;
+  --hemo-cell-padding: 1.5pt;
 
   display: flex;
   flex-direction: column;
   height: 100%;
   font-family: var(--hemo-font);
   font-size: var(--hemo-body-size);
-  color: #222;
+  line-height: 1.15;
+  color: #111;
   background: #e8ecf0;
+}
+
+.hemo-report-viewer,
+.hemo-report-viewer * {
+  box-sizing: border-box;
 }
 
 .hemo-report-viewer__toolbar {
@@ -58,120 +69,299 @@
   width: var(--hemo-page-width);
   min-height: var(--hemo-page-min-height);
   margin: 0 auto;
-  padding: var(--hemo-page-margin);
+  padding: var(--hemo-page-padding);
   background: #fff;
   box-shadow: 0 2px 12px rgba(0, 0, 0, 0.15);
-  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+}
+
+.hemo-report-page__header-band,
+.hemo-report-page__content,
+.hemo-report-page__footer-band {
+  width: 100%;
+  padding: 0;
+}
+
+.hemo-report-page__content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+.hemo-report-page__footer-band {
+  margin-top: auto;
 }
 
 .hemo-report-header {
-  margin-bottom: 0.75rem;
+  margin-bottom: 2pt;
+}
+
+.hemo-report-header__band {
+  display: grid;
+  grid-template-columns: 1.2fr 1.4fr 1fr;
+  width: 100%;
+  border: var(--hemo-border-width) solid var(--hemo-border);
+}
+
+.hemo-report-header__brand,
+.hemo-report-header__title-block,
+.hemo-report-header__meta {
+  padding: var(--hemo-cell-padding);
+  border-right: var(--hemo-border-width) solid var(--hemo-border);
+}
+
+.hemo-report-header__meta {
+  border-right: 0;
+}
+
+.hemo-report-header__title-block {
   text-align: center;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
 }
 
-.hemo-report-header--left {
-  text-align: left;
-}
-
-.hemo-report-header--right {
+.hemo-report-header__meta {
   text-align: right;
+  font-size: var(--hemo-body-size);
+}
+
+.hemo-report-header__meta-line {
+  margin-bottom: 1pt;
+}
+
+.hemo-report-header__meta-line:last-child {
+  margin-bottom: 0;
 }
 
 .hemo-report-header__logo {
-  max-width: 90px;
-  max-height: 48px;
-  margin-bottom: 0.25rem;
+  max-width: 64px;
+  max-height: 32px;
+  margin-bottom: 1pt;
 }
 
 .hemo-report-header__company-line {
   font-size: var(--hemo-body-size);
-  line-height: 1.3;
+  line-height: 1.1;
 }
 
 .hemo-report-header__title {
-  margin-top: 0.5rem;
-  font-size: var(--hemo-section-title);
+  margin-top: 2pt;
+  font-size: var(--hemo-header-title);
   font-weight: 600;
+  line-height: 1.1;
 }
 
 .hemo-report-header__subtitle,
 .hemo-report-header__code {
-  margin-top: 0.25rem;
+  margin-top: 1pt;
   font-size: var(--hemo-body-size);
 }
 
 .hemo-report-block {
-  margin-bottom: 0.75rem;
+  margin-bottom: 2pt;
 }
 
 .hemo-report-block__title {
   font-size: var(--hemo-section-title);
   font-weight: 600;
-  margin-bottom: 0.35rem;
+  margin: 0 0 2pt;
+}
+
+.hemo-report-block__caption {
+  font-style: italic;
+  font-size: var(--hemo-body-size);
+}
+
+.hemo-section-title-row th {
+  background: var(--hemo-section-header-bg);
+  font-size: var(--hemo-section-title);
+  font-weight: 600;
+  text-align: left;
 }
 
 .hemo-report-block table {
   width: 100%;
   border-collapse: collapse;
+  border-spacing: 0;
+  table-layout: fixed;
 }
 
 .hemo-report-block th,
 .hemo-report-block td {
-  border: 1px solid var(--hemo-border);
-  padding: 4px 6px;
+  border: var(--hemo-border-width) solid var(--hemo-border);
+  padding: var(--hemo-cell-padding);
   vertical-align: top;
+  font-size: var(--hemo-body-size);
+}
+
+.hemo-report-block thead .hemo-section-title-row th {
+  border-bottom: none;
+}
+
+.hemo-report-block thead tr + tr th {
+  border-top: none;
 }
 
 .hemo-report-block th {
-  background: #f0f0f0;
+  background: var(--hemo-section-header-bg);
   font-weight: 600;
+}
+
+.hemo-patient-info__panel {
+  border: var(--hemo-border-width) solid var(--hemo-border);
+}
+
+.hemo-patient-info__title-row {
+  background: var(--hemo-section-header-bg);
+  font-size: var(--hemo-section-title);
+  font-weight: 600;
+  padding: var(--hemo-cell-padding);
+  border-bottom: var(--hemo-border-width) solid var(--hemo-border);
 }
 
 .hemo-patient-info__columns {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 0.5rem;
-  border: 1px solid var(--hemo-border);
-  padding: 8px;
+  gap: 0;
+}
+
+.hemo-patient-info__column {
+  padding: var(--hemo-cell-padding);
+}
+
+.hemo-patient-info__column + .hemo-patient-info__column {
+  border-left: var(--hemo-border-width) solid var(--hemo-border);
 }
 
 .hemo-patient-info__row {
-  margin-bottom: 2px;
+  margin-bottom: 1pt;
+}
+
+.hemo-patient-info__row:last-child {
+  margin-bottom: 0;
 }
 
 .hemo-patient-info__label {
   font-weight: 600;
-  margin-right: 0.25rem;
+}
+
+.hemo-field-grid {
+  display: grid;
+  gap: 0;
+  width: 100%;
+  border: var(--hemo-border-width) solid var(--hemo-border);
+  border-right: 0;
+  border-bottom: 0;
+}
+
+.hemo-field-grid__title-row {
+  grid-column: 1 / -1;
+  background: var(--hemo-section-header-bg);
+  font-size: var(--hemo-section-title);
+  font-weight: 600;
+  padding: var(--hemo-cell-padding);
+  border-right: var(--hemo-border-width) solid var(--hemo-border);
+  border-bottom: var(--hemo-border-width) solid var(--hemo-border);
+}
+
+.hemo-field-grid__cell {
+  border-right: var(--hemo-border-width) solid var(--hemo-border);
+  border-bottom: var(--hemo-border-width) solid var(--hemo-border);
+  padding: var(--hemo-cell-padding);
+  min-width: 0;
+  word-break: break-word;
+}
+
+.hemo-field-grid__label {
+  font-weight: 600;
+}
+
+.hemo-field-grid__value {
+  font-weight: 600;
+}
+
+.hemo-checklist-table__checkbox-col {
+  width: 14pt;
+  text-align: center;
+}
+
+.hemo-checklist-table__box {
+  display: inline-flex;
+  width: 8pt;
+  height: 8pt;
+  border: var(--hemo-border-width) solid var(--hemo-border);
+  align-items: center;
+  justify-content: center;
+  font-family: Arial, sans-serif;
+  font-size: 6.5pt;
+  font-weight: 700;
+  line-height: 1;
+  background: #fff;
 }
 
 .hemo-signature-block__slots {
   display: flex;
   flex-wrap: wrap;
-  gap: 0.75rem;
+  gap: 0.35rem;
 }
 
 .hemo-signature-block__slot {
-  flex: 1 1 120px;
-  min-height: 60px;
-  border: 1px solid var(--hemo-border);
-  padding: 6px;
+  flex: 1 1 100px;
+  min-height: 48px;
+  border: var(--hemo-border-width) solid var(--hemo-border);
+  padding: var(--hemo-cell-padding);
   text-align: center;
 }
 
 .hemo-signature-block__image {
-  max-height: 40px;
+  max-height: 32px;
   max-width: 100%;
 }
 
 .hemo-report-footer {
-  margin-top: 1rem;
-  padding-top: 0.5rem;
-  border-top: 1px solid var(--hemo-border);
+  margin-top: 2pt;
+  padding-top: 2pt;
+  border-top: var(--hemo-border-width) solid var(--hemo-border);
   font-size: 6pt;
+}
+
+.hemo-report-footer__signatures {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  margin-bottom: 2pt;
+}
+
+.hemo-report-footer__signature-slot {
+  flex: 1 1 100px;
+  min-height: 36px;
+  border: var(--hemo-border-width) solid var(--hemo-border);
+  padding: var(--hemo-cell-padding);
+  text-align: center;
+}
+
+.hemo-report-footer__signature-image {
+  max-height: 28px;
+  max-width: 100%;
+}
+
+.hemo-report-footer__signature-role {
+  font-weight: 600;
+  margin-bottom: 1pt;
+}
+
+.hemo-report-footer__bottom {
   display: flex;
   justify-content: space-between;
   align-items: flex-end;
-  gap: 0.5rem;
+  gap: 0.35rem;
+}
+
+.hemo-data-grid__note-cell {
+  white-space: pre-wrap;
+  word-break: break-word;
 }
 
 .hemo-report-viewer__loading,
@@ -182,4 +372,34 @@
 
 .hemo-report-viewer__error {
   color: #b00020;
+}
+
+@media print {
+  .hemo-report-viewer__toolbar {
+    display: none;
+  }
+
+  .hemo-report-viewer {
+    background: #fff;
+  }
+
+  .hemo-report-viewer__canvas {
+    padding: 0;
+    overflow: visible;
+  }
+
+  .hemo-report-viewer__scale-wrap {
+    transform: none !important;
+  }
+
+  .hemo-report-page {
+    box-shadow: none;
+    width: 100%;
+    min-height: auto;
+  }
+
+  @page {
+    size: A4;
+    margin: 0;
+  }
 }

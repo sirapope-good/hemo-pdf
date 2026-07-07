@@ -19,6 +19,13 @@ public sealed class HemosheetLayoutPlanner : IHemosheetLayoutPlanner
         "เวลา", "BP", "HR", "RR", "BFR", "VP", "TMP", "DC", "NSS", "UF Rate", "HDF Vol.", "หมายเหตุ",
     ];
 
+    private readonly HemosheetLayoutProfileRegistry _profileRegistry;
+
+    public HemosheetLayoutPlanner(HemosheetLayoutProfileRegistry profileRegistry)
+    {
+        _profileRegistry = profileRegistry;
+    }
+
     public IReadOnlyList<HemosheetSectionPlan> Plan(HemosheetReportViewModel viewModel)
     {
         var features = viewModel.LayoutContext.Features;
@@ -26,7 +33,6 @@ public sealed class HemosheetLayoutPlanner : IHemosheetLayoutPlanner
         var profile = viewModel.LayoutContext.LayoutProfile;
         var plans = new List<HemosheetSectionPlan>
         {
-            new() { SectionId = HemosheetSectionId.Patient },
             new() { SectionId = HemosheetSectionId.SessionMeta },
             new() { SectionId = HemosheetSectionId.Dehydration },
             new() { SectionId = HemosheetSectionId.Prescription },
@@ -69,6 +75,11 @@ public sealed class HemosheetLayoutPlanner : IHemosheetLayoutPlanner
             plans.Add(new() { SectionId = HemosheetSectionId.AssessmentOther });
         }
 
+        if (HasLabData(viewModel))
+        {
+            plans.Add(new() { SectionId = HemosheetSectionId.Labs });
+        }
+
         plans.Add(new HemosheetSectionPlan
         {
             SectionId = HemosheetSectionId.DialysisRecords,
@@ -103,19 +114,36 @@ public sealed class HemosheetLayoutPlanner : IHemosheetLayoutPlanner
             });
         }
 
-        if (IsEnabled(features, "showNurseInShift"))
-        {
-            plans.Add(new() { SectionId = HemosheetSectionId.NursesInShift });
-        }
-
         if (profile == HemosheetLayoutProfile.Rama
-            && IsEnabled(features, "showConsentBlock"))
+            && IsEnabled(features, "showConsentBlock")
+            && _profileRegistry.IsProfileSection(HemosheetSectionId.Consent, profile))
         {
             plans.Add(new() { SectionId = HemosheetSectionId.Consent });
         }
 
-        plans.Add(new() { SectionId = HemosheetSectionId.Signatures });
         return plans;
+    }
+
+    private static bool HasLabData(HemosheetReportViewModel viewModel)
+    {
+        var labs = viewModel.Labs;
+        return !string.IsNullOrWhiteSpace(labs.Hct)
+            || !string.IsNullOrWhiteSpace(labs.Hb)
+            || !string.IsNullOrWhiteSpace(labs.Plt)
+            || !string.IsNullOrWhiteSpace(labs.Wbc)
+            || !string.IsNullOrWhiteSpace(labs.Na)
+            || !string.IsNullOrWhiteSpace(labs.K)
+            || !string.IsNullOrWhiteSpace(labs.Cl)
+            || !string.IsNullOrWhiteSpace(labs.Co2)
+            || !string.IsNullOrWhiteSpace(labs.Bun)
+            || !string.IsNullOrWhiteSpace(labs.Cr)
+            || !string.IsNullOrWhiteSpace(labs.Alb)
+            || !string.IsNullOrWhiteSpace(labs.Ca)
+            || !string.IsNullOrWhiteSpace(labs.P)
+            || !string.IsNullOrWhiteSpace(labs.Mg)
+            || !string.IsNullOrWhiteSpace(labs.Hbsag)
+            || !string.IsNullOrWhiteSpace(labs.AntiHcv)
+            || !string.IsNullOrWhiteSpace(labs.AntiHiv);
     }
 
     private static bool IsEnabled(IReadOnlyDictionary<string, bool> features, string key) =>

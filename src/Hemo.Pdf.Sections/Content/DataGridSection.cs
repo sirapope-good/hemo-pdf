@@ -20,49 +20,61 @@ public sealed class DataGridSection : IContentSection
             return;
         }
 
-        container.Column(col =>
+        var columnCount = grid.ColumnHeaders.Count;
+        var weights = ResolveColumnWeights(grid, columnCount);
+
+        container.Border(0.5f).Table(table =>
         {
-            col.Spacing(4);
+            table.ColumnsDefinition(columns =>
+            {
+                for (var i = 0; i < columnCount; i++)
+                {
+                    columns.RelativeColumn(weights[i]);
+                }
+            });
 
             if (!string.IsNullOrWhiteSpace(grid.Title))
             {
-                col.Item().Text(grid.Title)
+                table.Cell().ColumnSpan((uint)columnCount)
+                    .Background(PdfSectionMetrics.SectionHeaderBackground)
+                    .Border(0.5f)
+                    .Padding(PdfSectionMetrics.SectionTitlePadding)
+                    .Text(grid.Title)
                     .FontFamily(PdfStyleDefaults.Body.SectionTitleFontFamily)
                     .FontSize(PdfStyleDefaults.Body.SectionTitleFontSize)
                     .SemiBold();
             }
 
-            col.Item().Table(table =>
+            foreach (var header in grid.ColumnHeaders)
             {
-                table.ColumnsDefinition(columns =>
-                {
-                    foreach (var _ in grid.ColumnHeaders)
-                    {
-                        columns.RelativeColumn();
-                    }
-                });
+                table.Cell().Border(0.5f).Background(PdfSectionMetrics.SectionHeaderBackground).Padding(PdfSectionMetrics.CellPadding)
+                    .Text(header)
+                    .FontFamily(PdfStyleDefaults.Body.SectionTitleFontFamily)
+                    .FontSize(PdfStyleDefaults.Body.DataFontSize)
+                    .SemiBold();
+            }
 
-                foreach (var header in grid.ColumnHeaders)
+            foreach (var row in grid.Rows)
+            {
+                for (var i = 0; i < columnCount; i++)
                 {
-                    table.Cell().Border(0.5f).Background("#f0f0f0").Padding(4)
-                        .Text(header)
-                        .FontFamily(PdfStyleDefaults.Body.SectionTitleFontFamily)
-                        .FontSize(PdfStyleDefaults.Body.DataFontSize)
-                        .SemiBold();
+                    var value = i < row.Count ? row[i] : null;
+                    table.Cell().Border(0.5f).Padding(PdfSectionMetrics.CellPadding)
+                        .Text(value ?? "—")
+                        .FontFamily(PdfStyleDefaults.Body.DataFontFamily)
+                        .FontSize(PdfStyleDefaults.Body.DataFontSize);
                 }
-
-                foreach (var row in grid.Rows)
-                {
-                    for (var i = 0; i < grid.ColumnHeaders.Count; i++)
-                    {
-                        var value = i < row.Count ? row[i] : null;
-                        table.Cell().Border(0.5f).Padding(4)
-                            .Text(value ?? "—")
-                            .FontFamily(PdfStyleDefaults.Body.DataFontFamily)
-                            .FontSize(PdfStyleDefaults.Body.DataFontSize);
-                    }
-                }
-            });
+            }
         });
+    }
+
+    private static IReadOnlyList<float> ResolveColumnWeights(DataGridModel grid, int columnCount)
+    {
+        if (grid.ColumnWeights.Count == columnCount)
+        {
+            return grid.ColumnWeights;
+        }
+
+        return Enumerable.Repeat(1f, columnCount).ToList();
     }
 }

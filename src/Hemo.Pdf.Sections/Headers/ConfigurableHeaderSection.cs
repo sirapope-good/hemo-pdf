@@ -30,7 +30,7 @@ public sealed class ConfigurableHeaderSection : IReportHeaderSection
 
             if (!string.IsNullOrWhiteSpace(title))
             {
-                ApplyAlignment(column.Item().PaddingTop(8), branding?.Header.TitleAlignment ?? HeaderAlignment.Center)
+                ApplyAlignment(column.Item().PaddingTop(2), branding?.Header.TitleAlignment ?? HeaderAlignment.Center)
                     .Text(title)
                     .Bold()
                     .FontSize(PdfStyleDefaults.Body.SectionTitleFontSize);
@@ -38,7 +38,7 @@ public sealed class ConfigurableHeaderSection : IReportHeaderSection
 
             if (!string.IsNullOrWhiteSpace(context.Metadata.Subtitle))
             {
-                ApplyAlignment(column.Item().PaddingTop(4), branding?.Header.TitleAlignment ?? HeaderAlignment.Center)
+                ApplyAlignment(column.Item().PaddingTop(1), branding?.Header.TitleAlignment ?? HeaderAlignment.Center)
                     .Text(context.Metadata.Subtitle!)
                     .FontSize(PdfStyleDefaults.Body.BaseFontSize);
             }

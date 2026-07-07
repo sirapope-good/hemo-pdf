@@ -10,18 +10,22 @@ import { ChecklistTableReportBlock, ChecklistCheckboxCell, ChecklistTextCell } f
     <section class="hemo-report-block">
       <table class="hemo-checklist-table">
         <thead>
+          <tr *ngIf="block.title" class="hemo-section-title-row">
+            <th [attr.colspan]="block.columns.length">{{ block.title }}</th>
+          </tr>
           <tr>
-            <th *ngFor="let col of block.columns">{{ col }}</th>
+            <th *ngFor="let col of block.columns; let i = index" [class.hemo-checklist-table__checkbox-col]="i === 0">
+              {{ col }}
+            </th>
           </tr>
         </thead>
         <tbody>
           <tr *ngFor="let row of block.rows">
-            <td *ngFor="let cell of row">
+            <td *ngFor="let cell of row; let i = index" [class.hemo-checklist-table__checkbox-col]="i === 0">
               <ng-container [ngSwitch]="cell.kind">
-                <label *ngSwitchCase="'checkbox'" class="hemo-checklist-table__checkbox">
-                  <input type="checkbox" [checked]="asCheckbox(cell).checked" disabled />
-                  <span>{{ asCheckbox(cell).label }}</span>
-                </label>
+                <span *ngSwitchCase="'checkbox'" class="hemo-checklist-table__box" [class.hemo-checklist-table__box--checked]="asCheckbox(cell).checked">
+                  {{ asCheckbox(cell).checked ? '/' : '' }}
+                </span>
                 <span *ngSwitchDefault>{{ asText(cell).text }}</span>
               </ng-container>
             </td>

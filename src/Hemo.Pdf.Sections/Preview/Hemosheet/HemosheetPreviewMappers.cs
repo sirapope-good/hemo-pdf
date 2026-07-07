@@ -1,6 +1,7 @@
 using Hemo.Pdf.Core.Models.Hemosheet;
 using Hemo.Pdf.Core.Models.Preview;
 using Hemo.Pdf.Sections.Content;
+using Hemo.Pdf.Sections.Preview;
 
 namespace Hemo.Pdf.Sections.Preview.Hemosheet;
 
@@ -15,95 +16,103 @@ public static class HemosheetPreviewMappers
                 [
                     Lv("ชื่อ-สกุล", vm.Patient.Name),
                     Lv("HN", vm.Patient.Hn),
-                    Lv("เพศ", vm.Patient.Sex),
+                    Lv("เลขบัตรประชาชน", vm.Patient.IdentityNumber),
                 ],
                 [
-                    Lv("อายุ", vm.Patient.Age?.ToString()),
                     Lv("วันเกิด", FormatDate(vm.Patient.BirthDate)),
-                    Lv("แพทย์", vm.Patient.DoctorName),
-                ],
-                [
-                    Lv("สิทธิ์", vm.Patient.Coverage),
-                    Lv("แพ้ยา", vm.Patient.Allergies.Count > 0 ? string.Join(", ", vm.Patient.Allergies) : null),
+                    Lv("เพศ", vm.Patient.Sex),
                     Lv("หน่วย", vm.Unit.FullName),
                 ],
             ],
         };
 
-    public static KeyValueTableReportBlock? MapSessionMeta(HemosheetReportViewModel vm)
+    public static FieldGridReportBlock? MapSessionMeta(HemosheetReportViewModel vm)
     {
-        var rows = new List<LabelValue>
+        var fields = new List<FieldGridField>
         {
-            Lv("Ward", vm.Ward),
-            Lv("Bed", vm.Bed),
-            Lv("Treatment No.", vm.TreatmentNo?.ToString()),
-            Lv("เริ่มฟอก", FormatDateTime(vm.CycleStartTime)),
-            Lv("สิ้นสุด", FormatDateTime(vm.CycleEndTime)),
-            Lv("Complete", FormatDateTime(vm.CompletedTime)),
-            Lv("Kt/V", FormatFloat(vm.Ktv)),
-            Lv("URR", FormatFloat(vm.Urr)),
-            Lv("PRR", FormatFloat(vm.Prr)),
-            Lv("Recirc", FormatFloat(vm.Recir)),
+            F("Ward", vm.Ward),
+            F("Bed", vm.Bed),
+            F("Treatment No.", vm.TreatmentNo?.ToString()),
+            F("เริ่มฟอก", FormatDateTime(vm.CycleStartTime)),
+            F("สิ้นสุด", FormatDateTime(vm.CycleEndTime)),
+            F("Complete", FormatDateTime(vm.CompletedTime)),
+            F("Kt/V", FormatFloat(vm.Ktv)),
+            F("URR", FormatFloat(vm.Urr)),
+            F("PRR", FormatFloat(vm.Prr)),
+            F("Recirc", FormatFloat(vm.Recir)),
         };
 
         if (!string.IsNullOrWhiteSpace(vm.CreatorName))
         {
-            rows.Add(Lv("ผู้สร้าง", vm.CreatorName));
+            fields.Add(F("ผู้สร้าง", vm.CreatorName));
         }
 
-        return new KeyValueTableReportBlock { Title = "ข้อมูลรอบฟอก", Rows = rows };
+        return new FieldGridReportBlock
+        {
+            Title = "ข้อมูลรอบฟอก",
+            Columns = 4,
+            Fields = fields,
+        };
     }
 
-    public static KeyValueTableReportBlock? MapDehydration(HemosheetReportViewModel vm) =>
+    public static FieldGridReportBlock? MapDehydration(HemosheetReportViewModel vm) =>
         new()
         {
             Title = "น้ำหนัก / Dehydration",
-            Rows =
+            Columns = 4,
+            Fields =
             [
-                Lv("Pre Weight", FormatFloat(vm.Dehydration.PreWeight)),
-                Lv("Post Weight", FormatFloat(vm.Dehydration.PostWeight)),
-                Lv("Last Post", FormatFloat(vm.Dehydration.LastPostWeight)),
-                Lv("Food Intake", FormatFloat(vm.Dehydration.FoodIntakeWeight)),
-                Lv("Extra Fluid", FormatFloat(vm.Dehydration.ExtraFluid)),
-                Lv("Blood Transfusion", FormatFloat(vm.Dehydration.BloodTransfusion)),
-                Lv("UF Net", FormatFloat(vm.Dehydration.UfNet)),
+                F("Pre Weight", FormatFloat(vm.Dehydration.PreWeight)),
+                F("Post Weight", FormatFloat(vm.Dehydration.PostWeight)),
+                F("Last Post", FormatFloat(vm.Dehydration.LastPostWeight)),
+                F("Food Intake", FormatFloat(vm.Dehydration.FoodIntakeWeight)),
+                F("Extra Fluid", FormatFloat(vm.Dehydration.ExtraFluid)),
+                F("Blood Transfusion", FormatFloat(vm.Dehydration.BloodTransfusion)),
+                F("UF Net", FormatFloat(vm.Dehydration.UfNet)),
             ],
         };
 
-    public static KeyValueTableReportBlock? MapPrescription(HemosheetReportViewModel vm, IReadOnlyDictionary<string, bool> features)
+    public static FieldGridReportBlock? MapPrescription(
+        HemosheetReportViewModel vm,
+        IReadOnlyDictionary<string, bool> features)
     {
-        var rows = new List<LabelValue>
+        var fields = new List<FieldGridField>
         {
-            Lv("Mode", vm.DialysisPrescription.Mode),
-            Lv("Route", vm.DialysisPrescription.BloodAccessRoute),
-            Lv("Dry Weight", FormatFloat(vm.DialysisPrescription.DryWeight)),
+            F("Mode", vm.DialysisPrescription.Mode),
+            F("Route", vm.DialysisPrescription.BloodAccessRoute),
+            F("Dry Weight", FormatFloat(vm.DialysisPrescription.DryWeight)),
         };
 
         if (IsEnabled(features, "showDurationHours"))
         {
-            rows.Add(Lv("Duration (hr)", FormatFloat(vm.DialysisPrescription.DurationHours)));
+            fields.Add(F("Duration (hr)", FormatFloat(vm.DialysisPrescription.DurationHours)));
         }
 
         if (IsEnabled(features, "showDurationMinutes"))
         {
-            rows.Add(Lv("Duration (min)", FormatFloat(vm.DialysisPrescription.DurationMinutes)));
+            fields.Add(F("Duration (min)", FormatFloat(vm.DialysisPrescription.DurationMinutes)));
         }
 
         if (IsEnabled(features, "showHdfColumns"))
         {
-            rows.Add(Lv("HDF Type", vm.DialysisPrescription.HdfType));
+            fields.Add(F("HDF Type", vm.DialysisPrescription.HdfType));
         }
 
         if (IsEnabled(features, "showAcFields"))
         {
-            rows.Add(Lv("Anticoagulant", vm.DialysisPrescription.Anticoagulant));
+            fields.Add(F("Anticoagulant", vm.DialysisPrescription.Anticoagulant));
         }
         else if (IsEnabled(features, "showAcNotUsed"))
         {
-            rows.Add(Lv("Anticoagulant", "ไม่ใช้"));
+            fields.Add(F("Anticoagulant", "ไม่ใช้"));
         }
 
-        return new KeyValueTableReportBlock { Title = "คำสั่งการฟอก", Rows = rows };
+        return new FieldGridReportBlock
+        {
+            Title = "คำสั่งการฟอก",
+            Columns = 4,
+            Fields = fields,
+        };
     }
 
     public static VascularAccessReportBlock? MapVascularAccess(HemosheetReportViewModel vm, string? variant)
@@ -144,15 +153,48 @@ public static class HemosheetPreviewMappers
             return null;
         }
 
-        return new ChecklistTableReportBlock
+        return ChecklistTablePreviewMapper.Map(new ChecklistTableModel
         {
-            Columns = ["รายการ", "หมายเหตุ"],
-            Rows = items.Select(item => (IReadOnlyList<ChecklistCellValue>)
-            [
-                new ChecklistCheckboxCell { Checked = item.Checked, Label = item.Name },
-                new ChecklistTextCell { Text = item.Text ?? "" },
-            ]).ToList(),
+            Title = title,
+            Items = items.Select(i => new ChecklistItem
+            {
+                Label = i.Name ?? "",
+                IsChecked = i.Checked,
+                Notes = i.Text,
+            }).ToList(),
+        });
+    }
+
+    public static KeyValueTableReportBlock? MapLabs(HemosheetReportViewModel vm)
+    {
+        var labs = vm.Labs;
+        var rows = new List<LabelValue>
+        {
+            Lv("Hct", labs.Hct),
+            Lv("Hb", labs.Hb),
+            Lv("Plt", labs.Plt),
+            Lv("WBC", labs.Wbc),
+            Lv("Na", labs.Na),
+            Lv("K", labs.K),
+            Lv("Cl", labs.Cl),
+            Lv("CO2", labs.Co2),
+            Lv("BUN", labs.Bun),
+            Lv("Cr", labs.Cr),
+            Lv("Alb", labs.Alb),
+            Lv("Ca", labs.Ca),
+            Lv("P", labs.P),
+            Lv("Mg", labs.Mg),
+            Lv("HBsAg", labs.Hbsag),
+            Lv("Anti-HCV", labs.AntiHcv),
+            Lv("Anti-HIV", labs.AntiHiv),
         };
+
+        if (rows.All(r => r.Value == "—"))
+        {
+            return null;
+        }
+
+        return new KeyValueTableReportBlock { Title = "Lab", Rows = rows };
     }
 
     public static DataGridReportBlock? MapDialysisRecords(
@@ -172,6 +214,7 @@ public static class HemosheetPreviewMappers
         {
             Title = "บันทึกระหว่างฟอก",
             Columns = columns,
+            ColumnWeights = ResolveDialysisColumnWeights(columns),
             Rows = rows,
         };
     }
@@ -228,12 +271,41 @@ public static class HemosheetPreviewMappers
         };
     }
 
-    public static TextReportBlock? MapNursesInShift(HemosheetReportViewModel vm, IReadOnlyDictionary<string, bool> features)
+    public static string? BuildNursesInShiftLine(
+        HemosheetReportViewModel vm,
+        IReadOnlyDictionary<string, bool> features)
     {
         var text = IsEnabled(features, "showNurseInShiftNonPn")
             ? vm.NursesInShiftNonPn
             : vm.NursesInShift;
 
+        return string.IsNullOrWhiteSpace(text) ? null : text;
+    }
+
+    public static IReadOnlyList<float> ResolveDialysisColumnWeights(IReadOnlyList<string> columns) =>
+        columns.Select(ResolveDialysisColumnWeight).ToList();
+
+    private static float ResolveDialysisColumnWeight(string column) =>
+        column switch
+        {
+            "เวลา" => 1.5f,
+            "BP" => 1f,
+            "HR" => 0.6f,
+            "RR" => 0.6f,
+            "BFR" => 0.7f,
+            "VP" => 0.7f,
+            "TMP" => 0.7f,
+            "DC" => 0.6f,
+            "NSS" => 0.6f,
+            "UF Rate" => 0.8f,
+            "HDF Vol." => 0.8f,
+            "หมายเหตุ" => 3.5f,
+            _ => 1f,
+        };
+
+    public static TextReportBlock? MapNursesInShift(HemosheetReportViewModel vm, IReadOnlyDictionary<string, bool> features)
+    {
+        var text = BuildNursesInShiftLine(vm, features);
         if (string.IsNullOrWhiteSpace(text))
         {
             return null;
@@ -250,6 +322,7 @@ public static class HemosheetPreviewMappers
         vm.IsConsent
             ? new TextReportBlock
             {
+                Title = "ความยินยอม",
                 Content = "ผู้ป่วยให้ความยินยอมในการรักษา",
                 Style = "caption",
             }
@@ -309,6 +382,8 @@ public static class HemosheetPreviewMappers
         features.TryGetValue(key, out var enabled) && enabled;
 
     private static LabelValue Lv(string label, string? value) => new() { Label = label, Value = value ?? "—" };
+
+    private static FieldGridField F(string label, string? value) => new() { Label = label, Value = value ?? "—" };
 
     private static string? FormatDate(DateTime? value) =>
         value?.ToString("yyyy-MM-dd");

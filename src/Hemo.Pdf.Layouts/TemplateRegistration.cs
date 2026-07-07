@@ -1,4 +1,5 @@
 using Hemo.Pdf.Core.Constants;
+using Hemo.Pdf.Layouts.Hemosheet;
 using Hemo.Pdf.Layouts.Generic;
 using Hemo.Pdf.Layouts.Placeholder;
 using Hemo.Pdf.Layouts.Preview.Generic;
@@ -38,6 +39,7 @@ public static class TemplateRegistration
 
         services.AddScoped<Hemosheet.HemosheetLayoutPlanner>();
         services.AddScoped<Hemosheet.IHemosheetLayoutPlanner>(sp => sp.GetRequiredService<Hemosheet.HemosheetLayoutPlanner>());
+        services.AddHemosheetSectionRenderers();
         services.AddScoped<HemosheetDataProvider>();
         services.AddScoped<HemosheetComposer>();
         services.AddScoped<HemosheetReportRenderer>();

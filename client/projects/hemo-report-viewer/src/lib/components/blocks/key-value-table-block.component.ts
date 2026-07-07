@@ -8,12 +8,16 @@ import { KeyValueTableReportBlock } from '../../models/report-document.model';
   imports: [CommonModule],
   template: `
     <section class="hemo-report-block">
-      <h3 *ngIf="block.title" class="hemo-report-block__title">{{ block.title }}</h3>
       <table>
+        <thead *ngIf="block.title">
+          <tr class="hemo-section-title-row">
+            <th colspan="2">{{ block.title }}</th>
+          </tr>
+        </thead>
         <tbody>
           <tr *ngFor="let row of block.rows">
             <th scope="row">{{ row.label }}</th>
-            <td>{{ row.value }}</td>
+            <td>{{ row.value || '—' }}</td>
           </tr>
         </tbody>
       </table>

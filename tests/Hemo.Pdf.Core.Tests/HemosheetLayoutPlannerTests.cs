@@ -5,7 +5,7 @@ namespace Hemo.Pdf.Core.Tests;
 
 public class HemosheetLayoutPlannerTests
 {
-    private readonly HemosheetLayoutPlanner _planner = new();
+    private readonly HemosheetLayoutPlanner _planner = new(new HemosheetLayoutProfileRegistry());
 
     [Fact]
     public void Plan_HdAv_IncludesAvPanel_And_BaseDialysisColumns()
@@ -59,13 +59,66 @@ public class HemosheetLayoutPlannerTests
         Assert.Equal("perm-cath", vascular.Variant);
     }
 
+    [Fact]
+    public void Plan_Rama_IncludesConsent_WhenEnabled()
+    {
+        var vm = CreateViewModel(
+            mode: "HD",
+            catheterType: 0,
+            features: new Dictionary<string, bool>
+            {
+                ["showAvPanel"] = true,
+                ["showConsentBlock"] = true,
+            },
+            layoutProfile: HemosheetLayoutProfile.Rama,
+            isConsent: true);
+
+        var plans = _planner.Plan(vm);
+        Assert.Contains(plans, p => p.SectionId == HemosheetSectionId.Consent);
+    }
+
+    [Fact]
+    public void Plan_Default_ExcludesConsent()
+    {
+        var vm = CreateViewModel(
+            mode: "HD",
+            catheterType: 0,
+            features: new Dictionary<string, bool>
+            {
+                ["showAvPanel"] = true,
+                ["showConsentBlock"] = true,
+            },
+            isConsent: true);
+
+        var plans = _planner.Plan(vm);
+        Assert.DoesNotContain(plans, p => p.SectionId == HemosheetSectionId.Consent);
+    }
+
+    [Fact]
+    public void Plan_IncludesLabs_WhenLabDataPresent()
+    {
+        var vm = CreateViewModel(
+            mode: "HD",
+            catheterType: 0,
+            features: new Dictionary<string, bool> { ["showAvPanel"] = true },
+            labs: new HemosheetLabsViewModel { Hb = "12.5" });
+
+        var plans = _planner.Plan(vm);
+        Assert.Contains(plans, p => p.SectionId == HemosheetSectionId.Labs);
+    }
+
     private static HemosheetReportViewModel CreateViewModel(
         string mode,
         int catheterType,
-        IReadOnlyDictionary<string, bool> features)
+        IReadOnlyDictionary<string, bool> features,
+        HemosheetLayoutProfile layoutProfile = HemosheetLayoutProfile.Default,
+        bool isConsent = false,
+        HemosheetLabsViewModel? labs = null)
     {
         return new HemosheetReportViewModel
         {
+            IsConsent = isConsent,
+            Labs = labs ?? new HemosheetLabsViewModel(),
             DialysisPrescription = new HemosheetPrescriptionViewModel { Mode = mode },
             AvShunt = new HemosheetAvShuntViewModel { CatheterType = catheterType },
             Assessments = new HemosheetAssessmentsViewModel
@@ -74,6 +127,7 @@ public class HemosheetLayoutPlannerTests
             },
             LayoutContext = new HemosheetLayoutContextViewModel
             {
+                LayoutProfile = layoutProfile,
                 DialysisMode = mode,
                 Features = new Dictionary<string, bool>(features),
                 ReportSettings = new HemosheetReportSettingsViewModel

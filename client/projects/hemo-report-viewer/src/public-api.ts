@@ -10,6 +10,7 @@ export * from './lib/components/hemo-report-footer.component';
 export * from './lib/components/blocks/key-value-table-block.component';
 export * from './lib/components/blocks/patient-info-block.component';
 export * from './lib/components/blocks/data-grid-block.component';
+export * from './lib/components/blocks/field-grid-block.component';
 export * from './lib/components/blocks/checklist-table-block.component';
 export * from './lib/components/blocks/vascular-access-block.component';
 export * from './lib/components/blocks/signature-block.component';

@@ -52,6 +52,7 @@ export interface SignatureSlot {
 export type ReportBlock =
   | PatientInfoReportBlock
   | KeyValueTableReportBlock
+  | FieldGridReportBlock
   | DataGridReportBlock
   | ChecklistTableReportBlock
   | VascularAccessReportBlock
@@ -71,15 +72,30 @@ export interface KeyValueTableReportBlock {
   rows: LabelValue[];
 }
 
+export interface FieldGridReportBlock {
+  type: 'field-grid';
+  title?: string;
+  columns: number;
+  fields: FieldGridField[];
+}
+
+export interface FieldGridField {
+  label: string;
+  value: string;
+  columnSpan?: number;
+}
+
 export interface DataGridReportBlock {
   type: 'data-grid';
   title?: string;
   columns: string[];
+  columnWeights?: number[];
   rows: (string | boolean)[][];
 }
 
 export interface ChecklistTableReportBlock {
   type: 'checklist-table';
+  title?: string;
   columns: string[];
   rows: ChecklistCellValue[][];
 }
@@ -111,6 +127,7 @@ export interface SignatureReportBlock {
 
 export interface TextReportBlock {
   type: 'text';
+  title?: string;
   content: string;
   style?: 'title' | 'body' | 'caption' | string;
 }

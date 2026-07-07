@@ -1,4 +1,5 @@
 using Hemo.Pdf.Core.Abstractions;
+using Hemo.Pdf.Core.Constants;
 using Hemo.Pdf.Core.Context;
 using Hemo.Pdf.Rendering;
 using Hemo.Pdf.Sections.Abstractions;
@@ -26,6 +27,11 @@ public abstract class BaseReportComposer<TViewModel> : ILayoutComposer
 
         return new QuestLayout
         {
+            MarginMillimeters = ReportPageLayout.MarginHorizontalMm,
+            MarginTop = ReportPageLayout.MarginTopMm,
+            MarginBottom = ReportPageLayout.MarginBottomMm,
+            MarginLeft = ReportPageLayout.MarginHorizontalMm,
+            MarginRight = ReportPageLayout.MarginHorizontalMm,
             Header = c => _headerResolver.Resolve(context).Compose(c, viewModel, context),
             Content = c => ComposeContent(c, viewModel, context),
             Footer = c => _footerResolver.Resolve(context).Compose(c, viewModel, context),

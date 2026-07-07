@@ -21,6 +21,7 @@ public static class DataGridPreviewMapper
         {
             Title = grid.Title,
             Columns = grid.ColumnHeaders,
+            ColumnWeights = grid.ColumnWeights,
             Rows = grid.Rows
                 .Select(row => row
                     .Select(value => value ?? "—")

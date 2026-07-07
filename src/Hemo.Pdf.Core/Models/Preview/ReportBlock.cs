@@ -8,6 +8,7 @@ namespace Hemo.Pdf.Core.Models.Preview;
 [JsonDerivedType(typeof(DataGridReportBlock), "data-grid")]
 [JsonDerivedType(typeof(ChecklistTableReportBlock), "checklist-table")]
 [JsonDerivedType(typeof(VascularAccessReportBlock), "vascular-access")]
+[JsonDerivedType(typeof(FieldGridReportBlock), "field-grid")]
 [JsonDerivedType(typeof(SignatureReportBlock), "signature")]
 [JsonDerivedType(typeof(TextReportBlock), "text")]
 public abstract class ReportBlock;
@@ -28,11 +29,13 @@ public sealed class DataGridReportBlock : ReportBlock
 {
     public string? Title { get; init; }
     public IReadOnlyList<string> Columns { get; init; } = [];
+    public IReadOnlyList<float> ColumnWeights { get; init; } = [];
     public IReadOnlyList<IReadOnlyList<string>> Rows { get; init; } = [];
 }
 
 public sealed class ChecklistTableReportBlock : ReportBlock
 {
+    public string? Title { get; init; }
     public IReadOnlyList<string> Columns { get; init; } = [];
     public IReadOnlyList<IReadOnlyList<ChecklistCellValue>> Rows { get; init; } = [];
 }
@@ -60,8 +63,23 @@ public sealed class SignatureReportBlock : ReportBlock
 
 public sealed class TextReportBlock : ReportBlock
 {
+    public string? Title { get; init; }
     public string Content { get; init; } = "";
     public string Style { get; init; } = "body";
+}
+
+public sealed class FieldGridReportBlock : ReportBlock
+{
+    public string? Title { get; init; }
+    public int Columns { get; init; } = 2;
+    public IReadOnlyList<FieldGridField> Fields { get; init; } = [];
+}
+
+public sealed class FieldGridField
+{
+    public string Label { get; init; } = "";
+    public string? Value { get; init; }
+    public int ColumnSpan { get; init; } = 1;
 }
 
 public sealed class VascularAccessReportBlock : ReportBlock
