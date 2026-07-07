@@ -2,6 +2,13 @@
   "name": "@hemo/pdf-client",
   "version": "0.1.0",
   "description": "Angular client for Hemo-PDF standalone API",
+  "main": "src/public-api.ts",
+  "module": "src/public-api.ts",
+  "types": "src/public-api.ts",
+  "exports": {
+    ".": "./src/public-api.ts",
+    "./*": "./*"
+  },
   "peerDependencies": {
     "@angular/common": ">=15.0.0",
     "@angular/core": ">=15.0.0",

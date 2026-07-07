@@ -27,11 +27,11 @@ todos:
     content: "Follow-up: mock DTO JSON ครบ 12 template ใน assets/mock-data/"
     status: pending
   - id: followup-hemopro
-    content: "Follow-up: เชื่อม @hemo/pdf-client เข้า Hemo-frontend จริง + JWT production"
-    status: pending
+    content: "Phase 7: Hemopro Hemosheet integration — ดู hemopro_hemosheet_integration plan"
+    status: in_progress
   - id: phase6-report-preview
     content: "Phase 6: ReportDocument schema + POST /api/report/preview + @hemo/report-viewer (แทน Telerik tr-viewer)"
-    status: pending
+    status: completed
 isProject: false
 ---
 
@@ -49,10 +49,11 @@ isProject: false
 | Phase 3 | ✅ เสร็จ | templates 02–06 ผ่าน Generic renderer |
 | Phase 4 | ✅ เสร็จ | templates 07–12 + branding guideline |
 | Phase 5 | ✅ เสร็จ (core) | Docker/CI/CORS/rate limit; JWT จริงรอ Hemopro |
-| Phase 6 | ⏳ วางแผนแล้ว | ReportDocument + `@hemo/report-viewer` — ดู [02-FEATURE-PREVIEW-PDF.md](D:\GoodRepo\Hemo-PDF\02-FEATURE-PREVIEW-PDF.md) |
-| Follow-up | ⏳ ค้าง | ฟอนต์ Sarabun, mock DTO ครบ 12, merge เข้า Hemo-frontend |
+| Phase 6 | ✅ เสร็จ | ReportDocument + `@hemo/report-viewer` + demo — ดู [02-FEATURE-PREVIEW-PDF.md](D:\GoodRepo\Hemo-PDF\02-FEATURE-PREVIEW-PDF.md) |
+| Phase 7 | 🔄 ดำเนินการ | Hemopro Hemosheet integration — layout context + report-data API |
+| Follow-up | ⏳ ค้าง | ฟอนต์ Sarabun, mock DTO ครบ 12 |
 
-**Tests:** `dotnet test Hemo.Pdf.sln` — 15 tests ผ่าน  
+**Tests:** `dotnet test Hemo.Pdf.sln` — 24 tests ผ่าน  
 **Commits:** แยก 12 commits ตาม layer (tooling → core → … → docs)
 
 ### แก้ไขหลัง implement (dev UX)
@@ -283,22 +284,27 @@ Hemo-PDF/
 
 ---
 
-## Phase 6 — Report Preview (`@hemo/report-viewer`) ⏳
+## Phase 6 — Report Preview (`@hemo/report-viewer`) ✅
 
-> เอกสารเต็ม: [02-FEATURE-PREVIEW-PDF.md](D:\GoodRepo\Hemo-PDF\02-FEATURE-PREVIEW-PDF.md)  
-> แทนที่ Telerik `tr-viewer` ด้วย **ReportDocument JSON + HTML/CSS**
+> เอกสารเต็ม: [02-FEATURE-PREVIEW-PDF.md](D:\GoodRepo\Hemo-PDF\02-FEATURE-PREVIEW-PDF.md)
 
-### เป้าหมาย
-- Preview บนจอเร็ว (JSON แทน generate PDF ทุกครั้ง)
-- Toolbar: zoom, หน้า, print, download
-- Block vocabulary ตรงกับ `Hemo.Pdf.Sections`
+- [x] `ReportDocument` schema ใน `Hemo.Pdf.Core`
+- [x] `POST /api/report/preview` + `ReportPreviewService`
+- [x] `GenericReportDocumentComposer` (template 02–12)
+- [x] `@hemo/report-viewer` Angular library
+- [ ] Migrate `embedded-hemosheet-report` / `reports.page` จาก Telerik → **Phase 7**
 
-### Checklist
-- [ ] `ReportDocument` schema ใน `Hemo.Pdf.Core`
-- [ ] `POST /api/report/preview` + `ReportPreviewService`
-- [ ] `GenericReportDocumentComposer` (template 02–12)
-- [ ] `@hemo/report-viewer` Angular library
-- [ ] Migrate `embedded-hemosheet-report` / `reports.page` จาก Telerik
+---
+
+## Phase 7 — Hemopro Hemosheet Integration 🔄
+
+> แผนเต็ม: `.cursor/plans/hemopro_hemosheet_integration_d1c358da.plan.md`
+
+- [ ] `HemosheetReportDto` + `HemosheetLayoutContext` (Web.Api)
+- [ ] `HemosheetLayoutResolver` + unit tests
+- [ ] `GET /api/Hemodialysis/records/{id}/report-data`
+- [ ] `HemosheetReportDocumentComposer` + layout planner (Hemo-PDF)
+- [ ] Frontend: `embedded-hemosheet-report` + feature flag
 
 ---
 

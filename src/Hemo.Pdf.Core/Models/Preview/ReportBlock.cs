@@ -7,6 +7,7 @@ namespace Hemo.Pdf.Core.Models.Preview;
 [JsonDerivedType(typeof(KeyValueTableReportBlock), "key-value-table")]
 [JsonDerivedType(typeof(DataGridReportBlock), "data-grid")]
 [JsonDerivedType(typeof(ChecklistTableReportBlock), "checklist-table")]
+[JsonDerivedType(typeof(VascularAccessReportBlock), "vascular-access")]
 [JsonDerivedType(typeof(SignatureReportBlock), "signature")]
 [JsonDerivedType(typeof(TextReportBlock), "text")]
 public abstract class ReportBlock;
@@ -61,4 +62,11 @@ public sealed class TextReportBlock : ReportBlock
 {
     public string Content { get; init; } = "";
     public string Style { get; init; } = "body";
+}
+
+public sealed class VascularAccessReportBlock : ReportBlock
+{
+    public string? Title { get; init; }
+    public string Variant { get; init; } = "av-fistula";
+    public IReadOnlyList<LabelValue> Rows { get; init; } = [];
 }

@@ -3,7 +3,9 @@ using Hemo.Pdf.Layouts.Generic;
 using Hemo.Pdf.Layouts.Placeholder;
 using Hemo.Pdf.Layouts.Preview.Generic;
 using Hemo.Pdf.Layouts.Preview.Template01_DialysisSession;
+using Hemo.Pdf.Layouts.Preview.Template04_Hemosheet;
 using Hemo.Pdf.Layouts.Template01_DialysisSession;
+using Hemo.Pdf.Layouts.Template04_Hemosheet;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace Hemo.Pdf.Layouts;
@@ -33,6 +35,14 @@ public static class TemplateRegistration
         services.AddScoped<GenericReportPreviewRenderer>();
         services.AddScoped<DialysisSessionReportDocumentComposer>();
         services.AddScoped<DialysisSessionReportPreviewRenderer>();
+
+        services.AddScoped<Hemosheet.HemosheetLayoutPlanner>();
+        services.AddScoped<Hemosheet.IHemosheetLayoutPlanner>(sp => sp.GetRequiredService<Hemosheet.HemosheetLayoutPlanner>());
+        services.AddScoped<HemosheetDataProvider>();
+        services.AddScoped<HemosheetComposer>();
+        services.AddScoped<HemosheetReportRenderer>();
+        services.AddScoped<HemosheetReportDocumentComposer>();
+        services.AddScoped<HemosheetReportPreviewRenderer>();
 
         return services;
     }

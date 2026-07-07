@@ -1,3 +1,4 @@
+using Hemo.Pdf.Application.Mock;
 using Hemo.Pdf.Core.Abstractions;
 using Hemo.Pdf.Core.Constants;
 using Hemo.Pdf.Core.Context;
@@ -54,6 +55,10 @@ public sealed class PdfGenerationService : IPdfGenerationService
     {
         if (request.Signatures is not null)
             return request.Signatures;
+
+        var fromData = HemoproSignatureStore.TryResolveFromData(request.ReportTemplateId, request.Data);
+        if (fromData is not null)
+            return fromData;
 
         if (string.IsNullOrWhiteSpace(request.EntityId))
             return null;

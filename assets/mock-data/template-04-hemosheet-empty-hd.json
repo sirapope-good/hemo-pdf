@@ -1,0 +1,28 @@
+{
+  "id": "00000000-0000-0000-0000-000000000005",
+  "patient": { "name": "", "hn": "", "allergies": [] },
+  "unit": { "id": 1, "fullName": "หน่วยไตเทียม" },
+  "dehydration": {},
+  "dialysisPrescription": { "mode": "HD" },
+  "avShunt": { "catheterType": 0 },
+  "assessments": { "pre": [], "re": [], "post": [], "other": [] },
+  "dialysisRecords": [],
+  "nurseRecords": [],
+  "doctorRecords": [],
+  "medicineRecords": [],
+  "progressNotes": [],
+  "layoutContext": {
+    "layoutProfile": "Default",
+    "dialysisMode": "HD",
+    "vascularAccess": "AvFistula",
+    "reportSettings": {
+      "fixedLines": { "dialysis": 8, "nurse": 4, "medicine": 4, "doctor": 2, "progressNote": 2 }
+    },
+    "features": {
+      "showHdfColumns": false,
+      "showAvPanel": true,
+      "showCathPanel": false,
+      "showAcFields": true
+    }
+  }
+}

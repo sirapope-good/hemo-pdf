@@ -17,5 +17,6 @@
   <ItemGroup>
     <ProjectReference Include="..\..\src\Hemo.Pdf.Core\Hemo.Pdf.Core.csproj" />
     <ProjectReference Include="..\..\src\Hemo.Pdf.Application\Hemo.Pdf.Application.csproj" />
+    <ProjectReference Include="..\..\src\Hemo.Pdf.Layouts\Hemo.Pdf.Layouts.csproj" />
   </ItemGroup>
 </Project>

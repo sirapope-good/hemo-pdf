@@ -275,7 +275,8 @@ DTO + template ────┤
 - [ ] ฟอนต์ไทย (Sarabun) — ไฟล์ยังไม่ copy ลง `assets/fonts/sarabun/`
 - [x] `CancellationToken` support + max PDF 50MB
 - [x] Integration tests สำหรับ PDF endpoint
-- [ ] **Report Preview** — `ReportDocument` schema + `POST /api/report/preview` + `@hemo/report-viewer` (Phase 6)
+- [x] **Report Preview** — `ReportDocument` schema + `POST /api/report/preview` + `@hemo/report-viewer` (Phase 6 ✅)
+- [ ] **Hemopro integration** — Hemosheet report-data API + dedicated layout (Phase 7 🔄)
 
 ### 3. สิ่งที่ปรับจาก NSS / เพิ่มเติมใน Hemo-PDF
 

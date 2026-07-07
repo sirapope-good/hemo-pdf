@@ -1,0 +1,43 @@
+{
+  "id": "00000000-0000-0000-0000-000000000003",
+  "patient": {
+    "name": "มานี มีตา",
+    "hn": "HN-009999",
+    "sex": "Female",
+    "doctorName": "นพ. สมศักดิ์"
+  },
+  "unit": { "id": 2, "fullName": "หน่วยไตเทียม B" },
+  "dehydration": { "preWeight": 70.0, "postWeight": 68.0, "ufNet": 2.0 },
+  "dialysisPrescription": {
+    "mode": "HD",
+    "bloodAccessRoute": "Perm Cath",
+    "anticoagulant": "Heparin"
+  },
+  "avShunt": {
+    "catheterType": 3,
+    "shuntSite": "IJ",
+    "catheterLength": 19.5
+  },
+  "assessments": { "pre": [{ "name": "fever", "checked": false }], "re": [], "post": [], "other": [] },
+  "dialysisRecords": [
+    { "timestamp": "2026-07-06T08:00:00Z", "bps": 120, "bpd": 75, "bfr": 250 }
+  ],
+  "nurseRecords": [],
+  "doctorRecords": [],
+  "medicineRecords": [],
+  "progressNotes": [],
+  "layoutContext": {
+    "layoutProfile": "Default",
+    "dialysisMode": "HD",
+    "vascularAccess": "PermCath",
+    "reportSettings": {
+      "fixedLines": { "dialysis": 8, "nurse": 4, "medicine": 4, "doctor": 2, "progressNote": 2 }
+    },
+    "features": {
+      "showHdfColumns": false,
+      "showAvPanel": false,
+      "showCathPanel": true,
+      "showAcFields": true
+    }
+  }
+}

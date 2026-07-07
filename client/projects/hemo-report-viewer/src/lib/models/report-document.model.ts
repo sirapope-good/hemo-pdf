@@ -53,6 +53,8 @@ export type ReportBlock =
   | PatientInfoReportBlock
   | KeyValueTableReportBlock
   | DataGridReportBlock
+  | ChecklistTableReportBlock
+  | VascularAccessReportBlock
   | SignatureReportBlock
   | TextReportBlock
   | { type: string; [key: string]: unknown };
@@ -74,6 +76,32 @@ export interface DataGridReportBlock {
   title?: string;
   columns: string[];
   rows: (string | boolean)[][];
+}
+
+export interface ChecklistTableReportBlock {
+  type: 'checklist-table';
+  columns: string[];
+  rows: ChecklistCellValue[][];
+}
+
+export type ChecklistCellValue = ChecklistTextCell | ChecklistCheckboxCell;
+
+export interface ChecklistTextCell {
+  kind: 'text';
+  text: string;
+}
+
+export interface ChecklistCheckboxCell {
+  kind: 'checkbox';
+  checked: boolean;
+  label?: string;
+}
+
+export interface VascularAccessReportBlock {
+  type: 'vascular-access';
+  title?: string;
+  variant: 'av-fistula' | 'perm-cath' | string;
+  rows: LabelValue[];
 }
 
 export interface SignatureReportBlock {

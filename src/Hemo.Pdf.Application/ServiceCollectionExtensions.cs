@@ -45,7 +45,7 @@ public static class ServiceCollectionExtensions
         }
         else
         {
-            services.AddScoped<ISignatureStore, RequestSignatureStore>();
+            services.AddScoped<ISignatureStore, HemoproSignatureStore>();
         }
 
         services.AddScoped<ConfigurableHeaderSection>();

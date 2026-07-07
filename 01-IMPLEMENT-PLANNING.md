@@ -745,27 +745,35 @@ HemodialysisPro implement `DbBrandingStore` — Hemo-PDF ไม่ผูกก�
 - [ ] รองรับ Level 3 header override (ถ้ามีลูกค้าจริงที่ต้องการ)
 - [ ] `DbBrandingStore` guideline สำหรับ host
 
-### Phase 5 — Production Hardening
+### Phase 5 — Production Hardening ✅
 
-- [ ] Rate limiting (จาก NSS: `PdfGeneration` policy)
-- [ ] `CancellationToken` + max PDF size 50MB
-- [ ] JWT validation ร่วมกับ Hemopro (แทน MockAuth)
-- [ ] CORS สำหรับ Angular origin
-- [ ] Caching (optional): cache PDF ตาม `(templateId, entityId, brandingVersion)`
-- [ ] Health check `/health` + Docker compose แยกจาก Hemopro
+- [x] Rate limiting (`PdfGeneration` policy)
+- [x] `CancellationToken` + max PDF size 50MB
+- [ ] JWT validation ร่วมกับ Hemopro (แทน MockAuth) — Phase 7
+- [x] CORS สำหรับ Angular origin
+- [x] Health check `/health` + Docker compose
 
-### Phase 6 — Report Preview (`@hemo/report-viewer`) ⏳
+### Phase 6 — Report Preview (`@hemo/report-viewer`) ✅
 
 > รายละเอียดเต็ม: [02-FEATURE-PREVIEW-PDF.md](./02-FEATURE-PREVIEW-PDF.md)
 
-- [ ] `ReportDocument` schema + block types ใน `Hemo.Pdf.Core`
-- [ ] `IReportPreviewService` + `POST /api/report/preview`
-- [ ] `IReportDocumentComposer` คู่กับ `ILayoutComposer` (เริ่ม Generic 02–12)
-- [ ] `@hemo/report-viewer` — viewer + toolbar + block components
-- [ ] CSS mirror `PdfStyleDefaults`; Ionic preview modal (90dvh)
-- [ ] Hemopro: แทน Telerik `tr-viewer` (เริ่ม `embedded-hemosheet-report`)
+- [x] `ReportDocument` schema + block types ใน `Hemo.Pdf.Core`
+- [x] `IReportPreviewService` + `POST /api/report/preview`
+- [x] `IReportDocumentComposer` + Generic / DialysisSession composers
+- [x] `@hemo/report-viewer` — viewer + toolbar + block components
+- [x] Demo page + integration tests (24 tests)
+- [ ] Hemopro: แทน Telerik `tr-viewer` → **Phase 7**
 
-**Deliverable**: preview บนจอจาก JSON โดยไม่พึ่ง Telerik; print/download ยังใช้ QuestPDF
+### Phase 7 — Hemopro Hemosheet Integration 🔄
+
+> แผน: `.cursor/plans/hemopro_hemosheet_integration_d1c358da.plan.md`
+
+- [ ] `HemosheetReportDto` + `HemosheetLayoutContext` + layout resolver
+- [ ] `GET /api/Hemodialysis/records/{id}/report-data` (Web.Api)
+- [ ] `HemosheetReportDocumentComposer` dedicated layout (Hemo-PDF)
+- [ ] Link `@hemo/report-viewer` + migrate `embedded-hemosheet-report`
+
+**Deliverable**: preview/PDF hemosheet จากข้อมูลจริง + dynamic layout (HD/HDF, AV/perm-cath, tenant profile)
 
 ---
 

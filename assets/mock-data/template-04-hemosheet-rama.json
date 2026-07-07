@@ -1,0 +1,41 @@
+{
+  "id": "00000000-0000-0000-0000-000000000004",
+  "isConsent": true,
+  "creatorName": "RN Admin",
+  "doctorName": "นพ. รามา",
+  "patient": { "name": "ผู้ป่วย RAMA", "hn": "RAMA-001" },
+  "unit": { "id": 1, "fullName": "RAMA Nephro" },
+  "dehydration": { "preWeight": 65.0, "postWeight": 63.0 },
+  "dialysisPrescription": {
+    "mode": "HD",
+    "bloodAccessRoute": "AV Fistula",
+    "durationHours": 4,
+    "durationMinutes": 30,
+    "hdfType": null,
+    "anticoagulant": "Heparin"
+  },
+  "avShunt": { "catheterType": 0, "shuntSite": "L arm", "aNeedleSize": 16, "vNeedleSize": 16 },
+  "assessments": { "pre": [], "re": [], "post": [], "other": [] },
+  "dialysisRecords": [],
+  "nurseRecords": [],
+  "doctorRecords": [],
+  "medicineRecords": [],
+  "progressNotes": [],
+  "layoutContext": {
+    "layoutProfile": "Rama",
+    "dialysisMode": "HD",
+    "vascularAccess": "AvFistula",
+    "reportSettings": {
+      "hemosheetTemplate": "Hemosheet-RAMA.trdp",
+      "fixedLines": { "dialysis": 8, "nurse": 4, "medicine": 4, "doctor": 2, "progressNote": 2 }
+    },
+    "features": {
+      "showHdfColumns": false,
+      "showAvPanel": true,
+      "showConsentBlock": true,
+      "showCreatorName": true,
+      "showDurationHours": true,
+      "showDurationMinutes": true
+    }
+  }
+}

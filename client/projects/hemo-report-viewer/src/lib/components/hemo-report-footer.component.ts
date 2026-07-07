@@ -1,6 +1,6 @@
 import { Component, Input } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { ReportFooterBlock } from '../../models/report-document.model';
+import { ReportFooterBlock } from '../models/report-document.model';
 
 @Component({
   selector: 'hemo-report-footer',

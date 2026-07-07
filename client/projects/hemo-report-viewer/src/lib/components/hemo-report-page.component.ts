@@ -1,11 +1,13 @@
 import { Component, Input } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { ReportDocument, ReportBlock, PatientInfoReportBlock, KeyValueTableReportBlock, DataGridReportBlock, SignatureReportBlock, TextReportBlock } from '../models/report-document.model';
+import { ReportDocument, ReportBlock, PatientInfoReportBlock, KeyValueTableReportBlock, DataGridReportBlock, ChecklistTableReportBlock, VascularAccessReportBlock, SignatureReportBlock, TextReportBlock } from '../models/report-document.model';
 import { HemoReportHeaderComponent } from './hemo-report-header.component';
 import { HemoReportFooterComponent } from './hemo-report-footer.component';
 import { KeyValueTableBlockComponent } from './blocks/key-value-table-block.component';
 import { PatientInfoBlockComponent } from './blocks/patient-info-block.component';
 import { DataGridBlockComponent } from './blocks/data-grid-block.component';
+import { ChecklistTableBlockComponent } from './blocks/checklist-table-block.component';
+import { VascularAccessBlockComponent } from './blocks/vascular-access-block.component';
 import { SignatureBlockComponent } from './blocks/signature-block.component';
 
 @Component({
@@ -18,6 +20,8 @@ import { SignatureBlockComponent } from './blocks/signature-block.component';
     KeyValueTableBlockComponent,
     PatientInfoBlockComponent,
     DataGridBlockComponent,
+    ChecklistTableBlockComponent,
+    VascularAccessBlockComponent,
     SignatureBlockComponent,
   ],
   template: `
@@ -27,6 +31,8 @@ import { SignatureBlockComponent } from './blocks/signature-block.component';
         <hemo-patient-info-block *ngIf="block.type === 'patient-info'" [block]="asPatientInfo(block)" />
         <hemo-key-value-table-block *ngIf="block.type === 'key-value-table'" [block]="asKeyValue(block)" />
         <hemo-data-grid-block *ngIf="block.type === 'data-grid'" [block]="asDataGrid(block)" />
+        <hemo-checklist-table-block *ngIf="block.type === 'checklist-table'" [block]="asChecklist(block)" />
+        <hemo-vascular-access-block *ngIf="block.type === 'vascular-access'" [block]="asVascularAccess(block)" />
         <hemo-signature-block *ngIf="block.type === 'signature'" [block]="asSignature(block)" />
         <section *ngIf="block.type === 'text'" class="hemo-report-block">
           <p>{{ asText(block).content }}</p>
@@ -54,6 +60,14 @@ export class HemoReportPageComponent {
 
   asDataGrid(block: ReportBlock): DataGridReportBlock {
     return block as DataGridReportBlock;
+  }
+
+  asChecklist(block: ReportBlock): ChecklistTableReportBlock {
+    return block as ChecklistTableReportBlock;
+  }
+
+  asVascularAccess(block: ReportBlock): VascularAccessReportBlock {
+    return block as VascularAccessReportBlock;
   }
 
   asSignature(block: ReportBlock): SignatureReportBlock {

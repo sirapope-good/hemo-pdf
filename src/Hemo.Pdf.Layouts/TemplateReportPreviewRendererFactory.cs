@@ -1,6 +1,7 @@
 using Hemo.Pdf.Core.Constants;
 using Hemo.Pdf.Layouts.Preview.Generic;
 using Hemo.Pdf.Layouts.Preview.Template01_DialysisSession;
+using Hemo.Pdf.Layouts.Preview.Template04_Hemosheet;
 
 namespace Hemo.Pdf.Layouts;
 
@@ -10,6 +11,7 @@ public static class TemplateReportPreviewRendererFactory
         new Dictionary<string, Type>(StringComparer.OrdinalIgnoreCase)
         {
             [ReportTemplates.DialysisSession] = typeof(DialysisSessionReportPreviewRenderer),
+            [ReportTemplates.Hemosheet] = typeof(HemosheetReportPreviewRenderer),
         };
 
     public static Type ResolveRendererType(string reportTemplateId)

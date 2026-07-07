@@ -1,0 +1,22 @@
+{
+  "tenantCode": "local",
+  "customerId": "hemopro-local",
+  "displayName": "Hemodialysis Pro (Local)",
+  "header": {
+    "companyLines": [
+      "Hemodialysis Pro",
+      "Local Development Tenant"
+    ],
+    "titleAlignment": "center",
+    "reportCodePrefix": "LOCAL",
+    "showPageNumber": true
+  },
+  "footer": {
+    "disclaimerText": "เอกสารนี้จัดทำโดยระบบ HemodialysisPro",
+    "showSignatures": true
+  },
+  "style": {
+    "primaryFontFamily": "Sarabun",
+    "accentColor": "#1a5276"
+  }
+}

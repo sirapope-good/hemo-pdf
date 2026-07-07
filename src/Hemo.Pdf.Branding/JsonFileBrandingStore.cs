@@ -8,6 +8,15 @@ namespace Hemo.Pdf.Branding;
 
 public sealed class JsonFileBrandingStore : IBrandingStore
 {
+    /// <summary>
+    /// Dev hosts (secureDomain) are not Hemopro tenant codes — map to bootstrap tenant branding.
+    /// </summary>
+    private static readonly Dictionary<string, string> TenantAliases = new(StringComparer.OrdinalIgnoreCase)
+    {
+        ["localhost"] = "local",
+        ["127.0.0.1"] = "local",
+    };
+
     private static readonly JsonSerializerOptions JsonOptions = new()
     {
         PropertyNameCaseInsensitive = true,
@@ -28,6 +37,11 @@ public sealed class JsonFileBrandingStore : IBrandingStore
     public async Task<CustomerBrandingProfile> GetByTenantCodeAsync(string tenantCode, CancellationToken ct)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(tenantCode);
+
+        if (TenantAliases.TryGetValue(tenantCode.Trim(), out var alias))
+        {
+            tenantCode = alias;
+        }
 
         var filePath = Path.Combine(_rootPath, $"{tenantCode}.json");
         if (!File.Exists(filePath))

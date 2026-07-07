@@ -1,3 +1,4 @@
+using Hemo.Pdf.Application.Mock;
 using Hemo.Pdf.Core.Abstractions;
 using Hemo.Pdf.Core.Constants;
 using Hemo.Pdf.Core.Exceptions;
@@ -19,7 +20,8 @@ public sealed class SignatureRequiredGuard : IPdfGenerationGuard
         if (!ReportTemplates.RequiresSignature(request.ReportTemplateId))
             return;
 
-        var signatures = request.Signatures;
+        var signatures = request.Signatures
+            ?? HemoproSignatureStore.TryResolveFromData(request.ReportTemplateId, request.Data);
         if (signatures is null && !string.IsNullOrWhiteSpace(request.EntityId))
         {
             signatures = await _signatureStore.GetAsync(

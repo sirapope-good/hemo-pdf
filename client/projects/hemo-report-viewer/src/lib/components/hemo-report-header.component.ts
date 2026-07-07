@@ -1,6 +1,6 @@
 import { Component, Input } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { ReportBranding, ReportHeaderBlock } from '../../models/report-document.model';
+import { ReportBranding, ReportHeaderBlock } from '../models/report-document.model';
 
 @Component({
   selector: 'hemo-report-header',

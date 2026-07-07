@@ -207,6 +207,45 @@ public class PdfApiIntegrationTests : IClassFixture<PdfApiWebApplicationFactory>
         Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
     }
 
+    [Theory]
+    [InlineData("template-04-hemosheet-hd-av.json", "vascular-access")]
+    [InlineData("template-04-hemosheet-hdf-av.json", "data-grid")]
+    [InlineData("template-04-hemosheet-hd-perm.json", "vascular-access")]
+    public async Task Preview_HemosheetLayoutVariants_ContainExpectedBlocks(string mockFile, string expectedBlockType)
+    {
+        var mockPath = Path.GetFullPath(Path.Combine(
+            AppContext.BaseDirectory,
+            "..", "..", "..", "..", "..",
+            "assets", "mock-data", mockFile));
+
+        var jsonText = await File.ReadAllTextAsync(mockPath);
+        using var data = JsonDocument.Parse(jsonText);
+
+        var response = await PostPreviewAsync(
+            "tenant-demo-a",
+            "template-04-hemosheet",
+            new
+            {
+                reportTemplateId = "template-04-hemosheet",
+                tenantCode = "tenant-demo-a",
+                entityId = "hemosheet-test",
+                data = data.RootElement,
+                signatures = new
+                {
+                    isFullySigned = true,
+                    signatures = new[] { new { signerName = "Nurse" } },
+                },
+            });
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+
+        var responseJson = await response.Content.ReadAsStringAsync();
+        using var document = JsonDocument.Parse(responseJson);
+        var blocks = document.RootElement.GetProperty("pages")[0].GetProperty("blocks");
+        var types = blocks.EnumerateArray().Select(b => b.GetProperty("type").GetString()).ToList();
+        Assert.Contains(expectedBlockType, types);
+    }
+
     private async Task<HttpResponseMessage> PostPreviewAsync(string tenantCode, string templateId)
     {
         return await PostPreviewAsync(tenantCode, templateId, new

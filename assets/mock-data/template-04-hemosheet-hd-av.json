@@ -1,0 +1,111 @@
+{
+  "id": "ca10f9fa-75c0-4eb3-9fc3-35a797f5d3af",
+  "ward": "Nephro A",
+  "bed": "32 (Nikkiso EXA ES)",
+  "treatmentNo": 12,
+  "cycleStartTime": "2026-07-06T08:00:00Z",
+  "cycleEndTime": "2026-07-06T12:00:00Z",
+  "completedTime": "2026-07-06T12:05:00Z",
+  "ktv": 1.45,
+  "urr": 72.5,
+  "prr": 65.0,
+  "recir": 8.2,
+  "isAcNotUsed": false,
+  "isConsent": false,
+  "nursesInShift": "RN Somchai, RN Malee",
+  "patient": {
+    "name": "สมชาย ใจดี",
+    "hn": "HN-001234",
+    "birthDate": "1968-03-15T00:00:00Z",
+    "sex": "Male",
+    "age": 58,
+    "doctorName": "นพ. วิชัย รักษ์ดี",
+    "allergies": ["heparin"],
+    "coverage": "UC"
+  },
+  "unit": { "id": 1, "fullName": "หน่วยไตเทียม ชั้น 3" },
+  "dehydration": {
+    "preWeight": 68.5,
+    "postWeight": 66.2,
+    "lastPostWeight": 66.0,
+    "foodIntakeWeight": 0.25,
+    "ufNet": 2.3
+  },
+  "dialysisPrescription": {
+    "mode": "HD",
+    "bloodAccessRoute": "AV Fistula L",
+    "durationHours": 4,
+    "durationMinutes": 0,
+    "anticoagulant": "Heparin",
+    "dryWeight": 65.0
+  },
+  "avShunt": {
+    "avShuntId": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
+    "catheterType": 0,
+    "shuntSite": "L forearm",
+    "aNeedleSize": 16,
+    "vNeedleSize": 16
+  },
+  "assessments": {
+    "pre": [
+      { "name": "pain", "checked": true, "text": "" },
+      { "name": "chest", "checked": false, "text": "" }
+    ],
+    "re": [{ "name": "pain", "checked": false, "text": "" }],
+    "post": [],
+    "other": []
+  },
+  "dialysisRecords": [
+    {
+      "timestamp": "2026-07-06T08:30:00Z",
+      "bps": 130,
+      "bpd": 85,
+      "hr": 72,
+      "bfr": 300,
+      "ufRate": 500,
+      "note": ""
+    },
+    {
+      "timestamp": "2026-07-06T10:00:00Z",
+      "bps": 125,
+      "bpd": 80,
+      "hr": 70,
+      "bfr": 300,
+      "ufRate": 600,
+      "note": "stable"
+    }
+  ],
+  "nurseRecords": [
+    { "timestamp": "2026-07-06T08:15:00Z", "content": "เริ่มฟอกตามแผน" }
+  ],
+  "doctorRecords": [],
+  "medicineRecords": [
+    {
+      "timestamp": "2026-07-06T08:10:00Z",
+      "medicineName": "EPO",
+      "route": "SC",
+      "quantity": 4000
+    }
+  ],
+  "progressNotes": [],
+  "signatureNames": { "Nurse": "RN Somchai" },
+  "layoutContext": {
+    "layoutProfile": "Default",
+    "dialysisMode": "HD",
+    "vascularAccess": "AvFistula",
+    "reportSettings": {
+      "hemosheetTemplate": "Hemosheet.trdp",
+      "nurseInShiftEnabled": true,
+      "fixedLines": { "dialysis": 8, "nurse": 4, "medicine": 4, "doctor": 2, "progressNote": 2 }
+    },
+    "features": {
+      "showHdfColumns": false,
+      "showAvPanel": true,
+      "showCathPanel": false,
+      "showAcFields": true,
+      "showDurationHours": true,
+      "showNurseInShift": true,
+      "showProgressNote": false
+    }
+  }
+}

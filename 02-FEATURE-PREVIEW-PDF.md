@@ -487,6 +487,35 @@ sequenceDiagram
 
 ---
 
+## Phase 7 — Hemopro Hemosheet Integration 🔄
+
+> แผนเต็ม: [hemopro_hemosheet_integration plan](.cursor/plans/hemopro_hemosheet_integration_d1c358da.plan.md)
+
+### 7.1 — Data contract + layout context
+- [ ] `HemosheetReportDto` + `HemosheetLayoutContext` (JSON-friendly)
+- [ ] `HemosheetLayoutResolver` — port Telerik `Visible` rules (HD/HDF, AV/perm-cath)
+- [ ] Mock JSON หลาย scenario ใน `assets/mock-data/`
+
+### 7.2 — Backend (Hemopro Web.Api)
+- [ ] `IHemosheetReportDataService` + `GET .../records/{id}/report-data`
+- [ ] Template preview: `GET .../report-data/template`
+
+### 7.3 — Hemo-PDF dedicated Hemosheet layout
+- [ ] `IHemosheetLayoutPlanner` + `HemosheetReportDocumentComposer`
+- [ ] `checklist-table` + `vascular-access` blocks
+- [ ] QuestPDF `HemosheetComposer` ใช้ planner เดียวกัน
+
+### 7.4 — Frontend (Hemo-frontend)
+- [ ] Link `@hemo/report-viewer` + `@hemo/pdf-client`
+- [ ] Migrate `embedded-hemosheet-report` (feature flag)
+- [ ] Migrate `reports.page` + `HemoReportPreviewModal` (90dvh)
+
+### 7.5 — Production wiring
+- [ ] `pdfApiUrl` config, JWT/CORS, `HemoproSignatureStore`
+- [ ] Parity tests: tenant profiles × data scenarios
+
+---
+
 ## 13. ข้อจำกัดที่ยอมรับ
 
 | หัวข้อ | แนวทาง |
