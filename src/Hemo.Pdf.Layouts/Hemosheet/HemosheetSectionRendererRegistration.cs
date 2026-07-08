@@ -11,7 +11,9 @@ public static class HemosheetSectionRendererRegistration
         services.AddSingleton<HemosheetLayoutProfileRegistry>();
 
         services.AddSingleton<IHemosheetSectionRenderer, PatientSectionRenderer>();
+        services.AddSingleton<IHemosheetSectionRenderer, SubHeaderBarSectionRenderer>();
         services.AddSingleton<IHemosheetSectionRenderer, SessionMetaSectionRenderer>();
+        services.AddSingleton<IHemosheetSectionRenderer, TopLayoutSectionRenderer>();
         services.AddSingleton<IHemosheetSectionRenderer, DehydrationSectionRenderer>();
         services.AddSingleton<IHemosheetSectionRenderer, PrescriptionSectionRenderer>();
         services.AddSingleton<IHemosheetSectionRenderer, VascularAccessSectionRenderer>();
@@ -33,10 +35,16 @@ public static class HemosheetSectionRendererRegistration
             vm => vm.Assessments.Other));
         services.AddSingleton<IHemosheetSectionRenderer, LabsSectionRenderer>();
         services.AddSingleton<IHemosheetSectionRenderer, DialysisRecordsSectionRenderer>();
+        services.AddSingleton<IHemosheetSectionRenderer, UfSummarySectionRenderer>();
         services.AddSingleton<IHemosheetSectionRenderer, NurseRecordsSectionRenderer>();
         services.AddSingleton<IHemosheetSectionRenderer, DoctorRecordsSectionRenderer>();
         services.AddSingleton<IHemosheetSectionRenderer, MedicineRecordsSectionRenderer>();
         services.AddSingleton<IHemosheetSectionRenderer, ProgressNotesSectionRenderer>();
+        services.AddSingleton<IHemosheetSectionRenderer, NursingCarePlanSectionRenderer>();
+        services.AddSingleton<IHemosheetSectionRenderer, FooterChecklistsSectionRenderer>();
+        services.AddSingleton<IHemosheetSectionRenderer, PrePostHdNotesSectionRenderer>();
+        services.AddSingleton<IHemosheetSectionRenderer, PostVitalsSectionRenderer>();
+        services.AddSingleton<IHemosheetSectionRenderer, AvfAssessmentSectionRenderer>();
         services.AddSingleton<IHemosheetSectionRenderer, NursesInShiftSectionRenderer>();
         services.AddSingleton<IHemosheetSectionRenderer, ConsentSectionRenderer>();
         services.AddSingleton<IHemosheetSectionRenderer, SignaturesSectionRenderer>();

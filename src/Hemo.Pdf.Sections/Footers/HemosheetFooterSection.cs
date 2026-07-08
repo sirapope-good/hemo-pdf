@@ -18,13 +18,14 @@ public sealed class HemosheetFooterSection : IReportFooterSection
         var disclaimer = branding?.Footer.DisclaimerText;
         var showPageNumber = branding?.Header.ShowPageNumber ?? true;
         var signatures = context.Signatures?.Signatures ?? [];
+        var staffSlots = HemosheetPreviewMappers.MapStaffSignatureSlots(vm);
         var nursesLine = HemosheetPreviewMappers.BuildNursesInShiftLine(vm, vm.LayoutContext.Features);
 
         container.BorderTop(0.5f).PaddingTop(PdfSectionMetrics.CellPadding).Column(col =>
         {
             col.Spacing(2);
 
-            if (signatures.Count > 0)
+            if (signatures.Count > 0 || staffSlots.Count > 0)
             {
                 col.Item().Row(row =>
                 {
@@ -36,6 +37,22 @@ public sealed class HemosheetFooterSection : IReportFooterSection
                                 ? "ลายเซ็น"
                                 : signature.SignerRole;
                             PdfSignatureHelpers.RenderSignatureBlock(slot, signature, label, includeDate: false);
+                        });
+                    }
+
+                    foreach (var slot in staffSlots)
+                    {
+                        row.RelativeItem().PaddingHorizontal(2).MinHeight(36).Column(column =>
+                        {
+                            column.Item().Text(slot.Role)
+                                .FontFamily(PdfStyleDefaults.Body.SectionTitleFontFamily)
+                                .FontSize(PdfStyleDefaults.Body.DataFontSize)
+                                .SemiBold();
+                            column.Item().Height(24);
+                            column.Item().PaddingHorizontal(12).Height(3).LineHorizontal(0.4f);
+                            column.Item().AlignCenter().Text($"( {slot.Name ?? "—"} )")
+                                .FontFamily(PdfStyleDefaults.Body.DataFontFamily)
+                                .FontSize(PdfStyleDefaults.Body.DataFontSize);
                         });
                     }
                 });

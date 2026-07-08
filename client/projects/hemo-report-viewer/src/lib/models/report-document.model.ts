@@ -58,6 +58,11 @@ export type ReportBlock =
   | VascularAccessReportBlock
   | SignatureReportBlock
   | TextReportBlock
+  | SubHeaderBarReportBlock
+  | ColumnStackReportBlock
+  | SectionRowReportBlock
+  | ChecklistClusterReportBlock
+  | PrePostHdNotesReportBlock
   | { type: string; [key: string]: unknown };
 
 export interface PatientInfoReportBlock {
@@ -96,6 +101,7 @@ export interface DataGridReportBlock {
 export interface ChecklistTableReportBlock {
   type: 'checklist-table';
   title?: string;
+  layout?: 'default' | 'yn-columns' | string;
   columns: string[];
   rows: ChecklistCellValue[][];
 }
@@ -130,4 +136,33 @@ export interface TextReportBlock {
   title?: string;
   content: string;
   style?: 'title' | 'body' | 'caption' | string;
+}
+
+export interface SubHeaderBarReportBlock {
+  type: 'sub-header-bar';
+  fields: LabelValue[];
+}
+
+export interface ColumnStackReportBlock {
+  type: 'column-stack';
+  blocks: ReportBlock[];
+}
+
+export interface SectionRowReportBlock {
+  type: 'section-row';
+  columns: number;
+  blocks: ReportBlock[];
+}
+
+export interface ChecklistClusterReportBlock {
+  type: 'checklist-cluster';
+  tables: ChecklistTableReportBlock[];
+}
+
+export interface PrePostHdNotesReportBlock {
+  type: 'pre-post-hd-notes';
+  preHdContent?: string;
+  preHdSigner?: string;
+  postHdContent?: string;
+  postHdSigner?: string;
 }

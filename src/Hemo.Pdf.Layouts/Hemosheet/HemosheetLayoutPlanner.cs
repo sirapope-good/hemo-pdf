@@ -2,21 +2,16 @@ using Hemo.Pdf.Core.Models.Hemosheet;
 
 namespace Hemo.Pdf.Layouts.Hemosheet;
 
-public interface IHemosheetLayoutPlanner
-{
-    IReadOnlyList<HemosheetSectionPlan> Plan(HemosheetReportViewModel viewModel);
-}
-
 public sealed class HemosheetLayoutPlanner : IHemosheetLayoutPlanner
 {
     private static readonly string[] BaseDialysisColumns =
     [
-        "เวลา", "BP", "HR", "RR", "BFR", "VP", "TMP", "DC", "NSS", "UF Rate", "หมายเหตุ",
+        "เวลา", "BP", "HR", "RR", "BFR", "VP", "TMP", "DC", "NSS", "UF Rate", "Total", "หมายเหตุ",
     ];
 
     private static readonly string[] HdfDialysisColumns =
     [
-        "เวลา", "BP", "HR", "RR", "BFR", "VP", "TMP", "DC", "NSS", "UF Rate", "HDF Vol.", "หมายเหตุ",
+        "เวลา", "BP", "HR", "RR", "BFR", "VP", "TMP", "DC", "NSS", "UF Rate", "HDF Vol.", "Total", "หมายเหตุ",
     ];
 
     private readonly HemosheetLayoutProfileRegistry _profileRegistry;
@@ -31,12 +26,15 @@ public sealed class HemosheetLayoutPlanner : IHemosheetLayoutPlanner
         var features = viewModel.LayoutContext.Features;
         var settings = viewModel.LayoutContext.ReportSettings;
         var profile = viewModel.LayoutContext.LayoutProfile;
-        var plans = new List<HemosheetSectionPlan>
+        var plans = new List<HemosheetSectionPlan>();
+
+        if (HasSubHeader(viewModel))
         {
-            new() { SectionId = HemosheetSectionId.SessionMeta },
-            new() { SectionId = HemosheetSectionId.Dehydration },
-            new() { SectionId = HemosheetSectionId.Prescription },
-        };
+            plans.Add(new() { SectionId = HemosheetSectionId.SubHeaderBar });
+        }
+
+        plans.Add(new() { SectionId = HemosheetSectionId.SessionMeta });
+        plans.Add(new() { SectionId = HemosheetSectionId.Predialysis });
 
         if (IsEnabled(features, "showAvPanel"))
         {
@@ -55,11 +53,6 @@ public sealed class HemosheetLayoutPlanner : IHemosheetLayoutPlanner
             });
         }
 
-        if (viewModel.Assessments.Pre.Count > 0)
-        {
-            plans.Add(new() { SectionId = HemosheetSectionId.AssessmentPre });
-        }
-
         if (viewModel.Assessments.Re.Count > 0)
         {
             plans.Add(new() { SectionId = HemosheetSectionId.AssessmentRe });
@@ -68,6 +61,11 @@ public sealed class HemosheetLayoutPlanner : IHemosheetLayoutPlanner
         if (viewModel.Assessments.Post.Count > 0)
         {
             plans.Add(new() { SectionId = HemosheetSectionId.AssessmentPost });
+        }
+
+        if (HasNursingCarePlan(viewModel))
+        {
+            plans.Add(new() { SectionId = HemosheetSectionId.NursingCarePlan });
         }
 
         if (viewModel.Assessments.Other.Count > 0)
@@ -86,6 +84,8 @@ public sealed class HemosheetLayoutPlanner : IHemosheetLayoutPlanner
             VisibleColumns = IsEnabled(features, "showHdfColumns") ? HdfDialysisColumns : BaseDialysisColumns,
             FixedLineCount = settings.FixedLines.Dialysis,
         });
+
+        plans.Add(new() { SectionId = HemosheetSectionId.UfSummary });
 
         plans.Add(new HemosheetSectionPlan
         {
@@ -114,6 +114,15 @@ public sealed class HemosheetLayoutPlanner : IHemosheetLayoutPlanner
             });
         }
 
+        if (HasFooterChecklists(viewModel))
+        {
+            plans.Add(new() { SectionId = HemosheetSectionId.FooterChecklists });
+        }
+
+        plans.Add(new() { SectionId = HemosheetSectionId.PrePostHdNotes });
+        plans.Add(new() { SectionId = HemosheetSectionId.PostVitals });
+        plans.Add(new() { SectionId = HemosheetSectionId.AvfAssessment });
+
         if (profile == HemosheetLayoutProfile.Rama
             && IsEnabled(features, "showConsentBlock")
             && _profileRegistry.IsProfileSection(HemosheetSectionId.Consent, profile))
@@ -123,6 +132,22 @@ public sealed class HemosheetLayoutPlanner : IHemosheetLayoutPlanner
 
         return plans;
     }
+
+    private static bool HasSubHeader(HemosheetReportViewModel viewModel) =>
+        !string.IsNullOrWhiteSpace(viewModel.Patient.Diagnosis)
+        || viewModel.Patient.Allergies.Count > 0;
+
+    private static bool HasNursingCarePlan(HemosheetReportViewModel viewModel) =>
+        viewModel.Assessments.Other.Any(i =>
+            string.Equals(i.Name, "nursing_diagnosis", StringComparison.OrdinalIgnoreCase)
+            || string.Equals(i.Name, "nursing_intervention", StringComparison.OrdinalIgnoreCase)
+            || string.Equals(i.Name, "expected_outcomes", StringComparison.OrdinalIgnoreCase));
+
+    private static bool HasFooterChecklists(HemosheetReportViewModel viewModel) =>
+        viewModel.Assessments.Post.Any(i => i.Name?.StartsWith("complication.", StringComparison.OrdinalIgnoreCase) == true
+            || i.Name?.StartsWith("nursing.", StringComparison.OrdinalIgnoreCase) == true
+            || i.Name?.StartsWith("health.", StringComparison.OrdinalIgnoreCase) == true)
+        || viewModel.Assessments.Other.Any(i => i.Name?.StartsWith("medication.", StringComparison.OrdinalIgnoreCase) == true);
 
     private static bool HasLabData(HemosheetReportViewModel viewModel)
     {

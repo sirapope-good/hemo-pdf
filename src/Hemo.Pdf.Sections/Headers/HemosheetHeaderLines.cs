@@ -13,8 +13,11 @@ internal static class HemosheetHeaderLines
         {
             new("ชื่อ-สกุล", vm.Patient.Name),
             new("HN", vm.Patient.Hn),
-            new("วันเกิด", FormatDate(vm.Patient.BirthDate)),
+            new("อายุ", vm.Patient.Age?.ToString()),
             new("เพศ", vm.Patient.Sex),
+            new("สิทธิ์", vm.Patient.Coverage),
+            new("แพ้ยา", FormatAllergies(vm.Patient.Allergies)),
+            new("แพทย์", vm.Patient.DoctorName),
             new("หน่วย", vm.Unit.FullName),
         };
 
@@ -33,4 +36,14 @@ internal static class HemosheetHeaderLines
 
     private static string? FormatDate(DateTime? value) =>
         value?.ToString("yyyy-MM-dd");
+
+    private static string? FormatAllergies(IList<string>? allergies)
+    {
+        if (allergies is null || allergies.Count == 0)
+        {
+            return "ไม่มีแพ้ยา";
+        }
+
+        return string.Join(", ", allergies);
+    }
 }

@@ -3,7 +3,8 @@
   "isConsent": true,
   "creatorName": "RN Admin",
   "doctorName": "นพ. รามา",
-  "patient": { "name": "ผู้ป่วย RAMA", "hn": "RAMA-001" },
+  "patient": { "name": "ผู้ป่วย RAMA", "hn": "RAMA-001", "diagnosis": "CKD", "allergies": ["penicillin"] },
+  "doctorSignatureBase64": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==",
   "unit": { "id": 1, "fullName": "RAMA Nephro" },
   "dehydration": { "preWeight": 65.0, "postWeight": 63.0 },
   "dialysisPrescription": {

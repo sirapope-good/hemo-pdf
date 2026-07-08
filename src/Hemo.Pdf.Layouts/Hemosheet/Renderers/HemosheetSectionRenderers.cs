@@ -2,6 +2,7 @@ using Hemo.Pdf.Core.Context;
 using Hemo.Pdf.Core.Models.Hemosheet;
 using Hemo.Pdf.Core.Models.Preview;
 using Hemo.Pdf.Sections.Content;
+using Hemo.Pdf.Sections.Helpers;
 using Hemo.Pdf.Sections.Preview;
 using Hemo.Pdf.Sections.Preview.Hemosheet;
 using QuestPDF.Fluent;
@@ -83,7 +84,7 @@ internal sealed class DehydrationSectionRenderer : HemosheetSectionRendererBase
         HemosheetSectionPlan plan,
         HemosheetReportViewModel viewModel,
         PdfReportContext context) =>
-        Single(HemosheetPreviewMappers.MapDehydration(viewModel));
+        Single(HemosheetPreviewMappers.MapDehydration(viewModel, viewModel.LayoutContext.Features));
 
     public override void ComposePdf(
         IContainer container,
@@ -91,7 +92,7 @@ internal sealed class DehydrationSectionRenderer : HemosheetSectionRendererBase
         HemosheetReportViewModel viewModel,
         PdfReportContext context)
     {
-        var block = HemosheetPreviewMappers.MapDehydration(viewModel);
+        var block = HemosheetPreviewMappers.MapDehydration(viewModel, viewModel.LayoutContext.Features);
         ComposeFieldOrKeyValue(container, block);
     }
 
@@ -319,8 +320,25 @@ internal sealed class ConsentSectionRenderer : HemosheetSectionRendererBase
         IContainer container,
         HemosheetSectionPlan plan,
         HemosheetReportViewModel viewModel,
-        PdfReportContext context) =>
-        container.Text("ผู้ป่วยให้ความยินยอมในการรักษา").Italic();
+        PdfReportContext context)
+    {
+        if (!viewModel.IsConsent)
+        {
+            return;
+        }
+
+        container.Column(col =>
+        {
+            col.Spacing(4);
+            col.Item().Text("ผู้ป่วยให้ความยินยอมในการรักษา").Italic();
+
+            var signatureBytes = PdfImageHelpers.LoadLogoFromDataUrl(viewModel.DoctorSignatureBase64);
+            if (signatureBytes is { Length: > 0 })
+            {
+                col.Item().Height(36).Image(signatureBytes).FitHeight();
+            }
+        });
+    }
 }
 
 internal sealed class LabsSectionRenderer : HemosheetSectionRendererBase

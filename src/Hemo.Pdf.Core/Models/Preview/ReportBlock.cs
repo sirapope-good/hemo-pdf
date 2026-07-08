@@ -9,6 +9,11 @@ namespace Hemo.Pdf.Core.Models.Preview;
 [JsonDerivedType(typeof(ChecklistTableReportBlock), "checklist-table")]
 [JsonDerivedType(typeof(VascularAccessReportBlock), "vascular-access")]
 [JsonDerivedType(typeof(FieldGridReportBlock), "field-grid")]
+[JsonDerivedType(typeof(SubHeaderBarReportBlock), "sub-header-bar")]
+[JsonDerivedType(typeof(ColumnStackReportBlock), "column-stack")]
+[JsonDerivedType(typeof(SectionRowReportBlock), "section-row")]
+[JsonDerivedType(typeof(ChecklistClusterReportBlock), "checklist-cluster")]
+[JsonDerivedType(typeof(PrePostHdNotesReportBlock), "pre-post-hd-notes")]
 [JsonDerivedType(typeof(SignatureReportBlock), "signature")]
 [JsonDerivedType(typeof(TextReportBlock), "text")]
 public abstract class ReportBlock;
@@ -36,6 +41,7 @@ public sealed class DataGridReportBlock : ReportBlock
 public sealed class ChecklistTableReportBlock : ReportBlock
 {
     public string? Title { get; init; }
+    public string Layout { get; init; } = "default";
     public IReadOnlyList<string> Columns { get; init; } = [];
     public IReadOnlyList<IReadOnlyList<ChecklistCellValue>> Rows { get; init; } = [];
 }
@@ -87,4 +93,33 @@ public sealed class VascularAccessReportBlock : ReportBlock
     public string? Title { get; init; }
     public string Variant { get; init; } = "av-fistula";
     public IReadOnlyList<LabelValue> Rows { get; init; } = [];
+}
+
+public sealed class SubHeaderBarReportBlock : ReportBlock
+{
+    public IReadOnlyList<LabelValue> Fields { get; init; } = [];
+}
+
+public sealed class ColumnStackReportBlock : ReportBlock
+{
+    public IReadOnlyList<ReportBlock> Blocks { get; init; } = [];
+}
+
+public sealed class SectionRowReportBlock : ReportBlock
+{
+    public int Columns { get; init; } = 2;
+    public IReadOnlyList<ReportBlock> Blocks { get; init; } = [];
+}
+
+public sealed class ChecklistClusterReportBlock : ReportBlock
+{
+    public IReadOnlyList<ChecklistTableReportBlock> Tables { get; init; } = [];
+}
+
+public sealed class PrePostHdNotesReportBlock : ReportBlock
+{
+    public string? PreHdContent { get; init; }
+    public string? PreHdSigner { get; init; }
+    public string? PostHdContent { get; init; }
+    public string? PostHdSigner { get; init; }
 }

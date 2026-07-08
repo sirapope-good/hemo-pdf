@@ -35,6 +35,8 @@ public sealed class HemosheetReportViewModel
     public IList<HemosheetProgressNoteViewModel> ProgressNotes { get; init; } = [];
     public IList<HemosheetMedicineRecordViewModel> MedicineRecords { get; init; } = [];
     public HemosheetLabsViewModel Labs { get; init; } = new();
+    public HemosheetVitalSignViewModel? PreVital { get; init; }
+    public HemosheetVitalSignViewModel? PostVital { get; init; }
     public Dictionary<string, string> SignatureNames { get; init; } = new();
     public HemosheetLayoutContextViewModel LayoutContext { get; set; } = new();
 }
@@ -50,6 +52,8 @@ public sealed class HemosheetPatientViewModel
     public string? DoctorName { get; init; }
     public IList<string> Allergies { get; init; } = [];
     public string? Coverage { get; init; }
+    public string? Diagnosis { get; init; }
+    public string? Underlying { get; init; }
 }
 
 public sealed class HemosheetUnitViewModel
@@ -67,6 +71,11 @@ public sealed class HemosheetDehydrationViewModel
     public float? ExtraFluid { get; init; }
     public float? BloodTransfusion { get; init; }
     public float? UfNet { get; init; }
+    public float? TotalUf { get; init; }
+    public float? UfEstimate { get; init; }
+    public float? UfGoal { get; init; }
+    public float? FlushNss { get; init; }
+    public float? FlushNssTotal { get; init; }
 }
 
 public sealed class HemosheetPrescriptionViewModel
@@ -78,6 +87,35 @@ public sealed class HemosheetPrescriptionViewModel
     public float? DurationMinutes { get; init; }
     public string? Anticoagulant { get; init; }
     public float? DryWeight { get; init; }
+    public float? BloodFlow { get; init; }
+    public string? Dialyzer { get; init; }
+    public float? DialyzerSurfaceArea { get; init; }
+    public float? DialysateK { get; init; }
+    public float? DialysateCa { get; init; }
+    public float? DialysateNa { get; init; }
+    public float? DialysateHco3 { get; init; }
+    public float? DialysateTemperature { get; init; }
+    public float? DialysateFlowRate { get; init; }
+    public float? InitialAmount { get; init; }
+    public float? InitialAmountMl { get; init; }
+    public float? MaintainAmount { get; init; }
+    public float? MaintainAmountMl { get; init; }
+    public float? AcPerSession { get; init; }
+    public float? AcPerSessionMl { get; init; }
+    public string? ReasonForRefraining { get; init; }
+    public string? Note { get; init; }
+}
+
+public sealed class HemosheetVitalSignViewModel
+{
+    public DateTime? Timestamp { get; init; }
+    public int? Bps { get; init; }
+    public int? Bpd { get; init; }
+    public int? Hr { get; init; }
+    public int? Rr { get; init; }
+    public float? Temp { get; init; }
+    public float? SpO2 { get; init; }
+    public string? Posture { get; init; }
 }
 
 public sealed class HemosheetAvShuntViewModel
@@ -95,6 +133,7 @@ public sealed class HemosheetAssessmentItemViewModel
     public string? Name { get; init; }
     public bool Checked { get; init; }
     public string? Text { get; init; }
+    public IList<string> SelectedOptions { get; init; } = [];
 }
 
 public sealed class HemosheetAssessmentsViewModel
@@ -119,6 +158,7 @@ public sealed class HemosheetDialysisRecordViewModel
     public float? Nss { get; init; }
     public float? UfRate { get; init; }
     public float? HdfVolume { get; init; }
+    public float? UfTotal { get; init; }
     public string? Note { get; init; }
 }
 
@@ -212,7 +252,9 @@ public sealed class HemosheetFixedLinesViewModel
 public enum HemosheetSectionId
 {
     Patient,
+    SubHeaderBar,
     SessionMeta,
+    Predialysis,
     Dehydration,
     Prescription,
     VascularAccess,
@@ -220,11 +262,17 @@ public enum HemosheetSectionId
     AssessmentRe,
     AssessmentPost,
     AssessmentOther,
+    NursingCarePlan,
     DialysisRecords,
+    UfSummary,
     NurseRecords,
     DoctorRecords,
     MedicineRecords,
     ProgressNotes,
+    FooterChecklists,
+    PrePostHdNotes,
+    PostVitals,
+    AvfAssessment,
     NursesInShift,
     Consent,
     Labs,

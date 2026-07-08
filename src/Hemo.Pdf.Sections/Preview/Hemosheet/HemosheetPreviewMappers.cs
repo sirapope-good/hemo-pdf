@@ -1,3 +1,4 @@
+using Hemo.Pdf.Core.Context;
 using Hemo.Pdf.Core.Models.Hemosheet;
 using Hemo.Pdf.Core.Models.Preview;
 using Hemo.Pdf.Sections.Content;
@@ -7,6 +8,18 @@ namespace Hemo.Pdf.Sections.Preview.Hemosheet;
 
 public static class HemosheetPreviewMappers
 {
+    public static SubHeaderBarReportBlock? MapSubHeaderBar(HemosheetReportViewModel vm)
+    {
+        var fields = new List<LabelValue>();
+        if (!string.IsNullOrWhiteSpace(vm.Patient.Diagnosis))
+        {
+            fields.Add(Lv("Diagnosis", vm.Patient.Diagnosis));
+        }
+
+        fields.Add(Lv("Drug Allergy", FormatAllergies(vm.Patient.Allergies)));
+
+        return fields.Count == 0 ? null : new SubHeaderBarReportBlock { Fields = fields };
+    }
     public static PatientInfoReportBlock? MapPatient(HemosheetReportViewModel vm) =>
         new()
         {
@@ -42,7 +55,12 @@ public static class HemosheetPreviewMappers
             F("Recirc", FormatFloat(vm.Recir)),
         };
 
-        if (!string.IsNullOrWhiteSpace(vm.CreatorName))
+        var features = vm.LayoutContext.Features;
+        if (IsEnabled(features, "showCreatorName") && !string.IsNullOrWhiteSpace(vm.CreatorName))
+        {
+            fields.Add(F("ผู้สร้าง", vm.CreatorName));
+        }
+        else if (!string.IsNullOrWhiteSpace(vm.CreatorName) && vm.LayoutContext.LayoutProfile == HemosheetLayoutProfile.Rama)
         {
             fields.Add(F("ผู้สร้าง", vm.CreatorName));
         }
@@ -55,22 +73,37 @@ public static class HemosheetPreviewMappers
         };
     }
 
-    public static FieldGridReportBlock? MapDehydration(HemosheetReportViewModel vm) =>
-        new()
+    public static FieldGridReportBlock? MapDehydration(
+        HemosheetReportViewModel vm,
+        IReadOnlyDictionary<string, bool> features)
+    {
+        var fields = new List<FieldGridField>
+        {
+            F("Pre Weight", FormatFloat(vm.Dehydration.PreWeight)),
+            F("Post Weight", FormatFloat(vm.Dehydration.PostWeight)),
+            F("Last Post", FormatFloat(vm.Dehydration.LastPostWeight)),
+            F("Food Intake", FormatFloat(vm.Dehydration.FoodIntakeWeight)),
+            F("Extra Fluid", FormatFloat(vm.Dehydration.ExtraFluid)),
+            F("Blood Transfusion", FormatFloat(vm.Dehydration.BloodTransfusion)),
+            F("UF Net", FormatFloat(vm.Dehydration.UfNet)),
+            F("Total UF", FormatFloat(vm.Dehydration.TotalUf)),
+            F("UF Estimate", FormatFloat(vm.Dehydration.UfEstimate)),
+            F("UF Goal", FormatFloat(vm.Dehydration.UfGoal)),
+        };
+
+        if (IsEnabled(features, "showFlushNss"))
+        {
+            fields.Add(F("Flush NSS", FormatFloat(vm.Dehydration.FlushNss)));
+            fields.Add(F("Flush NSS Total", FormatFloat(vm.Dehydration.FlushNssTotal)));
+        }
+
+        return new FieldGridReportBlock
         {
             Title = "น้ำหนัก / Dehydration",
             Columns = 4,
-            Fields =
-            [
-                F("Pre Weight", FormatFloat(vm.Dehydration.PreWeight)),
-                F("Post Weight", FormatFloat(vm.Dehydration.PostWeight)),
-                F("Last Post", FormatFloat(vm.Dehydration.LastPostWeight)),
-                F("Food Intake", FormatFloat(vm.Dehydration.FoodIntakeWeight)),
-                F("Extra Fluid", FormatFloat(vm.Dehydration.ExtraFluid)),
-                F("Blood Transfusion", FormatFloat(vm.Dehydration.BloodTransfusion)),
-                F("UF Net", FormatFloat(vm.Dehydration.UfNet)),
-            ],
+            Fields = fields,
         };
+    }
 
     public static FieldGridReportBlock? MapPrescription(
         HemosheetReportViewModel vm,
@@ -101,11 +134,28 @@ public static class HemosheetPreviewMappers
         if (IsEnabled(features, "showAcFields"))
         {
             fields.Add(F("Anticoagulant", vm.DialysisPrescription.Anticoagulant));
+            fields.Add(F("Initial", FormatAc(vm.DialysisPrescription.InitialAmount, vm.DialysisPrescription.InitialAmountMl)));
+            fields.Add(F("Maintain", FormatAc(vm.DialysisPrescription.MaintainAmount, vm.DialysisPrescription.MaintainAmountMl)));
+            fields.Add(F("AC/Session", FormatAc(vm.DialysisPrescription.AcPerSession, vm.DialysisPrescription.AcPerSessionMl)));
+            if (!string.IsNullOrWhiteSpace(vm.DialysisPrescription.ReasonForRefraining))
+            {
+                fields.Add(F("Reason", vm.DialysisPrescription.ReasonForRefraining));
+            }
         }
         else if (IsEnabled(features, "showAcNotUsed"))
         {
             fields.Add(F("Anticoagulant", "ไม่ใช้"));
         }
+
+        fields.Add(F("Dialyzer", vm.DialysisPrescription.Dialyzer));
+        fields.Add(F("Surface Area", FormatFloat(vm.DialysisPrescription.DialyzerSurfaceArea)));
+        fields.Add(F("Blood Flow", FormatFloat(vm.DialysisPrescription.BloodFlow)));
+        fields.Add(F("Dialysate K", FormatFloat(vm.DialysisPrescription.DialysateK)));
+        fields.Add(F("Dialysate Ca", FormatFloat(vm.DialysisPrescription.DialysateCa)));
+        fields.Add(F("Na", FormatFloat(vm.DialysisPrescription.DialysateNa)));
+        fields.Add(F("HCO3", FormatFloat(vm.DialysisPrescription.DialysateHco3)));
+        fields.Add(F("Dialysate Temp", FormatFloat(vm.DialysisPrescription.DialysateTemperature)));
+        fields.Add(F("Dialysate Flow", FormatFloat(vm.DialysisPrescription.DialysateFlowRate)));
 
         return new FieldGridReportBlock
         {
@@ -146,7 +196,8 @@ public static class HemosheetPreviewMappers
 
     public static ChecklistTableReportBlock? MapAssessment(
         string title,
-        IList<HemosheetAssessmentItemViewModel> items)
+        IList<HemosheetAssessmentItemViewModel> items,
+        bool ynLayout = false)
     {
         if (items.Count == 0)
         {
@@ -156,14 +207,232 @@ public static class HemosheetPreviewMappers
         return ChecklistTablePreviewMapper.Map(new ChecklistTableModel
         {
             Title = title,
+            Layout = ynLayout ? "yn-columns" : "default",
             Items = items.Select(i => new ChecklistItem
             {
-                Label = i.Name ?? "",
+                Label = FormatAssessmentLabel(i),
                 IsChecked = i.Checked,
-                Notes = i.Text,
+                Notes = string.IsNullOrWhiteSpace(i.Text) ? null : i.Text,
             }).ToList(),
         });
     }
+
+    public static SectionRowReportBlock? MapTopLayoutRow(
+        HemosheetReportViewModel vm,
+        IReadOnlyDictionary<string, bool> features)
+    {
+        var leftBlocks = new List<ReportBlock>();
+        var preVitals = MapPreVitals(vm);
+        if (preVitals is not null)
+        {
+            leftBlocks.Add(preVitals);
+        }
+
+        var dehydration = MapDehydration(vm, features);
+        if (dehydration is not null)
+        {
+            leftBlocks.Add(dehydration);
+        }
+
+        var preSymptoms = MapAssessment("อาการก่อนฟอก", vm.Assessments.Pre, ynLayout: true);
+        if (preSymptoms is not null)
+        {
+            leftBlocks.Add(preSymptoms);
+        }
+
+        var prescription = MapPrescription(vm, features);
+        if (leftBlocks.Count == 0 && prescription is null)
+        {
+            return null;
+        }
+
+        var blocks = new List<ReportBlock>
+        {
+            new ColumnStackReportBlock { Blocks = leftBlocks },
+        };
+
+        if (prescription is not null)
+        {
+            blocks.Add(prescription);
+        }
+
+        return new SectionRowReportBlock
+        {
+            Columns = blocks.Count,
+            Blocks = blocks,
+        };
+    }
+
+    public static FieldGridReportBlock? MapPreVitals(HemosheetReportViewModel vm)
+    {
+        var vital = vm.PreVital;
+        if (vital is null)
+        {
+            return null;
+        }
+
+        return new FieldGridReportBlock
+        {
+            Title = "Predialysis Assessment",
+            Columns = 3,
+            Fields =
+            [
+                F("BP", FormatBp(vital.Bps, vital.Bpd)),
+                F("PR", vital.Hr?.ToString()),
+                F("RR", vital.Rr?.ToString()),
+                F("BT", FormatFloat(vital.Temp)),
+                F("Sat", FormatPercent(vital.SpO2)),
+            ],
+        };
+    }
+
+    public static KeyValueTableReportBlock? MapUfSummary(HemosheetReportViewModel vm) =>
+        new()
+        {
+            Title = "สรุปน้ำ",
+            Rows =
+            [
+                Lv("NSS", FormatMl(vm.Dehydration.FlushNssTotal)),
+                Lv("Extra-fluid", FormatMl(vm.Dehydration.ExtraFluid)),
+                Lv("Total UF", FormatMl(vm.Dehydration.TotalUf ?? vm.Dehydration.UfNet)),
+            ],
+        };
+
+    public static DataGridReportBlock? MapNursingCarePlan(HemosheetReportViewModel vm)
+    {
+        var diagnosis = FindAssessmentText(vm.Assessments.Other, "nursing_diagnosis");
+        var intervention = FindAssessmentText(vm.Assessments.Other, "nursing_intervention");
+        var outcomes = FindAssessmentText(vm.Assessments.Other, "expected_outcomes");
+
+        if (diagnosis is null && intervention is null && outcomes is null)
+        {
+            return null;
+        }
+
+        return new DataGridReportBlock
+        {
+            Title = "Nursing Care Plan",
+            Columns = ["Nursing Diagnosis", "Nursing Intervention", "Expected Outcomes"],
+            Rows = [[diagnosis ?? "—", intervention ?? "—", outcomes ?? "—"]],
+        };
+    }
+
+    public static ChecklistClusterReportBlock? MapFooterChecklists(HemosheetReportViewModel vm)
+    {
+        var tables = new[]
+        {
+            MapAssessmentGroup("Complication", FilterByPrefix(vm.Assessments.Post, "complication.")),
+            MapAssessmentGroup("Nursing management", FilterByPrefix(vm.Assessments.Post, "nursing.")),
+            MapAssessmentGroup("Health education", FilterByPrefix(vm.Assessments.Post, "health.")),
+            MapAssessmentGroup("Medication duration HD", FilterByPrefix(vm.Assessments.Other, "medication.")),
+        }.Where(t => t is not null).Cast<ChecklistTableReportBlock>().ToList();
+
+        return tables.Count == 0 ? null : new ChecklistClusterReportBlock { Tables = tables };
+    }
+
+    public static PrePostHdNotesReportBlock? MapPrePostHdNotes(HemosheetReportViewModel vm)
+    {
+        var pre = vm.NurseRecords.FirstOrDefault()?.Content;
+        var post = vm.NurseRecords.Skip(1).FirstOrDefault()?.Content
+            ?? vm.DoctorRecords.FirstOrDefault()?.Content;
+
+        if (string.IsNullOrWhiteSpace(pre) && string.IsNullOrWhiteSpace(post))
+        {
+            return null;
+        }
+
+        vm.SignatureNames.TryGetValue("pre_hd", out var preSigner);
+        vm.SignatureNames.TryGetValue("post_hd", out var postSigner);
+
+        return new PrePostHdNotesReportBlock
+        {
+            PreHdContent = pre,
+            PreHdSigner = preSigner,
+            PostHdContent = post,
+            PostHdSigner = postSigner,
+        };
+    }
+
+    public static FieldGridReportBlock? MapPostVitals(HemosheetReportViewModel vm)
+    {
+        var vital = vm.PostVital;
+        if (vital is null)
+        {
+            return null;
+        }
+
+        return new FieldGridReportBlock
+        {
+            Title = "Post Vital",
+            Columns = 5,
+            Fields =
+            [
+                F("BP", FormatBp(vital.Bps, vital.Bpd)),
+                F("PR", vital.Hr?.ToString()),
+                F("RR", vital.Rr?.ToString()),
+                F("BT", FormatFloat(vital.Temp)),
+                F("Sat", FormatPercent(vital.SpO2)),
+            ],
+        };
+    }
+
+    public static ChecklistTableReportBlock? MapAvfAssessment(HemosheetReportViewModel vm) =>
+        MapAssessment("AVF/AVG", FilterAvfItems(vm.Assessments.Post), ynLayout: true);
+
+    private static ChecklistTableReportBlock? MapAssessmentGroup(string title, IList<HemosheetAssessmentItemViewModel> items) =>
+        MapAssessment(title, items);
+
+    private static IList<HemosheetAssessmentItemViewModel> FilterByPrefix(
+        IList<HemosheetAssessmentItemViewModel> items,
+        string prefix) =>
+        items.Where(i => i.Name?.StartsWith(prefix, StringComparison.OrdinalIgnoreCase) == true).ToList();
+
+    private static IList<HemosheetAssessmentItemViewModel> FilterAvfItems(IList<HemosheetAssessmentItemViewModel> items) =>
+        items.Where(i => i.Name?.Contains("thrill", StringComparison.OrdinalIgnoreCase) == true
+            || i.Name?.Contains("bruit", StringComparison.OrdinalIgnoreCase) == true
+            || i.Name?.Contains("hematoma", StringComparison.OrdinalIgnoreCase) == true).ToList();
+
+    private static string? FindAssessmentText(IList<HemosheetAssessmentItemViewModel> items, string name) =>
+        items.FirstOrDefault(i => string.Equals(i.Name, name, StringComparison.OrdinalIgnoreCase))?.Text;
+
+    private static string FormatAssessmentLabel(HemosheetAssessmentItemViewModel item)
+    {
+        if (item.SelectedOptions.Count > 0)
+        {
+            return string.Join(", ", item.SelectedOptions);
+        }
+
+        return item.Name ?? "";
+    }
+
+    private static string? FormatAllergies(IList<string>? allergies)
+    {
+        if (allergies is null || allergies.Count == 0)
+        {
+            return "ไม่มีแพ้ยา";
+        }
+
+        return string.Join(", ", allergies);
+    }
+
+    private static string? FormatAc(float? amount, float? amountMl)
+    {
+        if (amountMl.HasValue)
+        {
+            return $"{FormatFloat(amountMl)} ml";
+        }
+
+        return FormatFloat(amount);
+    }
+
+    private static string? FormatBp(int? bps, int? bpd) =>
+        bps.HasValue || bpd.HasValue ? $"{bps}/{bpd}" : null;
+
+    private static string? FormatPercent(float? value) =>
+        value.HasValue ? $"{value:0.#}%" : null;
+
+    private static string? FormatMl(float? value) =>
+        value.HasValue ? $"{value:0.#} ml" : "0 ml";
 
     public static KeyValueTableReportBlock? MapLabs(HemosheetReportViewModel vm)
     {
@@ -275,6 +544,11 @@ public static class HemosheetPreviewMappers
         HemosheetReportViewModel vm,
         IReadOnlyDictionary<string, bool> features)
     {
+        if (!IsEnabled(features, "showNurseInShift"))
+        {
+            return null;
+        }
+
         var text = IsEnabled(features, "showNurseInShiftNonPn")
             ? vm.NursesInShiftNonPn
             : vm.NursesInShift;
@@ -299,6 +573,7 @@ public static class HemosheetPreviewMappers
             "NSS" => 0.6f,
             "UF Rate" => 0.8f,
             "HDF Vol." => 0.8f,
+            "Total" => 0.7f,
             "หมายเหตุ" => 3.5f,
             _ => 1f,
         };
@@ -364,6 +639,7 @@ public static class HemosheetPreviewMappers
             ["NSS"] = FormatFloat(record.Nss),
             ["UF Rate"] = FormatFloat(record.UfRate),
             ["HDF Vol."] = FormatFloat(record.HdfVolume),
+            ["Total"] = FormatFloat(record.UfTotal),
             ["หมายเหตุ"] = record.Note,
         };
 
@@ -384,6 +660,38 @@ public static class HemosheetPreviewMappers
     private static LabelValue Lv(string label, string? value) => new() { Label = label, Value = value ?? "—" };
 
     private static FieldGridField F(string label, string? value) => new() { Label = label, Value = value ?? "—" };
+
+    public static IReadOnlyList<SignatureSlot> MapStaffSignatureSlots(HemosheetReportViewModel vm)
+    {
+        var roleMap = new (string Key, string Label)[]
+        {
+            ("dialysis_nurse", "พยาบาลฟอกไต"),
+            ("na", "ผู้ช่วยพยาบาล"),
+            ("nephrologist", "Nephrologist"),
+            ("DialysisNurse", "พยาบาลฟอกไต"),
+            ("Nurse", "พยาบาลฟอกไต"),
+        };
+
+        var slots = new List<SignatureSlot>();
+        var usedLabels = new HashSet<string>(StringComparer.Ordinal);
+
+        foreach (var (key, label) in roleMap)
+        {
+            if (!vm.SignatureNames.TryGetValue(key, out var name) || string.IsNullOrWhiteSpace(name))
+            {
+                continue;
+            }
+
+            if (!usedLabels.Add(label))
+            {
+                continue;
+            }
+
+            slots.Add(new SignatureSlot { Role = label, Name = name });
+        }
+
+        return slots;
+    }
 
     private static string? FormatDate(DateTime? value) =>
         value?.ToString("yyyy-MM-dd");

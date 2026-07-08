@@ -1,7 +1,9 @@
 using Hemo.Pdf.Core.Constants;
 using Hemo.Pdf.Core.Context;
+using Hemo.Pdf.Core.Models.Preview;
 using Hemo.Pdf.Sections.Abstractions;
 using Hemo.Pdf.Sections.Helpers;
+using Hemo.Pdf.Sections.Preview;
 using QuestPDF.Fluent;
 using QuestPDF.Infrastructure;
 
@@ -11,67 +13,95 @@ public sealed class ChecklistTableSection : IContentSection
 {
     public void Compose(IContainer container, object viewModel, PdfReportContext context)
     {
+        if (viewModel is ChecklistTableReportBlock reportBlock)
+        {
+            ComposeBlock(container, reportBlock);
+            return;
+        }
+
         if (viewModel is not IChecklistSource source || source.Checklist is not { } checklist)
         {
             return;
         }
 
-        if (checklist.Items.Count == 0)
+        var block = ChecklistTablePreviewMapper.Map(checklist);
+        if (block is null)
         {
             return;
         }
+
+        ComposeBlock(container, block);
+    }
+
+    private static void ComposeBlock(IContainer container, ChecklistTableReportBlock block)
+    {
+        if (block.Rows.Count == 0)
+        {
+            return;
+        }
+
+        var ynLayout = string.Equals(block.Layout, "yn-columns", StringComparison.Ordinal);
+        var columnCount = ynLayout ? 4u : 3u;
 
         container.Border(0.5f).Table(table =>
         {
             table.ColumnsDefinition(columns =>
             {
-                columns.ConstantColumn(16);
-                columns.RelativeColumn(3);
-                columns.RelativeColumn(2);
+                if (ynLayout)
+                {
+                    columns.ConstantColumn(14);
+                    columns.ConstantColumn(14);
+                    columns.RelativeColumn(3);
+                    columns.RelativeColumn(2);
+                }
+                else
+                {
+                    columns.ConstantColumn(16);
+                    columns.RelativeColumn(3);
+                    columns.RelativeColumn(2);
+                }
             });
 
-            if (!string.IsNullOrWhiteSpace(checklist.Title))
+            if (!string.IsNullOrWhiteSpace(block.Title))
             {
-                table.Cell().ColumnSpan(3)
+                table.Cell().ColumnSpan(columnCount)
                     .Background(PdfSectionMetrics.SectionHeaderBackground)
                     .Border(0.5f)
                     .Padding(PdfSectionMetrics.SectionTitlePadding)
-                    .Text(checklist.Title)
+                    .Text(block.Title)
                     .FontFamily(PdfStyleDefaults.Body.SectionTitleFontFamily)
                     .FontSize(PdfStyleDefaults.Body.SectionTitleFontSize)
                     .SemiBold();
             }
 
-            table.Cell().Border(0.5f).Background(PdfSectionMetrics.SectionHeaderBackground).Padding(PdfSectionMetrics.CellPadding)
-                .Text("")
-                .FontSize(PdfStyleDefaults.Body.DataFontSize);
-            table.Cell().Border(0.5f).Background(PdfSectionMetrics.SectionHeaderBackground).Padding(PdfSectionMetrics.CellPadding)
-                .Text("รายการ")
-                .FontFamily(PdfStyleDefaults.Body.SectionTitleFontFamily)
-                .FontSize(PdfStyleDefaults.Body.DataFontSize)
-                .SemiBold();
-            table.Cell().Border(0.5f).Background(PdfSectionMetrics.SectionHeaderBackground).Padding(PdfSectionMetrics.CellPadding)
-                .Text("หมายเหตุ")
-                .FontFamily(PdfStyleDefaults.Body.SectionTitleFontFamily)
-                .FontSize(PdfStyleDefaults.Body.DataFontSize)
-                .SemiBold();
-
-            foreach (var item in checklist.Items)
+            foreach (var header in block.Columns)
             {
-                table.Cell().Border(0.5f).Padding(PdfSectionMetrics.CellPadding).Row(row =>
+                table.Cell().Border(0.5f).Background(PdfSectionMetrics.SectionHeaderBackground)
+                    .Padding(PdfSectionMetrics.CellPadding)
+                    .Text(header)
+                    .FontFamily(PdfStyleDefaults.Body.SectionTitleFontFamily)
+                    .FontSize(PdfStyleDefaults.Body.DataFontSize)
+                    .SemiBold();
+            }
+
+            foreach (var row in block.Rows)
+            {
+                foreach (var cell in row)
                 {
-                    PdfComponentHelpers.RenderCheckbox(row, item.IsChecked, 8f);
-                });
-
-                table.Cell().Border(0.5f).Padding(PdfSectionMetrics.CellPadding)
-                    .Text(item.Label)
-                    .FontFamily(PdfStyleDefaults.Body.DataFontFamily)
-                    .FontSize(PdfStyleDefaults.Body.DataFontSize);
-
-                table.Cell().Border(0.5f).Padding(PdfSectionMetrics.CellPadding)
-                    .Text(string.IsNullOrWhiteSpace(item.Notes) ? "—" : item.Notes)
-                    .FontFamily(PdfStyleDefaults.Body.DataFontFamily)
-                    .FontSize(PdfStyleDefaults.Body.DataFontSize);
+                    var cellContainer = table.Cell().Border(0.5f).Padding(PdfSectionMetrics.CellPadding);
+                    switch (cell)
+                    {
+                        case ChecklistCheckboxCell checkbox:
+                            cellContainer.Row(rowDescriptor =>
+                                PdfComponentHelpers.RenderCheckbox(rowDescriptor, checkbox.Checked, 8f));
+                            break;
+                        case ChecklistTextCell textCell:
+                            cellContainer.Text(string.IsNullOrWhiteSpace(textCell.Text) ? "—" : textCell.Text)
+                                .FontFamily(PdfStyleDefaults.Body.DataFontFamily)
+                                .FontSize(PdfStyleDefaults.Body.DataFontSize);
+                            break;
+                    }
+                }
             }
         });
     }

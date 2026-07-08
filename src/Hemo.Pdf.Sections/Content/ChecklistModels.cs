@@ -10,6 +10,7 @@ public sealed class ChecklistItem
 public sealed class ChecklistTableModel
 {
     public string? Title { get; init; }
+    public string Layout { get; init; } = "default";
     public IReadOnlyList<ChecklistItem> Items { get; init; } = [];
 }
 

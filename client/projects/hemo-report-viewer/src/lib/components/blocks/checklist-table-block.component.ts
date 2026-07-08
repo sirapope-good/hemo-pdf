@@ -8,22 +8,32 @@ import { ChecklistTableReportBlock, ChecklistCheckboxCell, ChecklistTextCell } f
   imports: [CommonModule],
   template: `
     <section class="hemo-report-block">
-      <table class="hemo-checklist-table">
+      <table class="hemo-checklist-table" [class.hemo-checklist-table--yn]="block.layout === 'yn-columns'">
         <thead>
           <tr *ngIf="block.title" class="hemo-section-title-row">
             <th [attr.colspan]="block.columns.length">{{ block.title }}</th>
           </tr>
           <tr>
-            <th *ngFor="let col of block.columns; let i = index" [class.hemo-checklist-table__checkbox-col]="i === 0">
+            <th
+              *ngFor="let col of block.columns; let i = index"
+              [class.hemo-checklist-table__checkbox-col]="isCheckboxColumn(i)"
+            >
               {{ col }}
             </th>
           </tr>
         </thead>
         <tbody>
           <tr *ngFor="let row of block.rows">
-            <td *ngFor="let cell of row; let i = index" [class.hemo-checklist-table__checkbox-col]="i === 0">
+            <td
+              *ngFor="let cell of row; let i = index"
+              [class.hemo-checklist-table__checkbox-col]="isCheckboxColumn(i)"
+            >
               <ng-container [ngSwitch]="cell.kind">
-                <span *ngSwitchCase="'checkbox'" class="hemo-checklist-table__box" [class.hemo-checklist-table__box--checked]="asCheckbox(cell).checked">
+                <span
+                  *ngSwitchCase="'checkbox'"
+                  class="hemo-checklist-table__box"
+                  [class.hemo-checklist-table__box--checked]="asCheckbox(cell).checked"
+                >
                   {{ asCheckbox(cell).checked ? '/' : '' }}
                 </span>
                 <span *ngSwitchDefault>{{ asText(cell).text }}</span>
@@ -37,6 +47,14 @@ import { ChecklistTableReportBlock, ChecklistCheckboxCell, ChecklistTextCell } f
 })
 export class ChecklistTableBlockComponent {
   @Input({ required: true }) block!: ChecklistTableReportBlock;
+
+  isCheckboxColumn(index: number): boolean {
+    if (this.block.layout === 'yn-columns') {
+      return index < 2;
+    }
+
+    return index === 0;
+  }
 
   asCheckbox(cell: unknown): ChecklistCheckboxCell {
     return cell as ChecklistCheckboxCell;

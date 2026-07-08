@@ -13,6 +13,8 @@
   "isAcNotUsed": false,
   "isConsent": false,
   "nursesInShift": "RN Somchai, RN Malee",
+  "preVital": { "bps": 138, "bpd": 88, "hr": 76, "rr": 18, "temp": 36.8, "spO2": 98 },
+  "postVital": { "bps": 128, "bpd": 82, "hr": 72, "rr": 18, "temp": 36.6, "spO2": 99 },
   "patient": {
     "name": "สมชาย ใจดี",
     "hn": "HN-001234",
@@ -21,7 +23,9 @@
     "age": 58,
     "doctorName": "นพ. วิชัย รักษ์ดี",
     "allergies": ["heparin"],
-    "coverage": "UC"
+    "coverage": "UC",
+    "diagnosis": "CKD stage 5",
+    "underlying": "DM, HT"
   },
   "unit": { "id": 1, "fullName": "หน่วยไตเทียม ชั้น 3" },
   "dehydration": {
@@ -29,7 +33,13 @@
     "postWeight": 66.2,
     "lastPostWeight": 66.0,
     "foodIntakeWeight": 0.25,
-    "ufNet": 2.3
+    "extraFluid": 0.5,
+    "ufNet": 2.3,
+    "totalUf": 2.8,
+    "ufEstimate": 2.5,
+    "ufGoal": 2.3,
+    "flushNss": 100,
+    "flushNssTotal": 200
   },
   "dialysisPrescription": {
     "mode": "HD",
@@ -37,7 +47,14 @@
     "durationHours": 4,
     "durationMinutes": 0,
     "anticoagulant": "Heparin",
-    "dryWeight": 65.0
+    "dryWeight": 65.0,
+    "dialyzer": "FX80",
+    "dialysateK": 2.0,
+    "dialysateCa": 2.5,
+    "bloodFlow": 300,
+    "initialAmount": 2000,
+    "maintainAmount": 800,
+    "acPerSession": 5000
   },
   "avShunt": {
     "avShuntId": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
@@ -52,8 +69,21 @@
       { "name": "chest", "checked": false, "text": "" }
     ],
     "re": [{ "name": "pain", "checked": false, "text": "" }],
-    "post": [],
-    "other": []
+    "post": [
+      { "name": "complication.hypotension", "checked": false, "text": "" },
+      { "name": "complication.cramps", "checked": true, "text": "mild" },
+      { "name": "nursing.skin_assessment", "checked": true, "text": "" },
+      { "name": "health.fluid_intake", "checked": true, "text": "" },
+      { "name": "avf.thrill", "checked": true, "text": "" },
+      { "name": "avf.bruit", "checked": true, "text": "" },
+      { "name": "avf.hematoma", "checked": false, "text": "" }
+    ],
+    "other": [
+      { "name": "medication.epo", "checked": true, "text": "4000 unit" },
+      { "name": "nursing_diagnosis", "checked": true, "text": "Risk for fluid imbalance" },
+      { "name": "nursing_intervention", "checked": true, "text": "Monitor weight and UF" },
+      { "name": "expected_outcomes", "checked": true, "text": "Achieve dry weight" }
+    ]
   },
   "dialysisRecords": [
     {
@@ -63,6 +93,7 @@
       "hr": 72,
       "bfr": 300,
       "ufRate": 500,
+      "ufTotal": 800,
       "note": ""
     },
     {
@@ -72,11 +103,13 @@
       "hr": 70,
       "bfr": 300,
       "ufRate": 600,
+      "ufTotal": 2000,
       "note": "stable"
     }
   ],
   "nurseRecords": [
-    { "timestamp": "2026-07-06T08:15:00Z", "content": "เริ่มฟอกตามแผน" }
+    { "timestamp": "2026-07-06T08:15:00Z", "content": "เริ่มฟอกตามแผน Pre HD note" },
+    { "timestamp": "2026-07-06T12:00:00Z", "content": "ฟอกเสร็จ Post HD note" }
   ],
   "doctorRecords": [],
   "medicineRecords": [
@@ -88,7 +121,11 @@
     }
   ],
   "progressNotes": [],
-  "signatureNames": { "Nurse": "RN Somchai" },
+  "signatureNames": {
+    "Nurse": "RN Somchai",
+    "pre_hd": "RN Somchai",
+    "post_hd": "RN Malee"
+  },
   "layoutContext": {
     "layoutProfile": "Default",
     "dialysisMode": "HD",
@@ -105,6 +142,8 @@
       "showAcFields": true,
       "showDurationHours": true,
       "showNurseInShift": true,
+      "showFlushNss": true,
+      "showCreatorName": true,
       "showProgressNote": false
     }
   }

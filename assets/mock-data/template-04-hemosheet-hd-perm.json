@@ -4,8 +4,11 @@
     "name": "มานี มีตา",
     "hn": "HN-009999",
     "sex": "Female",
-    "doctorName": "นพ. สมศักดิ์"
+    "doctorName": "นพ. สมศักดิ์",
+    "diagnosis": "ESRD",
+    "allergies": []
   },
+  "preVital": { "bps": 118, "bpd": 72, "hr": 80 },
   "unit": { "id": 2, "fullName": "หน่วยไตเทียม B" },
   "dehydration": { "preWeight": 70.0, "postWeight": 68.0, "ufNet": 2.0 },
   "dialysisPrescription": {

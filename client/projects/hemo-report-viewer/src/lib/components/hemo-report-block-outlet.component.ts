@@ -8,6 +8,10 @@ import { DataGridBlockComponent } from './blocks/data-grid-block.component';
 import { ChecklistTableBlockComponent } from './blocks/checklist-table-block.component';
 import { VascularAccessBlockComponent } from './blocks/vascular-access-block.component';
 import { SignatureBlockComponent } from './blocks/signature-block.component';
+import { SubHeaderBarBlockComponent } from './blocks/sub-header-bar-block.component';
+import { SectionRowBlockComponent } from './blocks/section-row-block.component';
+import { ChecklistClusterBlockComponent } from './blocks/checklist-cluster-block.component';
+import { PrePostHdNotesBlockComponent } from './blocks/pre-post-hd-notes-block.component';
 
 @Component({
   selector: 'hemo-report-block-outlet',
@@ -21,6 +25,10 @@ import { SignatureBlockComponent } from './blocks/signature-block.component';
     ChecklistTableBlockComponent,
     VascularAccessBlockComponent,
     SignatureBlockComponent,
+    SubHeaderBarBlockComponent,
+    SectionRowBlockComponent,
+    ChecklistClusterBlockComponent,
+    PrePostHdNotesBlockComponent,
   ],
   template: `
     @switch (block.type) {
@@ -44,6 +52,18 @@ import { SignatureBlockComponent } from './blocks/signature-block.component';
       }
       @case ('signature') {
         <hemo-signature-block [block]="$any(block)" />
+      }
+      @case ('sub-header-bar') {
+        <hemo-sub-header-bar-block [block]="$any(block)" />
+      }
+      @case ('section-row') {
+        <hemo-section-row-block [block]="$any(block)" />
+      }
+      @case ('checklist-cluster') {
+        <hemo-checklist-cluster-block [block]="$any(block)" />
+      }
+      @case ('pre-post-hd-notes') {
+        <hemo-pre-post-hd-notes-block [block]="$any(block)" />
       }
       @case ('text') {
         <section class="hemo-report-block">

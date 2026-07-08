@@ -1,8 +1,9 @@
 {
   "id": "00000000-0000-0000-0000-000000000002",
-  "patient": { "name": "", "hn": "", "allergies": [] },
+  "patient": { "name": "HDF Patient", "hn": "HDF-001", "allergies": [], "diagnosis": "ESRD on HDF" },
+  "preVital": { "bps": 132, "bpd": 84, "hr": 74 },
   "unit": { "id": 1, "fullName": "หน่วยไตเทียม" },
-  "dehydration": {},
+  "dehydration": { "preWeight": 70.0, "totalUf": 3.0, "extraFluid": 0.3 },
   "dialysisPrescription": {
     "mode": "HDF",
     "bloodAccessRoute": "AV Fistula R",
@@ -23,7 +24,8 @@
       "bps": 128,
       "bpd": 78,
       "hdfVolume": 12.5,
-      "ufRate": 450
+      "ufRate": 450,
+      "ufTotal": 1500
     }
   ],
   "nurseRecords": [],
@@ -42,7 +44,8 @@
       "showAvPanel": true,
       "showCathPanel": false,
       "showAcFields": true,
-      "showDurationHours": true
+      "showDurationHours": true,
+      "showNurseInShift": false
     }
   }
 }

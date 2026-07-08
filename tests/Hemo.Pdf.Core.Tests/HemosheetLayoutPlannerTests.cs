@@ -28,7 +28,30 @@ public class HemosheetLayoutPlannerTests
     }
 
     [Fact]
-    public void Plan_Hdf_IncludesHdfColumns()
+    public void Plan_Default_IncludesParitySections()
+    {
+        var vm = CreateViewModel(
+            mode: "HD",
+            catheterType: 0,
+            features: new Dictionary<string, bool>
+            {
+                ["showAvPanel"] = true,
+                ["showNurseInShift"] = true,
+            },
+            patient: new HemosheetPatientViewModel { Diagnosis = "CKD stage 5" },
+            preVital: new HemosheetVitalSignViewModel { Bps = 130, Bpd = 80 });
+
+        var plans = _planner.Plan(vm);
+
+        Assert.Contains(plans, p => p.SectionId == HemosheetSectionId.SubHeaderBar);
+        Assert.Contains(plans, p => p.SectionId == HemosheetSectionId.Predialysis);
+        Assert.Contains(plans, p => p.SectionId == HemosheetSectionId.UfSummary);
+        Assert.Contains(plans, p => p.SectionId == HemosheetSectionId.PrePostHdNotes);
+        Assert.Contains(plans, p => p.SectionId == HemosheetSectionId.PostVitals);
+    }
+
+    [Fact]
+    public void Plan_Hdf_IncludesHdfColumnsAndTotal()
     {
         var vm = CreateViewModel(
             mode: "HDF",
@@ -41,6 +64,7 @@ public class HemosheetLayoutPlannerTests
 
         var dialysis = _planner.Plan(vm).Single(p => p.SectionId == HemosheetSectionId.DialysisRecords);
         Assert.Contains("HDF Vol.", dialysis.VisibleColumns);
+        Assert.Contains("Total", dialysis.VisibleColumns);
     }
 
     [Fact]
@@ -113,11 +137,15 @@ public class HemosheetLayoutPlannerTests
         IReadOnlyDictionary<string, bool> features,
         HemosheetLayoutProfile layoutProfile = HemosheetLayoutProfile.Default,
         bool isConsent = false,
-        HemosheetLabsViewModel? labs = null)
+        HemosheetLabsViewModel? labs = null,
+        HemosheetPatientViewModel? patient = null,
+        HemosheetVitalSignViewModel? preVital = null)
     {
         return new HemosheetReportViewModel
         {
             IsConsent = isConsent,
+            Patient = patient ?? new HemosheetPatientViewModel(),
+            PreVital = preVital,
             Labs = labs ?? new HemosheetLabsViewModel(),
             DialysisPrescription = new HemosheetPrescriptionViewModel { Mode = mode },
             AvShunt = new HemosheetAvShuntViewModel { CatheterType = catheterType },

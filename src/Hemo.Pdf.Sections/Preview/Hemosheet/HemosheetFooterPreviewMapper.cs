@@ -9,6 +9,7 @@ public static class HemosheetFooterPreviewMapper
     public static ReportFooterBlock Map(HemosheetReportViewModel vm, PdfReportContext context)
     {
         var signatures = context.Signatures?.Signatures ?? [];
+        var staffSlots = HemosheetPreviewMappers.MapStaffSignatureSlots(vm);
         var footer = context.Branding?.Footer;
         var showPageNumber = context.Branding?.Header.ShowPageNumber ?? true;
         var lines = new List<string>();
@@ -24,11 +25,14 @@ public static class HemosheetFooterPreviewMapper
             lines.Add(footer.DisclaimerText!);
         }
 
+        var signatureSlots = SignaturePreviewMapper.MapSlots(signatures).ToList();
+        signatureSlots.AddRange(staffSlots);
+
         return new ReportFooterBlock
         {
-            Type = signatures.Count > 0 ? "signed" : "configurable",
+            Type = signatureSlots.Count > 0 ? "signed" : "configurable",
             Lines = lines,
-            Signatures = SignaturePreviewMapper.MapSlots(signatures),
+            Signatures = signatureSlots,
             PageNumber = showPageNumber ? new PageNumberInfo { Current = 1, Total = 1 } : null,
         };
     }

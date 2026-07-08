@@ -364,6 +364,74 @@
   word-break: break-word;
 }
 
+.hemo-label {
+  font-weight: 600;
+}
+
+.hemo-value {
+  font-weight: 400;
+}
+
+.hemo-sub-header-bar__table {
+  width: 100%;
+  border-collapse: collapse;
+  border: var(--hemo-border-width) solid var(--hemo-border);
+
+  td {
+    border: var(--hemo-border-width) solid var(--hemo-border);
+    padding: var(--hemo-cell-padding);
+    width: 50%;
+  }
+}
+
+.hemo-section-row__grid {
+  display: grid;
+  grid-template-columns: repeat(var(--hemo-section-columns, 2), minmax(0, 1fr));
+  gap: 2pt;
+  align-items: start;
+}
+
+.hemo-section-row__column {
+  display: flex;
+  flex-direction: column;
+  gap: 2pt;
+  min-width: 0;
+}
+
+.hemo-checklist-cluster__grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 2pt;
+}
+
+.hemo-pre-post-hd-notes {
+  width: 100%;
+  border-collapse: collapse;
+  border: var(--hemo-border-width) solid var(--hemo-border);
+
+  td {
+    border: var(--hemo-border-width) solid var(--hemo-border);
+    padding: var(--hemo-cell-padding);
+    vertical-align: top;
+  }
+}
+
+.hemo-pre-post-hd-notes__label {
+  font-weight: 600;
+  margin-bottom: 1pt;
+}
+
+.hemo-pre-post-hd-notes__signer {
+  width: 22%;
+  vertical-align: bottom;
+  text-align: center;
+}
+
+.hemo-checklist-table--yn .hemo-checklist-table__checkbox-col {
+  width: 14pt;
+  text-align: center;
+}
+
 .hemo-report-viewer__loading,
 .hemo-report-viewer__error {
   padding: 1rem;
