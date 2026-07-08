@@ -4,6 +4,8 @@ using Hemo.Pdf.Core.Context;
 using Hemo.Pdf.Core.Models.Hemosheet;
 using Hemo.Pdf.Layouts.Base;
 using Hemo.Pdf.Layouts.Hemosheet;
+using Hemo.Pdf.Layouts.Template04_Hemosheet.ThaiUr;
+using Hemo.Pdf.Rendering;
 using Hemo.Pdf.Sections.Abstractions;
 using QuestPDF.Fluent;
 using QuestPDF.Infrastructure;
@@ -14,6 +16,7 @@ public sealed class HemosheetComposer : BaseReportComposer<HemosheetReportViewMo
 {
     private readonly IHemosheetLayoutPlanner _planner;
     private readonly HemosheetSectionRendererRegistry _renderers;
+    private readonly ThaiUrHemosheetForm _thaiUrForm = new();
 
     public HemosheetComposer(
         IHemosheetLayoutPlanner planner,
@@ -24,6 +27,32 @@ public sealed class HemosheetComposer : BaseReportComposer<HemosheetReportViewMo
     {
         _planner = planner;
         _renderers = renderers;
+    }
+
+    public override object Compose(object dataModel, PdfReportContext context)
+    {
+        var viewModel = (HemosheetReportViewModel)dataModel;
+
+        // The ThaiUR "Hemodialysis Record" is a dense, self-contained single-page form (own header
+        // and footer), so it bypasses the block-flow planner and header/footer resolvers to match
+        // the Telerik original pixel-for-pixel. Default/Rama keep the flexible block-flow path.
+        if (viewModel.LayoutContext.LayoutProfile == HemosheetLayoutProfile.ThaiUr)
+        {
+            const float margin = HemosheetThaiUrStyle.PageMarginMm;
+            return new QuestLayout
+            {
+                MarginMillimeters = margin,
+                MarginTop = margin,
+                MarginBottom = margin,
+                MarginLeft = margin,
+                MarginRight = margin,
+                Header = null,
+                Content = c => _thaiUrForm.Compose(c, viewModel, context),
+                Footer = null,
+            };
+        }
+
+        return base.Compose(dataModel, context);
     }
 
     protected override void ComposeContent(

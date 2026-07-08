@@ -20,7 +20,7 @@ public abstract class BaseReportComposer<TViewModel> : ILayoutComposer
         _footerResolver = footerResolver;
     }
 
-    public object Compose(object dataModel, PdfReportContext context)
+    public virtual object Compose(object dataModel, PdfReportContext context)
     {
         var viewModel = (TViewModel)dataModel;
         PrepareContext(context, viewModel);

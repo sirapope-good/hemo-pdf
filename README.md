@@ -176,9 +176,10 @@ Print/Download ยังใช้ `@hemo/pdf-client` → `POST /api/pdf/generate
 
 ## Docs
 
-- [01-IMPLEMENT-PLANNING.md](./01-IMPLEMENT-PLANNING.md) — แผนออกแบบโมดูล
+- [.cursor/docs/PDF-REPORT-SYSTEM.md](./.cursor/docs/PDF-REPORT-SYSTEM.md) — สรุประบบ PDF/Preview ทั้ง 3 repo (สถานะปัจจุบัน + flow + fallback + วิธีขึ้น template ใหม่)
+- [01-IMPLEMENT-PLANNING.md](./01-IMPLEMENT-PLANNING.md) — แผนออกแบบโมดูล + decision log
 - [02-FEATURE-PREVIEW-PDF.md](./02-FEATURE-PREVIEW-PDF.md) — Report Preview (`@hemo/report-viewer`, แทน Telerik)
-- [0ฺ0-REFERENCE-PLANNING.md](./0ฺ0-REFERENCE-PLANNING.md) — อ้างอิงจาก NSS
+- [03-IMPLEMENT-REPORT-LAYOUT.md](./03-IMPLEMENT-REPORT-LAYOUT.md) — แผน Hemosheet layout parity
 
 ## Related Repos
 

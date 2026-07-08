@@ -250,6 +250,49 @@ public class PdfApiIntegrationTests : IClassFixture<PdfApiWebApplicationFactory>
         Assert.Contains(expectedBlockType, types);
     }
 
+    [Fact]
+    public async Task GeneratePdf_HemosheetThaiUr_ReturnsSinglePagePdf()
+    {
+        var mockPath = Path.GetFullPath(Path.Combine(
+            AppContext.BaseDirectory,
+            "..", "..", "..", "..", "..",
+            "assets", "mock-data", "template-04-hemosheet-thaiur.json"));
+
+        var jsonText = await File.ReadAllTextAsync(mockPath);
+        using var data = JsonDocument.Parse(jsonText);
+
+        var response = await PostGenerateAsync(
+            "tenant-demo-a",
+            "template-04-hemosheet",
+            new
+            {
+                reportTemplateId = "template-04-hemosheet",
+                tenantCode = "tenant-demo-a",
+                entityId = "hemosheet-thaiur",
+                data = data.RootElement,
+                signatures = new
+                {
+                    isFullySigned = true,
+                    signatures = new[] { new { signerName = "Nurse" } },
+                },
+            });
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.Equal("application/pdf", response.Content.Headers.ContentType?.MediaType);
+
+        var bytes = await response.Content.ReadAsByteArrayAsync();
+        Assert.True(bytes.Length > 100);
+        Assert.Equal((byte)'%', bytes[0]);
+
+        var pdfAscii = System.Text.Encoding.ASCII.GetString(bytes);
+        var pageCount = System.Text.RegularExpressions.Regex.Matches(pdfAscii, @"/Type\s*/Page[^s]").Count;
+        Assert.Equal(1, pageCount);
+
+        var outDir = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "output"));
+        Directory.CreateDirectory(outDir);
+        await File.WriteAllBytesAsync(Path.Combine(outDir, "hemosheet-thaiur.pdf"), bytes);
+    }
+
     private async Task<HttpResponseMessage> PostPreviewAsync(string tenantCode, string templateId)
     {
         return await PostPreviewAsync(tenantCode, templateId, new

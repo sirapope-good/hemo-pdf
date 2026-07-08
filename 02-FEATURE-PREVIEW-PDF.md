@@ -536,5 +536,5 @@ sequenceDiagram
 | ไฟล์ | ความสัมพันธ์ |
 |------|-------------|
 | [01-IMPLEMENT-PLANNING.md](./01-IMPLEMENT-PLANNING.md) | สถาปัตยกรรมรวม Hemo-PDF — §4, §8 ลิงก์มาที่เอกสารนี้ |
-| [0ฺ0-REFERENCE-PLANNING.md](./0ฺ0-REFERENCE-PLANNING.md) | อ้างอิง NSS + สรุป dual output |
+| [.cursor/docs/PDF-REPORT-SYSTEM.md](./.cursor/docs/PDF-REPORT-SYSTEM.md) | สรุประบบปัจจุบันทั้ง 3 repo + flow + fallback |
 | [.cursor/plans/hemo-pdf_implementation_8969dd4f.plan.md](./.cursor/plans/hemo-pdf_implementation_8969dd4f.plan.md) | Checklist รวม repo — Phase 6 สรุปจากเอกสารนี้ |
