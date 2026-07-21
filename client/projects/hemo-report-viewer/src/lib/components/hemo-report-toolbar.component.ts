@@ -15,6 +15,15 @@ import { CommonModule } from '@angular/common';
       <span>{{ pageIndex + 1 }} / {{ pageCount }}</span>
       <button type="button" (click)="nextPage.emit()" [disabled]="busy || pageIndex >= pageCount - 1">›</button>
       <span>|</span>
+      <button
+        type="button"
+        class="hemo-report-viewer__action-btn"
+        (click)="reload.emit()"
+        [disabled]="busy"
+        title="Reload preview">
+        <span *ngIf="loading" class="hemo-report-viewer__btn-spinner" aria-hidden="true"></span>
+        {{ loading ? 'กำลังโหลด…' : 'Reload' }}
+      </button>
       <button type="button" class="hemo-report-viewer__action-btn" (click)="print.emit()" [disabled]="busy">
         <span *ngIf="printing" class="hemo-report-viewer__btn-spinner" aria-hidden="true"></span>
         {{ printing ? 'กำลังพิมพ์…' : 'Print' }}
@@ -32,6 +41,7 @@ export class HemoReportToolbarComponent {
   @Input() pageCount = 1;
   @Input() minScale = 0.5;
   @Input() maxScale = 2;
+  @Input() loading = false;
   @Input() printing = false;
   @Input() downloading = false;
 
@@ -39,6 +49,7 @@ export class HemoReportToolbarComponent {
   @Output() zoomOut = new EventEmitter<void>();
   @Output() prevPage = new EventEmitter<void>();
   @Output() nextPage = new EventEmitter<void>();
+  @Output() reload = new EventEmitter<void>();
   @Output() print = new EventEmitter<void>();
   @Output() download = new EventEmitter<void>();
 
@@ -47,6 +58,6 @@ export class HemoReportToolbarComponent {
   }
 
   get busy(): boolean {
-    return this.printing || this.downloading;
+    return this.loading || this.printing || this.downloading;
   }
 }

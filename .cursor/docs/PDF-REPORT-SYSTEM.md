@@ -39,8 +39,8 @@ repo เสริมที่เกี่ยวข้อง:
 ### หลักการออกแบบสำคัญ
 
 1. **แยกความรับผิดชอบ:** Hemo-PDF เป็น service แยก deploy ไม่ฝังใน business API และไม่ query DB ของ Hemopro โดยตรง — รับข้อมูลผ่าน DTO ใน request body (stateless)
-2. **Dual output จาก pipeline เดียว (ฝั่ง server):** DTO ชุดเดียว → ออกได้ทั้ง PDF (`POST /api/pdf/generate`) และ ReportDocument JSON (`POST /api/report/preview`) โดยใช้ data provider + planner ตัวเดียวกัน — **Hemopro UI ใช้ PDF path เท่านั้นสำหรับ preview**
-3. **Hemopro preview = pdf.js canvas:** `hemo-report-viewer` render PDF blob ด้วย **pdf.js** (lazy load) ลง `<canvas>` — toolbar ควบคุมได้ 100% (zoom / หน้า / print / download), WYSIWYG กับไฟล์ที่พิมพ์
+2. **Dual output จาก pipeline เดียว (ฝั่ง server):** DTO ชุดเดียว → ออกได้ทั้ง PDF (`POST /api/pdf/generate`) และ ReportDocument JSON (`POST /api/report/preview`) โดยใช้ data provider + planner ตัวเดียวกัน
+3. **Hemopro preview = DOM จาก ReportDocument:** `hemo-report-viewer` render blocks เป็น HTML (ความรู้สึกใกล้ Telerik) — Print/Download ใช้ PDF จาก `POST /api/pdf/generate`
 
 ---
 
@@ -51,7 +51,7 @@ flowchart TB
     subgraph FE["Hemo-frontend (Angular :4200)"]
         RP[reports.page / embedded-hemosheet-report / preview-modal]
         PORT[HEMOSHEET_PREVIEW_PORT<br/>hemo-pdf.providers.ts]
-        VIEW[hemo-report-viewer<br/>pdf.js canvas + toolbar]
+        VIEW[hemo-report-viewer<br/>DOM blocks + toolbar]
         TELERIK[tr-viewer Telerik<br/>fallback]
     end
 
@@ -77,13 +77,14 @@ flowchart TB
     CTRL --> SVC --> RES
     SVC --> LAYRES
     SVC -->|HemosheetReportDto + LayoutContext| PORT
-    PORT -->|POST /api/pdf/generate| API
+    PORT -->|POST /api/report/preview| API
+    PORT -->|print/download POST /api/pdf/generate| API
     API --> APP --> FAC --> PLAN --> REN
     REN --> QP
     REN --> DOC
+    DOC -->|ReportDocument JSON| PORT
     QP -->|application/pdf blob| PORT
     PORT --> VIEW
-    DOC -.->|demo/tests only| API
     RP -.->|flag ปิด / report อื่น| TELERIK
 ```
 
@@ -113,12 +114,12 @@ GET /api/Hemodialysis/report-data/template?unitId=&templateMode=hd|hdf   // ฟ�
 ### ขั้นที่ 2 — Frontend เรียก preview/generate (Hemo-frontend)
 
 - Frontend **ไม่ได้ใช้ npm library โดยตรง** แต่ใช้ port ของตัวเองใน `src/app/share/hemo-pdf/hemo-pdf.providers.ts`:
-  - `HEMOSHEET_PREVIEW_PORT` → `loadHemosheetPreview()` / `loadPreview()` = `POST {pdfApiUrl}/api/pdf/generate` → `Blob`
-  - `generatePdf()` / `download()` = `POST {pdfApiUrl}/api/pdf/generate` เช่นกัน
-  - `buildPreviewBody()` hard-code `reportTemplateId: 'template-04-hemosheet'`, ใส่ `entityId: hemoId`, `data: dto`
+  - `HEMOSHEET_PREVIEW_PORT` → `loadHemosheetPreview()` = `POST {pdfApiUrl}/api/report/preview` → `ReportDocument`
+  - `generatePdf()` / `download()` = `POST {pdfApiUrl}/api/pdf/generate` → PDF blob
+  - `buildPreviewBody()` ใส่ `reportTemplateId` จาก catalog (hemosheet → `template-04-hemosheet`), `entityId: hemoId`, `data: dto`
   - tenant code มาจาก JWT claim (fallback `'local'`)
-- config: `src/assets/config/config.json` → `pdfApiUrl: http://localhost:5090`, `useHemoPdfPreview: true`
-- dependency: `pdfjs-dist` (lazy import ใน `hemo-report-pdf-canvas`) + worker ที่ `src/assets/pdfjs/pdf.worker.min.mjs`
+- config: tenant `config.json` / offline bootstrap → `pdfApiUrl: http://localhost:5090`, `useHemoPdfPreview: true`
+- viewer source: sync จาก `Hemo-PDF/client/.../hemo-report-viewer` ผ่าน `npm run sync:report-viewer`
 
 ### ขั้นที่ 3 — Hemo-PDF render (Hemo.Pdf.Api)
 
@@ -150,13 +151,12 @@ GeneratePdfRequest
 
 ### ขั้นที่ 4 — แสดงผลบนจอ (Hemo-frontend)
 
-- `hemo-report-viewer` รับ **`pdfBlob`** แล้วส่งให้ **`hemo-report-pdf-canvas`** (pdf.js) render ลง `<canvas>`
-- Toolbar (`hemo-report-toolbar`): zoom 0.5–2, เปลี่ยนหน้า, Print, Download — ควบคุมได้ 100% (ไม่ใช้ browser PDF iframe)
-- Fit-to-width: `ResizeObserver` + page viewport width จาก pdf.js
-- pdf.js โหลดแบบ **lazy** (`import('pdfjs-dist')`) ครั้งแรกที่เปิด preview
-- Print/Download → ใช้ blob เดิมที่โหลดแล้ว หรือเรียก `POST /api/pdf/generate` อีกครั้ง; print ผ่าน `printPdfBlob` (hidden iframe สำหรับสั่งพิมพ์เท่านั้น)
+- `hemo-report-viewer` รับ **`document: ReportDocument`** แล้ว render เป็น DOM ผ่าน `hemo-report-page` + `hemo-report-block-outlet`
+- Toolbar (`hemo-report-toolbar`): zoom (CSS scale) / เปลี่ยนหน้า / Print / Download
+- Fit-to-width: `ResizeObserver` + ความกว้าง A4 mm→px
+- Print/Download → `POST /api/pdf/generate` (PDF จริง); print ผ่าน `printPdfBlob` (hidden iframe สำหรับสั่งพิมพ์เท่านั้น)
 
-> **หมายเหตุ:** Block-based Angular preview ถูกลบออกจาก lib แล้ว — Hemopro ใช้ pdf.js canvas เท่านั้น. `POST /api/report/preview` (JSON) ยังอยู่สำหรับ integration test / demo HTML
+> **หมายเหตุ:** Hemopro ใช้ DOM preview สำหรับ Hemosheet เมื่อ `useHemoPdfPreview=true` — ไม่ใช้ pdf.js บนจอใน path นี้; `hemo-report-pdf-canvas` ยังอยู่ใน lib แต่ไม่ mount
 
 ---
 
@@ -165,7 +165,7 @@ GeneratePdfRequest
 | ชั้น | Fallback | ไฟล์/กลไก |
 |------|----------|-----------|
 | **Frontend viewer** | ถ้า `useHemoPdfPreview=false` หรือ report ไม่ใช่ hemosheet → ใช้ **Telerik `tr-viewer`** | `reports.page.ts/html`, `embedded-hemosheet-report` |
-| **Hemo-PDF preview UI** | ทุก template/profile → **pdf.js canvas** (ไม่ใช้ iframe / ไม่ใช้ blocks JSON บนจอ) | `hemo-report-viewer`, `hemo-report-pdf-canvas` |
+| **Hemo-PDF preview UI** | Hemosheet → **DOM ReportDocument blocks** (ไม่ใช้ iframe) | `hemo-report-viewer`, `hemo-report-block-outlet` |
 | **Renderer factory (PDF)** | template id ไม่รู้จัก → `PlaceholderReportRenderer` | `TemplateReportRendererFactory` |
 | **Renderer factory (Preview)** | template id ไม่รู้จัก → `GenericReportPreviewRenderer` | `TemplateReportPreviewRendererFactory` |
 | **Known template ไม่มี renderer เฉพาะ** | 02,03,05–12 → **Generic** stack (key-value flatten) | `ResolveRendererType` |
@@ -181,16 +181,17 @@ GeneratePdfRequest
 
 ---
 
-## 5. หัวใจของความยืดหยุ่น: Dual Output (Server) + pdf.js Preview (UI)
+## 5. หัวใจของความยืดหยุ่น: Dual Output (Server) + DOM Preview (UI)
 
-### 5.0 Hemopro preview path (มาตรฐานเดียว)
+### 5.0 Hemopro preview path (มาตรฐาน Hemosheet)
 
 ```
-DTO → POST /api/pdf/generate → PDF blob → pdf.js canvas → toolbar ของเรา
+DTO → POST /api/report/preview → ReportDocument → Angular DOM blocks → toolbar
+Print/Download → POST /api/pdf/generate → PDF blob
 ```
 
-- ทุก tenant/profile (Default, Rama, ThaiUR, …) ใช้ path เดียวกัน
-- Trade-off: preview ช้ากว่า JSON blocks เล็กน้อย แต่ WYSIWYG ~100% และบำรุงรักษาง่าย
+- Preview เป็น HTML (เลือกข้อความได้) — Print/Download ยังเป็น PDF จริง
+- Trade-off: layout DOM อาจ drift จาก QuestPDF เล็กน้อย ต้องไล่ parity เป็นรอบถัดไป
 
 ### 5.1 "Map once, render both" — `ReportBlock` เป็นตัวกลาง (ฝั่ง server)
 
@@ -203,7 +204,7 @@ Data → ReportBlock ──┤
 ```
 
 - ฝั่ง C#: `ReportBlockPdfComposer.Compose(block, container)` มี `switch` กลางที่แปลง **ทุก** `ReportBlock` เป็น QuestPDF (`Sections/Content/ReportBlockPdfComposer.cs`)
-- ฝั่ง Angular (legacy/demo): `hemo-report-block-outlet` `@switch (block.type)` — **ไม่ใช้ใน Hemopro preview แล้ว**
+- ฝั่ง Angular: `hemo-report-block-outlet` `@switch (block.type)` — ใช้ใน Hemopro preview
 - **ผลลัพธ์:** เพิ่ม block type ใหม่ = แก้ mapper 1 ที่ (C#) + เพิ่ม component 1 ตัว (Angular) แล้ว PDF กับ preview ตรงกันอัตโนมัติ
 
 ### 5.2 Block types ที่มีอยู่ (C# ↔ Angular)
@@ -305,14 +306,12 @@ flowchart LR
 
 | หัวข้อ | สิ่งที่ทำ |
 |--------|-----------|
-| **Viewer ซ้ำ 2 ชุด (drift)** | `sync-report-viewer.mjs` sync เฉพาะ pdf.js shell (viewer + toolbar + canvas + scss) — ลบ stale copy อัตโนมัติ + `--check` ใน CI (`pr-quick-check.yml`) |
-| **Block preview dead code** | ลบ block components / page / preview service / models จาก lib — `public-api.ts` export แค่ viewer shell |
+| **Viewer ซ้ำ 2 ชุด (drift)** | `sync-report-viewer.mjs` sync DOM viewer (models, page, blocks, toolbar, scss) + ลบ stale + `--check` ใน CI |
 | **Frontend duplication** | สร้าง `HemoPdfPreviewController` + `hemo-pdf-report-catalog.ts` — `reports.page` และ `embedded-hemosheet-report` ใช้ร่วมกัน |
 | **Template id hardcode** | `reportTemplateId` ผ่าน `HEMO_PDF_REPORT_TEMPLATES` / request object แทน hardcode ใน provider |
 | **Unused npm deps** | ลบ `@hemo/pdf-client`, `@hemo/report-viewer` จาก Hemopro `package.json` (ใช้ source copy + port) |
 | **Orphan modal** | ลบ `hemo-report-preview-modal` (ไม่มี caller) |
 | **Embedded viewer mount** | ใช้ static `<app-hemo-report-pdf-viewer-host>` แทน dynamic `createComponent` |
-| **pdf.js worker version** | `scripts/copy-pdfjs-worker.mjs` รันใน `postinstall` |
 | **Kendo CSS** | โหลดเฉพาะเมื่อใช้ Telerik path (`reports.page`, `embedded-hemosheet-report`) |
 | **โค้ด inert ฝั่ง Hemo-PDF** | ลบ `RequestSignatureStore`, `PageNumberFooterSection`, `SignedReportFooterSection` (รอบก่อนหน้า) |
 
@@ -323,8 +322,8 @@ flowchart LR
 | **branding ไม่มี default** | tenant JSON หาย → HTTP 500 (`FileNotFoundException`) | ควรมี default profile |
 | **Mock services** | `MockAuthHandler` (dev), `MockSignatureStore` (signed เสมอ), `MockTenantContextAccessor` (`tenant-demo-a`) | ยังไม่พร้อม production auth |
 | **`HemoproSignatureStore.GetAsync` คืน unsigned** | ลายเซ็นจริงมาจาก `TryResolveFromData` (payload) เท่านั้น | ต้องแน่ใจว่า backend ส่งลายเซ็นใน DTO |
-| **Dual pipeline PDF + ReportDocument** | Hemosheet ยัง maintain `ComposePdf` + `MapToPreview` คู่กัน; `/api/report/preview` ใช้ใน integration test/demo | ต้นทุนเพิ่ม template/section สูง — พิจารณา deprecate preview JSON เมื่อเลิก Telerik |
-| **ThaiUr preview drift** | PDF ใช้ `ThaiUrHemosheetForm` bypass; JSON preview ยังวิ่ง block planner | ไม่กระทบ Hemopro (ใช้ PDF เท่านั้น) |
+| **Dual pipeline PDF + ReportDocument** | Hemosheet maintain `ComposePdf` + `MapToPreview`; Hemopro preview ใช้ JSON DOM, print ใช้ PDF | ต้นทุนเพิ่ม template/section สูง — ยอมรับเพื่อความรู้สึก Telerik |
+| **ThaiUr preview drift** | PDF ใช้ `ThaiUrHemosheetForm` bypass; JSON preview ยังวิ่ง block planner | ต้องไล่ parity ถ้า tenant ใช้ ThaiUr |
 | **Template catalog ฝั่ง backend** | profile ยัง infer จากชื่อไฟล์ `.trdp` (`Contains("Thai")`) | ควรมี `HemosheetTemplateCatalog` ชัดเจน |
 | **Telerik fallback** | `useHemoPdfPreview` + `tr-viewer` ยัง active; plugin send ยังใช้ Report.Api | dual stack จนกว่าจะ cutover |
 | **โค้ดที่ยัง inert (เหลือ)** | `HemosheetLayoutProfileRegistry.GetSectionOrder`, `ITenantContextAccessor`/`TenantMiddleware` | ตัดสินใจ wire หรือลบ |
@@ -333,17 +332,17 @@ flowchart LR
 
 ### 9.3 Workflow การ sync viewer (สำคัญ)
 
-`Hemo-PDF/client/.../hemo-report-viewer/src/lib` = **source of truth** ของ viewer shell (pdf.js)
+`Hemo-PDF/client/.../hemo-report-viewer/src/lib` = **source of truth** ของ DOM report viewer  
 frontend เก็บ copy เพื่อให้ Angular compiler build ได้ (สอง repo แยกกัน)
 
 ```bash
 # หลังแก้ viewer ใน Hemo-PDF/client/.../hemo-report-viewer/src/lib
 cd Hemo-frontend
-npm run sync:report-viewer            # copy 4 ไฟล์ + ลบ stale ใน frontend copy
+npm run sync:report-viewer            # copy DOM viewer files + ลบ stale ใน frontend copy
 npm run sync:report-viewer -- --check # CI: fail ถ้า out of sync
 ```
 
-**ไฟล์ที่ sync:** `hemo-report-viewer.component.ts`, `hemo-report-pdf-canvas.component.ts`, `hemo-report-toolbar.component.ts`, `report-viewer.scss`
+**ไฟล์ที่ sync:** models, page/header/footer/outlet, block components, toolbar, viewer, scss (และ pdf-canvas ที่ยังเก็บไว้)
 
 - แก้ viewer ให้แก้ที่ **lib เท่านั้น** แล้วรัน sync — อย่าแก้ตรงที่ copy ฝั่ง frontend
 - frontend transport อยู่ที่ `HEMOSHEET_PREVIEW_PORT` + `HemoPdfPreviewController` (`src/app/share/hemo-pdf/`)

@@ -15,13 +15,20 @@ import {
   computed,
 } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { ReportDocument } from '../models/report-document.model';
 import { HemoReportToolbarComponent } from './hemo-report-toolbar.component';
-import { HemoReportPdfCanvasComponent } from './hemo-report-pdf-canvas.component';
+import { HemoReportPageComponent } from './hemo-report-page.component';
+
+const A4_WIDTH_MM = 210;
+const A4_HEIGHT_MM = 297;
+const MM_TO_PX = 96 / 25.4;
+const PAGE_WIDTH_PX = A4_WIDTH_MM * MM_TO_PX;
+const PAGE_HEIGHT_PX = A4_HEIGHT_MM * MM_TO_PX;
 
 @Component({
   selector: 'hemo-report-viewer',
   standalone: true,
-  imports: [CommonModule, HemoReportToolbarComponent, HemoReportPdfCanvasComponent],
+  imports: [CommonModule, HemoReportToolbarComponent, HemoReportPageComponent],
   encapsulation: ViewEncapsulation.None,
   styleUrls: ['../styles/report-viewer.scss'],
   template: `
@@ -30,25 +37,32 @@ import { HemoReportPdfCanvasComponent } from './hemo-report-pdf-canvas.component
         [scale]="scale()"
         [pageIndex]="pageIndex()"
         [pageCount]="pageCount()"
+        [loading]="loading"
         [printing]="printing"
         [downloading]="downloading"
         (zoomIn)="zoomIn()"
         (zoomOut)="zoomOut()"
         (prevPage)="prevPage()"
         (nextPage)="nextPage()"
+        (reload)="reload.emit()"
         (print)="print.emit()"
         (download)="download.emit()" />
 
       <div #canvasHost class="hemo-report-viewer__canvas">
-        <hemo-report-pdf-canvas
-          *ngIf="pdfBlob"
-          [pdfBlob]="pdfBlob"
-          [pageIndex]="pageIndex()"
-          [scale]="scale()"
-          [workerSrc]="workerSrc"
-          (pageCountChange)="onPageCountChange($event)"
-          (pageWidthChange)="onPageWidthChange($event)" />
-        <div *ngIf="!pdfBlob && loading" class="hemo-report-viewer__loading">
+        <div
+          *ngIf="document"
+          class="hemo-report-viewer__scale-slot"
+          [style.width.px]="scaledWidth()"
+          [style.height.px]="scaledHeight()">
+          <div
+            class="hemo-report-viewer__scale-wrap"
+            [style.width.px]="pageWidthPx"
+            [style.height.px]="pageHeightPx"
+            [style.transform]="'scale(' + scale() + ')'">
+            <hemo-report-page [document]="document" [pageIndex]="pageIndex()" />
+          </div>
+        </div>
+        <div *ngIf="!document && loading" class="hemo-report-viewer__loading">
           <span class="hemo-report-viewer__spinner" aria-hidden="true"></span>
           <span>กำลังโหลดตัวอย่างรายงาน…</span>
         </div>
@@ -70,31 +84,37 @@ export class HemoReportViewerComponent implements OnChanges {
 
   @ViewChild('canvasHost', { read: ElementRef }) canvasHostRef?: ElementRef<HTMLElement>;
 
-  @Input() pdfBlob: Blob | null = null;
+  @Input() document: ReportDocument | null = null;
   @Input() loading = false;
   @Input() errorMessage: string | null = null;
   @Input() printing = false;
   @Input() downloading = false;
-  @Input() workerSrc = '/assets/pdfjs/pdf.worker.min.mjs';
 
   @Output() print = new EventEmitter<void>();
   @Output() download = new EventEmitter<void>();
+  @Output() reload = new EventEmitter<void>();
+
+  readonly pageWidthPx = PAGE_WIDTH_PX;
+  readonly pageHeightPx = PAGE_HEIGHT_PX;
 
   private readonly zoomFactor = signal(1);
   private readonly fitScale = signal(1);
-  private readonly pdfPageWidth = signal(0);
-  private readonly pdfPageCount = signal(1);
 
   readonly scale = computed(() => +(this.fitScale() * this.zoomFactor()).toFixed(3));
+  readonly scaledWidth = computed(() => Math.ceil(PAGE_WIDTH_PX * this.scale()));
+  readonly scaledHeight = computed(() => Math.ceil(PAGE_HEIGHT_PX * this.scale()));
   readonly pageIndex = signal(0);
-  readonly pageCount = computed(() => Math.max(this.pdfPageCount(), 1));
+
+  readonly pageCount = computed(() => {
+    const pages = this.document?.pages?.length ?? 0;
+    return Math.max(pages, 1);
+  });
 
   ngOnChanges(changes: SimpleChanges): void {
-    if (changes['pdfBlob']) {
+    if (changes['document']) {
       this.pageIndex.set(0);
       this.zoomFactor.set(1);
-      this.pdfPageCount.set(1);
-      this.pdfPageWidth.set(0);
+      this.resetScroll();
     }
   }
 
@@ -112,16 +132,6 @@ export class HemoReportViewerComponent implements OnChanges {
     });
   }
 
-  onPageCountChange(count: number): void {
-    this.pdfPageCount.set(Math.max(count, 1));
-    this.pageIndex.update((index) => Math.min(index, Math.max(count - 1, 0)));
-  }
-
-  onPageWidthChange(width: number): void {
-    this.pdfPageWidth.set(width);
-    this.updateFitScale();
-  }
-
   zoomIn(): void {
     this.zoomFactor.update((value) => Math.min(2, +(value + 0.1).toFixed(2)));
   }
@@ -132,21 +142,31 @@ export class HemoReportViewerComponent implements OnChanges {
 
   prevPage(): void {
     this.pageIndex.update((index) => Math.max(0, index - 1));
+    this.resetScroll();
   }
 
   nextPage(): void {
     this.pageIndex.update((index) => Math.min(this.pageCount() - 1, index + 1));
+    this.resetScroll();
   }
 
   private updateFitScale(): void {
     const host = this.canvasHostRef?.nativeElement;
-    const pageWidth = this.pdfPageWidth();
-    if (!host || pageWidth <= 0) {
+    if (!host) {
       return;
     }
 
     const horizontalPadding = 32;
     const available = Math.max(host.clientWidth - horizontalPadding, 1);
-    this.fitScale.set(Math.min(1, available / pageWidth));
+    this.fitScale.set(Math.min(1, available / PAGE_WIDTH_PX));
+  }
+
+  private resetScroll(): void {
+    const host = this.canvasHostRef?.nativeElement;
+    if (!host) {
+      return;
+    }
+    host.scrollLeft = 0;
+    host.scrollTop = 0;
   }
 }
