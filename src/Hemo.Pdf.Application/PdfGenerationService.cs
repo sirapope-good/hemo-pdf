@@ -1,4 +1,4 @@
-using Hemo.Pdf.Application.Mock;
+using Hemo.Pdf.Application;
 using Hemo.Pdf.Core.Abstractions;
 using Hemo.Pdf.Core.Constants;
 using Hemo.Pdf.Core.Context;
@@ -10,27 +10,31 @@ public sealed class PdfGenerationService : IPdfGenerationService
 {
     private readonly IBrandingResolver _brandingResolver;
     private readonly IPdfGenerationGuard _guard;
-    private readonly ISignatureStore _signatureStore;
+    private readonly IReportSignatureResolver _signatureResolver;
     private readonly IReportRendererFactory _rendererFactory;
+    private readonly ITenantContextAccessor _tenantContext;
 
     public PdfGenerationService(
         IBrandingResolver brandingResolver,
         IPdfGenerationGuard guard,
-        ISignatureStore signatureStore,
-        IReportRendererFactory rendererFactory)
+        IReportSignatureResolver signatureResolver,
+        IReportRendererFactory rendererFactory,
+        ITenantContextAccessor tenantContext)
     {
         _brandingResolver = brandingResolver;
         _guard = guard;
-        _signatureStore = signatureStore;
+        _signatureResolver = signatureResolver;
         _rendererFactory = rendererFactory;
+        _tenantContext = tenantContext;
     }
 
     public async Task<byte[]> GenerateAsync(GeneratePdfRequest request, CancellationToken cancellationToken)
     {
+        GeneratePdfRequestValidator.Validate(request, _tenantContext);
         await _guard.EnsureCanGenerateAsync(request, cancellationToken);
 
         var branding = await _brandingResolver.ResolveAsync(request.TenantCode, cancellationToken);
-        var signatures = await ResolveSignaturesAsync(request, cancellationToken);
+        var signatures = await _signatureResolver.ResolveAsync(request, cancellationToken);
         ReportTemplates.TryGetDefinition(request.ReportTemplateId, out var templateDefinition);
 
         var context = new PdfReportContext
@@ -47,27 +51,6 @@ public sealed class PdfGenerationService : IPdfGenerationService
 
         var renderer = _rendererFactory.Create(request.ReportTemplateId);
         return await renderer.RenderReportAsync(context, cancellationToken);
-    }
-
-    private async Task<ReportSignatureContext?> ResolveSignaturesAsync(
-        GeneratePdfRequest request,
-        CancellationToken cancellationToken)
-    {
-        if (request.Signatures is not null)
-            return request.Signatures;
-
-        var fromData = HemoproSignatureStore.TryResolveFromData(request.ReportTemplateId, request.Data);
-        if (fromData is not null)
-            return fromData;
-
-        if (string.IsNullOrWhiteSpace(request.EntityId))
-            return null;
-
-        return await _signatureStore.GetAsync(
-            request.ReportTemplateId,
-            request.EntityId,
-            request.TenantCode,
-            cancellationToken);
     }
 
     private static ReportMetadata BuildMetadata(

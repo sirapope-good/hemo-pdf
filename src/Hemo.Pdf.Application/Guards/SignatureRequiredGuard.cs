@@ -1,4 +1,3 @@
-using Hemo.Pdf.Application.Mock;
 using Hemo.Pdf.Core.Abstractions;
 using Hemo.Pdf.Core.Constants;
 using Hemo.Pdf.Core.Exceptions;
@@ -8,11 +7,11 @@ namespace Hemo.Pdf.Application.Guards;
 
 public sealed class SignatureRequiredGuard : IPdfGenerationGuard
 {
-    private readonly ISignatureStore _signatureStore;
+    private readonly IReportSignatureResolver _signatureResolver;
 
-    public SignatureRequiredGuard(ISignatureStore signatureStore)
+    public SignatureRequiredGuard(IReportSignatureResolver signatureResolver)
     {
-        _signatureStore = signatureStore;
+        _signatureResolver = signatureResolver;
     }
 
     public async Task EnsureCanGenerateAsync(GeneratePdfRequest request, CancellationToken cancellationToken)
@@ -20,17 +19,7 @@ public sealed class SignatureRequiredGuard : IPdfGenerationGuard
         if (!ReportTemplates.RequiresSignature(request.ReportTemplateId))
             return;
 
-        var signatures = request.Signatures
-            ?? HemoproSignatureStore.TryResolveFromData(request.ReportTemplateId, request.Data);
-        if (signatures is null && !string.IsNullOrWhiteSpace(request.EntityId))
-        {
-            signatures = await _signatureStore.GetAsync(
-                request.ReportTemplateId,
-                request.EntityId,
-                request.TenantCode,
-                cancellationToken);
-        }
-
+        var signatures = await _signatureResolver.ResolveAsync(request, cancellationToken);
         if (signatures?.IsFullySigned != true)
         {
             throw new PdfGenerationForbiddenException(

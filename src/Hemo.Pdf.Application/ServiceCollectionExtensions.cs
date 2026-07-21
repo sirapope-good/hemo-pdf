@@ -32,6 +32,7 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<IPdfRenderer, QuestPdfRenderer>();
         services.AddScoped<IPdfGenerationService, PdfGenerationService>();
         services.AddScoped<IReportPreviewService, ReportPreviewService>();
+        services.AddScoped<IReportSignatureResolver, ReportSignatureResolver>();
         services.AddScoped<IPdfGenerationGuard, SignatureRequiredGuard>();
 
         services.AddScoped<MockTenantContextAccessor>();

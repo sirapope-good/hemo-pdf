@@ -10,27 +10,31 @@ public sealed class ReportPreviewService : IReportPreviewService
 {
     private readonly IBrandingResolver _brandingResolver;
     private readonly IPdfGenerationGuard _guard;
-    private readonly ISignatureStore _signatureStore;
+    private readonly IReportSignatureResolver _signatureResolver;
     private readonly IReportPreviewRendererFactory _rendererFactory;
+    private readonly ITenantContextAccessor _tenantContext;
 
     public ReportPreviewService(
         IBrandingResolver brandingResolver,
         IPdfGenerationGuard guard,
-        ISignatureStore signatureStore,
-        IReportPreviewRendererFactory rendererFactory)
+        IReportSignatureResolver signatureResolver,
+        IReportPreviewRendererFactory rendererFactory,
+        ITenantContextAccessor tenantContext)
     {
         _brandingResolver = brandingResolver;
         _guard = guard;
-        _signatureStore = signatureStore;
+        _signatureResolver = signatureResolver;
         _rendererFactory = rendererFactory;
+        _tenantContext = tenantContext;
     }
 
     public async Task<ReportDocument> PreviewAsync(GeneratePdfRequest request, CancellationToken cancellationToken)
     {
+        GeneratePdfRequestValidator.Validate(request, _tenantContext);
         await _guard.EnsureCanGenerateAsync(request, cancellationToken);
 
         var branding = await _brandingResolver.ResolveAsync(request.TenantCode, cancellationToken);
-        var signatures = await ResolveSignaturesAsync(request, cancellationToken);
+        var signatures = await _signatureResolver.ResolveAsync(request, cancellationToken);
         ReportTemplates.TryGetDefinition(request.ReportTemplateId, out var templateDefinition);
 
         var context = new PdfReportContext
@@ -47,23 +51,6 @@ public sealed class ReportPreviewService : IReportPreviewService
 
         var renderer = _rendererFactory.Create(request.ReportTemplateId);
         return await renderer.RenderPreviewAsync(context, cancellationToken);
-    }
-
-    private async Task<ReportSignatureContext?> ResolveSignaturesAsync(
-        GeneratePdfRequest request,
-        CancellationToken cancellationToken)
-    {
-        if (request.Signatures is not null)
-            return request.Signatures;
-
-        if (string.IsNullOrWhiteSpace(request.EntityId))
-            return null;
-
-        return await _signatureStore.GetAsync(
-            request.ReportTemplateId,
-            request.EntityId,
-            request.TenantCode,
-            cancellationToken);
     }
 
     private static ReportMetadata BuildMetadata(

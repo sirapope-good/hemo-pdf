@@ -15,7 +15,15 @@ public sealed class HemoPdfOptions
 
 public sealed class JwtOptions
 {
-    public string Authority { get; set; } = "";
+    /// <summary>Must match Web.Api Authentication:Issuer. Audience defaults to Issuer when blank.</summary>
+    public string Issuer { get; set; } = "";
 
+    /// <summary>Must match Web.Api Authentication:Key (symmetric HS256).</summary>
+    public string Key { get; set; } = "";
+
+    /// <summary>Optional. When empty, ValidAudience = Issuer (Hemopro token shape).</summary>
     public string Audience { get; set; } = "";
+
+    /// <summary>Legacy OIDC authority — unused for Hemopro symmetric JWT validation.</summary>
+    public string Authority { get; set; } = "";
 }

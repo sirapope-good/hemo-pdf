@@ -2,6 +2,8 @@
 
 บริการสร้าง PDF แยกสำหรับ **HemodialysisPro** — Standalone ASP.NET Core API + Angular client library
 
+**คู่มือรัน local ทั้ง stack (backend + FE + flag):** [.cursor/docs/LOCAL-DEV.md](.cursor/docs/LOCAL-DEV.md)
+
 ## Quick Start
 
 ```bash
@@ -40,6 +42,25 @@ curl -X POST http://localhost:5090/api/report/preview \
 ```
 
 Swagger: `http://localhost:5090/swagger` → `POST /api/report/preview` หรือ `/api/pdf/generate`
+
+### Auth (P1)
+
+| Environment | Behavior |
+|-------------|----------|
+| **Development** + `HemoPdf:UseMockServices=true` | `MockAuthHandler` — Bearer อะไรก็ได้; tenant จาก `X-Tenant-Code` |
+| **Non-Development** หรือ mock ปิด | Validate Hemopro JWT (symmetric HS256) — **ต้อง**ตั้ง `HemoPdf__Jwt__Issuer` และ `HemoPdf__Jwt__Key` ให้เท่ากับ Web.Api `Authentication__Issuer` / `Authentication__Key` |
+| Audience | ว่าง = ใช้ Issuer (ห้ามตั้ง `hemo-pdf` — token จริงไม่มี audience นี้) |
+| Tenant | JWT claim `tenant_code` เป็นที่มาของความจริง; header/body ต้องตรง มิฉะนั้น 403 |
+| Mock นอก Dev | **fail startup** |
+
+```bash
+# Production / local JWT mode (match Web.Api)
+export HemoPdf__UseMockServices=false
+export HemoPdf__Jwt__Issuer=http://localhost/
+export HemoPdf__Jwt__Key=NAmO0mtmIV4ZWSZ92vRlwj810XzFXsnH
+```
+
+**Trust model (P1):** Hemo-PDF ยังรับ DTO จาก browser (client-trust). อย่าใช้เป็น official signed clinical record จนกว่า **P1.5** (S2S fetch report-data จาก Web.Api)
 
 **Browser demo (ไม่ต้องมี Angular):** เปิด `client/demo/report-preview-demo/index.html` หลังรัน API
 

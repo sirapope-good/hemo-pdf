@@ -9,6 +9,7 @@ namespace Hemo.Pdf.Api.Controllers;
 [ApiController]
 [Authorize]
 [Route("api/pdf")]
+[Consumes("application/json")]
 public sealed class PdfController : ControllerBase
 {
     private readonly IPdfGenerationService _pdfGenerationService;
@@ -20,12 +21,14 @@ public sealed class PdfController : ControllerBase
 
     [HttpPost("generate")]
     [EnableRateLimiting("PdfGeneration")]
+    [Produces("application/pdf")]
     public async Task<IActionResult> Generate(
         [FromBody] GeneratePdfRequest request,
         CancellationToken cancellationToken)
     {
         var pdfBytes = await _pdfGenerationService.GenerateAsync(request, cancellationToken);
         var fileName = $"report-{request.EntityId ?? "export"}.pdf";
+        Response.Headers.CacheControl = "no-store";
         return File(pdfBytes, "application/pdf", fileName);
     }
 }

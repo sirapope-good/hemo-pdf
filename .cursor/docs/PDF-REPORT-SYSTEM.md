@@ -118,7 +118,8 @@ GET /api/Hemodialysis/report-data/template?unitId=&templateMode=hd|hdf   // ฟ�
   - `generatePdf()` / `download()` = `POST {pdfApiUrl}/api/pdf/generate` → PDF blob
   - `buildPreviewBody()` ใส่ `reportTemplateId` จาก catalog (hemosheet → `template-04-hemosheet`), `entityId: hemoId`, `data: dto`
   - tenant code มาจาก JWT claim (fallback `'local'`)
-- config: tenant `config.json` / offline bootstrap → `pdfApiUrl: http://localhost:5090`, `useHemoPdfPreview: true`
+- config: tenant `config.json` → `pdfApiUrl`, `useHemoPdfPreview` (opt-in); offline bootstrap default **`useHemoPdfPreview: false`** (ปลอดภัยเมื่อ HemoAdmin ล่ม)
+- ThaiUr profile: preview ใช้ **PDF-as-preview** (`generatePdf` + `hemo-report-pdf-canvas`) เพราะ PDF composer bypass planner — profile อื่นยังเป็น DOM `ReportDocument`
 - viewer source: sync จาก `Hemo-PDF/client/.../hemo-report-viewer` ผ่าน `npm run sync:report-viewer`
 
 ### ขั้นที่ 3 — Hemo-PDF render (Hemo.Pdf.Api)
@@ -156,7 +157,7 @@ GeneratePdfRequest
 - Fit-to-width: `ResizeObserver` + ความกว้าง A4 mm→px
 - Print/Download → `POST /api/pdf/generate` (PDF จริง); print ผ่าน `printPdfBlob` (hidden iframe สำหรับสั่งพิมพ์เท่านั้น)
 
-> **หมายเหตุ:** Hemopro ใช้ DOM preview สำหรับ Hemosheet เมื่อ `useHemoPdfPreview=true` — ไม่ใช้ pdf.js บนจอใน path นี้; `hemo-report-pdf-canvas` ยังอยู่ใน lib แต่ไม่ mount
+> **หมายเหตุ:** Hemopro ใช้ DOM preview สำหรับ Hemosheet เมื่อ `useHemoPdfPreview=true` และ layout ไม่ใช่ ThaiUr — ThaiUr ใช้ PDF canvas; `hemo-report-pdf-canvas` mount เฉพาะ PDF-as-preview path
 
 ---
 
@@ -320,13 +321,14 @@ flowchart LR
 | หัวข้อ | รายละเอียด | ผลกระทบ |
 |--------|-----------|---------|
 | **branding ไม่มี default** | tenant JSON หาย → HTTP 500 (`FileNotFoundException`) | ควรมี default profile |
-| **Mock services** | `MockAuthHandler` (dev), `MockSignatureStore` (signed เสมอ), `MockTenantContextAccessor` (`tenant-demo-a`) | ยังไม่พร้อม production auth |
-| **`HemoproSignatureStore.GetAsync` คืน unsigned** | ลายเซ็นจริงมาจาก `TryResolveFromData` (payload) เท่านั้น | ต้องแน่ใจว่า backend ส่งลายเซ็นใน DTO |
-| **Dual pipeline PDF + ReportDocument** | Hemosheet maintain `ComposePdf` + `MapToPreview`; Hemopro preview ใช้ JSON DOM, print ใช้ PDF | ต้นทุนเพิ่ม template/section สูง — ยอมรับเพื่อความรู้สึก Telerik |
-| **ThaiUr preview drift** | PDF ใช้ `ThaiUrHemosheetForm` bypass; JSON preview ยังวิ่ง block planner | ต้องไล่ parity ถ้า tenant ใช้ ThaiUr |
-| **Template catalog ฝั่ง backend** | profile ยัง infer จากชื่อไฟล์ `.trdp` (`Contains("Thai")`) | ควรมี `HemosheetTemplateCatalog` ชัดเจน |
+| **Mock services** | `MockAuthHandler` / `MockSignatureStore` ใช้ได้เฉพาะ Development + `UseMockServices`; non-Dev เปิด mock → **fail startup** | Production ต้องตั้ง `HemoPdf__Jwt__Issuer` + `HemoPdf__Jwt__Key` (= Web.Api `Authentication__*`) |
+| **JWT / tenant bind (P1)** | Symmetric HS256; `ValidAudience == Issuer`; `tenant_code` claim ผูกกับ `X-Tenant-Code` + body `TenantCode` | Header/body spoof → 403 |
+| **`HemoproSignatureStore.GetAsync` คืน unsigned** | ลายเซ็นจริงมาจาก `TryResolveFromData` (payload) ผ่าน `ReportSignatureResolver` ร่วมกัน preview/generate | **parity แล้ว** แต่ยังไม่ trusted จนกว่า P1.5 S2S |
+| **Dual pipeline PDF + ReportDocument** | Hemosheet maintain `ComposePdf` + `MapToPreview`; Hemopro preview ใช้ JSON DOM (ยกเว้น ThaiUr), print ใช้ PDF | ต้นทุนเพิ่ม template/section สูง — ยอมรับเพื่อความรู้สึก Telerik |
+| **ThaiUr preview** | FE บังคับ PDF-as-preview สำหรับ `layoutProfile=ThaiUr` | ปิด drift DOM≠PDF สำหรับ profile นี้ |
+| **Client-trust DTO (residual)** | Hemo-PDF ยังไม่ refetch report-data จาก Web.Api | อย่าใช้เป็น official signed record จนกว่า **P1.5 S2S** |
 | **Telerik fallback** | `useHemoPdfPreview` + `tr-viewer` ยัง active; plugin send ยังใช้ Report.Api | dual stack จนกว่าจะ cutover |
-| **โค้ดที่ยัง inert (เหลือ)** | `HemosheetLayoutProfileRegistry.GetSectionOrder`, `ITenantContextAccessor`/`TenantMiddleware` | ตัดสินใจ wire หรือลบ |
+| **โค้ดที่ยัง inert (เหลือ)** | `HemosheetLayoutProfileRegistry.GetSectionOrder` | ตัดสินใจ wire หรือลบ |
 | **Layout resolver ทำซ้ำกับ .trdp** | กติกา visibility อยู่ทั้งใน `.trdp` และ `HemosheetLayoutResolver` | sync 2 ที่จนกว่าจะเลิก Telerik |
 | **ยังเป็น copy (ไม่ใช่ package จริง)** | sync script ลด drift แต่ยังเป็น source copy | รัน sync เมื่อ lib เปลี่ยน |
 

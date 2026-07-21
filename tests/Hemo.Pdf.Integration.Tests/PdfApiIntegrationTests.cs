@@ -1,9 +1,15 @@
+using System.IdentityModel.Tokens.Jwt;
 using System.Net;
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
+using System.Security.Claims;
+using System.Text;
 using System.Text.Json;
 using Hemo.Pdf.Api;
+using Hemo.Pdf.Api.Auth;
+using Hemo.Pdf.Application;
 using Microsoft.AspNetCore.Mvc.Testing;
+using Microsoft.IdentityModel.Tokens;
 
 namespace Hemo.Pdf.Integration.Tests;
 
@@ -29,6 +35,7 @@ public class PdfApiIntegrationTests : IClassFixture<PdfApiWebApplicationFactory>
         var response = await PostGenerateAsync("tenant-demo-a", "template-02-lab-result");
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
         Assert.Equal("application/pdf", response.Content.Headers.ContentType?.MediaType);
+        Assert.Contains("no-store", response.Headers.CacheControl?.ToString() ?? "");
 
         var bytes = await response.Content.ReadAsByteArrayAsync();
         Assert.True(bytes.Length > 100);
@@ -100,6 +107,40 @@ public class PdfApiIntegrationTests : IClassFixture<PdfApiWebApplicationFactory>
             });
 
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task GeneratePdf_EntityIdMismatch_Returns400()
+    {
+        var response = await PostGenerateAsync(
+            "tenant-demo-a",
+            "template-02-lab-result",
+            new
+            {
+                reportTemplateId = "template-02-lab-result",
+                tenantCode = "tenant-demo-a",
+                entityId = "a",
+                data = new { id = "b", patientName = "Test Patient" },
+            });
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task GeneratePdf_BodyTenantMismatch_Returns403()
+    {
+        var response = await PostGenerateAsync(
+            "tenant-demo-a",
+            "template-02-lab-result",
+            new
+            {
+                reportTemplateId = "template-02-lab-result",
+                tenantCode = "tenant-demo-b",
+                entityId = "test-entity-1",
+                data = new { patientName = "Test Patient" },
+            });
+
+        Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
     }
 
     private async Task<HttpResponseMessage> PostGenerateAsync(string tenantCode, string templateId)
@@ -201,7 +242,14 @@ public class PdfApiIntegrationTests : IClassFixture<PdfApiWebApplicationFactory>
             {
                 reportTemplateId = "template-01-dialysis-session",
                 tenantCode = "tenant-demo-a",
+                entityId = "session-1",
                 data = new { patientName = "Test Patient" },
+                // Explicit unsigned payload — MockSignatureStore would otherwise always pass.
+                signatures = new
+                {
+                    isFullySigned = false,
+                    signatures = Array.Empty<object>(),
+                },
             });
 
         Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
@@ -224,6 +272,7 @@ public class PdfApiIntegrationTests : IClassFixture<PdfApiWebApplicationFactory>
 
         var jsonText = await File.ReadAllTextAsync(mockPath);
         using var data = JsonDocument.Parse(jsonText);
+        var entityId = data.RootElement.GetProperty("id").GetString()!;
 
         var response = await PostPreviewAsync(
             "tenant-demo-a",
@@ -232,7 +281,7 @@ public class PdfApiIntegrationTests : IClassFixture<PdfApiWebApplicationFactory>
             {
                 reportTemplateId = "template-04-hemosheet",
                 tenantCode = "tenant-demo-a",
-                entityId = "hemosheet-test",
+                entityId,
                 data = data.RootElement,
                 signatures = new
                 {
@@ -260,6 +309,7 @@ public class PdfApiIntegrationTests : IClassFixture<PdfApiWebApplicationFactory>
 
         var jsonText = await File.ReadAllTextAsync(mockPath);
         using var data = JsonDocument.Parse(jsonText);
+        var entityId = data.RootElement.GetProperty("id").GetString()!;
 
         var response = await PostGenerateAsync(
             "tenant-demo-a",
@@ -268,7 +318,7 @@ public class PdfApiIntegrationTests : IClassFixture<PdfApiWebApplicationFactory>
             {
                 reportTemplateId = "template-04-hemosheet",
                 tenantCode = "tenant-demo-a",
-                entityId = "hemosheet-thaiur",
+                entityId,
                 data = data.RootElement,
                 signatures = new
                 {
@@ -315,5 +365,84 @@ public class PdfApiIntegrationTests : IClassFixture<PdfApiWebApplicationFactory>
         request.Content = JsonContent.Create(body);
 
         return await _client.SendAsync(request);
+    }
+}
+
+public class JwtTokenValidationTests
+{
+    private const string TestIssuer = "http://localhost/";
+    private const string TestKey = "NAmO0mtmIV4ZWSZ92vRlwj810XzFXsnH";
+
+    [Fact]
+    public void CreateParameters_ValidatesMatchingToken()
+    {
+        var parameters = JwtTokenValidation.CreateParameters(new JwtOptions
+        {
+            Issuer = TestIssuer,
+            Key = TestKey,
+            Audience = "",
+        });
+
+        var token = CreateToken(TestIssuer, TestIssuer, TestKey);
+        var handler = new JwtSecurityTokenHandler();
+        var principal = handler.ValidateToken(token, parameters, out _);
+        Assert.Equal("user-1", principal.FindFirst(ClaimTypes.NameIdentifier)?.Value);
+    }
+
+    [Fact]
+    public void CreateParameters_RejectsWrongKey()
+    {
+        var parameters = JwtTokenValidation.CreateParameters(new JwtOptions
+        {
+            Issuer = TestIssuer,
+            Key = TestKey,
+        });
+
+        var token = CreateToken(TestIssuer, TestIssuer, "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx");
+        var handler = new JwtSecurityTokenHandler();
+        Assert.ThrowsAny<SecurityTokenException>(() =>
+            handler.ValidateToken(token, parameters, out _));
+    }
+
+    [Fact]
+    public void CreateParameters_RejectsAudienceMismatch()
+    {
+        var parameters = JwtTokenValidation.CreateParameters(new JwtOptions
+        {
+            Issuer = TestIssuer,
+            Key = TestKey,
+            Audience = "",
+        });
+
+        var token = CreateToken(TestIssuer, "hemo-pdf", TestKey);
+        var handler = new JwtSecurityTokenHandler();
+        Assert.ThrowsAny<SecurityTokenException>(() =>
+            handler.ValidateToken(token, parameters, out _));
+    }
+
+    [Fact]
+    public void EnsureProductionReady_Throws_WhenMockOutsideDevelopment()
+    {
+        Assert.Throws<InvalidOperationException>(() =>
+            JwtTokenValidation.EnsureProductionReady(
+                new HemoPdfOptions { UseMockServices = true },
+                isDevelopment: false));
+    }
+
+    private static string CreateToken(string issuer, string audience, string key)
+    {
+        var credentials = new SigningCredentials(
+            new SymmetricSecurityKey(Encoding.UTF8.GetBytes(key)),
+            SecurityAlgorithms.HmacSha256);
+
+        var token = new JwtSecurityToken(
+            issuer: issuer,
+            audience: audience,
+            claims: [new Claim(ClaimTypes.NameIdentifier, "user-1"), new Claim("tenant_code", "local")],
+            notBefore: DateTime.UtcNow.AddMinutes(-1),
+            expires: DateTime.UtcNow.AddMinutes(30),
+            signingCredentials: credentials);
+
+        return new JwtSecurityTokenHandler().WriteToken(token);
     }
 }

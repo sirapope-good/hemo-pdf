@@ -5,7 +5,7 @@ using Hemo.Pdf.Api.Middleware;
 using Hemo.Pdf.Core.Exceptions;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Diagnostics;
-using Microsoft.IdentityModel.Tokens;
+using Microsoft.AspNetCore.Http.Features;
 using QuestPDF.Infrastructure;
 using System.Security.Claims;
 using System.Threading.RateLimiting;
@@ -14,6 +14,9 @@ namespace Hemo.Pdf.Api;
 
 public sealed class Program
 {
+    /// <summary>Max JSON body size for generate/preview (base64 signatures inflate payloads).</summary>
+    public const long MaxRequestBodyBytes = 8 * 1024 * 1024;
+
     public static void Main(string[] args)
     {
         var builder = WebApplication.CreateBuilder(args);
@@ -23,6 +26,14 @@ public sealed class Program
         builder.Services.AddHemoPdf(builder.Configuration);
         builder.Services.AddHttpContextAccessor();
         builder.Services.AddControllers();
+        builder.Services.Configure<FormOptions>(options =>
+        {
+            options.MultipartBodyLengthLimit = MaxRequestBodyBytes;
+        });
+        builder.Services.Configure<Microsoft.AspNetCore.Server.Kestrel.Core.KestrelServerOptions>(options =>
+        {
+            options.Limits.MaxRequestBodySize = MaxRequestBodyBytes;
+        });
         builder.Services.AddHealthChecks();
         builder.Services.AddEndpointsApiExplorer();
         builder.Services.AddSwaggerGen(swagger =>
@@ -34,7 +45,7 @@ public sealed class Program
                 Scheme = "Bearer",
                 BearerFormat = "JWT",
                 In = Microsoft.OpenApi.Models.ParameterLocation.Header,
-                Description = "Development mock: ใส่ค่าอะไรก็ได้ เช่น `dev`",
+                Description = "Development mock: ใส่ค่าอะไรก็ได้ เช่น `dev`. Production: Hemopro access token.",
             });
             swagger.AddSecurityRequirement(new Microsoft.OpenApi.Models.OpenApiSecurityRequirement
             {
@@ -58,6 +69,7 @@ public sealed class Program
             .GetSection(HemoPdfOptions.SectionName)
             .Get<HemoPdfOptions>() ?? new HemoPdfOptions();
 
+        JwtTokenValidation.EnsureProductionReady(hemoPdfOptions, builder.Environment.IsDevelopment());
         ConfigureAuthentication(builder, hemoPdfOptions);
         ConfigureCors(builder, hemoPdfOptions);
         ConfigureRateLimiting(builder.Services);
@@ -69,10 +81,19 @@ public sealed class Program
             errorApp.Run(async context =>
             {
                 var exception = context.Features.Get<IExceptionHandlerFeature>()?.Error;
+                context.Response.Headers.CacheControl = "no-store";
+
                 if (exception is PdfGenerationForbiddenException forbidden)
                 {
                     context.Response.StatusCode = StatusCodes.Status403Forbidden;
                     await context.Response.WriteAsync(forbidden.Message);
+                    return;
+                }
+
+                if (exception is PdfGenerationBadRequestException badRequest)
+                {
+                    context.Response.StatusCode = StatusCodes.Status400BadRequest;
+                    await context.Response.WriteAsync(badRequest.Message);
                     return;
                 }
 
@@ -90,11 +111,21 @@ public sealed class Program
             app.UseSwaggerUI();
         }
 
+        app.Use(async (context, next) =>
+        {
+            context.Response.OnStarting(() =>
+            {
+                context.Response.Headers.CacheControl = "no-store";
+                return Task.CompletedTask;
+            });
+            await next();
+        });
+
         app.UseCors();
         app.UseAuthentication();
         app.UseAuthorization();
-        app.UseRateLimiter();
         app.UseMiddleware<TenantMiddleware>();
+        app.UseRateLimiter();
 
         app.MapControllers();
         app.MapHealthChecks("/health");
@@ -114,17 +145,11 @@ public sealed class Program
             return;
         }
 
-        var jwt = options.Jwt;
+        var validationParameters = JwtTokenValidation.CreateParameters(options.Jwt);
         authBuilder.AddJwtBearer(jwtOptions =>
         {
-            jwtOptions.Authority = jwt.Authority;
-            jwtOptions.Audience = jwt.Audience;
-            jwtOptions.TokenValidationParameters = new TokenValidationParameters
-            {
-                ValidateIssuer = !string.IsNullOrWhiteSpace(jwt.Authority),
-                ValidateAudience = !string.IsNullOrWhiteSpace(jwt.Audience),
-                ValidateLifetime = true,
-            };
+            jwtOptions.TokenValidationParameters = validationParameters;
+            jwtOptions.MapInboundClaims = false;
         });
     }
 
@@ -156,9 +181,13 @@ public sealed class Program
 
             rateLimiterOptions.AddPolicy("PdfGeneration", context =>
             {
-                var partitionKey = context.User.FindFirstValue(ClaimTypes.NameIdentifier)
-                    ?? context.Connection.RemoteIpAddress?.ToString()
-                    ?? "anonymous";
+                var userId = context.User.FindFirstValue(ClaimTypes.NameIdentifier) ?? "anonymous";
+                var tenant = context.Items[Application.Mock.MockTenantContextAccessor.HttpContextItemKey] as string
+                    ?? context.Request.Headers["X-Tenant-Code"].ToString();
+                if (string.IsNullOrWhiteSpace(tenant))
+                    tenant = "unknown-tenant";
+
+                var partitionKey = $"{tenant}:{userId}";
 
                 return RateLimitPartition.GetTokenBucketLimiter(partitionKey, _ => new TokenBucketRateLimiterOptions
                 {

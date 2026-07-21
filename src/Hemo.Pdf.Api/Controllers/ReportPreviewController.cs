@@ -9,6 +9,7 @@ namespace Hemo.Pdf.Api.Controllers;
 [ApiController]
 [Authorize]
 [Route("api/report")]
+[Consumes("application/json")]
 public sealed class ReportPreviewController : ControllerBase
 {
     private readonly IReportPreviewService _reportPreviewService;
@@ -20,11 +21,13 @@ public sealed class ReportPreviewController : ControllerBase
 
     [HttpPost("preview")]
     [EnableRateLimiting("PdfGeneration")]
+    [Produces("application/json")]
     public async Task<IActionResult> Preview(
         [FromBody] GeneratePdfRequest request,
         CancellationToken cancellationToken)
     {
         var document = await _reportPreviewService.PreviewAsync(request, cancellationToken);
+        Response.Headers.CacheControl = "no-store";
         return Ok(document);
     }
 }
