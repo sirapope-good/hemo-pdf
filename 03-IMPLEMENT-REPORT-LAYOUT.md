@@ -2,7 +2,44 @@
 
 > **เป้าหมาย:** สร้าง Hemosheet (`template-04-hemosheet`) ที่ **แทน Telerik `Hemosheet*.trdp` ได้เต็มรูปแบบ** — preview WYSIWYG + PDF export จาก pipeline เดียวกัน  
 > **อ้างอิง layout จริง:** [`Hemo-Report/Hemosheet.trdp`](file:///d:/GoodRepo/Hemo-Report/Hemosheet.trdp) และ variant (`Hemosheet-RAMA`, `Hemosheet-ThaiUR`, `Hemosheet-YTL`, `Hemosheet-New`)  
-> เอกสารที่เกี่ยวข้อง: [02-FEATURE-PREVIEW-PDF.md](./02-FEATURE-PREVIEW-PDF.md), [hemopro_hemosheet_integration plan](.cursor/plans/hemopro_hemosheet_integration_d1c358da.plan.md)
+> เอกสารที่เกี่ยวข้อง: [02-FEATURE-PREVIEW-PDF.md](./02-FEATURE-PREVIEW-PDF.md), [hemopro_hemosheet_integration plan](.cursor/plans/hemopro_hemosheet_integration_d1c358da.plan.md)  
+> **Master checklist รวมทั้งระบบ:** [.cursor/plans/hemo-pdf_implementation_8969dd4f.plan.md](.cursor/plans/hemo-pdf_implementation_8969dd4f.plan.md)  
+> **อัปเดตสถานะ:** 2026-07-23
+
+---
+
+## Checklist งานที่เหลือ (Hemosheet layout — อัปเดต 2026-07-23)
+
+### พื้นฐาน E2E — ทำแล้ว
+
+- [x] DTO + layout context + resolver + catalog (Web.Api)
+- [x] `report-data` API + S2S fetch จาก Hemo-PDF
+- [x] Planner + `IHemosheetSectionRenderer` registry (ไม่ใช่ switch ใหญ่แล้ว)
+- [x] FE opt-in preview (`useHemoPdfPreview`) + sync viewer
+- [x] Mock scenarios หลัก (HD/AV, HDF, perm-cath, RAMA, ThaiUR, empty)
+
+### ยังค้างก่อน DoD / แทน Telerik ได้
+
+**Layout & data**
+
+- [ ] Patient / dehydration / prescription / vascular — fidelity ใกล้ `.trdp` (field-grid, คอลัมน์)
+- [ ] Assessment: map `text` + spike checklist vs topic matrix
+- [ ] Labs ใน DTO + แสดงใน section
+- [ ] Pre/Post vitals ถ้าแยกจาก dialysis records ใน trdp
+
+**หน้ากระดาษ & ฟอนต์**
+
+- [ ] Sarabun ใน `assets/fonts/sarabun/` + `@font-face` viewer
+- [ ] A4 margin / header-footer bands ตรง PDF ↔ DOM
+- [ ] Pagination หลายหน้า (QuestPDF hints + `pages[]` ใน ReportDocument)
+
+**Profiles & ทดสอบ**
+
+- [ ] Profile YTL / New (diff จาก `.trdp` → registry)
+- [ ] Parity tests / visual sign-off ทุก mock scenario
+- [ ] DoD §1.3 ครบ (รวมปิดพึ่ง `tr-viewer` เมื่อ flag เปิด — ดู cutover plan)
+
+**นอกเอกสารนี้ (cutover):** [pdf_chore_phase2](.cursor/plans/pdf_chore_phase2_template_cutover.plan.md) — ลบ Telerik path, plugin send
 
 ---
 
@@ -245,29 +282,30 @@ public sealed class HemosheetLayoutProfileRegistry
 
 ---
 
-## 4. สถานะปัจจุบัน (สรุป)
+## 4. สถานะปัจจุบัน (สรุป) — อัปเดต 2026-07-23
 
-### 4.1 ทำแล้ว (Phase 7 พื้นฐาน)
+### 4.1 ทำแล้ว (Phase 7 พื้นฐาน + framework)
 
-- [x] `HemosheetReportDto` + `HemosheetLayoutContext` + `HemosheetLayoutResolver`
-- [x] `GET .../report-data` จาก Web.Api
+- [x] `HemosheetReportDto` + `HemosheetLayoutContext` + `HemosheetLayoutResolver` + catalog
+- [x] `GET .../report-data` จาก Web.Api (+ template mode)
 - [x] `IHemosheetLayoutPlanner` + unit tests
-- [x] `HemosheetComposer` + `HemosheetReportDocumentComposer` (switch-based)
-- [x] Preview viewer ใน Hemopro (embedded + modal) ด้วย feature flag
+- [x] `IHemosheetSectionRenderer` registry + composers (PDF + preview)
+- [x] Preview viewer ใน Hemopro (embedded + reports) ด้วย feature flag (default off)
 - [x] Block พื้นฐาน: patient-info, key-value, data-grid, checklist, vascular-access, signature
+- [x] ThaiUr PDF-as-preview path
 
 ### 4.2 ยังไม่พอสำหรับแทน Telerik
 
 | หัวข้อ | ช่องว่าง |
 |--------|---------|
-| Layout fidelity | patient 3 คอลัมน์, dehydration/prescription แนวตั้ง, ไม่มี field-grid |
-| Assessment | DTO เป็น list ธรรมดา; trdp มี topic matrix + metadata; `text` ยังไม่ map จาก API |
-| Labs | ไม่ส่งใน DTO |
-| Pagination | single page; trdp หลายหน้าเมื่อ records เต็ม |
-| Fonts / A4 | Sarabun ไม่โหลด, margin ไม่ตรง PDF |
-| Section registry | switch ใหญ่ใน composer — ขยายยาก |
+| Layout fidelity | patient / dehydration / prescription ยังไม่ตรงสัดส่วน `.trdp` |
+| Assessment | DTO เป็น list; trdp มี topic matrix; `text` ยังไม่ครบจาก API |
+| Labs | ยังไม่ครบใน DTO / หรือยังไม่ wire แสดง |
+| Pagination | ส่วนใหญ่ single page; trdp หลายหน้าเมื่อ records เต็ม |
+| Fonts / A4 | โฟลเดอร์ `assets/fonts/sarabun/` ยังว่าง / อาจ fallback default font |
 | Profile YTL/New | ยังไม่วิเคราะห์ diff จาก `.trdp` |
-| Parity test | ไม่มีเทียบ screenshot/PDF กับ Telerik |
+| Parity test | ไม่มีเทียบ screenshot/PDF กับ Telerik แบบเป็นระบบ |
+| Cutover | `tr-viewer` ยังเป็น fallback; plugin send ยัง Report.Api |
 
 ---
 
@@ -479,10 +517,13 @@ PR-G  Hemopro: Telerik cutover
 
 ---
 
-## 11. งานถัดไป (แนะนำเริ่มที่นี่)
+## 11. งานถัดไป (แนะนำเริ่มที่นี่) — อัปเดต 2026-07-23
 
-1. **Phase 1.1** — แตก `HemosheetComposer` เป็น section renderers (ไม่เปลี่ยน output ยัง)
-2. **Spike assessment** — อ่าน `AssessmentTable` ใน `Hemosheet.trdp` 1 ชั่วโมง ตัดสิน checklist vs matrix
-3. **Phase 3A** — A4 + Sarabun + header/footer bands (เห็นผลบนจอเร็ว)
+> Phase 1 framework (section registry) **ทำแล้ว** — เริ่มที่ fidelity ที่เห็นบนจอ
 
-เมื่อ Phase 1–3 เสร็จ Hemosheet จะ **ไม่ใช่แค่ “view ได้”** แต่เข้าใกล้ **แทน Telerik ได้จริง** ด้วย layout component ที่เพิ่ม profile/section ใหม่ได้โดยไม่แตะ viewer
+1. **Sarabun + A4 bands** — copy ฟอนต์ + จูน margin/header/footer (เห็นผลเร็ว)
+2. **Spike assessment** — อ่าน `AssessmentTable` ใน `Hemosheet.trdp` ตัดสิน checklist vs matrix
+3. **Phase 3B–3E** — จูน section ทีละกลุ่ม (patient → grids → signatures) ตาม checklist ด้านบน
+4. **Parity sign-off** → ค่อยทำ cutover ใน [pdf_chore_phase2](.cursor/plans/pdf_chore_phase2_template_cutover.plan.md)
+
+เมื่อ layout parity ถึงเกณฑ์ DoD §1.3 Hemosheet จะ **แทน Telerik ได้จริง** — แล้วค่อยปิด `tr-viewer`

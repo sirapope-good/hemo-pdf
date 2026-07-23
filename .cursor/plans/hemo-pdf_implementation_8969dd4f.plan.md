@@ -32,35 +32,90 @@ todos:
   - id: phase6-report-preview
     content: "Phase 6: ReportDocument schema + POST /api/report/preview + @hemo/report-viewer (แทน Telerik tr-viewer)"
     status: completed
+  - id: remaining-hemosheet-parity
+    content: "Remaining: Hemosheet layout parity ≥95% + pagination + labs/DTO — ดู 03-IMPLEMENT-REPORT-LAYOUT.md"
+    status: pending
+  - id: remaining-telerik-cutover
+    content: "Remaining: Telerik cutover (flag default, ลบ tr-viewer, plugin→Hemo-PDF) — ดู pdf_chore_phase2 plan"
+    status: pending
+  - id: remaining-dedicated-templates
+    content: "Remaining: dedicated layouts สำหรับ template 02–03, 05–12 (ตอนนี้ Generic)"
+    status: pending
 isProject: false
 ---
 
 # Hemo-PDF — Implementation Checklist
 
-อ้างอิงจาก [01-IMPLEMENT-PLANNING.md](D:\GoodRepo\Hemo-PDF\01-IMPLEMENT-PLANNING.md) และ [00-REFERENCE-PLANNING.md](D:\GoodRepo\Hemo-PDF\0ฺ0-REFERENCE-PLANNING.md)
+อ้างอิงจาก [01-IMPLEMENT-PLANNING.md](../../01-IMPLEMENT-PLANNING.md) และแผนย่อยด้านล่าง
 
-## สรุปสถานะ (อัปเดต 2026-07-06)
+## สรุปสถานะ (อัปเดต 2026-07-23)
 
 | Phase | สถานะ | หมายเหตุ |
 |-------|--------|----------|
-| Phase 0 | ✅ เสร็จ | API + integration test ผ่าน |
-| Phase 1 | ✅ เสร็จ | branding 2 tenant + signature guard |
-| Phase 2 | ✅ เสร็จ | template-01 dedicated + Angular client |
-| Phase 3 | ✅ เสร็จ | templates 02–06 ผ่าน Generic renderer |
-| Phase 4 | ✅ เสร็จ | templates 07–12 + branding guideline |
-| Phase 5 | ✅ เสร็จ (core) | Docker/CI/CORS/rate limit; JWT จริงรอ Hemopro |
-| Phase 6 | ✅ เสร็จ | ReportDocument + `@hemo/report-viewer` + demo — ดู [02-FEATURE-PREVIEW-PDF.md](D:\GoodRepo\Hemo-PDF\02-FEATURE-PREVIEW-PDF.md) |
-| Phase 7 | 🔄 ดำเนินการ | Hemopro Hemosheet integration — layout context + report-data API |
-| Follow-up | ⏳ ค้าง | ฟอนต์ Sarabun, mock DTO ครบ 12 |
+| Phase 0–5 | ✅ เสร็จ | Standalone API, branding, 12 template ids, Docker/CI/JWT |
+| Phase 6 | ✅ เสร็จ | ReportDocument + `@hemo/report-viewer` |
+| Phase 7 | 🔄 ~70–75% | Hemosheet E2E ใช้ได้ (opt-in flag); **ยังไม่ parity / cutover** |
+| Follow-up | ⏳ ค้าง | Sarabun fonts, mock DTO นอก hemosheet/01, dedicated templates |
 
-**Tests:** `dotnet test Hemo.Pdf.sln` — 24 tests ผ่าน  
-**Commits:** แยก 12 commits ตาม layer (tooling → core → … → docs)
+**แผนย่อยที่ยัง active**
 
-### แก้ไขหลัง implement (dev UX)
+| เอกสาร | ขอบเขต |
+|--------|--------|
+| [03-IMPLEMENT-REPORT-LAYOUT.md](../../03-IMPLEMENT-REPORT-LAYOUT.md) | Hemosheet layout parity แทน `.trdp` |
+| [pdf_chore_phase2_template_cutover.plan.md](./pdf_chore_phase2_template_cutover.plan.md) | Catalog ✅ + Telerik sunset / plugin send |
+| [PDF-REPORT-SYSTEM.md](../docs/PDF-REPORT-SYSTEM.md) | สถาปัตยกรรม + หนี้เทคนิค §9 |
 
-- [x] `MockAuthHandler` — auto-auth ใน Development + `UseMockServices` (ไม่บังคับ Bearer)
-- [x] `GeneratePdfOperationFilter` — ตัวอย่าง request ใน Swagger ที่ใช้ได้จริง
-- [x] `NullableByteArrayJsonConverter` — รองรับ `imageBytes: ""` จาก Swagger
+---
+
+## Checklist งานที่เหลือ (master — 2026-07-23)
+
+เรียงตามลำดับที่แนะนำก่อนปิด Telerik สำหรับ Hemosheet
+
+### A. Hemosheet parity (บล็อก cutover) — `03-IMPLEMENT-REPORT-LAYOUT.md`
+
+- [ ] Layout fidelity: patient / dehydration / prescription / vascular ใกล้ `.trdp`
+- [ ] Assessment: map text + ตัดสิน checklist vs matrix จาก Telerik
+- [ ] Labs ใน `HemosheetReportDto` + section renderer
+- [ ] Pagination หลายหน้า (QuestPDF + `ReportDocument.pages[]`)
+- [ ] Profile YTL / New (วิเคราะห์ diff `.trdp` → registry)
+- [ ] Copy ฟอนต์ Sarabun → `assets/fonts/sarabun/` + ยืนยันโหลดใน PDF
+- [ ] A4 margin / header-footer bands ตรง PDF ↔ viewer
+- [ ] Parity tests (mock 5–7 scenario เทียบ PDF / visual sign-off)
+- [ ] DoD: preview ≥95%, ไม่พึ่ง `tr-viewer` เมื่อ flag เปิด
+
+### B. Telerik cutover (Hemosheet) — `pdf_chore_phase2_*.plan.md`
+
+- [x] 2A Template catalog (BE + FE)
+- [ ] 2B ตัดสินใจ deprecate/ลด dual `ComposePdf` + `MapToPreview` (หรือ mark non-WYSIWYG)
+- [ ] 2C `useHemoPdfPreview` เป็น default / tenant GlobalSetting (optional)
+- [ ] 2C ลบ `tr-viewer` + Kendo CSS + toolbar hacks จาก embedded + reports
+- [ ] 2D Plugin `GenerateHemosheetPdf` → Hemo-PDF แทน Report.Api export
+- [ ] 2E อัปเดต docs checklist หลัง catalog
+- [ ] เลิกพึ่ง Report.Api / Telerik license เมื่อ hemosheet + send ครบ
+
+### C. Platform / production hardening
+
+- [ ] Branding fallback: tenant JSON หาย → ใช้ `default.json` (อย่า 500)
+- [ ] Production: `UseMockServices=false` + JWT Issuer/Key ตรง Web.Api
+- [ ] `UseServerFetch=true` คู่กับ FE ในทุก env ที่ใช้ clinical path
+- [ ] Health check dependency (branding path / Web.Api reachability — optional)
+- [ ] Dev machine: ASP.NET Core **8** runtime สำหรับ `dotnet test` (ตอนนี้มี 6+10 → Core/Integration abort)
+
+### D. Templates อื่น (หลัง Hemosheet นิ่ง)
+
+- [ ] Dedicated layout `template-01` ใช้งานจริงใน Hemopro (ถ้ายังไม่ wire)
+- [ ] Dedicated layouts `02–03`, `05–12` แทน Generic key-value (รอ business)
+- [ ] Mock DTO JSON ครบ 12 ใน `assets/mock-data/`
+- [ ] ขยาย FE catalog / `isHemoPdfReport` (เช่น `hemorecords`) เมื่อมี template
+- [ ] `DbBrandingStore` / Admin UI branding (ต่ำ)
+
+### E. ทำแล้วแล้ว (อย่าทำซ้ำ)
+
+- [x] Phase 0–6 foundation + preview API + Angular libs
+- [x] Web.Api `report-data` + `HemosheetLayoutResolver` + catalog
+- [x] Hemo-PDF planner + section renderer registry + ThaiUr PDF-as-preview
+- [x] FE opt-in `useHemoPdfPreview` + sync `hemo-report-viewer`
+- [x] S2S `UseServerFetch` + JWT bind tenant
 
 ---
 
@@ -112,8 +167,8 @@ Hemo-PDF/
 │   ├── Hemo.Pdf.Sections.Tests/
 │   └── Hemo.Pdf.Integration.Tests/
 ├── client/projects/hemo-pdf-client/
-├── assets/fonts/sarabun/          # ⏳ ยังไม่มีไฟล์ฟอนต์
-└── assets/branding/               # tenant-demo-a.json, tenant-demo-b.json
+├── assets/fonts/sarabun/          # ⏳ ยังไม่มีไฟล์ฟอนต์ (.ttf)
+└── assets/branding/               # local, default, tenant-demo-a/b.json
 ```
 
 **NSS files สำหรับ port (อ้างอิง):**
@@ -292,34 +347,41 @@ Hemo-PDF/
 - [x] `POST /api/report/preview` + `ReportPreviewService`
 - [x] `GenericReportDocumentComposer` (template 02–12)
 - [x] `@hemo/report-viewer` Angular library
-- [ ] Migrate `embedded-hemosheet-report` / `reports.page` จาก Telerik → **Phase 7**
+- [x] Wire `embedded-hemosheet-report` / `reports.page` ด้วย feature flag (opt-in) — cutover เต็มอยู่ใน Phase 2 chore
 
 ---
 
 ## Phase 7 — Hemopro Hemosheet Integration 🔄
 
-> แผนเต็ม: `.cursor/plans/hemopro_hemosheet_integration_d1c358da.plan.md`
+> แผนเต็ม: [hemopro_hemosheet_integration](./hemopro_hemosheet_integration_d1c358da.plan.md)  
+> Layout parity: [03-IMPLEMENT-REPORT-LAYOUT.md](../../03-IMPLEMENT-REPORT-LAYOUT.md)  
+> Cutover: [pdf_chore_phase2](./pdf_chore_phase2_template_cutover.plan.md)
 
-- [ ] `HemosheetReportDto` + `HemosheetLayoutContext` (Web.Api)
-- [ ] `HemosheetLayoutResolver` + unit tests
-- [ ] `GET /api/Hemodialysis/records/{id}/report-data`
-- [ ] `HemosheetReportDocumentComposer` + layout planner (Hemo-PDF)
-- [ ] Frontend: `embedded-hemosheet-report` + feature flag
+**ทำแล้ว (พื้นฐาน E2E)**
+
+- [x] `HemosheetReportDto` + `HemosheetLayoutContext` (Web.Api)
+- [x] `HemosheetLayoutResolver` + unit tests + `HemosheetTemplateCatalog`
+- [x] `GET /api/Hemodialysis/records/{id}/report-data` (+ template mode)
+- [x] `HemosheetReportDocumentComposer` + layout planner + section renderers
+- [x] Frontend: `embedded-hemosheet-report` / `reports.page` + feature flag (default **off**)
+- [x] S2S `UseServerFetch` จาก Hemo-PDF → Web.Api
+
+**ยังค้าง** → ดู **Checklist งานที่เหลือ** ด้านบน (หมวด A–B)
 
 ---
 
-## Follow-up (หลัง Phase 5 / คู่ขนาน Phase 6)
+## Follow-up (ยังใช้ได้ — รายละเอียดใน master checklist)
 
-| ลำดับ | งาน | ความสำคัญ |
-|-------|-----|-----------|
-| 1 | Copy ฟอนต์ Sarabun → `assets/fonts/sarabun/` | สูง — ภาษาไทยใน PDF |
-| 2 | Mock DTO JSON ครบ 12 template | กลาง — ทดสอบ manual/Swagger |
-| 3 | Integrate `@hemo/pdf-client` + `@hemo/report-viewer` เข้า Hemo-frontend | สูง — E2E + แทน Telerik preview |
-| 4 | ปิด `UseMockServices` + JWT จาก Hemopro | สูง — production |
-| 5 | Dedicated layout ต่อ template (แทน Generic) — PDF + preview คู่กัน | กลาง — รอ business finalize |
-| 6 | `DbBrandingStore` แทน JSON | ต่ำ — ตาม guideline |
-| 7 | Health check dependency (branding path, disk) | ต่ำ |
-| 8 | PDF caching | ต่ำ — optional |
+| ลำดับ | งาน | ความสำคัญ | หมวด |
+|-------|-----|-----------|------|
+| 1 | Copy ฟอนต์ Sarabun → `assets/fonts/sarabun/` | สูง | A / C |
+| 2 | Hemosheet layout parity + pagination | สูง | A |
+| 3 | Telerik sunset + plugin → Hemo-PDF | สูง | B |
+| 4 | Mock DTO JSON ครบ 12 template | กลาง | D |
+| 5 | Dedicated layout 02–12 แทน Generic | กลาง | D |
+| 6 | Branding default fallback (ห้าม 500) | กลาง | C |
+| 7 | `DbBrandingStore` แทน JSON | ต่ำ | D |
+| 8 | Health check dependency / PDF caching | ต่ำ | C |
 
 ---
 
@@ -364,4 +426,4 @@ Swagger: `http://localhost:5090/swagger` → Authorize `dev` → Execute (ใช
 | Branding | ทีม implement JSON |
 | Signature | mock + guard พร้อม |
 
-**Phase 0–5 implement ครบแล้ว** — งานถัดไป: **Phase 6** (Report Preview) + Follow-up ด้านล่าง
+**Phase 0–6 ครบแล้ว** — งานถัดไป: **Hemosheet parity (A)** → **Telerik cutover (B)** → templates อื่น (D)

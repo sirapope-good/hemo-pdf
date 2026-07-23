@@ -34,6 +34,21 @@ isProject: false
 > **ขึ้นต่อจาก:** cleanup Phase 1 (unified pdf.js viewer + `HemoPdfPreviewController` + sync script)
 > **สถานะ Phase 1:** เสร็จแล้ว — ดู `PDF-REPORT-SYSTEM.md` §9.1
 > **เป้าหมาย Phase 2:** ลด dual stack, ทำให้เพิ่ม template/report ใหม่ predictable, และปิด Telerik path สำหรับ hemosheet ได้อย่างปลอดภัย
+> **อัปเดต 2026-07-23:** Track **2A เสร็จ** — งานที่เหลือด้านล่าง + master checklist ใน [hemo-pdf_implementation](./hemo-pdf_implementation_8969dd4f.plan.md)
+
+## Checklist งานที่เหลือ (Phase 2)
+
+| Track | สถานะ | งาน |
+|-------|--------|-----|
+| **2A** Catalog BE+FE | ✅ | `HemosheetTemplateCatalog` + FE `hemo-pdf-report-catalog` |
+| **2B** Preview pipeline | ⏳ | ตัดสินใจ deprecate `/api/report/preview` หรือลด dual ComposePdf+MapToPreview |
+| **2B** Trim dual | ⏳ | Hemosheet: คง DOM preview หรือย้ายไป PDF-as-preview ทั้งหมด |
+| **2C** Tenant flag | ⏳ | ย้าย `useHemoPdfPreview` → GlobalSetting (optional) / default on เมื่อพร้อม |
+| **2C** Sunset FE | ⏳ | ลบ `tr-viewer`, Kendo CSS, toolbar hacks (embedded + reports) |
+| **2D** Plugin send | ⏳ | `GenerateHemosheetPdf` → Hemo-PDF แทน Report.Api |
+| **2E** Docs | ⏳ | อัปเดต `PDF-REPORT-SYSTEM.md` §7 + §9.4 หลัง catalog |
+
+**ขึ้นกับภายนอก Phase 2:** Hemosheet visual parity ([03-IMPLEMENT-REPORT-LAYOUT.md](../../03-IMPLEMENT-REPORT-LAYOUT.md)) ควรถึงเกณฑ์ก่อนเปิด flag default / ลบ Telerik
 
 ---
 
