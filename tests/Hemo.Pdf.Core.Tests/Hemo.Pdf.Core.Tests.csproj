@@ -18,5 +18,6 @@
     <ProjectReference Include="..\..\src\Hemo.Pdf.Core\Hemo.Pdf.Core.csproj" />
     <ProjectReference Include="..\..\src\Hemo.Pdf.Application\Hemo.Pdf.Application.csproj" />
     <ProjectReference Include="..\..\src\Hemo.Pdf.Layouts\Hemo.Pdf.Layouts.csproj" />
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
   </ItemGroup>
 </Project>

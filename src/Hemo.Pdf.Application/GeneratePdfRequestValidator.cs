@@ -7,7 +7,10 @@ namespace Hemo.Pdf.Application;
 
 public static class GeneratePdfRequestValidator
 {
-    public static void Validate(GeneratePdfRequest request, ITenantContextAccessor tenantContext)
+    public static void Validate(
+        GeneratePdfRequest request,
+        ITenantContextAccessor tenantContext,
+        bool allowMissingData = false)
     {
         ArgumentNullException.ThrowIfNull(request);
 
@@ -26,6 +29,24 @@ public static class GeneratePdfRequestValidator
         if (string.IsNullOrWhiteSpace(request.EntityId))
         {
             throw new PdfGenerationBadRequestException("entityId is required.");
+        }
+
+        var hasData = request.Data.ValueKind is not JsonValueKind.Undefined and not JsonValueKind.Null;
+        if (!hasData)
+        {
+            if (!allowMissingData)
+            {
+                throw new PdfGenerationBadRequestException("data is required.");
+            }
+
+            return;
+        }
+
+        // Template payloads use Guid.Empty (or other placeholder ids) while FE correlates with
+        // entityId like "template-{unitId}" — skip id equality for template requests.
+        if (HemosheetFetchSpec.IsTemplateRequest(request))
+        {
+            return;
         }
 
         if (TryGetDataId(request.Data, out var dataId)

@@ -48,6 +48,22 @@ public class SignatureRequiredGuardTests
     }
 
     [Fact]
+    public async Task HemosheetTemplatePreview_SkipsSignatureRequirement()
+    {
+        var guard = new SignatureRequiredGuard(new ReportSignatureResolver(new UnsignedSignatureStore()));
+        var request = new GeneratePdfRequest
+        {
+            ReportTemplateId = ReportTemplates.Hemosheet,
+            TenantCode = "tenant-demo-a",
+            EntityId = "template--1",
+            Data = JsonDocument.Parse("""{"id":"00000000-0000-0000-0000-000000000000"}""").RootElement,
+            Parameters = new Dictionary<string, object?> { ["template"] = true, ["unitId"] = -1 },
+        };
+
+        await guard.EnsureCanGenerateAsync(request, CancellationToken.None);
+    }
+
+    [Fact]
     public async Task UnsignedTemplate_WithMockStore_Passes()
     {
         var guard = new SignatureRequiredGuard(new ReportSignatureResolver(new MockSignatureStore()));
@@ -210,7 +226,7 @@ public class GeneratePdfRequestValidatorTests
     [Fact]
     public void MismatchedTenant_ThrowsForbidden()
     {
-        var accessor = new MockTenantContextAccessor();
+        var accessor = new TenantContextAccessor();
         accessor.SetTenantCode("local");
         var request = new GeneratePdfRequest
         {
@@ -227,7 +243,7 @@ public class GeneratePdfRequestValidatorTests
     [Fact]
     public void MissingEntityId_ThrowsBadRequest()
     {
-        var accessor = new MockTenantContextAccessor();
+        var accessor = new TenantContextAccessor();
         accessor.SetTenantCode("local");
         var request = new GeneratePdfRequest
         {
@@ -243,7 +259,7 @@ public class GeneratePdfRequestValidatorTests
     [Fact]
     public void EntityIdMismatchWithDataId_ThrowsBadRequest()
     {
-        var accessor = new MockTenantContextAccessor();
+        var accessor = new TenantContextAccessor();
         accessor.SetTenantCode("local");
         var request = new GeneratePdfRequest
         {
@@ -258,9 +274,26 @@ public class GeneratePdfRequestValidatorTests
     }
 
     [Fact]
+    public void TemplateEntityId_MismatchWithDataId_Passes()
+    {
+        var accessor = new TenantContextAccessor();
+        accessor.SetTenantCode("local");
+        var request = new GeneratePdfRequest
+        {
+            ReportTemplateId = ReportTemplates.Hemosheet,
+            TenantCode = "local",
+            EntityId = "template--1",
+            Data = JsonDocument.Parse("""{"id":"00000000-0000-0000-0000-000000000000"}""").RootElement,
+            Parameters = new Dictionary<string, object?> { ["template"] = true, ["unitId"] = -1 },
+        };
+
+        GeneratePdfRequestValidator.Validate(request, accessor);
+    }
+
+    [Fact]
     public void MatchingEntityAndTenant_Passes()
     {
-        var accessor = new MockTenantContextAccessor();
+        var accessor = new TenantContextAccessor();
         accessor.SetTenantCode("local");
         var request = new GeneratePdfRequest
         {
@@ -271,5 +304,62 @@ public class GeneratePdfRequestValidatorTests
         };
 
         GeneratePdfRequestValidator.Validate(request, accessor);
+    }
+}
+
+public class HemosheetFetchSpecTests
+{
+    [Fact]
+    public void FromRequest_Template_RequiresUnitId()
+    {
+        var request = new GeneratePdfRequest
+        {
+            ReportTemplateId = ReportTemplates.Hemosheet,
+            TenantCode = "local",
+            EntityId = "template-1",
+            Data = default,
+            Parameters = new Dictionary<string, object?> { ["template"] = true },
+        };
+
+        Assert.Throws<PdfGenerationBadRequestException>(() => HemosheetFetchSpec.FromRequest(request));
+    }
+
+    [Fact]
+    public void FromRequest_Template_ReadsTypedFields()
+    {
+        var request = new GeneratePdfRequest
+        {
+            ReportTemplateId = ReportTemplates.Hemosheet,
+            TenantCode = "local",
+            EntityId = "template--1",
+            Data = default,
+            Parameters = new Dictionary<string, object?>
+            {
+                ["template"] = true,
+                ["unitId"] = -1,
+                ["templateMode"] = "hdf",
+                ["tcvUsePercent"] = true,
+            },
+        };
+
+        var spec = HemosheetFetchSpec.FromRequest(request);
+        Assert.True(spec.IsTemplate);
+        Assert.Equal(-1, spec.UnitId);
+        Assert.Equal("hdf", spec.TemplateMode);
+        Assert.True(spec.TcvUsePercent);
+    }
+}
+
+public class HemosheetLayoutProfileReaderTests
+{
+    [Fact]
+    public void IsThaiUr_AcceptsStringAndNumeric()
+    {
+        Assert.True(HemosheetLayoutProfileReader.IsThaiUr(
+            JsonDocument.Parse("""{"layoutContext":{"layoutProfile":"ThaiUr"}}""").RootElement));
+        Assert.True(HemosheetLayoutProfileReader.IsThaiUr(
+            JsonDocument.Parse("""{"layoutContext":{"layoutProfile":2}}""").RootElement));
+        Assert.False(HemosheetLayoutProfileReader.IsThaiUr(
+            JsonDocument.Parse("""{"layoutContext":{"layoutProfile":"Default"}}""").RootElement));
     }
 }

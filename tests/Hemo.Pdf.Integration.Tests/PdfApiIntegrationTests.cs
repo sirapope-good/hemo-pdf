@@ -8,6 +8,7 @@ using System.Text.Json;
 using Hemo.Pdf.Api;
 using Hemo.Pdf.Api.Auth;
 using Hemo.Pdf.Application;
+using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.IdentityModel.Tokens;
 
@@ -233,7 +234,7 @@ public class PdfApiIntegrationTests : IClassFixture<PdfApiWebApplicationFactory>
     }
 
     [Fact]
-    public async Task Preview_UnsignedRequiredTemplate_Returns403()
+    public async Task Preview_UnsignedRequiredTemplate_ReturnsOk()
     {
         var response = await PostPreviewAsync(
             "tenant-demo-a",
@@ -244,7 +245,28 @@ public class PdfApiIntegrationTests : IClassFixture<PdfApiWebApplicationFactory>
                 tenantCode = "tenant-demo-a",
                 entityId = "session-1",
                 data = new { patientName = "Test Patient" },
-                // Explicit unsigned payload — MockSignatureStore would otherwise always pass.
+                signatures = new
+                {
+                    isFullySigned = false,
+                    signatures = Array.Empty<object>(),
+                },
+            });
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task GeneratePdf_UnsignedRequiredTemplate_Returns403()
+    {
+        var response = await PostGenerateAsync(
+            "tenant-demo-a",
+            "template-01-dialysis-session",
+            new
+            {
+                reportTemplateId = "template-01-dialysis-session",
+                tenantCode = "tenant-demo-a",
+                entityId = "session-1",
+                data = new { patientName = "Test Patient" },
                 signatures = new
                 {
                     isFullySigned = false,
@@ -444,5 +466,118 @@ public class JwtTokenValidationTests
             signingCredentials: credentials);
 
         return new JwtSecurityTokenHandler().WriteToken(token);
+    }
+}
+
+/// <summary>HTTP-level JWT auth tests (UseMockServices=false).</summary>
+public class JwtHttpIntegrationTests : IClassFixture<JwtPdfApiWebApplicationFactory>
+{
+    private readonly HttpClient _client;
+    private const string TestIssuer = "http://localhost/";
+    private const string TestKey = "NAmO0mtmIV4ZWSZ92vRlwj810XzFXsnH";
+
+    public JwtHttpIntegrationTests(JwtPdfApiWebApplicationFactory factory)
+    {
+        _client = factory.CreateClient();
+    }
+
+    [Fact]
+    public async Task Generate_WithoutToken_Returns401()
+    {
+        var request = new HttpRequestMessage(HttpMethod.Post, "/api/pdf/generate")
+        {
+            Content = JsonContent.Create(new
+            {
+                reportTemplateId = "template-02-lab-result",
+                tenantCode = "local",
+                entityId = "e1",
+                data = new { patientName = "A" },
+            }),
+        };
+        request.Headers.Add("X-Tenant-Code", "local");
+
+        var response = await _client.SendAsync(request);
+        Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task Generate_WithValidToken_ReturnsPdf()
+    {
+        var token = CreateToken("local");
+        var request = new HttpRequestMessage(HttpMethod.Post, "/api/pdf/generate")
+        {
+            Content = JsonContent.Create(new
+            {
+                reportTemplateId = "template-02-lab-result",
+                tenantCode = "local",
+                entityId = "e1",
+                data = new { patientName = "A" },
+            }),
+        };
+        request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
+        request.Headers.Add("X-Tenant-Code", "local");
+
+        var response = await _client.SendAsync(request);
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.Equal("application/pdf", response.Content.Headers.ContentType?.MediaType);
+    }
+
+    [Fact]
+    public async Task Generate_WithTenantHeaderMismatch_Returns403()
+    {
+        var token = CreateToken("local");
+        var request = new HttpRequestMessage(HttpMethod.Post, "/api/pdf/generate")
+        {
+            Content = JsonContent.Create(new
+            {
+                reportTemplateId = "template-02-lab-result",
+                tenantCode = "local",
+                entityId = "e1",
+                data = new { patientName = "A" },
+            }),
+        };
+        request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
+        request.Headers.Add("X-Tenant-Code", "other-tenant");
+
+        var response = await _client.SendAsync(request);
+        Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
+    }
+
+    private static string CreateToken(string tenantCode)
+    {
+        var credentials = new SigningCredentials(
+            new SymmetricSecurityKey(Encoding.UTF8.GetBytes(TestKey)),
+            SecurityAlgorithms.HmacSha256);
+
+        var token = new JwtSecurityToken(
+            issuer: TestIssuer,
+            audience: TestIssuer,
+            claims:
+            [
+                new Claim(ClaimTypes.NameIdentifier, "user-1"),
+                new Claim("tenant_code", tenantCode),
+            ],
+            notBefore: DateTime.UtcNow.AddMinutes(-1),
+            expires: DateTime.UtcNow.AddMinutes(30),
+            signingCredentials: credentials);
+
+        return new JwtSecurityTokenHandler().WriteToken(token);
+    }
+}
+
+public sealed class JwtPdfApiWebApplicationFactory : WebApplicationFactory<Program>
+{
+    protected override void ConfigureWebHost(Microsoft.AspNetCore.Hosting.IWebHostBuilder builder)
+    {
+        var brandingPath = Path.GetFullPath(
+            Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..", "..", "assets", "branding"));
+
+        builder.UseSetting("HemoPdf:UseMockServices", "false");
+        builder.UseSetting("HemoPdf:UseServerFetch", "false");
+        builder.UseSetting("HemoPdf:BrandingRootPath", brandingPath);
+        builder.UseSetting("HemoPdf:CorsOrigins:0", "http://localhost:4200");
+        builder.UseSetting("HemoPdf:Jwt:Issuer", "http://localhost/");
+        builder.UseSetting("HemoPdf:Jwt:Key", "NAmO0mtmIV4ZWSZ92vRlwj810XzFXsnH");
+        builder.UseSetting(WebHostDefaults.EnvironmentKey, "Production");
     }
 }

@@ -1,0 +1,53 @@
+using Hemo.Pdf.Core.Abstractions;
+using Hemo.Pdf.Core.Constants;
+using Hemo.Pdf.Core.Context;
+using Hemo.Pdf.Core.Models;
+
+namespace Hemo.Pdf.Application;
+
+internal static class ReportPipeline
+{
+    public static async Task<PdfReportContext> BuildContextAsync(
+        GeneratePdfRequest request,
+        IBrandingResolver brandingResolver,
+        IReportSignatureResolver signatureResolver,
+        CancellationToken cancellationToken)
+    {
+        var branding = await brandingResolver.ResolveAsync(request.TenantCode, cancellationToken);
+        var signatures = await signatureResolver.ResolveAsync(request, cancellationToken);
+        ReportTemplates.TryGetDefinition(request.ReportTemplateId, out var templateDefinition);
+
+        return new PdfReportContext
+        {
+            ReportTemplateId = request.ReportTemplateId,
+            TenantCode = request.TenantCode,
+            EntityId = request.EntityId,
+            Branding = branding,
+            Data = request.Data,
+            Signatures = signatures,
+            Parameters = request.Parameters ?? new Dictionary<string, object?>(),
+            Metadata = BuildMetadata(request, branding, templateDefinition),
+        };
+    }
+
+    private static ReportMetadata BuildMetadata(
+        GeneratePdfRequest request,
+        CustomerBrandingProfile branding,
+        ReportTemplateDefinition? templateDefinition)
+    {
+        var title = templateDefinition?.DisplayName ?? request.ReportTemplateId;
+        string? reportCode = null;
+
+        if (!string.IsNullOrWhiteSpace(branding.Header.ReportCodePrefix))
+        {
+            var suffix = request.EntityId ?? Guid.NewGuid().ToString("N")[..8];
+            reportCode = $"{branding.Header.ReportCodePrefix}-{suffix}";
+        }
+
+        return new ReportMetadata
+        {
+            Title = title,
+            ReportCode = reportCode,
+        };
+    }
+}

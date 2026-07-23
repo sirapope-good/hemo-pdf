@@ -1,0 +1,22 @@
+{
+  "tenantCode": "default",
+  "customerId": "hemopro-default",
+  "displayName": "Hemodialysis Pro (Default)",
+  "header": {
+    "companyLines": [
+      "Hemodialysis Pro",
+      "Default branding fallback"
+    ],
+    "titleAlignment": "center",
+    "reportCodePrefix": "DEFAULT",
+    "showPageNumber": true
+  },
+  "footer": {
+    "disclaimerText": "เอกสารนี้จัดทำโดยระบบ HemodialysisPro",
+    "showSignatures": true
+  },
+  "style": {
+    "primaryFontFamily": "Sarabun",
+    "accentColor": "#1a5276"
+  }
+}

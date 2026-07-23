@@ -46,8 +46,17 @@ public sealed class JsonFileBrandingStore : IBrandingStore
         var filePath = Path.Combine(_rootPath, $"{tenantCode}.json");
         if (!File.Exists(filePath))
         {
-            throw new FileNotFoundException(
-                $"Branding profile not found for tenant '{tenantCode}'. Expected file: {filePath}");
+            var defaultPath = Path.Combine(_rootPath, "default.json");
+            if (!File.Exists(defaultPath))
+            {
+                throw new FileNotFoundException(
+                    $"Branding profile not found for tenant '{tenantCode}'. Expected file: {filePath} (or default.json).");
+            }
+
+            _logger?.LogWarning(
+                "Branding profile missing for tenant {TenantCode}; falling back to default.json",
+                tenantCode);
+            filePath = defaultPath;
         }
 
         await using var stream = File.OpenRead(filePath);

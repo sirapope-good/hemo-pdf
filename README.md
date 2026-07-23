@@ -47,11 +47,12 @@ Swagger: `http://localhost:5090/swagger` → `POST /api/report/preview` หร�
 
 | Environment | Behavior |
 |-------------|----------|
-| **Development** + `HemoPdf:UseMockServices=true` | `MockAuthHandler` — Bearer อะไรก็ได้; tenant จาก `X-Tenant-Code` |
+| **Development** + `HemoPdf:UseMockServices=true` | `MockAuthHandler` — **ต้องมี** Bearer (ค่าอะไรก็ได้); tenant จาก `X-Tenant-Code` |
 | **Non-Development** หรือ mock ปิด | Validate Hemopro JWT (symmetric HS256) — **ต้อง**ตั้ง `HemoPdf__Jwt__Issuer` และ `HemoPdf__Jwt__Key` ให้เท่ากับ Web.Api `Authentication__Issuer` / `Authentication__Key` |
 | Audience | ว่าง = ใช้ Issuer (ห้ามตั้ง `hemo-pdf` — token จริงไม่มี audience นี้) |
 | Tenant | JWT claim `tenant_code` เป็นที่มาของความจริง; header/body ต้องตรง มิฉะนั้น 403 |
 | Mock นอก Dev | **fail startup** |
+| Server fetch | Dev: `UseServerFetch=true` → ดึง report-data จาก Web.Api; FE ส่ง slim body |
 
 ```bash
 # Production / local JWT mode (match Web.Api)

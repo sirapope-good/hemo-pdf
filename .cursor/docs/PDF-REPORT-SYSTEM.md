@@ -38,9 +38,9 @@ repo เสริมที่เกี่ยวข้อง:
 
 ### หลักการออกแบบสำคัญ
 
-1. **แยกความรับผิดชอบ:** Hemo-PDF เป็น service แยก deploy ไม่ฝังใน business API และไม่ query DB ของ Hemopro โดยตรง — รับข้อมูลผ่าน DTO ใน request body (stateless)
+1. **แยกความรับผิดชอบ:** Hemo-PDF เป็น service แยก deploy ไม่ฝังใน business API และไม่ query DB ของ Hemopro โดยตรง — เมื่อ `UseServerFetch=true` จะดึง DTO จาก Web.Api (S2S + JWT forward) เอง; ปิด flag แล้วยังรับ `data` จาก client ได้ (เทส/legacy)
 2. **Dual output จาก pipeline เดียว (ฝั่ง server):** DTO ชุดเดียว → ออกได้ทั้ง PDF (`POST /api/pdf/generate`) และ ReportDocument JSON (`POST /api/report/preview`) โดยใช้ data provider + planner ตัวเดียวกัน
-3. **Hemopro preview = DOM จาก ReportDocument:** `hemo-report-viewer` render blocks เป็น HTML (ความรู้สึกใกล้ Telerik) — Print/Download ใช้ PDF จาก `POST /api/pdf/generate`
+3. **Hemopro preview = DOM จาก ReportDocument:** `hemo-report-viewer` render blocks เป็น HTML (ความรู้สึกใกล้ Telerik) — Print/Download ใช้ PDF จาก `POST /api/pdf/generate` (ThaiUr ใช้ PDF-as-preview ผ่าน `meta.previewMode`)
 
 ---
 
@@ -49,7 +49,7 @@ repo เสริมที่เกี่ยวข้อง:
 ```mermaid
 flowchart TB
     subgraph FE["Hemo-frontend (Angular :4200)"]
-        RP[reports.page / embedded-hemosheet-report / preview-modal]
+        RP[reports.page / embedded-hemosheet-report]
         PORT[HEMOSHEET_PREVIEW_PORT<br/>hemo-pdf.providers.ts]
         VIEW[hemo-report-viewer<br/>DOM blocks + toolbar]
         TELERIK[tr-viewer Telerik<br/>fallback]
@@ -73,12 +73,10 @@ flowchart TB
     end
 
     RP --> PORT
-    PORT -->|GET report-data| CTRL
+    PORT -->|POST /api/report/preview + /api/pdf/generate| API
+    API -->|S2S GET report-data when UseServerFetch| CTRL
     CTRL --> SVC --> RES
     SVC --> LAYRES
-    SVC -->|HemosheetReportDto + LayoutContext| PORT
-    PORT -->|POST /api/report/preview| API
-    PORT -->|print/download POST /api/pdf/generate| API
     API --> APP --> FAC --> PLAN --> REN
     REN --> QP
     REN --> DOC
@@ -129,9 +127,14 @@ Request body ชุดเดียว (`GeneratePdfRequest`) เข้าได�
 | Endpoint | Service | Output |
 |----------|---------|--------|
 | `POST /api/pdf/generate` | `PdfGenerationService.GenerateAsync` | `application/pdf` (byte[]) |
-| `POST /api/report/preview` | `ReportPreviewService.PreviewAsync` | `ReportDocument` JSON |
+| `POST /api/report/preview` | `ReportPreviewService.PreviewAsync` | `ReportDocument` JSON (`meta.previewMode`: `dom` \| `pdf`) |
 
-ทั้งคู่ทำ pipeline เกือบเหมือนกัน:
+เมื่อ `HemoPdf:UseServerFetch=true` body เหลือ `reportTemplateId`, `tenantCode`, `entityId`, `parameters` — Hemo-PDF เรียก Web.Api report-data ด้วย JWT ที่ forward (short cache ~45s เพื่อลด ThaiUr preview→generate ซ้ำ)
+
+ทั้งคู่ทำ pipeline เกือบเหมือนกันผ่าน `ReportRequestPipeline` (validate → resolve data → re-validate):
+
+- Template (`parameters.template=true`): ข้าม `entityId == data.id` และข้าม signature guard
+- ThaiUr: preview คืน `meta.previewMode=pdf` (ไม่ build DOM); FE เรียก generate (ใช้ cache)
 
 ```
 GeneratePdfRequest
@@ -326,7 +329,7 @@ flowchart LR
 | **`HemoproSignatureStore.GetAsync` คืน unsigned** | ลายเซ็นจริงมาจาก `TryResolveFromData` (payload) ผ่าน `ReportSignatureResolver` ร่วมกัน preview/generate | **parity แล้ว** แต่ยังไม่ trusted จนกว่า P1.5 S2S |
 | **Dual pipeline PDF + ReportDocument** | Hemosheet maintain `ComposePdf` + `MapToPreview`; Hemopro preview ใช้ JSON DOM (ยกเว้น ThaiUr), print ใช้ PDF | ต้นทุนเพิ่ม template/section สูง — ยอมรับเพื่อความรู้สึก Telerik |
 | **ThaiUr preview** | FE บังคับ PDF-as-preview สำหรับ `layoutProfile=ThaiUr` | ปิด drift DOM≠PDF สำหรับ profile นี้ |
-| **Client-trust DTO (residual)** | Hemo-PDF ยังไม่ refetch report-data จาก Web.Api | อย่าใช้เป็น official signed record จนกว่า **P1.5 S2S** |
+| **Client-trust DTO** | เมื่อ `UseServerFetch=true` Hemo-PDF ดึง report-data จาก Web.Api (JWT forward); ปิด flag = กลับ client-trust | เปิด UseServerFetch ใน Dev; production ควรเปิดคู่ flag FE |
 | **Telerik fallback** | `useHemoPdfPreview` + `tr-viewer` ยัง active; plugin send ยังใช้ Report.Api | dual stack จนกว่าจะ cutover |
 | **โค้ดที่ยัง inert (เหลือ)** | `HemosheetLayoutProfileRegistry.GetSectionOrder` | ตัดสินใจ wire หรือลบ |
 | **Layout resolver ทำซ้ำกับ .trdp** | กติกา visibility อยู่ทั้งใน `.trdp` และ `HemosheetLayoutResolver` | sync 2 ที่จนกว่าจะเลิก Telerik |
@@ -402,8 +405,7 @@ npm run sync:report-viewer -- --check # CI: fail ถ้า out of sync
 | Block dispatcher (legacy/demo) | `.../report-viewer/components/hemo-report-block-outlet.component.ts` |
 | Report page | `src/app/reports/reports.page.ts` + `.html` |
 | Embedded hemosheet | `src/app/doctor-view/patient-overview/components/embedded-hemosheet-report/` |
-| Preview modal | `src/app/reports/hemo-report-preview-modal/` |
-| Config | `src/assets/config/config.json` (`pdfApiUrl`, `useHemoPdfPreview`) |
+| Config | `offline-bootstrap.json` + tenant `config.json` (`pdfApiUrl`, `useHemoPdfPreview`) |
 
 ### Angular libraries (source of truth)
 | Library | Path |

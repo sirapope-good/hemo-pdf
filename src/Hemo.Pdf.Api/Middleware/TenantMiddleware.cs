@@ -1,5 +1,4 @@
 using Hemo.Pdf.Application;
-using Hemo.Pdf.Application.Mock;
 using Hemo.Pdf.Core.Exceptions;
 
 namespace Hemo.Pdf.Api.Middleware;
@@ -20,7 +19,7 @@ public sealed class TenantMiddleware
         _options = options.Value;
     }
 
-    public async Task InvokeAsync(HttpContext context, MockTenantContextAccessor tenantContextAccessor)
+    public async Task InvokeAsync(HttpContext context, TenantContextAccessor tenantContextAccessor)
     {
         context.Request.Headers.TryGetValue("X-Tenant-Code", out var tenantHeader);
 
@@ -38,7 +37,7 @@ public sealed class TenantMiddleware
         if (!string.IsNullOrWhiteSpace(effectiveTenant))
         {
             tenantContextAccessor.SetTenantCode(effectiveTenant);
-            context.Items[MockTenantContextAccessor.HttpContextItemKey] = effectiveTenant;
+            context.Items[TenantContextAccessor.HttpContextItemKey] = effectiveTenant;
         }
 
         await _next(context);

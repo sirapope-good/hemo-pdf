@@ -3,10 +3,10 @@ using Hemo.Pdf.Core.Abstractions;
 using Hemo.Pdf.Core.Constants;
 using Hemo.Pdf.Core.Models;
 
-namespace Hemo.Pdf.Application.Mock;
+namespace Hemo.Pdf.Application;
 
 /// <summary>
-/// Resolves hemosheet signature state from request payload fields sent by Hemopro.
+/// Resolves hemosheet signature state from trusted report-data payload fields.
 /// </summary>
 public sealed class HemoproSignatureStore : ISignatureStore
 {
@@ -38,7 +38,8 @@ public sealed class HemoproSignatureStore : ISignatureStore
             && !string.IsNullOrWhiteSpace(doctorSig.GetString());
 
         var signatureCount = 0;
-        if (data.TryGetProperty("signatureNames", out var names) && names.ValueKind == JsonValueKind.Object)
+        JsonElement names = default;
+        if (data.TryGetProperty("signatureNames", out names) && names.ValueKind == JsonValueKind.Object)
         {
             signatureCount = names.EnumerateObject().Count();
         }

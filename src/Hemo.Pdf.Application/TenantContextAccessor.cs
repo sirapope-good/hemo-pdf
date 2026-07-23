@@ -1,8 +1,8 @@
 using Hemo.Pdf.Core.Abstractions;
 
-namespace Hemo.Pdf.Application.Mock;
+namespace Hemo.Pdf.Application;
 
-public sealed class MockTenantContextAccessor : ITenantContextAccessor
+public sealed class TenantContextAccessor : ITenantContextAccessor
 {
     public const string DefaultTenantCode = "tenant-demo-a";
     public const string HttpContextItemKey = "HemoPdf.TenantCode";

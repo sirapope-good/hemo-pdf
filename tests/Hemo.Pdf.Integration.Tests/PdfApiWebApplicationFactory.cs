@@ -11,6 +11,8 @@ public sealed class PdfApiWebApplicationFactory : WebApplicationFactory<Program>
             Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..", "..", "assets", "branding"));
 
         builder.UseSetting("HemoPdf:UseMockServices", "true");
+        builder.UseSetting("HemoPdf:UseServerFetch", "false");
         builder.UseSetting("HemoPdf:BrandingRootPath", brandingPath);
+        builder.UseSetting("HemoPdf:CorsOrigins:0", "http://localhost:4200");
     }
 }

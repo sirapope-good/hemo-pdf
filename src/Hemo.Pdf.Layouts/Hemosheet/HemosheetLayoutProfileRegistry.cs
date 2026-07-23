@@ -26,6 +26,7 @@ public sealed class HemosheetLayoutProfileRegistry
         HemosheetSectionId.Signatures,
     ];
 
+    [Obsolete("Unused by HemosheetLayoutPlanner; section order is built inline. Prefer IsProfileSection.")]
     public IReadOnlyList<HemosheetSectionId> GetSectionOrder(HemosheetLayoutProfile profile) =>
         profile switch
         {

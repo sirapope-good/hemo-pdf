@@ -159,11 +159,16 @@ public sealed class Program
         {
             cors.AddDefaultPolicy(policy =>
             {
-                var origins = options.CorsOrigins;
+                var origins = options.CorsOrigins?
+                    .Where(origin => !string.IsNullOrWhiteSpace(origin))
+                    .Select(origin => origin.Trim())
+                    .Distinct(StringComparer.OrdinalIgnoreCase)
+                    .ToArray() ?? [];
+
                 if (origins.Length == 0)
                 {
-                    policy.AllowAnyOrigin().AllowAnyHeader().AllowAnyMethod();
-                    return;
+                    throw new InvalidOperationException(
+                        "HemoPdf:CorsOrigins must contain at least one origin (e.g. http://localhost:4200). AllowAnyOrigin is not permitted.");
                 }
 
                 policy.WithOrigins(origins)
@@ -182,7 +187,7 @@ public sealed class Program
             rateLimiterOptions.AddPolicy("PdfGeneration", context =>
             {
                 var userId = context.User.FindFirstValue(ClaimTypes.NameIdentifier) ?? "anonymous";
-                var tenant = context.Items[Application.Mock.MockTenantContextAccessor.HttpContextItemKey] as string
+                var tenant = context.Items[Application.TenantContextAccessor.HttpContextItemKey] as string
                     ?? context.Request.Headers["X-Tenant-Code"].ToString();
                 if (string.IsNullOrWhiteSpace(tenant))
                     tenant = "unknown-tenant";

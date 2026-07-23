@@ -40,10 +40,18 @@ Swagger (Development): http://localhost:5090/swagger
 
 `appsettings.Development.json` ตั้ง `HemoPdf:UseMockServices=true` → ใช้ **MockAuth**
 
-- ส่ง `Authorization: Bearer` อะไรก็ได้ (เช่น `dev`)
+- **ต้อง**ส่ง `Authorization: Bearer …` (ค่าอะไรก็ได้ เช่น `dev`) — ไม่ส่ง Bearer = 401
 - tenant อ่านจาก header `X-Tenant-Code` (เช่น `local` หรือ `tenant-demo-a` สำหรับ branding mock)
+- `UseServerFetch=true` (Dev default) → Hemo-PDF ดึง DTO จาก Web.Api `:8200` เอง (forward JWT + `X-Tenant-Code`)
 
-ไม่ต้องตั้ง JWT key ในโหมดนี้
+ไม่ต้องตั้ง JWT key ในโหมด mock แต่ **Web.Api ต้องรัน** เมื่อเปิด server fetch
+
+### S2S tenant resolution (spike / verified)
+
+Web.Api `TenantRequestMetadataResolver` ลำดับ: AdminOps path → JWT `tenant_code` → `X-Tenant-Code` → Origin/host  
+ดังนั้น Hemo-PDF → Web.Api **ไม่ต้อง**ส่ง `Origin: localhost:4200` ถ้า forward `Authorization` (มี claim) และ/หรือ `X-Tenant-Code`
+
+Kill-switch S2S: `HemoPdf:UseServerFetch=false` (กลับไปเชื่อ `data` จาก client — ไม่แนะนำนอกเทส)
 
 ### Auth แบบจริง (JWT ร่วม Web.Api) — optional
 

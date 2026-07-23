@@ -26,12 +26,17 @@ public sealed class MockAuthHandler : AuthenticationHandler<AuthenticationScheme
 
     protected override Task<AuthenticateResult> HandleAuthenticateAsync()
     {
+        if (!(_environment.IsDevelopment() && _hemoPdfOptions.UseMockServices))
+        {
+            return Task.FromResult(AuthenticateResult.Fail("Mock authentication is only available in Development."));
+        }
+
         var authorization = Request.Headers.Authorization.ToString();
         var hasBearer = !string.IsNullOrWhiteSpace(authorization)
             && authorization.StartsWith("Bearer ", StringComparison.OrdinalIgnoreCase);
 
-        if (!hasBearer
-            && !(_environment.IsDevelopment() && _hemoPdfOptions.UseMockServices))
+        // Dev mock still requires a Bearer token (any value) — never allow missing Authorization.
+        if (!hasBearer)
         {
             return Task.FromResult(AuthenticateResult.Fail("Missing or invalid Bearer token."));
         }

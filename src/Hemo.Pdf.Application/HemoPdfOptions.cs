@@ -6,9 +6,16 @@ public sealed class HemoPdfOptions
 
     public bool UseMockServices { get; set; } = true;
 
+    /// <summary>
+    /// When true, Hemo-PDF fetches report-data from Web.Api (JWT delegation) and ignores client Data/Signatures.
+    /// </summary>
+    public bool UseServerFetch { get; set; }
+
     public string BrandingRootPath { get; set; } = "../../assets/branding";
 
     public JwtOptions Jwt { get; set; } = new();
+
+    public WebApiOptions WebApi { get; set; } = new();
 
     public string[] CorsOrigins { get; set; } = [];
 }
@@ -26,4 +33,10 @@ public sealed class JwtOptions
 
     /// <summary>Legacy OIDC authority — unused for Hemopro symmetric JWT validation.</summary>
     public string Authority { get; set; } = "";
+}
+
+public sealed class WebApiOptions
+{
+    /// <summary>Base URL of Hemopro Web.Api (e.g. http://localhost:8200).</summary>
+    public string BaseUrl { get; set; } = "http://localhost:8200";
 }

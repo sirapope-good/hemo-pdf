@@ -30,16 +30,28 @@ public static class ServiceCollectionExtensions
         });
 
         services.AddSingleton<IPdfRenderer, QuestPdfRenderer>();
+        services.AddMemoryCache();
         services.AddScoped<IPdfGenerationService, PdfGenerationService>();
         services.AddScoped<IReportPreviewService, ReportPreviewService>();
         services.AddScoped<IReportSignatureResolver, ReportSignatureResolver>();
         services.AddScoped<IPdfGenerationGuard, SignatureRequiredGuard>();
+        services.AddScoped<ReportDataResolver>();
+        services.AddScoped<ReportRequestPipeline>();
 
-        services.AddScoped<MockTenantContextAccessor>();
-        services.AddScoped<ITenantContextAccessor>(sp => sp.GetRequiredService<MockTenantContextAccessor>());
+        services.AddScoped<TenantContextAccessor>();
+        services.AddScoped<ITenantContextAccessor>(sp => sp.GetRequiredService<TenantContextAccessor>());
 
         services.AddSingleton<IBrandingStore, JsonFileBrandingStore>();
         services.AddScoped<IBrandingResolver, BrandingResolver>();
+
+        services.AddHttpClient<IHemosheetReportDataClient, HemosheetReportDataClient>(client =>
+        {
+            var baseUrl = options.WebApi.BaseUrl?.Trim();
+            if (!string.IsNullOrWhiteSpace(baseUrl))
+            {
+                client.BaseAddress = new Uri(baseUrl.EndsWith('/') ? baseUrl : baseUrl + "/");
+            }
+        });
 
         if (options.UseMockServices)
         {

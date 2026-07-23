@@ -1,76 +1,96 @@
 using Hemo.Pdf.Core.Abstractions;
 using Hemo.Pdf.Core.Constants;
-using Hemo.Pdf.Core.Context;
 using Hemo.Pdf.Core.Models;
 using Hemo.Pdf.Core.Models.Preview;
+using Hemo.Pdf.Sections.Preview;
+using Microsoft.Extensions.Options;
 
 namespace Hemo.Pdf.Application;
 
 public sealed class ReportPreviewService : IReportPreviewService
 {
     private readonly IBrandingResolver _brandingResolver;
-    private readonly IPdfGenerationGuard _guard;
     private readonly IReportSignatureResolver _signatureResolver;
     private readonly IReportPreviewRendererFactory _rendererFactory;
-    private readonly ITenantContextAccessor _tenantContext;
+    private readonly ReportRequestPipeline _requestPipeline;
 
     public ReportPreviewService(
         IBrandingResolver brandingResolver,
-        IPdfGenerationGuard guard,
         IReportSignatureResolver signatureResolver,
         IReportPreviewRendererFactory rendererFactory,
-        ITenantContextAccessor tenantContext)
+        ReportRequestPipeline requestPipeline)
     {
         _brandingResolver = brandingResolver;
-        _guard = guard;
         _signatureResolver = signatureResolver;
         _rendererFactory = rendererFactory;
-        _tenantContext = tenantContext;
+        _requestPipeline = requestPipeline;
     }
 
     public async Task<ReportDocument> PreviewAsync(GeneratePdfRequest request, CancellationToken cancellationToken)
     {
-        GeneratePdfRequestValidator.Validate(request, _tenantContext);
-        await _guard.EnsureCanGenerateAsync(request, cancellationToken);
+        // Preview must not enforce fully-signed — drafts should still render.
+        request = await _requestPipeline.PrepareAsync(request, cancellationToken);
 
-        var branding = await _brandingResolver.ResolveAsync(request.TenantCode, cancellationToken);
-        var signatures = await _signatureResolver.ResolveAsync(request, cancellationToken);
-        ReportTemplates.TryGetDefinition(request.ReportTemplateId, out var templateDefinition);
+        var layoutProfile = HemosheetLayoutProfileReader.ReadLayoutProfile(request.Data) ?? "Default";
 
-        var context = new PdfReportContext
+        // ThaiUr uses PDF-as-preview (DOM planner does not mirror that composer).
+        // Skip branding/signature context build — FE will call generate next (cached report-data).
+        if (HemosheetLayoutProfileReader.IsThaiUr(request.Data))
         {
-            ReportTemplateId = request.ReportTemplateId,
-            TenantCode = request.TenantCode,
-            EntityId = request.EntityId,
-            Branding = branding,
-            Data = request.Data,
-            Signatures = signatures,
-            Parameters = request.Parameters ?? new Dictionary<string, object?>(),
-            Metadata = BuildMetadata(request, branding, templateDefinition),
-        };
-
-        var renderer = _rendererFactory.Create(request.ReportTemplateId);
-        return await renderer.RenderPreviewAsync(context, cancellationToken);
-    }
-
-    private static ReportMetadata BuildMetadata(
-        GeneratePdfRequest request,
-        CustomerBrandingProfile branding,
-        ReportTemplateDefinition? templateDefinition)
-    {
-        var title = templateDefinition?.DisplayName ?? request.ReportTemplateId;
-        string? reportCode = null;
-
-        if (!string.IsNullOrWhiteSpace(branding.Header.ReportCodePrefix))
-        {
-            var suffix = request.EntityId ?? Guid.NewGuid().ToString("N")[..8];
-            reportCode = $"{branding.Header.ReportCodePrefix}-{suffix}";
+            return BuildThaiUrPdfModeDocument(request, layoutProfile);
         }
 
-        return new ReportMetadata
+        var context = await ReportPipeline.BuildContextAsync(
+            request,
+            _brandingResolver,
+            _signatureResolver,
+            cancellationToken);
+
+        var renderer = _rendererFactory.Create(request.ReportTemplateId);
+        var document = await renderer.RenderPreviewAsync(context, cancellationToken);
+        return WithPreviewMode(document, "dom", layoutProfile);
+    }
+
+    private static ReportDocument BuildThaiUrPdfModeDocument(GeneratePdfRequest request, string layoutProfile)
+    {
+        ReportTemplates.TryGetDefinition(request.ReportTemplateId, out var templateDefinition);
+        var title = templateDefinition?.DisplayName ?? request.ReportTemplateId;
+
+        return new ReportDocument
         {
-            Title = title,
-            ReportCode = reportCode,
+            Meta = new ReportDocumentMeta
+            {
+                TemplateId = request.ReportTemplateId,
+                Title = title,
+                PageSize = "A4",
+                GeneratedAt = DateTime.UtcNow.ToString("o"),
+                PreviewMode = "pdf",
+                LayoutProfile = layoutProfile,
+            },
+            Branding = new ReportBranding(),
+            Header = new ReportHeaderBlock(),
+            Pages = [],
+            Footer = new ReportFooterBlock(),
+        };
+    }
+
+    private static ReportDocument WithPreviewMode(ReportDocument document, string previewMode, string? layoutProfile)
+    {
+        return new ReportDocument
+        {
+            Meta = new ReportDocumentMeta
+            {
+                TemplateId = document.Meta.TemplateId,
+                Title = document.Meta.Title,
+                PageSize = document.Meta.PageSize,
+                GeneratedAt = document.Meta.GeneratedAt,
+                PreviewMode = previewMode,
+                LayoutProfile = layoutProfile ?? document.Meta.LayoutProfile,
+            },
+            Branding = document.Branding,
+            Header = document.Header,
+            Pages = document.Pages,
+            Footer = document.Footer,
         };
     }
 }

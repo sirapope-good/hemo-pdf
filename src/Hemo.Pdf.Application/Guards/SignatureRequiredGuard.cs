@@ -19,6 +19,10 @@ public sealed class SignatureRequiredGuard : IPdfGenerationGuard
         if (!ReportTemplates.RequiresSignature(request.ReportTemplateId))
             return;
 
+        // Empty template forms are never fully signed — allow generate/print for layout review.
+        if (HemosheetFetchSpec.IsTemplateRequest(request))
+            return;
+
         var signatures = await _signatureResolver.ResolveAsync(request, cancellationToken);
         if (signatures?.IsFullySigned != true)
         {
