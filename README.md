@@ -71,9 +71,11 @@ dotnet test Hemo.Pdf.sln
 ```
 
 ```bash
-# Docker
+# Docker (UseServerFetch → Web.Api on host via host.docker.internal:8200)
 docker compose up --build
 ```
+
+Web.Api must be running on the host at `:8200`. Inside the container `localhost` is the container itself — compose sets `HemoPdf__WebApi__BaseUrl=http://host.docker.internal:8200`.
 
 ## Architecture
 

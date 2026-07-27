@@ -54,6 +54,42 @@ internal static class ThaiUrData
     public static string Allergies(HemosheetReportViewModel vm) =>
         vm.Patient.Allergies.Count == 0 ? "ไม่มีแพ้ยา" : string.Join(", ", vm.Patient.Allergies);
 
+    public static string? Map(int? sys, int? dia)
+    {
+        if (sys is null || dia is null) return null;
+        return Round((sys.Value + 2 * dia.Value) / 3f);
+    }
+
+    /// <summary>NSS for fluid summary: session totals, else sum of dialysis-row NSS.</summary>
+    public static float? NssMl(HemosheetReportViewModel vm)
+    {
+        if (vm.Dehydration.FlushNssTotal is not null) return vm.Dehydration.FlushNssTotal;
+        if (vm.Dehydration.FlushNss is not null) return vm.Dehydration.FlushNss;
+        var sum = vm.DialysisRecords.Sum(r => r.Nss ?? 0f);
+        return sum > 0 ? sum : null;
+    }
+
+    /// <summary>Extra-fluid as ml (DTO may already be ml; values &lt; 20 treated as liters).</summary>
+    public static float? ExtraFluidMl(HemosheetReportViewModel vm)
+    {
+        var v = vm.Dehydration.ExtraFluid;
+        if (v is null) return null;
+        return v is > 0 and < 20 ? v * 1000f : v;
+    }
+
+    public static float? TotalUfMl(HemosheetReportViewModel vm)
+    {
+        var uf = vm.Dehydration.TotalUf ?? vm.Dehydration.UfNet;
+        return uf is null ? null : uf * 1000f;
+    }
+
+    public static float? NetFluidBalanceMl(HemosheetReportViewModel vm)
+    {
+        var totalUf = TotalUfMl(vm);
+        if (totalUf is null) return null;
+        return totalUf - (NssMl(vm) ?? 0f) - (ExtraFluidMl(vm) ?? 0f);
+    }
+
     /// <summary>null = item absent, true/false = present and (un)checked.</summary>
     public static bool? PreState(HemosheetReportViewModel vm, params string[] keys) =>
         State(vm.Assessments.Pre, keys);

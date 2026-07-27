@@ -51,7 +51,7 @@ public class ReportDataResolverCacheTests
             CancellationToken cancellationToken)
         {
             RecordCalls++;
-            var json = """{"id":"hemo-1","layoutContext":{"layoutProfile":"ThaiUr"}}""";
+            var json = """{"id":"hemo-1","layoutContext":{"hemoPdfTemplateId":"template-04-hemosheet","layoutProfile":"ThaiUr"}}""";
             return Task.FromResult(JsonDocument.Parse(json).RootElement.Clone());
         }
 

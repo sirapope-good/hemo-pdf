@@ -1,0 +1,4 @@
+Copyright 2018 The Sarabun Project Authors (https://github.com/googlefonts/Sarabun)
+
+This Font Software is licensed under the SIL Open Font License, Version 1.1.
+See https://openfontlicense.org

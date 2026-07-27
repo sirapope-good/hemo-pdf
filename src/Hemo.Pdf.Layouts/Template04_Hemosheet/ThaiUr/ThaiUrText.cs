@@ -5,13 +5,10 @@ using QuestPDF.Infrastructure;
 namespace Hemo.Pdf.Layouts.Template04_Hemosheet.ThaiUr;
 
 /// <summary>
-/// Shared styling primitives for the ThaiUR Hemosheet form. Centralizing them here keeps the
-/// large <see cref="ThaiUrHemosheetForm"/> readable and lets us tune the whole form in one place.
+/// Shared styling primitives for the ThaiUR Hemosheet form.
 /// </summary>
 internal static class ThaiUrText
 {
-    // Microsoft Sans Serif for Latin; QuestPDF's automated glyph fallback resolves Thai glyphs
-    // from the registered Sarabun font when Microsoft Sans Serif lacks them.
     public static TextStyle Base => TextStyle.Default
         .FontFamily(HemosheetThaiUrStyle.FontFamily)
         .FontSize(HemosheetThaiUrStyle.BaseFontSize)
@@ -24,21 +21,19 @@ internal static class ThaiUrText
 
     public static TextStyle Title => Base.FontSize(HemosheetThaiUrStyle.TitleFontSize).Bold();
 
-    /// <summary>Border thickness helper so every cell uses the Telerik 0.4pt rule.</summary>
     public static IContainer Cell(this IContainer c) => c.Border(HemosheetThaiUrStyle.BorderWidth);
 
-    /// <summary>A lavender section-title bar identical to the Telerik header cells.</summary>
     public static void HeaderBar(this IContainer c, string text)
     {
         c.Border(HemosheetThaiUrStyle.BorderWidth)
             .Background(HemosheetThaiUrStyle.HeaderBackground)
+            .Height(HemosheetThaiUrStyle.HeaderBarHeightMm, Unit.Millimetre)
             .AlignMiddle()
             .AlignCenter()
             .Text(text)
             .Style(Bold);
     }
 
-    /// <summary>Left-aligned label text used across the form.</summary>
     public static void Label(this IContainer c, string text)
     {
         c.PaddingLeft(1f).AlignMiddle().Text(text).Style(Base);
@@ -59,7 +54,6 @@ internal static class ThaiUrText
         c.AlignMiddle().AlignCenter().Text(string.IsNullOrWhiteSpace(text) ? "" : text).Style(Base);
     }
 
-    /// <summary>A small square checkbox (checked draws a slash), matching the Telerik checkbox image.</summary>
     public static void Checkbox(this RowDescriptor row, bool isChecked, float sizePt = 8f)
     {
         var box = row.ConstantItem(sizePt)
@@ -69,34 +63,33 @@ internal static class ThaiUrText
             .AlignMiddle()
             .AlignCenter();
 
+        // Keep checkbox mark on Sarabun so Docker/Linux never depends on Arial.
         box.Text(isChecked ? "\u2713" : "\u200B")
-            .FontFamily("Arial")
-            .FontSize(sizePt * 0.9f)
+            .FontFamily(HemosheetThaiUrStyle.FontFamily)
+            .FontSize(sizePt * 0.85f)
             .Bold();
     }
 
-    /// <summary>Label + Y[ ] N[ ] triple used all over the assessment/vascular blocks.</summary>
     public static void YesNo(this IContainer c, string label, bool? yes)
     {
         c.Row(r =>
         {
-            r.RelativeItem().Label(label);
+            r.RelativeItem().AlignMiddle().PaddingLeft(1f).Text(label).Style(Base);
             r.AutoItem().AlignMiddle().Text("Y").Style(Base);
             r.ConstantItem(2f);
-            r.Checkbox(yes == true);
-            r.ConstantItem(4f);
+            r.Checkbox(yes == true, sizePt: 7f);
+            r.ConstantItem(3f);
             r.AutoItem().AlignMiddle().Text("N").Style(Base);
             r.ConstantItem(2f);
-            r.Checkbox(yes == false);
+            r.Checkbox(yes == false, sizePt: 7f);
         });
     }
 
-    /// <summary>Checkbox + caption, used in the bottom Complication/Nursing/Health groups.</summary>
     public static void CheckLine(this IContainer c, string label, bool isChecked)
     {
-        c.Height(HemosheetThaiUrStyle.RowHeightMm, Unit.Millimetre).Row(r =>
+        c.Height(HemosheetThaiUrStyle.CheckRowHeightMm, Unit.Millimetre).AlignMiddle().Row(r =>
         {
-            r.Checkbox(isChecked);
+            r.Checkbox(isChecked, sizePt: 6.5f);
             r.ConstantItem(2f);
             r.RelativeItem().AlignMiddle().Text(label).Style(Base);
         });

@@ -47,7 +47,8 @@ public sealed class ReportDataResolver
                     "data is required when HemoPdf:UseServerFetch is disabled.");
             }
 
-            return request;
+            // Prefer layoutContext.hemoPdfTemplateId from payload (HemoAdmin → Web.Api catalog).
+            return WithResolvedTemplate(request, request.Data, request.Signatures, request.Parameters);
         }
 
         if (string.IsNullOrWhiteSpace(request.EntityId))
@@ -82,18 +83,27 @@ public sealed class ReportDataResolver
         }
 
         // Ignore client Data/Signatures when server fetch is on (trusted SoT).
+        // ReportTemplateId comes from layoutContext.hemoPdfTemplateId (HemoAdmin Hemosheet template)
+        // when present; FE may send document-type key "hemosheet" as a wire hint only.
         // Keep caller's EntityId for template correlation (FE uses template-{unitId});
         // validator skips id match when IsTemplate.
-        return new GeneratePdfRequest
+        return WithResolvedTemplate(request, data, signatures: null, parameters);
+    }
+
+    private static GeneratePdfRequest WithResolvedTemplate(
+        GeneratePdfRequest request,
+        JsonElement data,
+        ReportSignatureContext? signatures,
+        Dictionary<string, object?>? parameters) =>
+        new()
         {
-            ReportTemplateId = request.ReportTemplateId,
+            ReportTemplateId = HemosheetTemplateIdReader.Resolve(request.ReportTemplateId, data),
             TenantCode = request.TenantCode,
             EntityId = request.EntityId,
             Data = data,
-            Signatures = null,
+            Signatures = signatures,
             Parameters = parameters,
         };
-    }
 
     private static string BuildCacheKey(
         string tenantCode,

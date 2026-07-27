@@ -5,9 +5,14 @@ services:
       dockerfile: Dockerfile
     ports:
       - "5090:5090"
+    # Reach Web.Api on the host (container localhost ≠ host localhost).
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     environment:
       ASPNETCORE_ENVIRONMENT: Development
       HemoPdf__UseMockServices: "true"
+      HemoPdf__UseServerFetch: "true"
+      HemoPdf__WebApi__BaseUrl: "http://host.docker.internal:8200"
       HemoPdf__BrandingRootPath: "/app/assets/branding"
     volumes:
       - ./assets/branding:/app/assets/branding:ro
