@@ -13,6 +13,7 @@ public sealed class HemosheetLayoutProfileRegistry
         HemosheetSectionId.VascularAccess,
         HemosheetSectionId.AssessmentPre,
         HemosheetSectionId.AssessmentRe,
+        HemosheetSectionId.AssessmentPreRe,
         HemosheetSectionId.AssessmentPost,
         HemosheetSectionId.AssessmentOther,
         HemosheetSectionId.Labs,

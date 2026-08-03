@@ -8,7 +8,11 @@ import { ChecklistTableReportBlock, ChecklistCheckboxCell, ChecklistTextCell } f
   imports: [CommonModule],
   template: `
     <section class="hemo-report-block">
-      <table class="hemo-checklist-table" [class.hemo-checklist-table--yn]="block.layout === 'yn-columns'">
+      <table
+        class="hemo-checklist-table"
+        [class.hemo-checklist-table--yn]="block.layout === 'yn-columns'"
+        [class.hemo-checklist-table--pre-re]="block.layout === 'pre-re-matrix'"
+      >
         <thead>
           <tr *ngIf="block.title" class="hemo-section-title-row">
             <th [attr.colspan]="block.columns.length">{{ block.title }}</th>
@@ -51,6 +55,10 @@ export class ChecklistTableBlockComponent {
   isCheckboxColumn(index: number): boolean {
     if (this.block.layout === 'yn-columns') {
       return index < 2;
+    }
+
+    if (this.block.layout === 'pre-re-matrix') {
+      return index >= 1 && index <= 4;
     }
 
     return index === 0;

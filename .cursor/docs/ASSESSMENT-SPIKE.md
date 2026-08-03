@@ -89,8 +89,9 @@
 - [x] อ่าน AssessmentTable จริงจาก `.trdp`  
 - [x] เทียบกับ DTO + mapper ปัจจุบัน  
 - [x] ตัดสิน A/B/C  
-- [ ] Implement Phase A (mapper + matrix layout)  
+- [x] Implement Phase A (mapper + matrix layout)  
 - [ ] Visual compare mock Default vs Telerik Assessment panel  
+- [ ] Phase B BE contract gaps (DisplayName / option keys / catalog)
 
 ---
 

@@ -1,5 +1,6 @@
 using Hemo.Pdf.Core.Models.Hemosheet;
 using Hemo.Pdf.Layouts.Hemosheet.Renderers;
+using Hemo.Pdf.Sections.Preview.Hemosheet;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace Hemo.Pdf.Layouts.Hemosheet;
@@ -25,14 +26,15 @@ public static class HemosheetSectionRendererRegistration
             HemosheetSectionId.AssessmentRe,
             "Assessment (Re)",
             vm => vm.Assessments.Re));
+        services.AddSingleton<IHemosheetSectionRenderer, AssessmentPreReSectionRenderer>();
         services.AddSingleton<IHemosheetSectionRenderer>(_ => new AssessmentSectionRenderer(
             HemosheetSectionId.AssessmentPost,
             "Assessment (Post)",
-            vm => vm.Assessments.Post));
+            vm => HemosheetPreviewMappers.SelectPostBodyItems(vm.Assessments.Post)));
         services.AddSingleton<IHemosheetSectionRenderer>(_ => new AssessmentSectionRenderer(
             HemosheetSectionId.AssessmentOther,
             "Assessment (Other)",
-            vm => vm.Assessments.Other));
+            vm => HemosheetPreviewMappers.SelectOtherBodyItems(vm.Assessments.Other)));
         services.AddSingleton<IHemosheetSectionRenderer, LabsSectionRenderer>();
         services.AddSingleton<IHemosheetSectionRenderer, DialysisRecordsSectionRenderer>();
         services.AddSingleton<IHemosheetSectionRenderer, UfSummarySectionRenderer>();

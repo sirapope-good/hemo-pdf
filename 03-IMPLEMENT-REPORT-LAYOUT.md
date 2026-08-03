@@ -361,10 +361,12 @@ public sealed class HemosheetLayoutProfileRegistry
 #### 3C — Assessment (checklist + matrix ถ้าจำเป็น)
 
 - [x] **Spike เสร็จ** — ดู [.cursor/docs/ASSESSMENT-SPIKE.md](.cursor/docs/ASSESSMENT-SPIKE.md): เลือก **Hybrid (C)**
-- [ ] Default: Pre∪Re topic matrix (Topic \| Pre Y/N \| Re Y/N) — layout ใหม่หรือ `checklist-table` mode
-- [ ] `checklist-table` 3 คอลัมน์ / yn สำหรับ ThaiUR, AVF, footer groups
-- [ ] แก้ mapper ให้ตรง BE (`SelectedOptions` บน parent name ไม่ใช่ dotted mock names)
-- [ ] Pre / Re / Post / Other ตาม planner + กัน double-render
+- [x] Default: Pre∪Re topic matrix (`checklist-table` layout `pre-re-matrix`) — Phase A
+- [x] `checklist-table` yn สำหรับ ThaiUR top-row, AVF, footer groups
+- [x] แก้ mapper ให้ตรง BE (`SelectedOptions` บน parent name + dotted mock)
+- [x] Pre / Re / Post / Other ตาม planner + กัน double-render (ThaiUr ยังใส่ Pre ใน Predialysis)
+- [ ] Visual compare mock Default vs Telerik Assessment panel
+- [ ] Phase B BE: DisplayName / option keys / catalog (empty form)
 
 #### 3D — ตารางบันทึก (grids)
 

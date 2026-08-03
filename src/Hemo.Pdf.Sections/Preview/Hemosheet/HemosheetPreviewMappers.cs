@@ -241,7 +241,8 @@ public static class HemosheetPreviewMappers
         IList<HemosheetAssessmentItemViewModel> items,
         bool ynLayout = false)
     {
-        if (items.Count == 0)
+        var expanded = ExpandAssessmentItems(items);
+        if (expanded.Count == 0)
         {
             return null;
         }
@@ -249,14 +250,43 @@ public static class HemosheetPreviewMappers
         return ChecklistTablePreviewMapper.Map(new ChecklistTableModel
         {
             Title = title,
-            Layout = ynLayout ? "yn-columns" : "default",
-            Items = items.Select(i => new ChecklistItem
-            {
-                Label = FormatAssessmentLabel(i),
-                IsChecked = i.Checked,
-                Notes = string.IsNullOrWhiteSpace(i.Text) ? null : i.Text,
-            }).ToList(),
+            Layout = ynLayout
+                ? ChecklistTablePreviewMapper.LayoutYnColumns
+                : ChecklistTablePreviewMapper.LayoutDefault,
+            Items = expanded.ToList(),
         });
+    }
+
+    /// <summary>
+    /// Default/Rama Telerik AssessmentTable: Topic | Pre Y/N | Re Y/N.
+    /// </summary>
+    public static ChecklistTableReportBlock? MapPreReAssessmentMatrix(HemosheetReportViewModel vm)
+    {
+        var preByName = IndexByName(vm.Assessments.Pre);
+        var reByName = IndexByName(vm.Assessments.Re);
+        if (preByName.Count == 0 && reByName.Count == 0)
+        {
+            return null;
+        }
+
+        var topics = preByName.Keys
+            .Union(reByName.Keys, StringComparer.OrdinalIgnoreCase)
+            .OrderBy(n => n, StringComparer.OrdinalIgnoreCase)
+            .ToList();
+
+        var rows = topics.Select(topic =>
+        {
+            preByName.TryGetValue(topic, out var pre);
+            reByName.TryGetValue(topic, out var re);
+            var notes = FirstNonEmpty(pre?.Text, re?.Text);
+            return (
+                Topic: FormatTopicLabel(topic),
+                PreChecked: pre is null ? (bool?)null : pre.Checked,
+                ReChecked: re is null ? (bool?)null : re.Checked,
+                Notes: notes);
+        }).ToList();
+
+        return ChecklistTablePreviewMapper.MapPreReMatrix("Assessment (Pre / Re)", rows);
     }
 
     public static SectionRowReportBlock? MapTopLayoutRow(
@@ -276,10 +306,14 @@ public static class HemosheetPreviewMappers
             leftBlocks.Add(dehydration);
         }
 
-        var preSymptoms = MapAssessment("อาการก่อนฟอก", vm.Assessments.Pre, ynLayout: true);
-        if (preSymptoms is not null)
+        // ThaiUr keeps Pre Y/N in the top column; Default/Rama use AssessmentPreRe matrix instead.
+        if (vm.LayoutContext.LayoutProfile == HemosheetLayoutProfile.ThaiUr)
         {
-            leftBlocks.Add(preSymptoms);
+            var preSymptoms = MapAssessment("อาการก่อนฟอก", vm.Assessments.Pre, ynLayout: true);
+            if (preSymptoms is not null)
+            {
+                leftBlocks.Add(preSymptoms);
+            }
         }
 
         var prescription = MapPrescription(vm, features);
@@ -361,12 +395,12 @@ public static class HemosheetPreviewMappers
 
     public static ChecklistClusterReportBlock? MapFooterChecklists(HemosheetReportViewModel vm)
     {
-        var tables = new[]
+        var tables = new ChecklistTableReportBlock?[]
         {
-            MapAssessmentGroup("Complication", FilterByPrefix(vm.Assessments.Post, "complication.")),
-            MapAssessmentGroup("Nursing management", FilterByPrefix(vm.Assessments.Post, "nursing.")),
-            MapAssessmentGroup("Health education", FilterByPrefix(vm.Assessments.Post, "health.")),
-            MapAssessmentGroup("Medication duration HD", FilterByPrefix(vm.Assessments.Other, "medication.")),
+            MapAssessmentGroup("Complication", ResolveFooterGroup(vm.Assessments.Post, "complication")),
+            MapAssessmentGroup("Nursing management", ResolveFooterGroup(vm.Assessments.Post, "nursing")),
+            MapAssessmentGroup("Health education", ResolveFooterGroup(vm.Assessments.Post, "health")),
+            MapAssessmentGroup("Medication duration HD", ResolveFooterGroup(vm.Assessments.Other, "medication")),
         }.Where(t => t is not null).Cast<ChecklistTableReportBlock>().ToList();
 
         return tables.Count == 0 ? null : new ChecklistClusterReportBlock { Tables = tables };
@@ -421,31 +455,155 @@ public static class HemosheetPreviewMappers
     public static ChecklistTableReportBlock? MapAvfAssessment(HemosheetReportViewModel vm) =>
         MapAssessment("AVF/AVG", FilterAvfItems(vm.Assessments.Post), ynLayout: true);
 
+    /// <summary>Post items that are not footer clusters or AVF Y/N rows.</summary>
+    public static IList<HemosheetAssessmentItemViewModel> SelectPostBodyItems(
+        IList<HemosheetAssessmentItemViewModel> post) =>
+        post.Where(i => !IsFooterPostItem(i) && !IsAvfItem(i)).ToList();
+
+    /// <summary>Other items that are not medication footer or nursing care-plan fields.</summary>
+    public static IList<HemosheetAssessmentItemViewModel> SelectOtherBodyItems(
+        IList<HemosheetAssessmentItemViewModel> other) =>
+        other.Where(i => !IsFooterMedicationItem(i) && !IsNursingCarePlanItem(i)).ToList();
+
     private static ChecklistTableReportBlock? MapAssessmentGroup(string title, IList<HemosheetAssessmentItemViewModel> items) =>
         MapAssessment(title, items);
 
-    private static IList<HemosheetAssessmentItemViewModel> FilterByPrefix(
+    private static IList<ChecklistItem> ExpandAssessmentItems(IList<HemosheetAssessmentItemViewModel> items)
+    {
+        var result = new List<ChecklistItem>();
+        foreach (var item in items)
+        {
+            if (item.SelectedOptions.Count > 0)
+            {
+                var notesAttached = false;
+                foreach (var option in item.SelectedOptions.Where(o => !string.IsNullOrWhiteSpace(o)))
+                {
+                    result.Add(new ChecklistItem
+                    {
+                        Label = option,
+                        IsChecked = true,
+                        Notes = !notesAttached && !string.IsNullOrWhiteSpace(item.Text) ? item.Text : null,
+                    });
+                    notesAttached = true;
+                }
+
+                continue;
+            }
+
+            result.Add(new ChecklistItem
+            {
+                Label = FormatTopicLabel(item.Name),
+                IsChecked = item.Checked,
+                Notes = string.IsNullOrWhiteSpace(item.Text) ? null : item.Text,
+            });
+        }
+
+        return result;
+    }
+
+    private static IList<HemosheetAssessmentItemViewModel> ResolveFooterGroup(
         IList<HemosheetAssessmentItemViewModel> items,
-        string prefix) =>
-        items.Where(i => i.Name?.StartsWith(prefix, StringComparison.OrdinalIgnoreCase) == true).ToList();
+        string groupKey)
+    {
+        var dottedPrefix = groupKey + ".";
+        var dotted = items
+            .Where(i => i.Name?.StartsWith(dottedPrefix, StringComparison.OrdinalIgnoreCase) == true)
+            .Select(i => new HemosheetAssessmentItemViewModel
+            {
+                Name = i.Name![dottedPrefix.Length..],
+                Checked = i.Checked,
+                Text = i.Text,
+                SelectedOptions = i.SelectedOptions,
+            })
+            .ToList();
+
+        if (dotted.Count > 0)
+        {
+            return dotted;
+        }
+
+        var parent = items.FirstOrDefault(i =>
+            string.Equals(i.Name, groupKey, StringComparison.OrdinalIgnoreCase));
+        if (parent is null)
+        {
+            return [];
+        }
+
+        if (parent.SelectedOptions.Count > 0)
+        {
+            return parent.SelectedOptions
+                .Where(o => !string.IsNullOrWhiteSpace(o))
+                .Select(o => new HemosheetAssessmentItemViewModel
+                {
+                    Name = o,
+                    Checked = true,
+                    Text = parent.Text,
+                })
+                .ToList();
+        }
+
+        return parent.Checked
+            ? [new HemosheetAssessmentItemViewModel { Name = groupKey, Checked = true, Text = parent.Text }]
+            : [];
+    }
 
     private static IList<HemosheetAssessmentItemViewModel> FilterAvfItems(IList<HemosheetAssessmentItemViewModel> items) =>
-        items.Where(i => i.Name?.Contains("thrill", StringComparison.OrdinalIgnoreCase) == true
-            || i.Name?.Contains("bruit", StringComparison.OrdinalIgnoreCase) == true
-            || i.Name?.Contains("hematoma", StringComparison.OrdinalIgnoreCase) == true).ToList();
+        items.Where(IsAvfItem).ToList();
+
+    private static bool IsFooterPostItem(HemosheetAssessmentItemViewModel item)
+    {
+        var name = item.Name;
+        if (string.IsNullOrWhiteSpace(name))
+        {
+            return false;
+        }
+
+        return name.StartsWith("complication.", StringComparison.OrdinalIgnoreCase)
+            || name.StartsWith("nursing.", StringComparison.OrdinalIgnoreCase)
+            || name.StartsWith("health.", StringComparison.OrdinalIgnoreCase)
+            || string.Equals(name, "complication", StringComparison.OrdinalIgnoreCase)
+            || string.Equals(name, "nursing", StringComparison.OrdinalIgnoreCase)
+            || string.Equals(name, "health", StringComparison.OrdinalIgnoreCase)
+            || string.Equals(name, "technical", StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static bool IsFooterMedicationItem(HemosheetAssessmentItemViewModel item)
+    {
+        var name = item.Name;
+        if (string.IsNullOrWhiteSpace(name))
+        {
+            return false;
+        }
+
+        return name.StartsWith("medication.", StringComparison.OrdinalIgnoreCase)
+            || string.Equals(name, "medication", StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static bool IsAvfItem(HemosheetAssessmentItemViewModel item) =>
+        item.Name?.Contains("thrill", StringComparison.OrdinalIgnoreCase) == true
+        || item.Name?.Contains("bruit", StringComparison.OrdinalIgnoreCase) == true
+        || item.Name?.Contains("hematoma", StringComparison.OrdinalIgnoreCase) == true;
+
+    private static bool IsNursingCarePlanItem(HemosheetAssessmentItemViewModel item) =>
+        string.Equals(item.Name, "nursing_diagnosis", StringComparison.OrdinalIgnoreCase)
+        || string.Equals(item.Name, "nursing_intervention", StringComparison.OrdinalIgnoreCase)
+        || string.Equals(item.Name, "expected_outcomes", StringComparison.OrdinalIgnoreCase);
 
     private static string? FindAssessmentText(IList<HemosheetAssessmentItemViewModel> items, string name) =>
         items.FirstOrDefault(i => string.Equals(i.Name, name, StringComparison.OrdinalIgnoreCase))?.Text;
 
-    private static string FormatAssessmentLabel(HemosheetAssessmentItemViewModel item)
-    {
-        if (item.SelectedOptions.Count > 0)
-        {
-            return string.Join(", ", item.SelectedOptions);
-        }
+    private static Dictionary<string, HemosheetAssessmentItemViewModel> IndexByName(
+        IList<HemosheetAssessmentItemViewModel> items) =>
+        items
+            .Where(i => !string.IsNullOrWhiteSpace(i.Name))
+            .GroupBy(i => i.Name!, StringComparer.OrdinalIgnoreCase)
+            .ToDictionary(g => g.Key, g => g.First(), StringComparer.OrdinalIgnoreCase);
 
-        return item.Name ?? "";
-    }
+    private static string FormatTopicLabel(string? name) =>
+        string.IsNullOrWhiteSpace(name) ? "—" : name;
+
+    private static string? FirstNonEmpty(params string?[] values) =>
+        values.FirstOrDefault(v => !string.IsNullOrWhiteSpace(v));
 
     private static string? FormatAllergies(IList<string>? allergies)
     {

@@ -101,7 +101,7 @@ export interface DataGridReportBlock {
 export interface ChecklistTableReportBlock {
   type: 'checklist-table';
   title?: string;
-  layout?: 'default' | 'yn-columns' | string;
+  layout?: 'default' | 'yn-columns' | 'pre-re-matrix' | string;
   columns: string[];
   rows: ChecklistCellValue[][];
 }

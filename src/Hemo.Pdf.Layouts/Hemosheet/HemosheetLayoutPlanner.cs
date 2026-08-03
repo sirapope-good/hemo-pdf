@@ -53,12 +53,18 @@ public sealed class HemosheetLayoutPlanner : IHemosheetLayoutPlanner
             });
         }
 
-        if (viewModel.Assessments.Re.Count > 0)
+        // Default/Rama: Pre∪Re topic matrix (Telerik AssessmentTable). ThaiUr keeps Pre in Predialysis top row.
+        if (profile != HemosheetLayoutProfile.ThaiUr
+            && (viewModel.Assessments.Pre.Count > 0 || viewModel.Assessments.Re.Count > 0))
+        {
+            plans.Add(new() { SectionId = HemosheetSectionId.AssessmentPreRe });
+        }
+        else if (profile == HemosheetLayoutProfile.ThaiUr && viewModel.Assessments.Re.Count > 0)
         {
             plans.Add(new() { SectionId = HemosheetSectionId.AssessmentRe });
         }
 
-        if (viewModel.Assessments.Post.Count > 0)
+        if (HasPostAssessmentBody(viewModel))
         {
             plans.Add(new() { SectionId = HemosheetSectionId.AssessmentPost });
         }
@@ -68,7 +74,7 @@ public sealed class HemosheetLayoutPlanner : IHemosheetLayoutPlanner
             plans.Add(new() { SectionId = HemosheetSectionId.NursingCarePlan });
         }
 
-        if (viewModel.Assessments.Other.Count > 0)
+        if (HasOtherAssessmentBody(viewModel))
         {
             plans.Add(new() { SectionId = HemosheetSectionId.AssessmentOther });
         }
@@ -137,17 +143,61 @@ public sealed class HemosheetLayoutPlanner : IHemosheetLayoutPlanner
         !string.IsNullOrWhiteSpace(viewModel.Patient.Diagnosis)
         || viewModel.Patient.Allergies.Count > 0;
 
-    private static bool HasNursingCarePlan(HemosheetReportViewModel viewModel) =>
-        viewModel.Assessments.Other.Any(i =>
-            string.Equals(i.Name, "nursing_diagnosis", StringComparison.OrdinalIgnoreCase)
-            || string.Equals(i.Name, "nursing_intervention", StringComparison.OrdinalIgnoreCase)
-            || string.Equals(i.Name, "expected_outcomes", StringComparison.OrdinalIgnoreCase));
-
     private static bool HasFooterChecklists(HemosheetReportViewModel viewModel) =>
-        viewModel.Assessments.Post.Any(i => i.Name?.StartsWith("complication.", StringComparison.OrdinalIgnoreCase) == true
-            || i.Name?.StartsWith("nursing.", StringComparison.OrdinalIgnoreCase) == true
-            || i.Name?.StartsWith("health.", StringComparison.OrdinalIgnoreCase) == true)
-        || viewModel.Assessments.Other.Any(i => i.Name?.StartsWith("medication.", StringComparison.OrdinalIgnoreCase) == true);
+        viewModel.Assessments.Post.Any(IsFooterPostItem)
+        || viewModel.Assessments.Other.Any(IsFooterMedicationItem);
+
+    private static bool HasPostAssessmentBody(HemosheetReportViewModel viewModel) =>
+        viewModel.Assessments.Post.Any(i =>
+            !IsFooterPostItem(i)
+            && !IsAvfItem(i));
+
+    private static bool HasOtherAssessmentBody(HemosheetReportViewModel viewModel) =>
+        viewModel.Assessments.Other.Any(i =>
+            !IsFooterMedicationItem(i)
+            && !IsNursingCarePlanItem(i));
+
+    private static bool IsFooterPostItem(HemosheetAssessmentItemViewModel item)
+    {
+        var name = item.Name;
+        if (string.IsNullOrWhiteSpace(name))
+        {
+            return false;
+        }
+
+        return name.StartsWith("complication.", StringComparison.OrdinalIgnoreCase)
+            || name.StartsWith("nursing.", StringComparison.OrdinalIgnoreCase)
+            || name.StartsWith("health.", StringComparison.OrdinalIgnoreCase)
+            || string.Equals(name, "complication", StringComparison.OrdinalIgnoreCase)
+            || string.Equals(name, "nursing", StringComparison.OrdinalIgnoreCase)
+            || string.Equals(name, "health", StringComparison.OrdinalIgnoreCase)
+            || string.Equals(name, "technical", StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static bool IsFooterMedicationItem(HemosheetAssessmentItemViewModel item)
+    {
+        var name = item.Name;
+        if (string.IsNullOrWhiteSpace(name))
+        {
+            return false;
+        }
+
+        return name.StartsWith("medication.", StringComparison.OrdinalIgnoreCase)
+            || string.Equals(name, "medication", StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static bool IsAvfItem(HemosheetAssessmentItemViewModel item) =>
+        item.Name?.Contains("thrill", StringComparison.OrdinalIgnoreCase) == true
+        || item.Name?.Contains("bruit", StringComparison.OrdinalIgnoreCase) == true
+        || item.Name?.Contains("hematoma", StringComparison.OrdinalIgnoreCase) == true;
+
+    private static bool IsNursingCarePlanItem(HemosheetAssessmentItemViewModel item) =>
+        string.Equals(item.Name, "nursing_diagnosis", StringComparison.OrdinalIgnoreCase)
+        || string.Equals(item.Name, "nursing_intervention", StringComparison.OrdinalIgnoreCase)
+        || string.Equals(item.Name, "expected_outcomes", StringComparison.OrdinalIgnoreCase);
+
+    private static bool HasNursingCarePlan(HemosheetReportViewModel viewModel) =>
+        viewModel.Assessments.Other.Any(IsNursingCarePlanItem);
 
     private static bool HasLabData(HemosheetReportViewModel viewModel)
     {

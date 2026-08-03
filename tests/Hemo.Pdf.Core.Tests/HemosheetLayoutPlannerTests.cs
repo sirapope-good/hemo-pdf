@@ -131,6 +131,68 @@ public class HemosheetLayoutPlannerTests
         Assert.Contains(plans, p => p.SectionId == HemosheetSectionId.Labs);
     }
 
+    [Fact]
+    public void Plan_Default_UsesPreReMatrix_NotSeparateRe()
+    {
+        var vm = CreateViewModel(
+            mode: "HD",
+            catheterType: 0,
+            features: new Dictionary<string, bool> { ["showAvPanel"] = true },
+            assessments: new HemosheetAssessmentsViewModel
+            {
+                Pre = [new() { Name = "pain", Checked = true }],
+                Re = [new() { Name = "pain", Checked = false }],
+            });
+
+        var plans = _planner.Plan(vm);
+        Assert.Contains(plans, p => p.SectionId == HemosheetSectionId.AssessmentPreRe);
+        Assert.DoesNotContain(plans, p => p.SectionId == HemosheetSectionId.AssessmentRe);
+    }
+
+    [Fact]
+    public void Plan_Default_FooterFromParentSelectedOptions()
+    {
+        var vm = CreateViewModel(
+            mode: "HD",
+            catheterType: 0,
+            features: new Dictionary<string, bool> { ["showAvPanel"] = true },
+            assessments: new HemosheetAssessmentsViewModel
+            {
+                Post =
+                [
+                    new()
+                    {
+                        Name = "complication",
+                        Checked = true,
+                        SelectedOptions = ["Hypo-tension"],
+                    },
+                ],
+            });
+
+        var plans = _planner.Plan(vm);
+        Assert.Contains(plans, p => p.SectionId == HemosheetSectionId.FooterChecklists);
+        Assert.DoesNotContain(plans, p => p.SectionId == HemosheetSectionId.AssessmentPost);
+    }
+
+    [Fact]
+    public void Plan_ThaiUr_SkipsPreReMatrix()
+    {
+        var vm = CreateViewModel(
+            mode: "HD",
+            catheterType: 0,
+            features: new Dictionary<string, bool> { ["showAvPanel"] = true },
+            layoutProfile: HemosheetLayoutProfile.ThaiUr,
+            assessments: new HemosheetAssessmentsViewModel
+            {
+                Pre = [new() { Name = "pain", Checked = true }],
+                Re = [new() { Name = "pain", Checked = false }],
+            });
+
+        var plans = _planner.Plan(vm);
+        Assert.DoesNotContain(plans, p => p.SectionId == HemosheetSectionId.AssessmentPreRe);
+        Assert.Contains(plans, p => p.SectionId == HemosheetSectionId.AssessmentRe);
+    }
+
     private static HemosheetReportViewModel CreateViewModel(
         string mode,
         int catheterType,
@@ -139,7 +201,8 @@ public class HemosheetLayoutPlannerTests
         bool isConsent = false,
         HemosheetLabsViewModel? labs = null,
         HemosheetPatientViewModel? patient = null,
-        HemosheetVitalSignViewModel? preVital = null)
+        HemosheetVitalSignViewModel? preVital = null,
+        HemosheetAssessmentsViewModel? assessments = null)
     {
         return new HemosheetReportViewModel
         {
@@ -149,7 +212,7 @@ public class HemosheetLayoutPlannerTests
             Labs = labs ?? new HemosheetLabsViewModel(),
             DialysisPrescription = new HemosheetPrescriptionViewModel { Mode = mode },
             AvShunt = new HemosheetAvShuntViewModel { CatheterType = catheterType },
-            Assessments = new HemosheetAssessmentsViewModel
+            Assessments = assessments ?? new HemosheetAssessmentsViewModel
             {
                 Pre = [new HemosheetAssessmentItemViewModel { Name = "pain", Checked = true }],
             },

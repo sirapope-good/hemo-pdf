@@ -260,6 +260,8 @@ public enum HemosheetSectionId
     VascularAccess,
     AssessmentPre,
     AssessmentRe,
+    /// <summary>Default-profile Topic | Pre Y/N | Re Y/N table (Telerik AssessmentTable).</summary>
+    AssessmentPreRe,
     AssessmentPost,
     AssessmentOther,
     NursingCarePlan,

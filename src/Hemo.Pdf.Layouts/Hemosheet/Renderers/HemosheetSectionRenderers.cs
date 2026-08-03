@@ -187,7 +187,31 @@ internal sealed class AssessmentSectionRenderer : HemosheetSectionRendererBase
         HemosheetSectionPlan plan,
         HemosheetReportViewModel viewModel,
         PdfReportContext context) =>
-        _section.Compose(container, new ChecklistAdapter(_title, _itemsSelector(viewModel)), EmptyContext);
+        ReportBlockPdfComposer.Compose(
+            container,
+            HemosheetPreviewMappers.MapAssessment(_title, _itemsSelector(viewModel)),
+            EmptyContext);
+}
+
+internal sealed class AssessmentPreReSectionRenderer : HemosheetSectionRendererBase
+{
+    public override HemosheetSectionId SectionId => HemosheetSectionId.AssessmentPreRe;
+
+    public override IReadOnlyList<ReportBlock> MapToPreview(
+        HemosheetSectionPlan plan,
+        HemosheetReportViewModel viewModel,
+        PdfReportContext context) =>
+        Single(HemosheetPreviewMappers.MapPreReAssessmentMatrix(viewModel));
+
+    public override void ComposePdf(
+        IContainer container,
+        HemosheetSectionPlan plan,
+        HemosheetReportViewModel viewModel,
+        PdfReportContext context) =>
+        ReportBlockPdfComposer.Compose(
+            container,
+            HemosheetPreviewMappers.MapPreReAssessmentMatrix(viewModel),
+            EmptyContext);
 }
 
 internal sealed class DialysisRecordsSectionRenderer : DataGridSectionRendererBase

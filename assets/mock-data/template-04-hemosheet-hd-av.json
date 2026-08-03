@@ -8,30 +8,49 @@
   "completedTime": "2026-07-06T12:05:00Z",
   "ktv": 1.45,
   "urr": 72.5,
-  "prr": 65.0,
+  "prr": 65,
   "recir": 8.2,
   "isAcNotUsed": false,
   "isConsent": false,
   "nursesInShift": "RN Somchai, RN Malee",
-  "preVital": { "bps": 138, "bpd": 88, "hr": 76, "rr": 18, "temp": 36.8, "spO2": 98 },
-  "postVital": { "bps": 128, "bpd": 82, "hr": 72, "rr": 18, "temp": 36.6, "spO2": 99 },
+  "preVital": {
+    "bps": 138,
+    "bpd": 88,
+    "hr": 76,
+    "rr": 18,
+    "temp": 36.8,
+    "spO2": 98
+  },
+  "postVital": {
+    "bps": 128,
+    "bpd": 82,
+    "hr": 72,
+    "rr": 18,
+    "temp": 36.6,
+    "spO2": 99
+  },
   "patient": {
-    "name": "สมชาย ใจดี",
+    "name": "เธชเธกเธเธฒเธข เนเธเธ”เธต",
     "hn": "HN-001234",
     "birthDate": "1968-03-15T00:00:00Z",
     "sex": "Male",
     "age": 58,
-    "doctorName": "นพ. วิชัย รักษ์ดี",
-    "allergies": ["heparin"],
+    "doctorName": "เธเธ. เธงเธดเธเธฑเธข เธฃเธฑเธเธฉเนเธ”เธต",
+    "allergies": [
+      "heparin"
+    ],
     "coverage": "UC",
     "diagnosis": "CKD stage 5",
     "underlying": "DM, HT"
   },
-  "unit": { "id": 1, "fullName": "หน่วยไตเทียม ชั้น 3" },
+  "unit": {
+    "id": 1,
+    "fullName": "เธซเธเนเธงเธขเนเธ•เน€เธ—เธตเธขเธก เธเธฑเนเธ 3"
+  },
   "dehydration": {
     "preWeight": 68.5,
     "postWeight": 66.2,
-    "lastPostWeight": 66.0,
+    "lastPostWeight": 66,
     "foodIntakeWeight": 0.25,
     "extraFluid": 0.5,
     "ufNet": 2.3,
@@ -47,9 +66,9 @@
     "durationHours": 4,
     "durationMinutes": 0,
     "anticoagulant": "Heparin",
-    "dryWeight": 65.0,
+    "dryWeight": 65,
     "dialyzer": "FX80",
-    "dialysateK": 2.0,
+    "dialysateK": 2,
     "dialysateCa": 2.5,
     "bloodFlow": 300,
     "initialAmount": 2000,
@@ -65,24 +84,111 @@
   },
   "assessments": {
     "pre": [
-      { "name": "pain", "checked": true, "text": "mild" },
-      { "name": "chest", "checked": false, "text": "" }
+      {
+        "name": "pain",
+        "checked": true,
+        "text": "mild",
+        "selectedOptions": []
+      },
+      {
+        "name": "chest",
+        "checked": false,
+        "text": "",
+        "selectedOptions": []
+      },
+      {
+        "name": "edema",
+        "checked": true,
+        "text": "",
+        "selectedOptions": []
+      }
     ],
-    "re": [{ "name": "pain", "checked": false, "text": "" }],
+    "re": [
+      {
+        "name": "pain",
+        "checked": false,
+        "text": "",
+        "selectedOptions": []
+      },
+      {
+        "name": "chest",
+        "checked": false,
+        "text": "",
+        "selectedOptions": []
+      }
+    ],
     "post": [
-      { "name": "complication.hypotension", "checked": false, "text": "" },
-      { "name": "complication.cramps", "checked": true, "text": "mild" },
-      { "name": "nursing.skin_assessment", "checked": true, "text": "" },
-      { "name": "health.fluid_intake", "checked": true, "text": "" },
-      { "name": "avf.thrill", "checked": true, "text": "" },
-      { "name": "avf.bruit", "checked": true, "text": "" },
-      { "name": "avf.hematoma", "checked": false, "text": "" }
+      {
+        "name": "complication",
+        "checked": true,
+        "text": "mild",
+        "selectedOptions": [
+          "Hypo-tension",
+          "Muscle cramp"
+        ]
+      },
+      {
+        "name": "nursing",
+        "checked": true,
+        "text": "",
+        "selectedOptions": [
+          "Skin assessment"
+        ]
+      },
+      {
+        "name": "health",
+        "checked": true,
+        "text": "",
+        "selectedOptions": [
+          "Fluid intake"
+        ]
+      },
+      {
+        "name": "thrill",
+        "checked": true,
+        "text": "",
+        "selectedOptions": []
+      },
+      {
+        "name": "bruit",
+        "checked": true,
+        "text": "",
+        "selectedOptions": []
+      },
+      {
+        "name": "hematoma",
+        "checked": false,
+        "text": "",
+        "selectedOptions": []
+      }
     ],
     "other": [
-      { "name": "medication.epo", "checked": true, "text": "4000 unit" },
-      { "name": "nursing_diagnosis", "checked": true, "text": "Risk for fluid imbalance" },
-      { "name": "nursing_intervention", "checked": true, "text": "Monitor weight and UF" },
-      { "name": "expected_outcomes", "checked": true, "text": "Achieve dry weight" }
+      {
+        "name": "medication",
+        "checked": true,
+        "text": "4000 unit",
+        "selectedOptions": [
+          "EPO"
+        ]
+      },
+      {
+        "name": "nursing_diagnosis",
+        "checked": true,
+        "text": "Risk for fluid imbalance",
+        "selectedOptions": []
+      },
+      {
+        "name": "nursing_intervention",
+        "checked": true,
+        "text": "Monitor weight and UF",
+        "selectedOptions": []
+      },
+      {
+        "name": "expected_outcomes",
+        "checked": true,
+        "text": "Achieve dry weight",
+        "selectedOptions": []
+      }
     ]
   },
   "dialysisRecords": [
@@ -108,8 +214,14 @@
     }
   ],
   "nurseRecords": [
-    { "timestamp": "2026-07-06T08:15:00Z", "content": "เริ่มฟอกตามแผน Pre HD note" },
-    { "timestamp": "2026-07-06T12:00:00Z", "content": "ฟอกเสร็จ Post HD note" }
+    {
+      "timestamp": "2026-07-06T08:15:00Z",
+      "content": "เน€เธฃเธดเนเธกเธเธญเธเธ•เธฒเธกเนเธเธ Pre HD note"
+    },
+    {
+      "timestamp": "2026-07-06T12:00:00Z",
+      "content": "เธเธญเธเน€เธชเธฃเนเธ Post HD note"
+    }
   ],
   "doctorRecords": [],
   "medicineRecords": [
@@ -133,7 +245,13 @@
     "reportSettings": {
       "hemosheetTemplate": "Hemosheet.trdp",
       "nurseInShiftEnabled": true,
-      "fixedLines": { "dialysis": 8, "nurse": 4, "medicine": 4, "doctor": 2, "progressNote": 2 }
+      "fixedLines": {
+        "dialysis": 8,
+        "nurse": 4,
+        "medicine": 4,
+        "doctor": 2,
+        "progressNote": 2
+      }
     },
     "features": {
       "showHdfColumns": false,

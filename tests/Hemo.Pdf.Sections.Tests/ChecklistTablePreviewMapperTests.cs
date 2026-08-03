@@ -30,14 +30,19 @@ public class ChecklistTablePreviewMapperTests
     }
 
     [Fact]
-    public void Map_EmptyItems_ReturnsNull()
+    public void Map_PreReMatrix_MissingSideLeavesBothUnchecked()
     {
-        var block = ChecklistTablePreviewMapper.Map(new ChecklistTableModel
-        {
-            Title = "Assessment (Pre)",
-            Items = [],
-        });
+        var block = ChecklistTablePreviewMapper.MapPreReMatrix("Assessment",
+        [
+            ("pain", true, null, "mild"),
+        ]);
 
-        Assert.Null(block);
+        Assert.NotNull(block);
+        Assert.Equal(ChecklistTablePreviewMapper.LayoutPreReMatrix, block!.Layout);
+        Assert.Equal(["Topic", "Pre Y", "Pre N", "Re Y", "Re N", "หมายเหตุ"], block.Columns);
+        Assert.True(((ChecklistCheckboxCell)block.Rows[0][1]).Checked);
+        Assert.False(((ChecklistCheckboxCell)block.Rows[0][2]).Checked);
+        Assert.False(((ChecklistCheckboxCell)block.Rows[0][3]).Checked);
+        Assert.False(((ChecklistCheckboxCell)block.Rows[0][4]).Checked);
     }
 }

@@ -40,14 +40,25 @@ public sealed class ChecklistTableSection : IContentSection
             return;
         }
 
-        var ynLayout = string.Equals(block.Layout, "yn-columns", StringComparison.Ordinal);
-        var columnCount = ynLayout ? 4u : 3u;
+        var layout = block.Layout ?? ChecklistTablePreviewMapper.LayoutDefault;
+        var ynLayout = string.Equals(layout, ChecklistTablePreviewMapper.LayoutYnColumns, StringComparison.Ordinal);
+        var preReLayout = string.Equals(layout, ChecklistTablePreviewMapper.LayoutPreReMatrix, StringComparison.Ordinal);
+        var columnCount = (uint)Math.Max(1, block.Columns.Count);
 
         container.Border(0.5f).Table(table =>
         {
             table.ColumnsDefinition(columns =>
             {
-                if (ynLayout)
+                if (preReLayout)
+                {
+                    columns.RelativeColumn(3);
+                    columns.ConstantColumn(18);
+                    columns.ConstantColumn(18);
+                    columns.ConstantColumn(18);
+                    columns.ConstantColumn(18);
+                    columns.RelativeColumn(2);
+                }
+                else if (ynLayout)
                 {
                     columns.ConstantColumn(14);
                     columns.ConstantColumn(14);
