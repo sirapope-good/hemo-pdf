@@ -34,6 +34,20 @@ internal static class ThaiUrText
             .Style(Bold);
     }
 
+    /// <summary>
+    /// Header fill for a section already wrapped in <c>Border</c> — avoids double box around the title.
+    /// </summary>
+    public static void BlockHeader(this IContainer c, string text)
+    {
+        c.BorderBottom(HemosheetThaiUrStyle.BorderWidth)
+            .Background(HemosheetThaiUrStyle.HeaderBackground)
+            .Height(HemosheetThaiUrStyle.HeaderBarHeightMm, Unit.Millimetre)
+            .AlignMiddle()
+            .AlignCenter()
+            .Text(text)
+            .Style(Bold);
+    }
+
     public static void Label(this IContainer c, string text)
     {
         c.PaddingLeft(1f).AlignMiddle().Text(text).Style(Base);

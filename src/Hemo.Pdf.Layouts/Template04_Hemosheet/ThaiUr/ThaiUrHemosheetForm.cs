@@ -17,22 +17,36 @@ internal sealed class ThaiUrHemosheetForm
 
     public void Compose(IContainer container, HemosheetReportViewModel vm, PdfReportContext context)
     {
+        // No single outer Border around the whole column — that blocks paging when a Note
+        // grows and fluid+footer must move to page 2 as one block (ShowEntire).
         container
             .DefaultTextStyle(ThaiUrText.Base)
-            .Border(Bw)
             .Column(page =>
             {
-                page.Item().Element(c => Header(c, vm));
-                page.Item().Element(c => TopBand(c, vm));
-                page.Item().Element(c => NursingPlan(c, vm));
-                page.Item().Element(c => DialysisTable(c, vm));
-                page.Item().Element(c => FluidSummaryRow(c, vm));
-                page.Item().Element(c => ThaiUrHemosheetFooter.Compose(c, vm));
+                page.Item().Border(Bw).Column(main =>
+                {
+                    main.Item().Element(c => Header(c, vm));
+                    main.Item().Element(c => TopBand(c, vm));
+                    main.Item().Element(c => NursingPlan(c, vm));
+                    main.Item().Element(c => DialysisTable(c, vm));
+                });
+                // Fluid + footer stay together; if they no longer fit under a tall Note, whole band → next page.
+                page.Item().ShowEntire().Border(Bw).Column(bottom =>
+                {
+                    bottom.Item().Element(c => FluidSummaryRow(c, vm));
+                    bottom.Item().Element(c => ThaiUrHemosheetFooter.Compose(c, vm));
+                });
             });
     }
 
     /// <summary>
-    /// Logo | Title / Diagnosis+Allergy | patient meta (row-span down to Predialysis header).
+    /// Row 1: Logo | Title (spans 2), both confined to this row only with the same explicit height
+    /// (TitleHeightMm), so the logo box matches the title box exactly with no leftover empty strip.
+    /// Patient info (col 4) uses RowSpan(2) so its ONE box extends down through row 2 as well — it
+    /// must never end with a separate bordered-but-empty gap underneath before Predialysis starts.
+    /// Row 2: Diagnosis + Drug Allergy (ColumnSpan 3) span Logo + Title's columns only — flush from
+    /// the far left edge (under the logo), stopping before the patient-info column so it never eats
+    /// that space (patient info's own RowSpan already covers column 4 here).
     /// </summary>
     private static void Header(IContainer c, HemosheetReportViewModel vm)
     {
@@ -46,7 +60,7 @@ internal sealed class ThaiUrHemosheetForm
                 cols.ConstantColumn(70, Mm);
             });
 
-            t.Cell().RowSpan(2).Border(Bw).MinHeight(HemosheetThaiUrStyle.TitleHeightMm + Rh, Mm)
+            t.Cell().Border(Bw).Height(HemosheetThaiUrStyle.TitleHeightMm, Mm)
                 .AlignMiddle().AlignCenter()
                 .Element(logo => Logo(logo, vm));
 
@@ -63,15 +77,12 @@ internal sealed class ThaiUrHemosheetForm
                 MetaLine(meta, "Date", ThaiUrData.Date(vm.CycleStartTime), "HD NO.", ThaiUrData.Num(vm.TreatmentNo));
             });
 
-            t.Cell().Border(Bw).Height(Rh, Mm).Row(r =>
+            t.Cell().ColumnSpan(3).Border(Bw).Height(Rh, Mm).Row(r =>
             {
                 r.ConstantItem(16, Mm).Label("Diagnosis");
-                r.RelativeItem().Value(vm.Patient.Diagnosis ?? vm.Patient.Underlying);
-            });
-            t.Cell().Border(Bw).Height(Rh, Mm).Row(r =>
-            {
+                r.RelativeItem(2).Value(vm.Patient.Diagnosis ?? vm.Patient.Underlying);
                 r.ConstantItem(20, Mm).Label("Drug Allergy");
-                r.RelativeItem().Value(ThaiUrData.Allergies(vm));
+                r.RelativeItem(1).Value(ThaiUrData.Allergies(vm));
             });
         });
     }
@@ -100,7 +111,8 @@ internal sealed class ThaiUrHemosheetForm
 
     private static void MetaLine(ColumnDescriptor col, string label, string? value, string? label2, string? value2)
     {
-        col.Item().BorderBottom(Bw).Height(Rh, Mm).Row(r =>
+        // No BorderBottom — patient meta sits in one bordered cell without internal row rules.
+        col.Item().Height(Rh, Mm).Row(r =>
         {
             r.ConstantItem(22, Mm).Text(label).Style(ThaiUrText.Bold);
             r.RelativeItem().Text(string.IsNullOrWhiteSpace(value) ? "-" : value).Style(ThaiUrText.Base);
@@ -112,30 +124,97 @@ internal sealed class ThaiUrHemosheetForm
         });
     }
 
+    // Every row in this band is a fixed-length checklist (same count for every patient), so each
+    // side's total height is deterministic and can be computed up front from Rh/row counts —
+    // no ExtendVertical needed (that fills *all* available space up to the page boundary, which
+    // is why the dividers previously ballooned across two extra pages instead of just closing the
+    // gap). MinHeight computed from real content gives an exact match with no wasted space, while
+    // still letting QuestPDF's normal Table growth take over if any row organically wraps taller.
+    private static float PredialysisInnerSplitMm()
+    {
+        const int vitalsRows = 6; // BP, PR, RR, BT, Sat, Urine
+        const int weightsRows = 9;
+        const int vascularAccessRows = 8; // shunt site, needle no., A, V, thrill, bruit, edema, inflamation
+        var leftColMm = (vitalsRows + SymptomRows.Length) * Rh;
+        var rightColMm = weightsRows * Rh + HemosheetThaiUrStyle.HeaderBarHeightMm
+            + vascularAccessRows * Rh + HemosheetThaiUrStyle.SectionBreathingMm;
+        return Math.Max(leftColMm, rightColMm);
+    }
+
+    private static float PredialysisTotalHeightMm() =>
+        HemosheetThaiUrStyle.HeaderBarHeightMm + PredialysisInnerSplitMm();
+
+    private static float PrescriptionMachineSplitMm()
+    {
+        const int leftFixedRows = 6; // Machine, Dialyzer, Surface area, Use No., Last TCV, Grade
+        const int leftMinHeightRows = 4; // Test Leak, Disinfectant, Disinfectant test, reason
+        const int rightRows = 1 + 3 + 6; // HD/Online + 3 YesNoRow + 6 ValueUnit
+        var leftMm = (leftFixedRows + leftMinHeightRows) * Rh;
+        var rightMm = rightRows * Rh;
+        return Math.Max(leftMm, rightMm);
+    }
+
+    private static float AnticoagulantSplitMm()
+    {
+        const int acRows = 3; // checkbox, loading, maintenance
+        const int timeRows = 3; // Time start, Duration, Time off
+        var acMm = HemosheetThaiUrStyle.HeaderBarHeightMm + acRows * Rh + HemosheetThaiUrStyle.SectionBreathingMm;
+        var timeMm = HemosheetThaiUrStyle.HeaderBarHeightMm
+            + timeRows * HemosheetThaiUrStyle.TimeDialysisRowHeightMm + HemosheetThaiUrStyle.SectionBreathingMm;
+        return Math.Max(acMm, timeMm);
+    }
+
+    /// <summary>
+    /// Anticoagulant row must absorb TopBand slack when Predialysis is taller than Prescription.
+    /// Otherwise the vertical divider stops at content height and leaves an undivided gap above Nursing Plan.
+    /// </summary>
+    private static float AnticoagulantFillMm()
+    {
+        var baseMm = AnticoagulantSplitMm();
+        var slackMm = Math.Max(0f, PredialysisTotalHeightMm() - PrescriptionTotalHeightMm());
+        return baseMm + slackMm;
+    }
+
+    private static float PrescriptionTotalHeightMm() =>
+        HemosheetThaiUrStyle.HeaderBarHeightMm + PrescriptionMachineSplitMm() + AnticoagulantSplitMm();
+
     private static void TopBand(IContainer c, HemosheetReportViewModel vm)
     {
-        c.Row(row =>
+        var splitMm = Math.Max(PredialysisTotalHeightMm(), PrescriptionTotalHeightMm());
+        c.Table(t =>
         {
-            // AlignTop prevents the shorter side from stretching row gaps between cells.
-            row.ConstantItem(HemosheetThaiUrStyle.AssessmentColumnWidthMm, Mm).AlignTop().Border(Bw)
-                .Element(left => Predialysis(left, vm));
-            row.RelativeItem().AlignTop().Border(Bw).Element(right => Prescription(right, vm));
+            t.ColumnsDefinition(cols =>
+            {
+                cols.ConstantColumn(HemosheetThaiUrStyle.AssessmentColumnWidthMm, Mm);
+                cols.RelativeColumn();
+            });
+            t.Cell().AlignTop().MinHeight(splitMm, Mm).Element(left => Predialysis(left, vm));
+            t.Cell().AlignTop().BorderLeft(Bw).MinHeight(splitMm, Mm).Element(right => Prescription(right, vm));
         });
     }
 
     private static void Predialysis(IContainer c, HemosheetReportViewModel vm)
     {
+        var splitMm = PredialysisInnerSplitMm();
         c.Column(col =>
         {
             col.Item().HeaderBar("Predialysys Assessment");
-            col.Item().Row(r =>
+            col.Item().Table(t =>
             {
-                r.ConstantItem(58, Mm).AlignTop().Column(leftCol =>
+                t.ColumnsDefinition(cols =>
+                {
+                    cols.ConstantColumn(58, Mm);
+                    cols.RelativeColumn();
+                });
+                t.Cell().AlignTop().MinHeight(splitMm, Mm).Column(leftCol =>
                 {
                     leftCol.Item().Element(v => Vitals(v, vm));
                     leftCol.Item().Element(s => Symptoms(s, vm));
                 });
-                r.RelativeItem().AlignTop().Column(rightCol =>
+                // Vertical divider only — no per-row horizontal grid inside the section.
+                // MinHeight (computed from real row counts) closes this exactly at the taller
+                // Vitals+Symptoms column instead of stopping short at its own shorter content.
+                t.Cell().AlignTop().BorderLeft(Bw).MinHeight(splitMm, Mm).Column(rightCol =>
                 {
                     rightCol.Item().Element(w => Weights(w, vm));
                     rightCol.Item().Element(va => VascularAccess(va, vm));
@@ -154,7 +233,7 @@ internal sealed class ThaiUrHemosheetForm
             LabeledValueUnit(col, "RR", ThaiUrData.Num(p?.Rr), "bpm");
             LabeledValueUnit(col, "BT", ThaiUrData.Num(p?.Temp), "\u00B0C");
             LabeledValueUnit(col, "Sat", ThaiUrData.Num(p?.SpO2), "%");
-            col.Item().Border(Bw).Height(Rh, Mm).Row(r =>
+            col.Item().Height(Rh, Mm).Row(r =>
             {
                 r.ConstantItem(14, Mm).Label("Urine");
                 r.Checkbox(ThaiUrData.PreState(vm, "urine") == true);
@@ -164,7 +243,7 @@ internal sealed class ThaiUrHemosheetForm
 
     private static void LabeledValueUnit(ColumnDescriptor col, string label, string value, string unit)
     {
-        col.Item().Border(Bw).Height(Rh, Mm).Row(r =>
+        col.Item().Height(Rh, Mm).Row(r =>
         {
             r.ConstantItem(12, Mm).Label(label);
             r.RelativeItem().Value(value);
@@ -197,7 +276,7 @@ internal sealed class ThaiUrHemosheetForm
         {
             foreach (var (label, keys) in SymptomRows)
             {
-                col.Item().Border(Bw).Height(Rh, Mm).AlignMiddle()
+                col.Item().Height(Rh, Mm).AlignMiddle()
                     .YesNo(label, ThaiUrData.PreState(vm, keys));
             }
         });
@@ -220,9 +299,9 @@ internal sealed class ThaiUrHemosheetForm
         });
     }
 
-    private static void LabelValue(ColumnDescriptor col, string label, string? value, float labelMm = 22f)
+    private static void LabelValue(ColumnDescriptor col, string label, string? value, float labelMm = 22f, float? rowHeightMm = null)
     {
-        col.Item().Border(Bw).Height(Rh, Mm).Row(r =>
+        col.Item().Height(rowHeightMm ?? Rh, Mm).Row(r =>
         {
             r.ConstantItem(labelMm, Mm).Label(label);
             r.RelativeItem().Value(value);
@@ -231,27 +310,41 @@ internal sealed class ThaiUrHemosheetForm
 
     private static void VascularAccess(IContainer c, HemosheetReportViewModel vm)
     {
+        // Telerik: header cell only + vertical column splits — no bottom closing box around content.
         c.Column(col =>
         {
             col.Item().HeaderBar("Vascular Access");
-            col.Item().Border(Bw).Height(Rh, Mm).Value(vm.AvShunt.ShuntSite ?? vm.DialysisPrescription.BloodAccessRoute);
-            LabelValue(col, "Needle No.", $"A {ThaiUrData.Num(vm.AvShunt.ANeedleSize)}  V {ThaiUrData.Num(vm.AvShunt.VNeedleSize)}", 18f);
-            col.Item().Border(Bw).Height(Rh, Mm).PaddingLeft(1f).YesNo("Thrill", ThaiUrData.PreState(vm, "thrill", "vas:av:thrill"));
-            col.Item().Border(Bw).Height(Rh, Mm).PaddingLeft(1f).YesNo("Bruit", ThaiUrData.PreState(vm, "bruit", "vas:av:bruit"));
-            col.Item().Border(Bw).Height(Rh, Mm).PaddingLeft(1f).YesNo("Edema", ThaiUrData.PreState(vm, "vas:edema", "edema"));
-            col.Item().Border(Bw).Height(Rh, Mm).PaddingLeft(1f).YesNo("Inflamation", ThaiUrData.PreState(vm, "vas:inflammation", "inflamation"));
+            col.Item().Height(Rh, Mm).Value(vm.AvShunt.ShuntSite ?? vm.DialysisPrescription.BloodAccessRoute);
+            col.Item().Height(Rh, Mm).PaddingLeft(1f).AlignMiddle()
+                .Text("Needle No.").Style(ThaiUrText.Base);
+            col.Item().Height(Rh, Mm).PaddingLeft(1f).AlignMiddle()
+                .Text($"A {ThaiUrData.Num(vm.AvShunt.ANeedleSize)}").Style(ThaiUrText.Base);
+            col.Item().Height(Rh, Mm).PaddingLeft(1f).AlignMiddle()
+                .Text($"V {ThaiUrData.Num(vm.AvShunt.VNeedleSize)}").Style(ThaiUrText.Base);
+            col.Item().Height(Rh, Mm).PaddingLeft(1f).YesNo("Thrill", ThaiUrData.PreState(vm, "thrill", "vas:av:thrill"));
+            col.Item().Height(Rh, Mm).PaddingLeft(1f).YesNo("Bruit", ThaiUrData.PreState(vm, "bruit", "vas:av:bruit"));
+            col.Item().Height(Rh, Mm).PaddingLeft(1f).YesNo("Edema", ThaiUrData.PreState(vm, "vas:edema", "edema"));
+            col.Item().Height(Rh, Mm).PaddingLeft(1f).YesNo("Inflamation", ThaiUrData.PreState(vm, "vas:inflammation", "inflamation"));
+            col.Item().Height(HemosheetThaiUrStyle.SectionBreathingMm, Mm);
         });
     }
 
     private static void Prescription(IContainer c, HemosheetReportViewModel vm)
     {
         var pr = vm.DialysisPrescription;
+        var leftMm = HemosheetThaiUrStyle.PrescriptionLeftColumnWidthMm;
+        var machineSplitMm = PrescriptionMachineSplitMm();
         c.Column(col =>
         {
             col.Item().HeaderBar("Hemodialysis Prescription");
-            col.Item().Row(row =>
+            col.Item().Table(t =>
             {
-                row.ConstantItem(51, Mm).Column(left =>
+                t.ColumnsDefinition(cols =>
+                {
+                    cols.ConstantColumn(leftMm, Mm);
+                    cols.RelativeColumn();
+                });
+                t.Cell().MinHeight(machineSplitMm, Mm).Column(left =>
                 {
                     LabelValue(left, "Machine", vm.Bed, 17f);
                     LabelValue(left, "Dialyzer", pr.Dialyzer, 17f);
@@ -260,7 +353,7 @@ internal sealed class ThaiUrHemosheetForm
                     LabelValue(left, "Last TCV", "-", 17f);
                     LabelValue(left, "Grade", "-", 17f);
                     PassRow(left, "Test Leak");
-                    left.Item().Border(Bw).MinHeight(Rh, Mm).Row(r =>
+                    left.Item().MinHeight(Rh, Mm).Row(r =>
                     {
                         r.ConstantItem(20, Mm).Label("Disinfectant");
                         r.Checkbox(false);
@@ -269,15 +362,15 @@ internal sealed class ThaiUrHemosheetForm
                         r.RelativeItem();
                     });
                     PassRow(left, "Disinfectant test");
-                    left.Item().Border(Bw).MinHeight(Rh, Mm).Row(r =>
+                    left.Item().MinHeight(Rh, Mm).Row(r =>
                     {
                         r.ConstantItem(34, Mm).Label("สาเหตุการทิ้งตัวกรอง");
                         r.RelativeItem().Value(ThaiUrData.OtherText(vm, "reason"));
                     });
                 });
-                row.RelativeItem().Column(right =>
+                t.Cell().BorderLeft(Bw).MinHeight(machineSplitMm, Mm).Column(right =>
                 {
-                    right.Item().Border(Bw).Height(Rh, Mm).Row(r =>
+                    right.Item().Height(Rh, Mm).Row(r =>
                     {
                         r.Checkbox(string.Equals(pr.Mode, "HD", StringComparison.OrdinalIgnoreCase));
                         r.ConstantItem(1.5f);
@@ -297,13 +390,14 @@ internal sealed class ThaiUrHemosheetForm
                     ValueUnit(right, "Dialysis Temp", ThaiUrData.Num(pr.DialysateTemperature), "\u2103");
                 });
             });
+            // Fill leftover TopBand height so Anticoagulant|Time Dialysis divider reaches Nursing Plan.
             col.Item().Element(a => Anticoagulant(a, vm));
         });
     }
 
     private static void PassRow(ColumnDescriptor col, string label)
     {
-        col.Item().Border(Bw).MinHeight(Rh, Mm).Row(r =>
+        col.Item().MinHeight(Rh, Mm).Row(r =>
         {
             r.ConstantItem(20, Mm).Label(label);
             r.Checkbox(false);
@@ -319,7 +413,7 @@ internal sealed class ThaiUrHemosheetForm
 
     private static void YesNoRow(ColumnDescriptor col, string label, bool? yes)
     {
-        col.Item().Border(Bw).Height(Rh, Mm).PaddingLeft(1f).Row(r =>
+        col.Item().Height(Rh, Mm).PaddingLeft(1f).Row(r =>
         {
             r.ConstantItem(18, Mm).Label(label);
             r.Checkbox(yes == true);
@@ -335,7 +429,7 @@ internal sealed class ThaiUrHemosheetForm
 
     private static void ValueUnit(ColumnDescriptor col, string label, string value, string unit)
     {
-        col.Item().Border(Bw).Height(Rh, Mm).Row(r =>
+        col.Item().Height(Rh, Mm).Row(r =>
         {
             r.ConstantItem(20, Mm).Label(label);
             r.RelativeItem().Value(value);
@@ -346,26 +440,37 @@ internal sealed class ThaiUrHemosheetForm
     private static void Anticoagulant(IContainer c, HemosheetReportViewModel vm)
     {
         var pr = vm.DialysisPrescription;
-        c.Row(row =>
+        var leftMm = HemosheetThaiUrStyle.PrescriptionLeftColumnWidthMm;
+        var timeRh = HemosheetThaiUrStyle.TimeDialysisRowHeightMm;
+        // Include TopBand slack (Predialysis taller than Prescription) so BorderLeft reaches Nursing Plan.
+        var fillMm = AnticoagulantFillMm();
+        // Vertical divider only (same 51mm split as Prescription) — no top/bottom closing box.
+        // Table + MinHeight fills Predialysis slack so the divider does not stop mid-gap.
+        c.Table(t =>
         {
-            row.RelativeItem().Border(Bw).Column(col =>
+            t.ColumnsDefinition(cols =>
+            {
+                cols.ConstantColumn(leftMm, Mm);
+                cols.RelativeColumn();
+            });
+            t.Cell().MinHeight(fillMm, Mm).Column(col =>
             {
                 col.Item().HeaderBar("Anticoagulant");
-                col.Item().Border(Bw).Height(Rh, Mm).Row(r =>
+                col.Item().Height(Rh, Mm).Row(r =>
                 {
                     r.Checkbox(vm.IsAcNotUsed);
                     r.ConstantItem(1.5f);
                     r.RelativeItem().AlignMiddle().Text("No Heparin").Style(ThaiUrText.Base);
                 });
-                col.Item().Border(Bw).Height(Rh, Mm).Value($"Loading: {ThaiUrData.Ml(pr.InitialAmountMl)}");
-                col.Item().Border(Bw).Height(Rh, Mm).Value($"Maintenance: {ThaiUrData.Ml(pr.MaintainAmountMl)}");
+                col.Item().Height(Rh, Mm).Value($"Loading: {ThaiUrData.Ml(pr.InitialAmountMl)}");
+                col.Item().Height(Rh, Mm).Value($"Maintenance: {ThaiUrData.Ml(pr.MaintainAmountMl)}");
             });
-            row.RelativeItem().Border(Bw).Column(col =>
+            t.Cell().BorderLeft(Bw).MinHeight(fillMm, Mm).Column(col =>
             {
                 col.Item().HeaderBar("Time Dialysis");
-                LabelValue(col, "Time start", ThaiUrData.Time(vm.CycleStartTime), 14f);
-                LabelValue(col, "Duration", pr.DurationHours is not null ? $"{ThaiUrData.Num(pr.DurationHours)} Hours" : "-", 14f);
-                LabelValue(col, "Time off", ThaiUrData.Time(vm.CycleEndTime), 14f);
+                LabelValue(col, "Time start", ThaiUrData.Time(vm.CycleStartTime), 14f, timeRh);
+                LabelValue(col, "Duration", pr.DurationHours is not null ? $"{ThaiUrData.Num(pr.DurationHours)} Hours" : "-", 14f, timeRh);
+                LabelValue(col, "Time off", ThaiUrData.Time(vm.CycleEndTime), 14f, timeRh);
             });
         });
     }
@@ -450,8 +555,15 @@ internal sealed class ThaiUrHemosheetForm
                     rec?.UfTotal is not null ? ThaiUrData.Num(rec.UfTotal * 1000) : "",
                 };
                 foreach (var value in cells)
-                    t.Cell().Border(Bw).Height(Rh, Mm).ValueCentered(value);
-                t.Cell().Border(Bw).Height(Rh, Mm).PaddingLeft(1f).AlignMiddle().Text(rec?.Note ?? "").Style(ThaiUrText.Base);
+                    t.Cell().Border(Bw).MinHeight(Rh, Mm).AlignMiddle().ValueCentered(value);
+                // Grow with wrapped note (up to DialysisNoteMaxLines); sibling cells MinHeight so the row expands together.
+                t.Cell().Border(Bw).MinHeight(Rh, Mm).PaddingHorizontal(1f).PaddingVertical(0.5f).AlignMiddle()
+                    .Text(text =>
+                    {
+                        text.DefaultTextStyle(ThaiUrText.Base);
+                        text.ClampLines(HemosheetThaiUrStyle.DialysisNoteMaxLines, "\u2026");
+                        text.Span(rec?.Note ?? "");
+                    });
             }
         });
     }
@@ -479,13 +591,11 @@ internal sealed class ThaiUrHemosheetForm
 
             foreach (var (label, value) in boxes)
             {
-                t.Cell().Border(Bw).MinHeight(6.5f, Mm).Padding(1f)
-                    .AlignMiddle().AlignCenter()
-                    .Column(cc =>
-                    {
-                        cc.Item().AlignCenter().Text(label).Style(ThaiUrText.Bold);
-                        cc.Item().AlignCenter().Text(value).Style(ThaiUrText.Base);
-                    });
+                t.Cell().Border(Bw).MinHeight(6.5f, Mm).Padding(1f).AlignCenter().Column(cc =>
+                {
+                    cc.Item().AlignCenter().Text(label).Style(ThaiUrText.Bold);
+                    cc.Item().AlignCenter().Text(value).Style(ThaiUrText.Base);
+                });
             }
         });
     }

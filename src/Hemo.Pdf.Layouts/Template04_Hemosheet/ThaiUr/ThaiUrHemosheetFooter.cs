@@ -106,19 +106,18 @@ internal static class ThaiUrHemosheetFooter
 
     private static void CheckGroup(IContainer c, HemosheetReportViewModel vm, string title, string[] items, string? title2, string[]? items2)
     {
+        // No per-item borders — Telerik places free checkboxes in a panel (outer box only).
         c.Column(col =>
         {
             col.Item().HeaderBar(title);
             foreach (var item in items)
-                col.Item().Border(Bw).Height(HemosheetThaiUrStyle.CheckRowHeightMm, Mm).PaddingLeft(1f)
-                    .CheckLine(item, ThaiUrData.Checked(vm, item));
+                col.Item().PaddingLeft(1f).CheckLine(item, ThaiUrData.Checked(vm, item));
 
             if (title2 is not null && items2 is not null)
             {
                 col.Item().HeaderBar(title2);
                 foreach (var item in items2)
-                    col.Item().Border(Bw).Height(HemosheetThaiUrStyle.CheckRowHeightMm, Mm).PaddingLeft(1f)
-                        .CheckLine(item, ThaiUrData.Checked(vm, item));
+                    col.Item().PaddingLeft(1f).CheckLine(item, ThaiUrData.Checked(vm, item));
             }
         });
     }
@@ -129,8 +128,7 @@ internal static class ThaiUrHemosheetFooter
         {
             col.Item().HeaderBar("Health education");
             foreach (var item in HealthItems)
-                col.Item().Border(Bw).Height(HemosheetThaiUrStyle.CheckRowHeightMm, Mm).PaddingLeft(1f)
-                    .CheckLine(item, ThaiUrData.Checked(vm, item));
+                col.Item().PaddingLeft(1f).CheckLine(item, ThaiUrData.Checked(vm, item));
         });
     }
 
@@ -157,9 +155,11 @@ internal static class ThaiUrHemosheetFooter
                 {
                     var m = i < vm.MedicineRecords.Count ? vm.MedicineRecords[i] : null;
                     var name = m is null ? "" : $"{m.MedicineName} {ThaiUrData.Num(m.Quantity)} {m.Route}".Trim();
-                    t.Cell().Border(Bw).Height(Rh, Mm).PaddingLeft(1f).Text(name).Style(ThaiUrText.Base);
-                    t.Cell().Border(Bw).Height(Rh, Mm).ValueCentered(ThaiUrData.Time(m?.Timestamp));
-                    t.Cell().Border(Bw).Height(Rh, Mm);
+                    // Outer table frame only — no per-row horizontal rules (matches Telerik panel look).
+                    t.Cell().BorderLeft(Bw).BorderRight(Bw).MinHeight(Rh, Mm).PaddingLeft(1f).AlignMiddle()
+                        .Text(name).Style(ThaiUrText.Base);
+                    t.Cell().BorderRight(Bw).MinHeight(Rh, Mm).ValueCentered(ThaiUrData.Time(m?.Timestamp));
+                    t.Cell().BorderRight(Bw).MinHeight(Rh, Mm);
                 }
             });
             // Telerik places Hct/Hb under the medication column, not Health education.
