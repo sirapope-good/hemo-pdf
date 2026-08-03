@@ -22,6 +22,7 @@ interface PdfPageProxy {
     canvasContext: CanvasRenderingContext2D;
     viewport: PdfPageViewport;
     canvas: HTMLCanvasElement;
+    transform?: number[] | null;
   }): { promise: Promise<void>; cancel(): void };
 }
 
@@ -152,6 +153,8 @@ export class HemoReportPdfCanvasComponent implements OnChanges, OnDestroy {
       const baseViewport = page.getViewport({ scale: 1 });
       this.pageWidthChange.emit(baseViewport.width);
 
+      // CSS display size follows zoom; bitmap is multiplied by devicePixelRatio for crisp HiDPI.
+      const outputScale = Math.max(window.devicePixelRatio || 1, 1);
       const viewport = page.getViewport({ scale: this.scale });
       const canvas = this.pageCanvasRef.nativeElement;
       const context = canvas.getContext('2d');
@@ -159,13 +162,20 @@ export class HemoReportPdfCanvasComponent implements OnChanges, OnDestroy {
         return;
       }
 
-      canvas.width = Math.floor(viewport.width);
-      canvas.height = Math.floor(viewport.height);
+      const cssWidth = Math.floor(viewport.width);
+      const cssHeight = Math.floor(viewport.height);
+      canvas.width = Math.floor(cssWidth * outputScale);
+      canvas.height = Math.floor(cssHeight * outputScale);
+      canvas.style.width = `${cssWidth}px`;
+      canvas.style.height = `${cssHeight}px`;
+
+      const transform = outputScale !== 1 ? [outputScale, 0, 0, outputScale, 0, 0] : null;
 
       this.renderTask = page.render({
         canvasContext: context,
         viewport,
         canvas,
+        transform,
       });
       await this.renderTask.promise;
       this.renderTask = null;
@@ -191,5 +201,7 @@ export class HemoReportPdfCanvasComponent implements OnChanges, OnDestroy {
     context?.clearRect(0, 0, canvas.width, canvas.height);
     canvas.width = 0;
     canvas.height = 0;
+    canvas.style.width = '';
+    canvas.style.height = '';
   }
 }

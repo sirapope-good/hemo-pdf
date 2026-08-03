@@ -11,6 +11,9 @@ export interface ReportDocumentMeta {
   title: string;
   pageSize: 'A4' | string;
   generatedAt?: string;
+  /** Hint from Hemo-PDF: "dom" renders pages; "pdf" should call generate for preview. */
+  previewMode?: 'dom' | 'pdf' | string;
+  layoutProfile?: string;
 }
 
 export interface ReportBranding {

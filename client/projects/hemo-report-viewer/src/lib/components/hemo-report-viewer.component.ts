@@ -37,6 +37,8 @@ const PAGE_HEIGHT_PX = A4_HEIGHT_MM * MM_TO_PX;
         [scale]="scale()"
         [pageIndex]="pageIndex()"
         [pageCount]="pageCount()"
+        [minScale]="minDisplayScale()"
+        [maxScale]="maxDisplayScale()"
         [loading]="loading"
         [printing]="printing"
         [downloading]="downloading"
@@ -103,6 +105,8 @@ export class HemoReportViewerComponent implements OnChanges {
   readonly scale = computed(() => +(this.fitScale() * this.zoomFactor()).toFixed(3));
   readonly scaledWidth = computed(() => Math.ceil(PAGE_WIDTH_PX * this.scale()));
   readonly scaledHeight = computed(() => Math.ceil(PAGE_HEIGHT_PX * this.scale()));
+  readonly minDisplayScale = computed(() => +(this.fitScale() * 0.5).toFixed(3));
+  readonly maxDisplayScale = computed(() => +(this.fitScale() * 2).toFixed(3));
   readonly pageIndex = signal(0);
 
   readonly pageCount = computed(() => {
@@ -158,7 +162,8 @@ export class HemoReportViewerComponent implements OnChanges {
 
     const horizontalPadding = 32;
     const available = Math.max(host.clientWidth - horizontalPadding, 1);
-    this.fitScale.set(Math.min(1, available / PAGE_WIDTH_PX));
+    // Fit to container width (may exceed 100% on wide viewports so the page isn't tiny).
+    this.fitScale.set(Math.min(2.5, available / PAGE_WIDTH_PX));
   }
 
   private resetScroll(): void {

@@ -532,8 +532,9 @@ internal sealed class ThaiUrHemosheetForm
         {
             col.Item().Element(cp =>
                 CheckGroup(cp, vm, "Complication", ComplicationItems, "Technical complication", TechnicalItems));
-            col.Item().ExtendVertical();
-            col.Item().Border(Bw).Height(Rh, Mm).Row(r =>
+            // Nest inside ExtendVertical + AlignBottom so the spacer cannot push Nephrologist
+            // onto the next page while leaving empty space under Dialysis Nurse / NA.
+            col.Item().ExtendVertical().AlignBottom().Border(Bw).Height(Rh, Mm).Row(r =>
             {
                 r.ConstantItem(24, Mm).LabelBold("Nephrologist");
                 r.RelativeItem().Value(vm.DoctorName ?? vm.Patient.DoctorName);
