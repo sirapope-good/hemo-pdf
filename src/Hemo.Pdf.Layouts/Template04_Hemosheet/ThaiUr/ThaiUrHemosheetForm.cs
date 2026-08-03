@@ -512,28 +512,32 @@ internal sealed class ThaiUrHemosheetForm
         "Nutrition", "Vascular Access", "Exercise", "Personal hygine", "Medication", "Fluid control", "KT",
     ];
 
+    /// <summary>Reserved height for Pre/Post HD note body (~2.5 text lines at ThaiUR base size).</summary>
+    private const float NoteBodyMinHeightMm = 11.5f;
+
     private static void BottomBand(IContainer c, HemosheetReportViewModel vm)
     {
+        // Left block = Complication | Nursing, with Nephrologist spanning both (long doctor names).
+        // Right block = Health | Med, then Pre/Post (reserved 2–3 lines), then vitals/signatures
+        // snapped to the bottom of the band so the page fills evenly.
         c.Row(row =>
         {
-            // Left: Complication + Technical; Nephrologist pinned to bottom of this column.
-            // No AlignTop so the column stretches with the taller right side.
-            row.ConstantItem(45, Mm).Border(Bw).Element(left => LeftAssessmentColumn(left, vm));
-            row.ConstantItem(48, Mm).AlignTop().Border(Bw).Element(nm =>
-                CheckGroup(nm, vm, "Nursing management", NursingItems, null, null));
-            // Right: Health/Med + Nurse record + Post Vital / AVF / Dialysis Nurse / NA
-            row.RelativeItem().AlignTop().Border(Bw).Element(right => RightFooterColumn(right, vm));
+            row.ConstantItem(76, Mm).Border(Bw).Element(left => AssessmentAndNephrologistColumn(left, vm));
+            row.RelativeItem().Border(Bw).Element(right => HealthMedAndNotesColumn(right, vm));
         });
     }
 
-    private static void LeftAssessmentColumn(IContainer c, HemosheetReportViewModel vm)
+    private static void AssessmentAndNephrologistColumn(IContainer c, HemosheetReportViewModel vm)
     {
         c.Column(col =>
         {
-            col.Item().Element(cp =>
-                CheckGroup(cp, vm, "Complication", ComplicationItems, "Technical complication", TechnicalItems));
-            // Nest inside ExtendVertical + AlignBottom so the spacer cannot push Nephrologist
-            // onto the next page while leaving empty space under Dialysis Nurse / NA.
+            col.Item().Row(r =>
+            {
+                r.RelativeItem().AlignTop().Border(Bw).Element(cp =>
+                    CheckGroup(cp, vm, "Complication", ComplicationItems, "Technical complication", TechnicalItems));
+                r.RelativeItem().AlignTop().Border(Bw).Element(nm =>
+                    CheckGroup(nm, vm, "Nursing management", NursingItems, null, null));
+            });
             col.Item().ExtendVertical().AlignBottom().Border(Bw).Height(Rh, Mm).Row(r =>
             {
                 r.ConstantItem(24, Mm).LabelBold("Nephrologist");
@@ -542,23 +546,34 @@ internal sealed class ThaiUrHemosheetForm
         });
     }
 
-    private static void RightFooterColumn(IContainer c, HemosheetReportViewModel vm)
+    private static void HealthMedAndNotesColumn(IContainer c, HemosheetReportViewModel vm)
     {
         c.Column(col =>
         {
-            col.Item().Element(he => HealthAndMedication(he, vm));
-            col.Item().Element(n => NurseNotesTable(n, vm));
-            col.Item().Element(pv => PostVital(pv, vm));
-            col.Item().Element(av => AvfRow(av, vm));
-            col.Item().Border(Bw).Height(Rh, Mm).Row(r =>
+            col.Item().Row(r =>
             {
-                r.ConstantItem(28, Mm).LabelBold("Dialysis Nurse");
-                r.RelativeItem().Value(vm.NursesInShiftNonPn);
+                r.ConstantItem(42, Mm).AlignTop().Border(Bw).Element(he => HealthEducation(he, vm));
+                r.RelativeItem().AlignTop().Border(Bw).Element(med => MedicationTable(med, vm));
             });
-            col.Item().Border(Bw).Height(Rh, Mm).Row(r =>
+            col.Item().Element(n => PrePostHdNotes(n, vm));
+            // Push vitals/signatures to the bottom of this column (aligns with Nephrologist).
+            col.Item().ExtendVertical().AlignBottom().Element(bottom =>
             {
-                r.ConstantItem(28, Mm).LabelBold("Dialysis NA");
-                r.RelativeItem().Value(vm.NursesInShift);
+                bottom.Column(stack =>
+                {
+                    stack.Item().Element(pv => PostVital(pv, vm));
+                    stack.Item().Element(av => AvfRow(av, vm));
+                    stack.Item().Border(Bw).Height(Rh, Mm).Row(r =>
+                    {
+                        r.ConstantItem(28, Mm).LabelBold("Dialysis Nurse");
+                        r.RelativeItem().Value(vm.NursesInShiftNonPn);
+                    });
+                    stack.Item().Border(Bw).Height(Rh, Mm).Row(r =>
+                    {
+                        r.ConstantItem(28, Mm).LabelBold("Dialysis NA");
+                        r.RelativeItem().Value(vm.NursesInShift);
+                    });
+                });
             });
         });
     }
@@ -582,26 +597,14 @@ internal sealed class ThaiUrHemosheetForm
         });
     }
 
-    private static void HealthAndMedication(IContainer c, HemosheetReportViewModel vm)
+    private static void HealthEducation(IContainer c, HemosheetReportViewModel vm)
     {
         c.Column(col =>
         {
-            col.Item().Row(r =>
-            {
-                r.ConstantItem(42, Mm).AlignTop().Column(he =>
-                {
-                    he.Item().HeaderBar("Health education");
-                    foreach (var item in HealthItems)
-                        he.Item().Border(Bw).Height(HemosheetThaiUrStyle.CheckRowHeightMm, Mm).PaddingLeft(1f)
-                            .CheckLine(item, ThaiUrData.Checked(vm, item));
-                    he.Item().Border(Bw).Height(Rh, Mm).Row(lab =>
-                    {
-                        lab.RelativeItem().Label($"Hct: {vm.Labs.Hct ?? "-"}");
-                        lab.RelativeItem().Label($"Hb: {vm.Labs.Hb ?? "-"}");
-                    });
-                });
-                r.RelativeItem().AlignTop().Element(med => MedicationTable(med, vm));
-            });
+            col.Item().HeaderBar("Health education");
+            foreach (var item in HealthItems)
+                col.Item().Border(Bw).Height(HemosheetThaiUrStyle.CheckRowHeightMm, Mm).PaddingLeft(1f)
+                    .CheckLine(item, ThaiUrData.Checked(vm, item));
         });
     }
 
@@ -615,8 +618,8 @@ internal sealed class ThaiUrHemosheetForm
                 t.ColumnsDefinition(cols =>
                 {
                     cols.RelativeColumn(3);
-                    cols.ConstantColumn(18, Mm);
                     cols.ConstantColumn(16, Mm);
+                    cols.ConstantColumn(14, Mm);
                 });
                 t.Cell().Border(Bw).AlignCenter().Text("Name/Dose/Route").Style(ThaiUrText.Bold);
                 t.Cell().Border(Bw).AlignCenter().Text("Time").Style(ThaiUrText.Bold);
@@ -633,55 +636,58 @@ internal sealed class ThaiUrHemosheetForm
                     t.Cell().Border(Bw).Height(Rh, Mm);
                 }
             });
+            // Telerik places Hct/Hb under the medication column, not Health education.
+            col.Item().Border(Bw).Height(Rh, Mm).Row(lab =>
+            {
+                lab.RelativeItem().Label($"Hct: {vm.Labs.Hct ?? "-"}");
+                lab.RelativeItem().Label($"Hb: {vm.Labs.Hb ?? "-"}");
+            });
         });
     }
 
-    private static void NurseNotesTable(IContainer c, HemosheetReportViewModel vm)
+    private static void PrePostHdNotes(IContainer c, HemosheetReportViewModel vm)
     {
-        var lines = Math.Max(vm.LayoutContext.ReportSettings.FixedLines.Nurse, vm.NurseRecords.Count);
-        if (lines <= 0) lines = 2; // keep a compact nurse-record band so right column has content under Health/Med
+        var pre = vm.NurseRecords.FirstOrDefault()?.Content;
+        var post = vm.NurseRecords.Skip(1).FirstOrDefault()?.Content
+            ?? vm.DoctorRecords.FirstOrDefault()?.Content;
+        vm.SignatureNames.TryGetValue("pre_hd", out var preSigner);
+        vm.SignatureNames.TryGetValue("post_hd", out var postSigner);
 
-        c.Column(col =>
+        c.Table(t =>
         {
-            col.Item().HeaderBar("บันทึกพยาบาล");
-            col.Item().Table(t =>
+            t.ColumnsDefinition(cols =>
             {
-                t.ColumnsDefinition(cols =>
-                {
-                    cols.ConstantColumn(12, Mm);
-                    cols.RelativeColumn();
-                    cols.ConstantColumn(18, Mm);
-                });
-                t.Cell().Border(Bw).Background(HemosheetThaiUrStyle.HeaderBackground)
-                    .AlignCenter().AlignMiddle().Height(Rh, Mm).Text("Time").Style(ThaiUrText.Bold);
-                t.Cell().Border(Bw).Background(HemosheetThaiUrStyle.HeaderBackground)
-                    .AlignCenter().AlignMiddle().Height(Rh, Mm).Text("Content").Style(ThaiUrText.Bold);
-                t.Cell().Border(Bw).Background(HemosheetThaiUrStyle.HeaderBackground)
-                    .AlignCenter().AlignMiddle().Height(Rh, Mm).Text("Sign").Style(ThaiUrText.Bold);
-
-                for (var i = 0; i < lines; i++)
-                {
-                    var note = i < vm.NurseRecords.Count ? vm.NurseRecords[i] : null;
-                    t.Cell().Border(Bw).Height(Rh, Mm).ValueCentered(ThaiUrData.Time(note?.Timestamp));
-                    t.Cell().Border(Bw).Height(Rh, Mm).PaddingLeft(1f).AlignMiddle()
-                        .Text(note?.Content ?? "").Style(ThaiUrText.Base);
-                    t.Cell().Border(Bw).Height(Rh, Mm);
-                }
+                cols.RelativeColumn();
+                cols.ConstantColumn(28, Mm);
             });
+
+            NoteRow(t, "Pre HD", pre, preSigner);
+            NoteRow(t, "Post HD", post, postSigner);
         });
+
+        static void NoteRow(TableDescriptor t, string label, string? content, string? signer)
+        {
+            var body = string.IsNullOrWhiteSpace(content) ? "" : content.Trim();
+            // Reserve ~2–3 lines even when empty; grow with real text via MinHeight.
+            t.Cell().Border(Bw).MinHeight(NoteBodyMinHeightMm, Mm).Padding(1f).AlignTop()
+                .Text(string.IsNullOrEmpty(body) ? label : $"{label} {body}")
+                .Style(ThaiUrText.Base);
+            t.Cell().Border(Bw).MinHeight(NoteBodyMinHeightMm, Mm).Padding(1f).AlignBottom().AlignRight()
+                .Text(signer ?? "").Style(ThaiUrText.Base);
+        }
     }
 
     private static void PostVital(IContainer c, HemosheetReportViewModel vm)
     {
         var p = vm.PostVital;
-        c.Border(Bw).Height(Rh, Mm).Row(r =>
+        c.Border(Bw).Height(Rh, Mm).PaddingHorizontal(1f).Row(r =>
         {
             r.ConstantItem(18, Mm).LabelBold("Post Vital");
             PostVitalItem(r, "BP", ThaiUrData.Bp(p?.Bps, p?.Bpd));
             PostVitalItem(r, "PR", ThaiUrData.Num(p?.Hr));
             PostVitalItem(r, "RR", ThaiUrData.Num(p?.Rr));
-            PostVitalItem(r, "Sat", $"{ThaiUrData.Num(p?.SpO2)}%");
-            PostVitalItem(r, "BT", $"{ThaiUrData.Num(p?.Temp)}\u00B0C");
+            PostVitalItem(r, "BT", $"{ThaiUrData.Num(p?.Temp)} \u00B0C");
+            PostVitalItem(r, "Sat", $"{ThaiUrData.Num(p?.SpO2)} %");
         });
     }
 
@@ -692,9 +698,9 @@ internal sealed class ThaiUrHemosheetForm
             r.ConstantItem(14, Mm).LabelBold("AVF/AVG");
             AvfCheck(r, "Thrill", ThaiUrData.PostState(vm, "thrill", "vas:av:thrill", "post:thrill"));
             AvfCheck(r, "Bruit", ThaiUrData.PostState(vm, "bruit", "vas:av:bruit", "post:bruit"));
-            AvfCheck(r, "Hema", ThaiUrData.PostState(vm, "hematoma", "hema", "vas:hematoma"));
-            AvfCheck(r, "SB>20", ThaiUrData.PostState(vm, "sb", "stop bleeding", "stopbleeding", "vas:sb"));
-            r.RelativeItem().AlignMiddle()
+            AvfCheck(r, "Hematoma", ThaiUrData.PostState(vm, "hematoma", "hema", "vas:hematoma"));
+            AvfCheck(r, "Stop Bleeding > 20 min", ThaiUrData.PostState(vm, "sb", "stop bleeding", "stopbleeding", "vas:sb"));
+            r.RelativeItem().AlignMiddle().AlignRight().PaddingRight(2f)
                 .Text($"A{ThaiUrData.Num(vm.AvShunt.ANeedleSize)}/V{ThaiUrData.Num(vm.AvShunt.VNeedleSize)}")
                 .Style(ThaiUrText.Base);
         });
@@ -710,10 +716,10 @@ internal sealed class ThaiUrHemosheetForm
 
     private static void PostVitalItem(RowDescriptor r, string label, string value)
     {
-        r.RelativeItem().Row(inner =>
+        r.RelativeItem().PaddingHorizontal(1f).Row(inner =>
         {
             inner.AutoItem().AlignMiddle().Text($"{label} ").Style(ThaiUrText.Bold);
-            inner.RelativeItem().AlignMiddle().Text(value).Style(ThaiUrText.Base);
+            inner.RelativeItem().AlignMiddle().Text(string.IsNullOrWhiteSpace(value) ? "-" : value).Style(ThaiUrText.Base);
         });
     }
 }
