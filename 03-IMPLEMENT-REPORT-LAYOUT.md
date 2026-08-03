@@ -360,9 +360,11 @@ public sealed class HemosheetLayoutProfileRegistry
 
 #### 3C — Assessment (checklist + matrix ถ้าจำเป็น)
 
-- [ ] `checklist-table` 3 คอลัมน์ (checkbox · รายการ · หมายเหตุ)
-- [ ] ประเมินว่า trdp `AssessmentTable` ต้องใช้ `assessment-matrix` หรือ checklist พอ — **spike 1 วัน** อ่าน binding ใน `definition.xml`
-- [ ] Pre / Re / Post / Other ตาม planner
+- [x] **Spike เสร็จ** — ดู [.cursor/docs/ASSESSMENT-SPIKE.md](.cursor/docs/ASSESSMENT-SPIKE.md): เลือก **Hybrid (C)**
+- [ ] Default: Pre∪Re topic matrix (Topic \| Pre Y/N \| Re Y/N) — layout ใหม่หรือ `checklist-table` mode
+- [ ] `checklist-table` 3 คอลัมน์ / yn สำหรับ ThaiUR, AVF, footer groups
+- [ ] แก้ mapper ให้ตรง BE (`SelectedOptions` บน parent name ไม่ใช่ dotted mock names)
+- [ ] Pre / Re / Post / Other ตาม planner + กัน double-render
 
 #### 3D — ตารางบันทึก (grids)
 
