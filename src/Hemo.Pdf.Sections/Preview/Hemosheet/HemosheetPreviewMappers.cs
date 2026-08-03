@@ -24,16 +24,23 @@ public static class HemosheetPreviewMappers
         new()
         {
             Title = "ข้อมูลผู้ป่วย",
+            // 2 columns to mirror Telerik Basic panel (not 3) — PDF + preview share this block.
             Columns =
             [
                 [
                     Lv("ชื่อ-สกุล", vm.Patient.Name),
                     Lv("HN", vm.Patient.Hn),
                     Lv("เลขบัตรประชาชน", vm.Patient.IdentityNumber),
+                    Lv("วันเกิด", FormatDate(vm.Patient.BirthDate)),
+                    Lv("อายุ", vm.Patient.Age?.ToString()),
+                    Lv("เพศ", vm.Patient.Sex),
                 ],
                 [
-                    Lv("วันเกิด", FormatDate(vm.Patient.BirthDate)),
-                    Lv("เพศ", vm.Patient.Sex),
+                    Lv("แพทย์", vm.Patient.DoctorName ?? vm.DoctorName),
+                    Lv("แพ้ยา", FormatAllergies(vm.Patient.Allergies)),
+                    Lv("สิทธิ์", vm.Patient.Coverage),
+                    Lv("Diagnosis", vm.Patient.Diagnosis),
+                    Lv("Underlying", vm.Patient.Underlying),
                     Lv("หน่วย", vm.Unit.FullName),
                 ],
             ],
@@ -91,7 +98,9 @@ public static class HemosheetPreviewMappers
             F("UF Goal", FormatFloat(vm.Dehydration.UfGoal)),
         };
 
-        if (IsEnabled(features, "showFlushNss"))
+        if (IsEnabled(features, "showFlushNss")
+            || vm.Dehydration.FlushNss is not null
+            || vm.Dehydration.FlushNssTotal is not null)
         {
             fields.Add(F("Flush NSS", FormatFloat(vm.Dehydration.FlushNss)));
             fields.Add(F("Flush NSS Total", FormatFloat(vm.Dehydration.FlushNssTotal)));
@@ -100,7 +109,8 @@ public static class HemosheetPreviewMappers
         return new FieldGridReportBlock
         {
             Title = "น้ำหนัก / Dehydration",
-            Columns = 4,
+            // Telerik Basic dehydration panel is typically 2–3 columns, not a tall 4-col strip.
+            Columns = 3,
             Fields = fields,
         };
     }
@@ -126,6 +136,14 @@ public static class HemosheetPreviewMappers
             fields.Add(F("Duration (min)", FormatFloat(vm.DialysisPrescription.DurationMinutes)));
         }
 
+        // When layout features omit duration flags (older payloads), still show hours if present.
+        if (!IsEnabled(features, "showDurationHours")
+            && !IsEnabled(features, "showDurationMinutes")
+            && vm.DialysisPrescription.DurationHours is not null)
+        {
+            fields.Add(F("Duration (hr)", FormatFloat(vm.DialysisPrescription.DurationHours)));
+        }
+
         if (IsEnabled(features, "showHdfColumns"))
         {
             fields.Add(F("HDF Type", vm.DialysisPrescription.HdfType));
@@ -142,9 +160,21 @@ public static class HemosheetPreviewMappers
                 fields.Add(F("Reason", vm.DialysisPrescription.ReasonForRefraining));
             }
         }
-        else if (IsEnabled(features, "showAcNotUsed"))
+        else if (IsEnabled(features, "showAcNotUsed") || vm.IsAcNotUsed)
         {
             fields.Add(F("Anticoagulant", "ไม่ใช้"));
+            if (!string.IsNullOrWhiteSpace(vm.DialysisPrescription.ReasonForRefraining))
+            {
+                fields.Add(F("Reason", vm.DialysisPrescription.ReasonForRefraining));
+            }
+        }
+        else if (!string.IsNullOrWhiteSpace(vm.DialysisPrescription.Anticoagulant))
+        {
+            // Fallback when Features omitted AC flags but prescription has AC data.
+            fields.Add(F("Anticoagulant", vm.DialysisPrescription.Anticoagulant));
+            fields.Add(F("Initial", FormatAc(vm.DialysisPrescription.InitialAmount, vm.DialysisPrescription.InitialAmountMl)));
+            fields.Add(F("Maintain", FormatAc(vm.DialysisPrescription.MaintainAmount, vm.DialysisPrescription.MaintainAmountMl)));
+            fields.Add(F("AC/Session", FormatAc(vm.DialysisPrescription.AcPerSession, vm.DialysisPrescription.AcPerSessionMl)));
         }
 
         fields.Add(F("Dialyzer", vm.DialysisPrescription.Dialyzer));
@@ -157,10 +187,20 @@ public static class HemosheetPreviewMappers
         fields.Add(F("Dialysate Temp", FormatFloat(vm.DialysisPrescription.DialysateTemperature)));
         fields.Add(F("Dialysate Flow", FormatFloat(vm.DialysisPrescription.DialysateFlowRate)));
 
+        if (!string.IsNullOrWhiteSpace(vm.DialysisPrescription.Note))
+        {
+            fields.Add(new FieldGridField
+            {
+                Label = "Note",
+                Value = vm.DialysisPrescription.Note,
+                ColumnSpan = 3,
+            });
+        }
+
         return new FieldGridReportBlock
         {
             Title = "คำสั่งการฟอก",
-            Columns = 4,
+            Columns = 3,
             Fields = fields,
         };
     }
@@ -176,14 +216,16 @@ public static class HemosheetPreviewMappers
             ? new List<LabelValue>
             {
                 Lv("Site", vm.AvShunt.ShuntSite),
+                Lv("Route", vm.DialysisPrescription.BloodAccessRoute),
                 Lv("A Needle", FormatFloat(vm.AvShunt.ANeedleSize)),
                 Lv("V Needle", FormatFloat(vm.AvShunt.VNeedleSize)),
             }
             : new List<LabelValue>
             {
                 Lv("Site", vm.AvShunt.ShuntSite),
+                Lv("Route", vm.DialysisPrescription.BloodAccessRoute),
                 Lv("Catheter Length", FormatFloat(vm.AvShunt.CatheterLength)),
-                Lv("Catheter Type", vm.AvShunt.CatheterType?.ToString()),
+                Lv("Catheter Type", FormatCatheterType(vm.AvShunt.CatheterType)),
             };
 
         return new VascularAccessReportBlock
@@ -414,6 +456,18 @@ public static class HemosheetPreviewMappers
 
         return string.Join(", ", allergies);
     }
+
+    /// <summary>Matches <c>Wasenshi.HemoDialysisPro.Models.Enums.CatheterType</c> int values.</summary>
+    private static string? FormatCatheterType(int? catheterType) =>
+        catheterType switch
+        {
+            null => null,
+            0 => "AV Fistula",
+            1 => "AV Graft",
+            2 => "Perm Cath",
+            3 => "Double Lumen",
+            _ => catheterType.Value.ToString(),
+        };
 
     private static string? FormatAc(float? amount, float? amountMl)
     {

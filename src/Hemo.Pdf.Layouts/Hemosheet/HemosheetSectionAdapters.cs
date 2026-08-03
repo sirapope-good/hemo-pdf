@@ -7,19 +7,6 @@ namespace Hemo.Pdf.Layouts.Hemosheet;
 
 internal static class HemosheetSectionAdapters
 {
-    internal sealed class PatientInfoAdapter(HemosheetReportViewModel vm) : IPatientInfoSource
-    {
-        public PatientInfoModel PatientInfo { get; } = new()
-        {
-            Name = vm.Patient.Name,
-            HospitalNumber = vm.Patient.Hn,
-            IdentityNumber = vm.Patient.IdentityNumber,
-            DateOfBirth = vm.Patient.BirthDate?.ToString("yyyy-MM-dd"),
-            Gender = vm.Patient.Sex,
-            Unit = vm.Unit.FullName,
-        };
-    }
-
     internal sealed class KeyValueRowsAdapter(string? title, IReadOnlyList<LabelValue> rows) : IKeyValueRowsSource
     {
         public string? SectionTitle => title;

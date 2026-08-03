@@ -34,8 +34,6 @@ internal abstract class HemosheetSectionRendererBase : IHemosheetSectionRenderer
 
 internal sealed class PatientSectionRenderer : HemosheetSectionRendererBase
 {
-    private readonly PatientInfoSection _section = new();
-
     public override HemosheetSectionId SectionId => HemosheetSectionId.Patient;
 
     public override IReadOnlyList<ReportBlock> MapToPreview(
@@ -49,7 +47,7 @@ internal sealed class PatientSectionRenderer : HemosheetSectionRendererBase
         HemosheetSectionPlan plan,
         HemosheetReportViewModel viewModel,
         PdfReportContext context) =>
-        _section.Compose(container, new PatientInfoAdapter(viewModel), EmptyContext);
+        ReportBlockPdfComposer.Compose(container, HemosheetPreviewMappers.MapPatient(viewModel), EmptyContext);
 }
 
 internal sealed class SessionMetaSectionRenderer : HemosheetSectionRendererBase

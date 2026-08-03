@@ -200,7 +200,8 @@ Print/Download ยังใช้ `@hemo/pdf-client` → `POST /api/pdf/generate
 
 ## Docs
 
-- [.cursor/docs/PDF-REPORT-SYSTEM.md](./.cursor/docs/PDF-REPORT-SYSTEM.md) — สรุประบบ PDF/Preview ทั้ง 3 repo (สถานะปัจจุบัน + flow + fallback + วิธีขึ้น template ใหม่)
+- [PDF-REPORT-SYSTEM.md](./.cursor/docs/PDF-REPORT-SYSTEM.md) — สรุประบบ PDF/Preview ทั้ง 3 repo (สถานะปัจจุบัน + flow + fallback + วิธีขึ้น template ใหม่)
+- [LAYOUT-FIDELITY-PROCESS.md](./.cursor/docs/LAYOUT-FIDELITY-PROCESS.md) — วิธีทำ layout fidelity ทีละ section
 - [.cursor/plans/hemo-pdf_implementation_8969dd4f.plan.md](./.cursor/plans/hemo-pdf_implementation_8969dd4f.plan.md) — **checklist งานที่เหลือ (master)** + สถานะ Phase 0–7
 - [01-IMPLEMENT-PLANNING.md](./01-IMPLEMENT-PLANNING.md) — แผนออกแบบโมดูล + decision log
 - [02-FEATURE-PREVIEW-PDF.md](./02-FEATURE-PREVIEW-PDF.md) — Report Preview (`@hemo/report-viewer`, แทน Telerik)

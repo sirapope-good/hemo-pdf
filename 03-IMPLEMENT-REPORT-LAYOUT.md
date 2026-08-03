@@ -140,11 +140,11 @@ flowchart TB
 | กลุ่มใน `.trdp` | ข้อมูลจาก DTO | Component เป้าหมาย | สถานะปัจจุบัน |
 |----------------|---------------|-------------------|---------------|
 | Logo / header | branding + meta | `ConfigurableHeaderSection` / `hemo-report-header` | มี — ต้องจูน A4 margin |
-| Basic (ชื่อ, HN, วันเกิด, เพศ, แพทย์, แพ้ยา, สิทธิ์) | `patient` | `patient-info` | **ไม่ตรง** — PDF 2 คอลัมน์, preview 3 คอลัมน์ |
-| Session (Ward, Bed, Treatment No, Kt/V…) | meta fields | `key-value-table` หรือ `field-row` | มีคร่าว ๆ |
-| Dehydration | `dehydration` | `field-grid` (multi-column) | **key-value แนวตั้ง** — ไม่ตรง layout 2–3 คอลัมน์ใน trdp |
-| Prescription + AC | `dialysisPrescription`, `isAcNotUsed` | `field-grid` + feature flags | บาง field ยังขาด (flush, duration split) |
-| Vascular Access | `avShunt` + variant | `vascular-access` | มี variant — ต้องจูน field |
+| Basic (ชื่อ, HN, วันเกิด, เพศ, แพทย์, แพ้ยา, สิทธิ์) | `patient` | `patient-info` | **รอบ 1 ปรับแล้ว** — 2 คอลัมน์ครบแพทย์/แพ้ยา/สิทธิ์/อายุ; PDF ใช้ `ReportBlock` เดียวกับ preview |
+| Session (Ward, Bed, Treatment No, Kt/V…) | meta fields | `key-value-table` หรือ `field-row` | มีคร่าว ๆ (field-grid 4 คอลัมน์) |
+| Dehydration | `dehydration` | `field-grid` (multi-column) | **รอบ 2 ปรับแล้ว** — field-grid 3 คอลัมน์ + flush เมื่อมีค่า |
+| Prescription + AC | `dialysisPrescription`, `isAcNotUsed` | `field-grid` + feature flags | **รอบ 3 ปรับแล้ว** — 3 คอลัมน์, AC/duration fallback, Note span |
+| Vascular Access | `avShunt` + variant | `vascular-access` | **รอบ 4 ปรับแล้ว** — Route + catheter type labels |
 | Assessment Pre/Re/Post/Other | `assessments.*` | `checklist-table` × 4 | **โครงสร้างต่าง** — trdp มี Topic matrix + checkbox แยก; DTO เป็น list |
 | Dialysis records | `dialysisRecords` | `data-grid` + fixed lines + HDF cols | มี — ต้อง parity width/padding |
 | Nurse / Doctor records | `nurseRecords`, `doctorRecords` | `data-grid` | มี |
@@ -517,13 +517,14 @@ PR-G  Hemopro: Telerik cutover
 
 ---
 
-## 11. งานถัดไป (แนะนำเริ่มที่นี่) — อัปเดต 2026-07-23
+## 11. งานถัดไป (แนะนำเริ่มที่นี่) — อัปเดต 2026-08-03
 
-> Phase 1 framework (section registry) **ทำแล้ว** — เริ่มที่ fidelity ที่เห็นบนจอ
+> Process: [.cursor/docs/LAYOUT-FIDELITY-PROCESS.md](.cursor/docs/LAYOUT-FIDELITY-PROCESS.md)  
+> **รอบ 1–4 (Patient / Dehydration / Prescription / Vascular) ทำ mapper fidelity แล้ว** — ยังต้อง visual sign-off กับ `.trdp`
 
-1. **Sarabun + A4 bands** — copy ฟอนต์ + จูน margin/header/footer (เห็นผลเร็ว)
+1. **Visual compare** mock HD-AV / HDF / perm-cath PDF กับ Telerik (ตา) แล้วจูน padding/column ถ้ายังห่าง
 2. **Spike assessment** — อ่าน `AssessmentTable` ใน `Hemosheet.trdp` ตัดสิน checklist vs matrix
-3. **Phase 3B–3E** — จูน section ทีละกลุ่ม (patient → grids → signatures) ตาม checklist ด้านบน
+3. **Phase 3D–3E** — grids + signatures ตาม checklist
 4. **Parity sign-off** → ค่อยทำ cutover ใน [pdf_chore_phase2](.cursor/plans/pdf_chore_phase2_template_cutover.plan.md)
 
 เมื่อ layout parity ถึงเกณฑ์ DoD §1.3 Hemosheet จะ **แทน Telerik ได้จริง** — แล้วค่อยปิด `tr-viewer`

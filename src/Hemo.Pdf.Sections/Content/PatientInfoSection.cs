@@ -1,5 +1,6 @@
 using Hemo.Pdf.Core.Constants;
 using Hemo.Pdf.Core.Context;
+using Hemo.Pdf.Core.Models.Preview;
 using Hemo.Pdf.Sections.Abstractions;
 using Hemo.Pdf.Sections.Helpers;
 using QuestPDF.Fluent;
@@ -11,45 +12,76 @@ public sealed class PatientInfoSection : IContentSection
 {
     public void Compose(IContainer container, object viewModel, PdfReportContext context)
     {
+        if (viewModel is PatientInfoReportBlock block)
+        {
+            ComposeBlock(container, block);
+            return;
+        }
+
         if (viewModel is not IPatientInfoSource source)
         {
             return;
         }
 
-        var info = source.PatientInfo;
+        // Legacy adapter path (template-01 etc.) — keep until callers migrate to ReportBlock.
+        ComposeBlock(container, new PatientInfoReportBlock
+        {
+            Title = "ข้อมูลผู้ป่วย",
+            Columns =
+            [
+                [
+                    new LabelValue { Label = "ชื่อ-สกุล", Value = source.PatientInfo.Name ?? "—" },
+                    new LabelValue { Label = "HN", Value = source.PatientInfo.HospitalNumber ?? "—" },
+                    new LabelValue { Label = "เลขบัตรประชาชน", Value = source.PatientInfo.IdentityNumber ?? "—" },
+                ],
+                [
+                    new LabelValue { Label = "วันเกิด", Value = source.PatientInfo.DateOfBirth ?? "—" },
+                    new LabelValue { Label = "เพศ", Value = source.PatientInfo.Gender ?? "—" },
+                    new LabelValue { Label = "หน่วย", Value = source.PatientInfo.Unit ?? "—" },
+                ],
+            ],
+        });
+    }
+
+    public static void ComposeBlock(IContainer container, PatientInfoReportBlock block)
+    {
+        var columns = block.Columns.Count == 0 ? 2 : block.Columns.Count;
 
         container.Border(0.5f).Table(table =>
         {
-            table.ColumnsDefinition(columns =>
+            table.ColumnsDefinition(def =>
             {
-                columns.RelativeColumn();
-                columns.RelativeColumn();
+                for (var i = 0; i < columns; i++)
+                {
+                    def.RelativeColumn();
+                }
             });
 
-            table.Cell().ColumnSpan(2)
-                .Background(PdfSectionMetrics.SectionHeaderBackground)
-                .Border(0.5f)
-                .Padding(PdfSectionMetrics.SectionTitlePadding)
-                .Text("ข้อมูลผู้ป่วย")
-                .FontFamily(PdfStyleDefaults.Body.SectionTitleFontFamily)
-                .FontSize(PdfStyleDefaults.Body.SectionTitleFontSize)
-                .SemiBold();
-
-            table.Cell().Border(0.5f).Padding(PdfSectionMetrics.CellPadding).Column(left =>
+            if (!string.IsNullOrWhiteSpace(block.Title))
             {
-                left.Spacing(1);
-                left.Item().Text(t => PdfTextHelpers.ComposeInlineLabelValue(t, "ชื่อ-สกุล", info.Name));
-                left.Item().Text(t => PdfTextHelpers.ComposeInlineLabelValue(t, "HN", info.HospitalNumber));
-                left.Item().Text(t => PdfTextHelpers.ComposeInlineLabelValue(t, "เลขบัตรประชาชน", info.IdentityNumber));
-            });
+                table.Cell().ColumnSpan((uint)columns)
+                    .Background(PdfSectionMetrics.SectionHeaderBackground)
+                    .Border(0.5f)
+                    .Padding(PdfSectionMetrics.SectionTitlePadding)
+                    .Text(block.Title)
+                    .FontFamily(PdfStyleDefaults.Body.SectionTitleFontFamily)
+                    .FontSize(PdfStyleDefaults.Body.SectionTitleFontSize)
+                    .SemiBold();
+            }
 
-            table.Cell().Border(0.5f).Padding(PdfSectionMetrics.CellPadding).Column(right =>
+            for (var i = 0; i < columns; i++)
             {
-                right.Spacing(1);
-                right.Item().Text(t => PdfTextHelpers.ComposeInlineLabelValue(t, "วันเกิด", info.DateOfBirth));
-                right.Item().Text(t => PdfTextHelpers.ComposeInlineLabelValue(t, "เพศ", info.Gender));
-                right.Item().Text(t => PdfTextHelpers.ComposeInlineLabelValue(t, "หน่วย", info.Unit));
-            });
+                var fields = i < block.Columns.Count ? block.Columns[i] : [];
+                table.Cell().Border(0.5f).Padding(PdfSectionMetrics.CellPadding).Column(col =>
+                {
+                    col.Spacing(1);
+                    foreach (var field in fields)
+                    {
+                        col.Item().Text(t =>
+                            PdfTextHelpers.ComposeInlineLabelValue(t, field.Label, field.Value));
+                    }
+                });
+            }
         });
     }
 }
