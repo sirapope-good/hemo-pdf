@@ -12,4 +12,7 @@
     <ProjectReference Include="..\Hemo.Pdf.Rendering\Hemo.Pdf.Rendering.csproj" />
     <PackageReference Include="QuestPDF" Version="2024.7.2" />
   </ItemGroup>
+  <ItemGroup>
+    <InternalsVisibleTo Include="Hemo.Pdf.Core.Tests" />
+  </ItemGroup>
 </Project>

@@ -121,20 +121,21 @@ public class HemosheetAssessmentMapperTests
     }
 
     [Fact]
-    public void MapTopLayoutRow_IncludesPreYnOnlyForThaiUr()
+    public void MapTopLayoutRow_DoesNotIncludePreYnChecklist()
     {
-        var defaultVm = BaseVm(HemosheetLayoutProfile.Default);
-        var defaultRow = HemosheetPreviewMappers.MapTopLayoutRow(defaultVm, defaultVm.LayoutContext.Features);
-        Assert.NotNull(defaultRow);
-        Assert.DoesNotContain(
-            Flatten(defaultRow!),
-            b => b is ChecklistTableReportBlock c && c.Title == "อาการก่อนฟอก");
-
-        var thaiUrVm = BaseVm(HemosheetLayoutProfile.ThaiUr);
-        var thaiUrRow = HemosheetPreviewMappers.MapTopLayoutRow(thaiUrVm, thaiUrVm.LayoutContext.Features);
-        Assert.Contains(
-            Flatten(thaiUrRow!),
-            b => b is ChecklistTableReportBlock c && c.Layout == ChecklistTablePreviewMapper.LayoutYnColumns);
+        // ThaiUR symptoms live on the dedicated PDF form; shared MapTopLayoutRow stays Default-shaped.
+        foreach (var profile in new[] { HemosheetLayoutProfile.Default, HemosheetLayoutProfile.ThaiUr })
+        {
+            var vm = BaseVm(profile);
+            var row = HemosheetPreviewMappers.MapTopLayoutRow(vm, vm.LayoutContext.Features);
+            Assert.NotNull(row);
+            Assert.DoesNotContain(
+                Flatten(row!),
+                b => b is ChecklistTableReportBlock c && c.Title == "อาการก่อนฟอก");
+            Assert.DoesNotContain(
+                Flatten(row!),
+                b => b is ChecklistTableReportBlock c && c.Layout == ChecklistTablePreviewMapper.LayoutYnColumns);
+        }
     }
 
     private static HemosheetReportViewModel BaseVm(HemosheetLayoutProfile profile) =>

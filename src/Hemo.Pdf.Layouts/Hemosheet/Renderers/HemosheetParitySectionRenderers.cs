@@ -29,7 +29,7 @@ internal sealed class SubHeaderBarSectionRenderer : HemosheetSectionRendererBase
   }
 }
 
-internal sealed class TopLayoutSectionRenderer : HemosheetSectionRendererBase
+internal sealed class PredialysisSectionRenderer : HemosheetSectionRendererBase
 {
   public override HemosheetSectionId SectionId => HemosheetSectionId.Predialysis;
 

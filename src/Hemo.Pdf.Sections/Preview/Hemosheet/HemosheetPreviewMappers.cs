@@ -306,16 +306,6 @@ public static class HemosheetPreviewMappers
             leftBlocks.Add(dehydration);
         }
 
-        // ThaiUr keeps Pre Y/N in the top column; Default/Rama use AssessmentPreRe matrix instead.
-        if (vm.LayoutContext.LayoutProfile == HemosheetLayoutProfile.ThaiUr)
-        {
-            var preSymptoms = MapAssessment("อาการก่อนฟอก", vm.Assessments.Pre, ynLayout: true);
-            if (preSymptoms is not null)
-            {
-                leftBlocks.Add(preSymptoms);
-            }
-        }
-
         var prescription = MapPrescription(vm, features);
         if (leftBlocks.Count == 0 && prescription is null)
         {
@@ -458,12 +448,12 @@ public static class HemosheetPreviewMappers
     /// <summary>Post items that are not footer clusters or AVF Y/N rows.</summary>
     public static IList<HemosheetAssessmentItemViewModel> SelectPostBodyItems(
         IList<HemosheetAssessmentItemViewModel> post) =>
-        post.Where(i => !IsFooterPostItem(i) && !IsAvfItem(i)).ToList();
+        HemosheetAssessmentFilters.SelectPostBodyItems(post);
 
     /// <summary>Other items that are not medication footer or nursing care-plan fields.</summary>
     public static IList<HemosheetAssessmentItemViewModel> SelectOtherBodyItems(
         IList<HemosheetAssessmentItemViewModel> other) =>
-        other.Where(i => !IsFooterMedicationItem(i) && !IsNursingCarePlanItem(i)).ToList();
+        HemosheetAssessmentFilters.SelectOtherBodyItems(other);
 
     private static ChecklistTableReportBlock? MapAssessmentGroup(string title, IList<HemosheetAssessmentItemViewModel> items) =>
         MapAssessment(title, items);
@@ -548,46 +538,7 @@ public static class HemosheetPreviewMappers
     }
 
     private static IList<HemosheetAssessmentItemViewModel> FilterAvfItems(IList<HemosheetAssessmentItemViewModel> items) =>
-        items.Where(IsAvfItem).ToList();
-
-    private static bool IsFooterPostItem(HemosheetAssessmentItemViewModel item)
-    {
-        var name = item.Name;
-        if (string.IsNullOrWhiteSpace(name))
-        {
-            return false;
-        }
-
-        return name.StartsWith("complication.", StringComparison.OrdinalIgnoreCase)
-            || name.StartsWith("nursing.", StringComparison.OrdinalIgnoreCase)
-            || name.StartsWith("health.", StringComparison.OrdinalIgnoreCase)
-            || string.Equals(name, "complication", StringComparison.OrdinalIgnoreCase)
-            || string.Equals(name, "nursing", StringComparison.OrdinalIgnoreCase)
-            || string.Equals(name, "health", StringComparison.OrdinalIgnoreCase)
-            || string.Equals(name, "technical", StringComparison.OrdinalIgnoreCase);
-    }
-
-    private static bool IsFooterMedicationItem(HemosheetAssessmentItemViewModel item)
-    {
-        var name = item.Name;
-        if (string.IsNullOrWhiteSpace(name))
-        {
-            return false;
-        }
-
-        return name.StartsWith("medication.", StringComparison.OrdinalIgnoreCase)
-            || string.Equals(name, "medication", StringComparison.OrdinalIgnoreCase);
-    }
-
-    private static bool IsAvfItem(HemosheetAssessmentItemViewModel item) =>
-        item.Name?.Contains("thrill", StringComparison.OrdinalIgnoreCase) == true
-        || item.Name?.Contains("bruit", StringComparison.OrdinalIgnoreCase) == true
-        || item.Name?.Contains("hematoma", StringComparison.OrdinalIgnoreCase) == true;
-
-    private static bool IsNursingCarePlanItem(HemosheetAssessmentItemViewModel item) =>
-        string.Equals(item.Name, "nursing_diagnosis", StringComparison.OrdinalIgnoreCase)
-        || string.Equals(item.Name, "nursing_intervention", StringComparison.OrdinalIgnoreCase)
-        || string.Equals(item.Name, "expected_outcomes", StringComparison.OrdinalIgnoreCase);
+        HemosheetAssessmentFilters.SelectAvfItems(items);
 
     private static string? FindAssessmentText(IList<HemosheetAssessmentItemViewModel> items, string name) =>
         items.FirstOrDefault(i => string.Equals(i.Name, name, StringComparison.OrdinalIgnoreCase))?.Text;

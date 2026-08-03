@@ -30,24 +30,19 @@ internal abstract class HemosheetSectionRendererBase : IHemosheetSectionRenderer
 
     protected static IReadOnlyList<ReportBlock> Single(ReportBlock? block) =>
         block is null ? [] : [block];
-}
 
-internal sealed class PatientSectionRenderer : HemosheetSectionRendererBase
-{
-    public override HemosheetSectionId SectionId => HemosheetSectionId.Patient;
-
-    public override IReadOnlyList<ReportBlock> MapToPreview(
-        HemosheetSectionPlan plan,
-        HemosheetReportViewModel viewModel,
-        PdfReportContext context) =>
-        Single(HemosheetPreviewMappers.MapPatient(viewModel));
-
-    public override void ComposePdf(
-        IContainer container,
-        HemosheetSectionPlan plan,
-        HemosheetReportViewModel viewModel,
-        PdfReportContext context) =>
-        ReportBlockPdfComposer.Compose(container, HemosheetPreviewMappers.MapPatient(viewModel), EmptyContext);
+    internal static void ComposeFieldOrKeyValue(IContainer container, ReportBlock? block)
+    {
+        switch (block)
+        {
+            case FieldGridReportBlock fieldGrid:
+                new FieldGridSection().Compose(container, new FieldGridAdapter(fieldGrid), EmptyContext);
+                break;
+            case KeyValueTableReportBlock keyValue:
+                new KeyValueTableSection().Compose(container, new KeyValueRowsAdapter(keyValue.Title, keyValue.Rows), EmptyContext);
+                break;
+        }
+    }
 }
 
 internal sealed class SessionMetaSectionRenderer : HemosheetSectionRendererBase
@@ -67,65 +62,7 @@ internal sealed class SessionMetaSectionRenderer : HemosheetSectionRendererBase
         PdfReportContext context)
     {
         var block = HemosheetPreviewMappers.MapSessionMeta(viewModel);
-        DehydrationSectionRenderer.ComposeFieldOrKeyValue(container, block);
-    }
-}
-
-internal sealed class DehydrationSectionRenderer : HemosheetSectionRendererBase
-{
-    private readonly KeyValueTableSection _keyValueSection = new();
-    private readonly FieldGridSection _fieldGridSection = new();
-
-    public override HemosheetSectionId SectionId => HemosheetSectionId.Dehydration;
-
-    public override IReadOnlyList<ReportBlock> MapToPreview(
-        HemosheetSectionPlan plan,
-        HemosheetReportViewModel viewModel,
-        PdfReportContext context) =>
-        Single(HemosheetPreviewMappers.MapDehydration(viewModel, viewModel.LayoutContext.Features));
-
-    public override void ComposePdf(
-        IContainer container,
-        HemosheetSectionPlan plan,
-        HemosheetReportViewModel viewModel,
-        PdfReportContext context)
-    {
-        var block = HemosheetPreviewMappers.MapDehydration(viewModel, viewModel.LayoutContext.Features);
         ComposeFieldOrKeyValue(container, block);
-    }
-
-    internal static void ComposeFieldOrKeyValue(IContainer container, ReportBlock? block)
-    {
-        switch (block)
-        {
-            case FieldGridReportBlock fieldGrid:
-                new FieldGridSection().Compose(container, new FieldGridAdapter(fieldGrid), EmptyContext);
-                break;
-            case KeyValueTableReportBlock keyValue:
-                new KeyValueTableSection().Compose(container, new KeyValueRowsAdapter(keyValue.Title, keyValue.Rows), EmptyContext);
-                break;
-        }
-    }
-}
-
-internal sealed class PrescriptionSectionRenderer : HemosheetSectionRendererBase
-{
-    public override HemosheetSectionId SectionId => HemosheetSectionId.Prescription;
-
-    public override IReadOnlyList<ReportBlock> MapToPreview(
-        HemosheetSectionPlan plan,
-        HemosheetReportViewModel viewModel,
-        PdfReportContext context) =>
-        Single(HemosheetPreviewMappers.MapPrescription(viewModel, viewModel.LayoutContext.Features));
-
-    public override void ComposePdf(
-        IContainer container,
-        HemosheetSectionPlan plan,
-        HemosheetReportViewModel viewModel,
-        PdfReportContext context)
-    {
-        var block = HemosheetPreviewMappers.MapPrescription(viewModel, viewModel.LayoutContext.Features);
-        DehydrationSectionRenderer.ComposeFieldOrKeyValue(container, block);
     }
 }
 
@@ -159,7 +96,6 @@ internal sealed class VascularAccessSectionRenderer : HemosheetSectionRendererBa
 
 internal sealed class AssessmentSectionRenderer : HemosheetSectionRendererBase
 {
-    private readonly ChecklistTableSection _section = new();
     private readonly HemosheetSectionId _sectionId;
     private readonly string _title;
     private readonly Func<HemosheetReportViewModel, IList<HemosheetAssessmentItemViewModel>> _itemsSelector;
@@ -282,52 +218,6 @@ internal abstract class DataGridSectionRendererBase : HemosheetSectionRendererBa
     }
 }
 
-internal sealed class NursesInShiftSectionRenderer : HemosheetSectionRendererBase
-{
-    public override HemosheetSectionId SectionId => HemosheetSectionId.NursesInShift;
-
-    public override IReadOnlyList<ReportBlock> MapToPreview(
-        HemosheetSectionPlan plan,
-        HemosheetReportViewModel viewModel,
-        PdfReportContext context)
-    {
-        var textBlock = HemosheetPreviewMappers.MapNursesInShift(viewModel, viewModel.LayoutContext.Features);
-        if (textBlock is null)
-        {
-            return [];
-        }
-
-        return
-        [
-            new TextReportBlock
-            {
-                Title = "พยาบาลเวร",
-                Content = textBlock.Content,
-                Style = textBlock.Style,
-            },
-        ];
-    }
-
-    public override void ComposePdf(
-        IContainer container,
-        HemosheetSectionPlan plan,
-        HemosheetReportViewModel viewModel,
-        PdfReportContext context)
-    {
-        var textBlock = HemosheetPreviewMappers.MapNursesInShift(viewModel, viewModel.LayoutContext.Features);
-        if (textBlock is null)
-        {
-            return;
-        }
-
-        container.Column(col =>
-        {
-            col.Item().Text("พยาบาลเวร").SemiBold();
-            col.Item().Text(textBlock.Content);
-        });
-    }
-}
-
 internal sealed class ConsentSectionRenderer : HemosheetSectionRendererBase
 {
     public override HemosheetSectionId SectionId => HemosheetSectionId.Consent;
@@ -391,22 +281,3 @@ internal sealed class LabsSectionRenderer : HemosheetSectionRendererBase
     }
 }
 
-internal sealed class SignaturesSectionRenderer : HemosheetSectionRendererBase
-{
-    private readonly SignatureBlockSection _section = new();
-
-    public override HemosheetSectionId SectionId => HemosheetSectionId.Signatures;
-
-    public override IReadOnlyList<ReportBlock> MapToPreview(
-        HemosheetSectionPlan plan,
-        HemosheetReportViewModel viewModel,
-        PdfReportContext context) =>
-        Single(SignaturePreviewMapper.Map(context));
-
-    public override void ComposePdf(
-        IContainer container,
-        HemosheetSectionPlan plan,
-        HemosheetReportViewModel viewModel,
-        PdfReportContext context) =>
-        _section.Compose(container, viewModel, context);
-}

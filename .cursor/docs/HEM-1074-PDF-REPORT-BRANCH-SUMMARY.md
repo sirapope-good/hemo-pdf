@@ -205,7 +205,6 @@ assets/
 
 - Viewer เป็น **source copy** ผ่าน sync script — ยังไม่ publish npm package จริง  
 - กติกา visibility อยู่ทั้ง `.trdp` และ `HemosheetLayoutResolver` จนกว่าจะเลิก Telerik  
-- `HemosheetLayoutProfileRegistry.GetSectionOrder` ยัง inert  
 - เมื่อปิด `UseServerFetch` = client-trust DTO (ไม่เหมาะ clinical official)  
 - Dev machine อาจมีปัญหา .NET runtime ผสม (6/8/10) ตอน `dotnet test`
 

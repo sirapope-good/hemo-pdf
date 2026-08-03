@@ -299,7 +299,7 @@ flowchart LR
 - **`HemosheetLayoutPlanner.Plan(vm)`** = สมองตัดสินลำดับ/การแสดง section จาก `LayoutContext.Features` (`showAvPanel`/`showCathPanel`/`showHdfColumns`...), `ReportSettings.FixedLines`, การมีอยู่ของข้อมูล และ profile
 - **`HemosheetSectionId`** = enum ~26 section (Patient, SessionMeta, Dehydration, Prescription, VascularAccess, Assessment×4, Labs, Dialysis/Nurse/Doctor/Medicine/ProgressNote records, NursesInShift, Consent, Signatures, ฯลฯ)
 - **`IHemosheetSectionRenderer`** — แต่ละ section เป็น 1 ไฟล์ที่รู้วิธี emit ทั้ง PDF และ preview (`HemosheetSectionRenderers.cs`, `HemosheetParitySectionRenderers.cs`)
-- **`HemosheetLayoutProfileRegistry`** — Default/Rama/ThaiUr; ปัจจุบัน `GetSectionOrder` คืนลำดับเดียวกันทุก profile (planner สร้างลำดับเอง), profile ใช้จริงแค่ `IsProfileSection` (Consent = Rama เท่านั้น)
+- **`HemosheetLayoutProfileRegistry`** — Default/Rama/ThaiUr; planner owns section order; profile gate is `IsProfileSection` only (Consent = Rama)
 
 **Data scenario ที่ต้องรองรับ** (มี mock ใน `assets/mock-data/`): HD/AV, HDF/AV, HD/perm-cath, RAMA (consent), ThaiUR (nurse-in-shift non-PN)
 
@@ -318,7 +318,7 @@ flowchart LR
 | **Orphan modal** | ลบ `hemo-report-preview-modal` (ไม่มี caller) |
 | **Embedded viewer mount** | ใช้ static `<app-hemo-report-pdf-viewer-host>` แทน dynamic `createComponent` |
 | **Kendo CSS** | โหลดเฉพาะเมื่อใช้ Telerik path (`reports.page`, `embedded-hemosheet-report`) |
-| **โค้ด inert ฝั่ง Hemo-PDF** | ลบ `RequestSignatureStore`, `PageNumberFooterSection`, `SignedReportFooterSection` (รอบก่อนหน้า) |
+| **โค้ด inert ฝั่ง Hemo-PDF** | ลบ `RequestSignatureStore`, `PageNumberFooterSection`, `SignedReportFooterSection`; ลบ `GetSectionOrder` + dead Patient/Dehydration/Prescription/NursesInShift/Signatures section DI |
 
 ### 9.2 ยังเหลือ (ควรจัดการต่อ)
 
@@ -332,7 +332,6 @@ flowchart LR
 | **ThaiUr preview** | FE บังคับ PDF-as-preview สำหรับ `layoutProfile=ThaiUr` | ปิด drift DOM≠PDF สำหรับ profile นี้ |
 | **Client-trust DTO** | เมื่อ `UseServerFetch=true` Hemo-PDF ดึง report-data จาก Web.Api (JWT forward); ปิด flag = กลับ client-trust | เปิด UseServerFetch ใน Dev; production ควรเปิดคู่ flag FE |
 | **Telerik fallback** | `useHemoPdfPreview` + `tr-viewer` ยัง active; plugin send ยังใช้ Report.Api | dual stack จนกว่าจะ cutover |
-| **โค้ดที่ยัง inert (เหลือ)** | `HemosheetLayoutProfileRegistry.GetSectionOrder` | ตัดสินใจ wire หรือลบ |
 | **Layout resolver ทำซ้ำกับ .trdp** | กติกา visibility อยู่ทั้งใน `.trdp` และ `HemosheetLayoutResolver` | sync 2 ที่จนกว่าจะเลิก Telerik |
 | **ยังเป็น copy (ไม่ใช่ package จริง)** | sync script ลด drift แต่ยังเป็น source copy | รัน sync เมื่อ lib เปลี่ยน |
 

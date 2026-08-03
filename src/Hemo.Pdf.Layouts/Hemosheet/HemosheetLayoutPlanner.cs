@@ -1,4 +1,5 @@
 using Hemo.Pdf.Core.Models.Hemosheet;
+using Hemo.Pdf.Sections.Preview.Hemosheet;
 
 namespace Hemo.Pdf.Layouts.Hemosheet;
 
@@ -144,60 +145,21 @@ public sealed class HemosheetLayoutPlanner : IHemosheetLayoutPlanner
         || viewModel.Patient.Allergies.Count > 0;
 
     private static bool HasFooterChecklists(HemosheetReportViewModel viewModel) =>
-        viewModel.Assessments.Post.Any(IsFooterPostItem)
-        || viewModel.Assessments.Other.Any(IsFooterMedicationItem);
+        viewModel.Assessments.Post.Any(HemosheetAssessmentFilters.IsFooterPostItem)
+        || viewModel.Assessments.Other.Any(HemosheetAssessmentFilters.IsFooterMedicationItem);
 
     private static bool HasPostAssessmentBody(HemosheetReportViewModel viewModel) =>
         viewModel.Assessments.Post.Any(i =>
-            !IsFooterPostItem(i)
-            && !IsAvfItem(i));
+            !HemosheetAssessmentFilters.IsFooterPostItem(i)
+            && !HemosheetAssessmentFilters.IsAvfItem(i));
 
     private static bool HasOtherAssessmentBody(HemosheetReportViewModel viewModel) =>
         viewModel.Assessments.Other.Any(i =>
-            !IsFooterMedicationItem(i)
-            && !IsNursingCarePlanItem(i));
-
-    private static bool IsFooterPostItem(HemosheetAssessmentItemViewModel item)
-    {
-        var name = item.Name;
-        if (string.IsNullOrWhiteSpace(name))
-        {
-            return false;
-        }
-
-        return name.StartsWith("complication.", StringComparison.OrdinalIgnoreCase)
-            || name.StartsWith("nursing.", StringComparison.OrdinalIgnoreCase)
-            || name.StartsWith("health.", StringComparison.OrdinalIgnoreCase)
-            || string.Equals(name, "complication", StringComparison.OrdinalIgnoreCase)
-            || string.Equals(name, "nursing", StringComparison.OrdinalIgnoreCase)
-            || string.Equals(name, "health", StringComparison.OrdinalIgnoreCase)
-            || string.Equals(name, "technical", StringComparison.OrdinalIgnoreCase);
-    }
-
-    private static bool IsFooterMedicationItem(HemosheetAssessmentItemViewModel item)
-    {
-        var name = item.Name;
-        if (string.IsNullOrWhiteSpace(name))
-        {
-            return false;
-        }
-
-        return name.StartsWith("medication.", StringComparison.OrdinalIgnoreCase)
-            || string.Equals(name, "medication", StringComparison.OrdinalIgnoreCase);
-    }
-
-    private static bool IsAvfItem(HemosheetAssessmentItemViewModel item) =>
-        item.Name?.Contains("thrill", StringComparison.OrdinalIgnoreCase) == true
-        || item.Name?.Contains("bruit", StringComparison.OrdinalIgnoreCase) == true
-        || item.Name?.Contains("hematoma", StringComparison.OrdinalIgnoreCase) == true;
-
-    private static bool IsNursingCarePlanItem(HemosheetAssessmentItemViewModel item) =>
-        string.Equals(item.Name, "nursing_diagnosis", StringComparison.OrdinalIgnoreCase)
-        || string.Equals(item.Name, "nursing_intervention", StringComparison.OrdinalIgnoreCase)
-        || string.Equals(item.Name, "expected_outcomes", StringComparison.OrdinalIgnoreCase);
+            !HemosheetAssessmentFilters.IsFooterMedicationItem(i)
+            && !HemosheetAssessmentFilters.IsNursingCarePlanItem(i));
 
     private static bool HasNursingCarePlan(HemosheetReportViewModel viewModel) =>
-        viewModel.Assessments.Other.Any(IsNursingCarePlanItem);
+        viewModel.Assessments.Other.Any(HemosheetAssessmentFilters.IsNursingCarePlanItem);
 
     private static bool HasLabData(HemosheetReportViewModel viewModel)
     {
