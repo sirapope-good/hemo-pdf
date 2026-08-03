@@ -1,3 +1,4 @@
+using Hemo.Pdf.Sections.Helpers;
 using QuestPDF.Fluent;
 using QuestPDF.Helpers;
 using QuestPDF.Infrastructure;
@@ -35,7 +36,7 @@ internal static class ThaiUrText
     }
 
     /// <summary>
-    /// Header fill for a section already wrapped in <c>Border</c> — avoids double box around the title.
+    /// Header fill for a section already wrapped in <c>Border</c> - avoids double box around the title.
     /// </summary>
     public static void BlockHeader(this IContainer c, string text)
     {
@@ -63,45 +64,55 @@ internal static class ThaiUrText
         c.PaddingLeft(1f).AlignMiddle().Text(string.IsNullOrWhiteSpace(text) ? "-" : text).Style(Base);
     }
 
+    /// <summary>Like <see cref="Value"/> but empty/whitespace stays blank (no "-").</summary>
+    public static void ValueBlank(this IContainer c, string? text)
+    {
+        c.PaddingLeft(1f).AlignMiddle().Text(string.IsNullOrWhiteSpace(text) ? "" : text).Style(Base);
+    }
+
     public static void ValueCentered(this IContainer c, string? text)
     {
         c.AlignMiddle().AlignCenter().Text(string.IsNullOrWhiteSpace(text) ? "" : text).Style(Base);
     }
 
     public static void Checkbox(this RowDescriptor row, bool isChecked, float sizePt = 8f)
-    {
-        var box = row.ConstantItem(sizePt)
-            .Height(sizePt)
-            .Width(sizePt)
-            .Border(HemosheetThaiUrStyle.BorderWidth)
-            .AlignMiddle()
-            .AlignCenter();
+        => PdfCheckbox.Render(row, isChecked, sizePt);
 
-        // Keep checkbox mark on Sarabun so Docker/Linux never depends on Arial.
-        box.Text(isChecked ? "\u2713" : "\u200B")
-            .FontFamily(HemosheetThaiUrStyle.FontFamily)
-            .FontSize(sizePt * 0.85f)
-            .Bold();
-    }
-
-    public static void YesNo(this IContainer c, string label, bool? yes)
+    /// <summary>
+    /// Label | Y+box | N+box with fixed mm columns (Telerik BottomLeftPanel: 25 | 16 | 17).
+    /// </summary>
+    public static void YesNo(
+        this IContainer c,
+        string label,
+        bool? yes,
+        float labelMm = 25f,
+        float yColMm = 16f,
+        float nColMm = 17f)
     {
         c.Row(r =>
         {
-            r.RelativeItem().AlignMiddle().PaddingLeft(1f).Text(label).Style(Base);
-            r.AutoItem().AlignMiddle().Text("Y").Style(Base);
-            r.ConstantItem(2f);
-            r.Checkbox(yes == true, sizePt: 7f);
-            r.ConstantItem(3f);
-            r.AutoItem().AlignMiddle().Text("N").Style(Base);
-            r.ConstantItem(2f);
-            r.Checkbox(yes == false, sizePt: 7f);
+            r.ConstantItem(labelMm, Unit.Millimetre).AlignMiddle().PaddingLeft(1f).Text(label).Style(Base);
+            YnCell(r, yColMm, "Y", yes == true);
+            YnCell(r, nColMm, "N", yes == false);
         });
     }
 
+    private static void YnCell(RowDescriptor row, float widthMm, string letter, bool isChecked)
+    {
+        row.ConstantItem(widthMm, Unit.Millimetre).AlignMiddle().Row(yn =>
+        {
+            yn.ConstantItem(2f);
+            yn.AutoItem().AlignMiddle().Text(letter).Style(Base);
+            yn.ConstantItem(3f);
+            yn.Checkbox(isChecked, sizePt: 7f);
+            yn.RelativeItem();
+        });
+    }
+
+    /// <summary>Checkbox + label. Parent supplies row height (fixed or ExtendVertical + MinHeight).</summary>
     public static void CheckLine(this IContainer c, string label, bool isChecked)
     {
-        c.Height(HemosheetThaiUrStyle.CheckRowHeightMm, Unit.Millimetre).AlignMiddle().Row(r =>
+        c.AlignMiddle().Row(r =>
         {
             r.Checkbox(isChecked, sizePt: 6.5f);
             r.ConstantItem(2f);

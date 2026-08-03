@@ -176,6 +176,8 @@ public sealed class HemosheetDoctorRecordViewModel
 
 public sealed class HemosheetProgressNoteViewModel
 {
+    /// <summary>Nurse Processing Focus → ThaiUR Nursing Diagnosis.</summary>
+    public string? Focus { get; init; }
     public string? A { get; init; }
     public string? I { get; init; }
     public string? E { get; init; }

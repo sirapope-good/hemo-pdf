@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;600;700&display=swap');
+﻿@import url('https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;600;700&display=swap');
 
 .hemo-report-viewer {
   --hemo-font: 'Sarabun', 'Segoe UI', sans-serif;
@@ -74,7 +74,7 @@
   flex: 1;
   overflow: auto;
   padding: 1rem;
-  /* Do not use flex centering here — scaled overflow must stay inside scrollable bounds. */
+  /* Do not use flex centering here โ€” scaled overflow must stay inside scrollable bounds. */
 }
 
 .hemo-report-viewer__scale-slot {
@@ -326,17 +326,11 @@
 }
 
 .hemo-checklist-table__box {
-  display: inline-flex;
+  display: inline-block;
   width: 8pt;
   height: 8pt;
-  border: var(--hemo-border-width) solid var(--hemo-border);
-  align-items: center;
-  justify-content: center;
-  font-family: Arial, sans-serif;
-  font-size: 6.5pt;
-  font-weight: 700;
-  line-height: 1;
-  background: #fff;
+  vertical-align: middle;
+  flex-shrink: 0;
 }
 
 .hemo-signature-block__slots {

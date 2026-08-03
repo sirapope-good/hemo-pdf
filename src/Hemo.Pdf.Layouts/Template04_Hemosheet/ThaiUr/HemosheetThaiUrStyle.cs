@@ -25,6 +25,10 @@ internal static class HemosheetThaiUrStyle
     public const int DialysisNoteMaxLines = 4;
     /// <summary>Slightly tighter than data rows so checkbox bands fit one A4 page.</summary>
     public const float CheckRowHeightMm = 4.2f;
+    /// <summary>Post-assessment checklist rows (Complication / Nursing / Health) — a touch airier.</summary>
+    public const float PostCheckRowHeightMm = 4.5f;
+    /// <summary>Post Vital / AVF / signature strip under notes.</summary>
+    public const float PostStripRowHeightMm = 5.2f;
     public const float HeaderBarHeightMm = 5.0f;
     public const float TitleHeightMm = 18.4f;
     public const float PageMarginMm = 2f;

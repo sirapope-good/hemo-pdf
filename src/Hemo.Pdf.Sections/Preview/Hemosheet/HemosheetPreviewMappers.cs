@@ -690,15 +690,15 @@ public static class HemosheetPreviewMappers
     public static DataGridReportBlock? MapProgressNotes(HemosheetReportViewModel vm, int fixedLineCount)
     {
         var rows = vm.ProgressNotes
-            .Select(r => (IReadOnlyList<string>) [r.A ?? "—", r.I ?? "—", r.E ?? "—"])
+            .Select(r => (IReadOnlyList<string>) [r.Focus ?? "—", r.A ?? "—", r.I ?? "—", r.E ?? "—"])
             .ToList();
 
-        PadRows(rows, fixedLineCount, 3);
+        PadRows(rows, fixedLineCount, 4);
 
         return new DataGridReportBlock
         {
             Title = "Progress Note",
-            Columns = ["A", "I", "E"],
+            Columns = ["Focus", "A", "I", "E"],
             Rows = rows,
         };
     }

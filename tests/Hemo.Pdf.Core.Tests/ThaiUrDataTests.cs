@@ -141,4 +141,160 @@ public class ThaiUrDataTests
         Assert.Equal("120/80", ThaiUrData.Bp(120, 80));
         Assert.Equal("-/-", ThaiUrData.Bp(null, null));
     }
+
+
+    [Theory]
+    [InlineData("pale", "pale", true)]
+    [InlineData("vas:edema", "edema", true)]
+    [InlineData("vas:av:thrill", "thrill", true)]
+    [InlineData("inflame", "inflame", true)]
+    [InlineData("crep", "crep", true)]
+    [InlineData("inf", "inf", true)]
+    [InlineData("head", "headache", false)]
+    [InlineData("bruit", "thrill", false)]
+    public void NameMatches_SupportsSeedAndAliasKeys(string name, string key, bool expected)
+    {
+        Assert.Equal(expected, ThaiUrData.NameMatches(name, key));
+    }
+
+    [Fact]
+    public void PreState_MatchesThaiUrShortKeysAndSeedNames()
+    {
+        var vm = new HemosheetReportViewModel
+        {
+            Assessments = new HemosheetAssessmentsViewModel
+            {
+                Pre =
+                [
+                    new() { Name = "head", Checked = true },
+                    new() { Name = "inflame", Checked = false },
+                    new() { Name = "pale", Checked = true },
+                    new() { Name = "crep", Checked = true },
+                    new() { Name = "dys", Checked = false },
+                    new() { Name = "pbleed", Checked = true },
+                    new() { Name = "inf", Checked = true },
+                ],
+            },
+        };
+
+        Assert.True(ThaiUrData.PreState(vm, "head", "headache"));
+        Assert.False(ThaiUrData.PreState(vm, "inflame", "inflamation"));
+        Assert.True(ThaiUrData.PreState(vm, "pale"));
+        Assert.True(ThaiUrData.PreState(vm, "crep", "crepitatic"));
+        Assert.False(ThaiUrData.PreState(vm, "dyspnea", "dys"));
+        Assert.True(ThaiUrData.PreState(vm, "pbleed", "bleeding"));
+        Assert.True(ThaiUrData.PreState(vm, "inf", "inflame"));
+        Assert.Null(ThaiUrData.PreState(vm, "urine"));
+    }
+
+    [Fact]
+    public void PreOrOtherState_ReadsUrineFromOtherBucket()
+    {
+        var vm = new HemosheetReportViewModel
+        {
+            Assessments = new HemosheetAssessmentsViewModel
+            {
+                Other = [new() { Name = "urine", Checked = true }],
+            },
+        };
+
+        Assert.Null(ThaiUrData.PreState(vm, "urine"));
+        Assert.True(ThaiUrData.PreOrOtherState(vm, "urine"));
+    }
+
+    [Fact]
+    public void Checked_MatchesSelectedOptionsDisplayNames_FromLiveBeShape()
+    {
+        var vm = new HemosheetReportViewModel
+        {
+            Assessments = new HemosheetAssessmentsViewModel
+            {
+                Post =
+                [
+                    new()
+                    {
+                        Name = "complication",
+                        Checked = true,
+                        SelectedOptions = ["Hypo-tension", "Fever", "No complication"],
+                    },
+                    new()
+                    {
+                        Name = "nursing",
+                        Checked = true,
+                        SelectedOptions = ["Monitor vital signs", "Psychological support"],
+                    },
+                    new()
+                    {
+                        Name = "health",
+                        Checked = true,
+                        SelectedOptions = ["Personal hygiene", "KT preparation"],
+                    },
+                ],
+            },
+        };
+
+        Assert.True(ThaiUrData.Checked(vm, "Hypotension"));
+        Assert.True(ThaiUrData.Checked(vm, "Fever"));
+        Assert.True(ThaiUrData.Checked(vm, "No complication"));
+        Assert.False(ThaiUrData.Checked(vm, "Hypertension"));
+        Assert.True(ThaiUrData.Checked(vm, "Monitor V/S"));
+        Assert.True(ThaiUrData.Checked(vm, "Phycho support"));
+        Assert.True(ThaiUrData.Checked(vm, "Personal hygine"));
+        Assert.True(ThaiUrData.Checked(vm, "KT"));
+        Assert.False(ThaiUrData.Checked(vm, "Nutrition"));
+    }
+
+    [Fact]
+    public void TokenEquals_NormalizesHypoTensionSpelling()
+    {
+        Assert.True(ThaiUrData.TokenEquals("Hypo-tension", "Hypotension"));
+        Assert.True(ThaiUrData.TokenEquals("Hypo-tension", "Hypo-tension")); // exact
+        Assert.True(ThaiUrData.Checked(new HemosheetReportViewModel
+        {
+            Assessments = new HemosheetAssessmentsViewModel
+            {
+                Post = [new() { Name = "complication", Checked = true, SelectedOptions = ["Nausea/Vomit"] }],
+            },
+        }, "Nausea / Vomitting")); // alias table bridges spelling
+        Assert.False(ThaiUrData.TokenEquals("Monitor vital signs", "Monitor V/S"));
+    }
+
+
+    [Fact]
+    public void NursingPlanRows_MapsFocusInterventionEvaluation_AndExpandsNewlines()
+    {
+        var vm = new HemosheetReportViewModel
+        {
+            ProgressNotes =
+            [
+                new()
+                {
+                    Focus = "Diagnosis A",
+                    I = "Intervene 1\nIntervene 2",
+                    E = "Outcome 1",
+                },
+                new()
+                {
+                    Focus = "Diagnosis B",
+                    I = "Intervene B",
+                    E = "Outcome B1\nOutcome B2",
+                },
+            ],
+        };
+
+        var rows = ThaiUrData.NursingPlanRows(vm);
+        Assert.Equal(4, rows.Count);
+        Assert.Equal(("Diagnosis A", "Intervene 1", "Outcome 1"), rows[0]);
+        Assert.Equal(("", "Intervene 2", ""), rows[1]);
+        Assert.Equal(("Diagnosis B", "Intervene B", "Outcome B1"), rows[2]);
+        Assert.Equal(("", "", "Outcome B2"), rows[3]);
+    }
+
+    [Fact]
+    public void NursingPlanRows_EmptyNotes_YieldsBlankPlaceholderRow()
+    {
+        var rows = ThaiUrData.NursingPlanRows(new HemosheetReportViewModel());
+        Assert.Single(rows);
+        Assert.Equal(("", "", ""), rows[0]);
+    }
 }

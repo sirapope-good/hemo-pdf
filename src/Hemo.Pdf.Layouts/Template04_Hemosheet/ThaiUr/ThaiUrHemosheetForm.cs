@@ -233,11 +233,7 @@ internal sealed class ThaiUrHemosheetForm
             LabeledValueUnit(col, "RR", ThaiUrData.Num(p?.Rr), "bpm");
             LabeledValueUnit(col, "BT", ThaiUrData.Num(p?.Temp), "\u00B0C");
             LabeledValueUnit(col, "Sat", ThaiUrData.Num(p?.SpO2), "%");
-            col.Item().Height(Rh, Mm).Row(r =>
-            {
-                r.ConstantItem(14, Mm).Label("Urine");
-                r.Checkbox(ThaiUrData.PreState(vm, "urine") == true);
-            });
+            col.Item().Height(Rh, Mm).YesNo("Urine", ThaiUrData.PreOrOtherState(vm, "urine"), labelMm: 14f, yColMm: 14f, nColMm: 14f);
         });
     }
 
@@ -251,22 +247,23 @@ internal sealed class ThaiUrHemosheetForm
         });
     }
 
+    // Keys: default seed Name + ThaiUR/Telerik short keys (from Hemosheet-ThaiUR.trdp).
     private static readonly (string Label, string[] Keys)[] SymptomRows =
     [
         ("Pale", ["pale"]),
         ("Edema", ["edema"]),
-        ("Dyspnea", ["dyspnea"]),
+        ("Dyspnea", ["dyspnea", "dys"]),
         ("Fever", ["fever"]),
-        ("Crepitatic", ["crepitatic", "crepitation"]),
-        ("Headache", ["headache"]),
-        ("Nausea/Vomitting", ["nausea", "vomit", "vomitting"]),
-        ("Anorexia", ["anorexia"]),
-        ("Itching", ["itching"]),
-        ("Engorged neck vein", ["engorged", "neckvein"]),
-        ("Anxiety", ["anxiety"]),
+        ("Crepitatic", ["crep", "crepitatic", "crepitation"]),
+        ("Headache", ["head", "headache"]),
+        ("Nausea/Vomitting", ["vomit", "nausea", "vomitting"]),
+        ("Anorexia", ["ano", "anorexia", "oral"]),
+        ("Itching", ["itch", "itching"]),
+        ("Engorged neck vein", ["neck", "engorged", "neckvein"]),
+        ("Anxiety", ["anxiety", "psycho"]),
         ("Sleep disturbance", ["sleep"]),
-        ("Constipation", ["constipation"]),
-        ("Prolong bleeding", ["prolong", "bleeding"]),
+        ("Constipation", ["cons", "constipation"]),
+        ("Prolong bleeding", ["pbleed", "bleeding", "prolong"]),
     ];
 
     private static void Symptoms(IContainer c, HemosheetReportViewModel vm)
@@ -321,10 +318,11 @@ internal sealed class ThaiUrHemosheetForm
                 .Text($"A {ThaiUrData.Num(vm.AvShunt.ANeedleSize)}").Style(ThaiUrText.Base);
             col.Item().Height(Rh, Mm).PaddingLeft(1f).AlignMiddle()
                 .Text($"V {ThaiUrData.Num(vm.AvShunt.VNeedleSize)}").Style(ThaiUrText.Base);
-            col.Item().Height(Rh, Mm).PaddingLeft(1f).YesNo("Thrill", ThaiUrData.PreState(vm, "thrill", "vas:av:thrill"));
-            col.Item().Height(Rh, Mm).PaddingLeft(1f).YesNo("Bruit", ThaiUrData.PreState(vm, "bruit", "vas:av:bruit"));
-            col.Item().Height(Rh, Mm).PaddingLeft(1f).YesNo("Edema", ThaiUrData.PreState(vm, "vas:edema", "edema"));
-            col.Item().Height(Rh, Mm).PaddingLeft(1f).YesNo("Inflamation", ThaiUrData.PreState(vm, "vas:inflammation", "inflamation"));
+            // Narrow Vascular Access column (~42mm): tighter Y/N columns than symptom panel.
+            col.Item().Height(Rh, Mm).YesNo("Thrill", ThaiUrData.PreState(vm, "thrill", "vas:av:thrill"), 14f, 13f, 13f);
+            col.Item().Height(Rh, Mm).YesNo("Bruit", ThaiUrData.PreState(vm, "bruit", "vas:av:bruit"), 14f, 13f, 13f);
+            col.Item().Height(Rh, Mm).YesNo("Edema", ThaiUrData.PreState(vm, "edema", "vas:edema"), 14f, 13f, 13f);
+            col.Item().Height(Rh, Mm).YesNo("Inflamation", ThaiUrData.PreState(vm, "inf", "inflame", "inflamation", "vas:inflammation"), 14f, 13f, 13f);
             col.Item().Height(HemosheetThaiUrStyle.SectionBreathingMm, Mm);
         });
     }
@@ -417,11 +415,11 @@ internal sealed class ThaiUrHemosheetForm
         {
             r.ConstantItem(18, Mm).Label(label);
             r.Checkbox(yes == true);
-            r.ConstantItem(1.5f);
+            r.ConstantItem(2.5f);
             r.AutoItem().AlignMiddle().Text("Yes").Style(ThaiUrText.Base);
-            r.ConstantItem(3f);
+            r.ConstantItem(6f);
             r.Checkbox(yes == false);
-            r.ConstantItem(1.5f);
+            r.ConstantItem(2.5f);
             r.AutoItem().AlignMiddle().Text("No").Style(ThaiUrText.Base);
             r.RelativeItem();
         });
@@ -477,6 +475,8 @@ internal sealed class ThaiUrHemosheetForm
 
     private static void NursingPlan(IContainer c, HemosheetReportViewModel vm)
     {
+        // Source: Nurse Processing (Progress Notes) — Focus / I / E, not assessments.Other.
+        var planRows = ThaiUrData.NursingPlanRows(vm);
         c.Table(t =>
         {
             t.ColumnsDefinition(cols =>
@@ -489,9 +489,13 @@ internal sealed class ThaiUrHemosheetForm
             t.Cell().HeaderBar("Nursing Intervention");
             t.Cell().HeaderBar("Expected Outcomes");
 
-                t.Cell().Border(Bw).MinHeight(7, Mm).Value(ThaiUrData.OtherText(vm, "nursing_diagnosis"));
-            t.Cell().Border(Bw).MinHeight(7, Mm).Value(ThaiUrData.OtherText(vm, "nursing_intervention"));
-            t.Cell().Border(Bw).MinHeight(7, Mm).Value(ThaiUrData.OtherText(vm, "expected_outcomes"));
+            foreach (var (diagnosis, intervention, outcome) in planRows)
+            {
+                // Single-line rows stay near Rh; multi-line cells still grow past MinHeight.
+                t.Cell().Border(Bw).MinHeight(Rh, Mm).ValueBlank(diagnosis);
+                t.Cell().Border(Bw).MinHeight(Rh, Mm).ValueBlank(intervention);
+                t.Cell().Border(Bw).MinHeight(Rh, Mm).ValueBlank(outcome);
+            }
         });
     }
 

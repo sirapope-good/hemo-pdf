@@ -44,8 +44,9 @@ internal static class ThaiUrHemosheetFooter
     public static void Compose(IContainer c, HemosheetReportViewModel vm)
     {
         // Left block = Complication | Nursing, with Nephrologist spanning both (long doctor names).
-        // Right block = Health | Med, then Pre/Post (reserved 2–3 lines), then vitals/signatures
-        // snapped to the bottom of the band so the page fills evenly.
+        // Right block = Health | Med, then Pre/Post, then vitals/signatures.
+        // Content-sized only — no ExtendVertical here (footer lives under ShowEntire with
+        // unconstrained column height; ExtendVertical causes DocumentLayoutException).
         c.Row(row =>
         {
             row.ConstantItem(76, Mm).Border(Bw).Element(left => AssessmentAndNephrologistColumn(left, vm));
@@ -53,18 +54,32 @@ internal static class ThaiUrHemosheetFooter
         });
     }
 
+    private static float CheckPanelHeightMm(string[] items, string[]? items2)
+    {
+        var rh = HemosheetThaiUrStyle.PostCheckRowHeightMm;
+        var h = HemosheetThaiUrStyle.HeaderBarHeightMm + items.Length * rh;
+        if (items2 is not null)
+            h += HemosheetThaiUrStyle.HeaderBarHeightMm + items2.Length * rh;
+        return h;
+    }
+
     private static void AssessmentAndNephrologistColumn(IContainer c, HemosheetReportViewModel vm)
     {
+        // Match panel heights via MinHeight (taller of Complication+Technical vs Nursing).
+        var panelMm = Math.Max(
+            CheckPanelHeightMm(ComplicationItems, TechnicalItems),
+            CheckPanelHeightMm(NursingItems, null));
+
         c.Column(col =>
         {
-            col.Item().Row(r =>
+            col.Item().MinHeight(panelMm, Mm).Row(r =>
             {
-                r.RelativeItem().AlignTop().Border(Bw).Element(cp =>
+                r.RelativeItem().Border(Bw).MinHeight(panelMm, Mm).Element(cp =>
                     CheckGroup(cp, vm, "Complication", ComplicationItems, "Technical complication", TechnicalItems));
-                r.RelativeItem().AlignTop().Border(Bw).Element(nm =>
+                r.RelativeItem().Border(Bw).MinHeight(panelMm, Mm).Element(nm =>
                     CheckGroup(nm, vm, "Nursing management", NursingItems, null, null));
             });
-            col.Item().ExtendVertical().AlignBottom().Border(Bw).Height(Rh, Mm).Row(r =>
+            col.Item().Border(Bw).Height(HemosheetThaiUrStyle.PostStripRowHeightMm, Mm).Row(r =>
             {
                 r.ConstantItem(24, Mm).LabelBold("Nephrologist");
                 r.RelativeItem().Value(vm.DoctorName ?? vm.Patient.DoctorName);
@@ -82,53 +97,56 @@ internal static class ThaiUrHemosheetFooter
                 r.RelativeItem().AlignTop().Border(Bw).Element(med => MedicationTable(med, vm));
             });
             col.Item().Element(n => PrePostHdNotes(n, vm));
-            // Push vitals/signatures to the bottom of this column (aligns with Nephrologist).
-            col.Item().ExtendVertical().AlignBottom().Element(bottom =>
+            col.Item().Element(pv => PostVital(pv, vm));
+            col.Item().Element(av => AvfRow(av, vm));
+            col.Item().Border(Bw).Height(HemosheetThaiUrStyle.PostStripRowHeightMm, Mm).Row(r =>
             {
-                bottom.Column(stack =>
-                {
-                    stack.Item().Element(pv => PostVital(pv, vm));
-                    stack.Item().Element(av => AvfRow(av, vm));
-                    stack.Item().Border(Bw).Height(Rh, Mm).Row(r =>
-                    {
-                        r.ConstantItem(28, Mm).LabelBold("Dialysis Nurse");
-                        r.RelativeItem().Value(vm.NursesInShiftNonPn);
-                    });
-                    stack.Item().Border(Bw).Height(Rh, Mm).Row(r =>
-                    {
-                        r.ConstantItem(28, Mm).LabelBold("Dialysis NA");
-                        r.RelativeItem().Value(vm.NursesInShift);
-                    });
-                });
+                r.ConstantItem(28, Mm).LabelBold("Dialysis Nurse");
+                r.RelativeItem().Value(vm.NursesInShiftNonPn);
+            });
+            col.Item().Border(Bw).Height(HemosheetThaiUrStyle.PostStripRowHeightMm, Mm).Row(r =>
+            {
+                r.ConstantItem(28, Mm).LabelBold("Dialysis NA");
+                r.RelativeItem().Value(vm.NursesInShift);
             });
         });
     }
 
     private static void CheckGroup(IContainer c, HemosheetReportViewModel vm, string title, string[] items, string? title2, string[]? items2)
     {
-        // No per-item borders — Telerik places free checkboxes in a panel (outer box only).
+        var rh = HemosheetThaiUrStyle.PostCheckRowHeightMm;
         c.Column(col =>
         {
             col.Item().HeaderBar(title);
             foreach (var item in items)
-                col.Item().PaddingLeft(1f).CheckLine(item, ThaiUrData.Checked(vm, item));
+            {
+                col.Item().Height(rh, Mm).PaddingLeft(1f)
+                    .CheckLine(item, ThaiUrData.Checked(vm, item));
+            }
 
             if (title2 is not null && items2 is not null)
             {
                 col.Item().HeaderBar(title2);
                 foreach (var item in items2)
-                    col.Item().PaddingLeft(1f).CheckLine(item, ThaiUrData.Checked(vm, item));
+                {
+                    col.Item().Height(rh, Mm).PaddingLeft(1f)
+                        .CheckLine(item, ThaiUrData.Checked(vm, item));
+                }
             }
         });
     }
 
     private static void HealthEducation(IContainer c, HemosheetReportViewModel vm)
     {
+        var minRh = HemosheetThaiUrStyle.PostCheckRowHeightMm;
         c.Column(col =>
         {
             col.Item().HeaderBar("Health education");
             foreach (var item in HealthItems)
-                col.Item().PaddingLeft(1f).CheckLine(item, ThaiUrData.Checked(vm, item));
+            {
+                col.Item().Height(minRh, Mm).PaddingLeft(1f)
+                    .CheckLine(item, ThaiUrData.Checked(vm, item));
+            }
         });
     }
 
@@ -145,9 +163,14 @@ internal static class ThaiUrHemosheetFooter
                     cols.ConstantColumn(16, Mm);
                     cols.ConstantColumn(14, Mm);
                 });
-                t.Cell().Border(Bw).AlignCenter().Text("Name/Dose/Route").Style(ThaiUrText.Bold);
-                t.Cell().Border(Bw).AlignCenter().Text("Time").Style(ThaiUrText.Bold);
-                t.Cell().Border(Bw).AlignCenter().Text("Sign").Style(ThaiUrText.Bold);
+                // Column header row needs explicit height + AlignMiddle (text-only cells collapse too short).
+                const float medColHeaderMm = 5.5f;
+                t.Cell().Border(Bw).Height(medColHeaderMm, Mm).AlignMiddle().AlignCenter()
+                    .Text("Name/Dose/Route").Style(ThaiUrText.Bold);
+                t.Cell().Border(Bw).Height(medColHeaderMm, Mm).AlignMiddle().AlignCenter()
+                    .Text("Time").Style(ThaiUrText.Bold);
+                t.Cell().Border(Bw).Height(medColHeaderMm, Mm).AlignMiddle().AlignCenter()
+                    .Text("Sign").Style(ThaiUrText.Bold);
 
                 var lines = Math.Max(vm.LayoutContext.ReportSettings.FixedLines.Medicine, vm.MedicineRecords.Count);
                 if (lines <= 0) lines = 2;
@@ -206,46 +229,73 @@ internal static class ThaiUrHemosheetFooter
     private static void PostVital(IContainer c, HemosheetReportViewModel vm)
     {
         var p = vm.PostVital;
-        c.Border(Bw).Height(Rh, Mm).PaddingHorizontal(1f).Row(r =>
+        var h = HemosheetThaiUrStyle.PostStripRowHeightMm;
+        c.Table(t =>
         {
-            r.ConstantItem(18, Mm).LabelBold("Post Vital");
-            PostVitalItem(r, "BP", ThaiUrData.Bp(p?.Bps, p?.Bpd));
-            PostVitalItem(r, "PR", ThaiUrData.Num(p?.Hr));
-            PostVitalItem(r, "RR", ThaiUrData.Num(p?.Rr));
-            PostVitalItem(r, "BT", $"{ThaiUrData.Num(p?.Temp)} \u00B0C");
-            PostVitalItem(r, "Sat", $"{ThaiUrData.Num(p?.SpO2)} %");
+            t.ColumnsDefinition(cols =>
+            {
+                cols.ConstantColumn(18, Mm);
+                cols.RelativeColumn();
+                cols.RelativeColumn();
+                cols.RelativeColumn();
+                cols.RelativeColumn();
+                cols.RelativeColumn();
+            });
+            t.Cell().Border(Bw).Height(h, Mm).AlignMiddle().PaddingLeft(1f)
+                .Text("Post Vital").Style(ThaiUrText.Bold);
+            PostVitalCell(t, h, "BP", ThaiUrData.Bp(p?.Bps, p?.Bpd));
+            PostVitalCell(t, h, "PR", ThaiUrData.Num(p?.Hr));
+            PostVitalCell(t, h, "RR", ThaiUrData.Num(p?.Rr));
+            PostVitalCell(t, h, "BT", $"{ThaiUrData.Num(p?.Temp)} \u00B0C");
+            PostVitalCell(t, h, "Sat", $"{ThaiUrData.Num(p?.SpO2)} %");
+        });
+    }
+
+    private static void PostVitalCell(TableDescriptor t, float heightMm, string label, string value)
+    {
+        t.Cell().Border(Bw).Height(heightMm, Mm).AlignMiddle().PaddingHorizontal(1f).Row(inner =>
+        {
+            inner.AutoItem().AlignMiddle().Text($"{label} ").Style(ThaiUrText.Bold);
+            inner.RelativeItem().AlignMiddle()
+                .Text(string.IsNullOrWhiteSpace(value) ? "-" : value).Style(ThaiUrText.Base);
         });
     }
 
     private static void AvfRow(IContainer c, HemosheetReportViewModel vm)
     {
-        c.Border(Bw).Height(Rh, Mm).PaddingLeft(1f).Row(r =>
+        // One bordered cell per checkbox (matches Telerik AVF/AVG strip).
+        var h = HemosheetThaiUrStyle.PostStripRowHeightMm;
+        c.Table(t =>
         {
-            r.ConstantItem(14, Mm).LabelBold("AVF/AVG");
-            AvfCheck(r, "Thrill", ThaiUrData.PostState(vm, "thrill", "vas:av:thrill", "post:thrill"));
-            AvfCheck(r, "Bruit", ThaiUrData.PostState(vm, "bruit", "vas:av:bruit", "post:bruit"));
-            AvfCheck(r, "Hematoma", ThaiUrData.PostState(vm, "hematoma", "hema", "vas:hematoma"));
-            AvfCheck(r, "Stop Bleeding > 20 min", ThaiUrData.PostState(vm, "sb", "stop bleeding", "stopbleeding", "vas:sb"));
-            r.RelativeItem().AlignMiddle().AlignRight().PaddingRight(2f)
+            t.ColumnsDefinition(cols =>
+            {
+                cols.ConstantColumn(16, Mm);
+                cols.RelativeColumn();
+                cols.RelativeColumn();
+                cols.RelativeColumn();
+                cols.RelativeColumn(1.5f);
+                cols.ConstantColumn(18, Mm);
+            });
+            t.Cell().Border(Bw).Height(h, Mm).AlignMiddle().PaddingLeft(1f)
+                .Text("AVF/AVG").Style(ThaiUrText.Bold);
+            AvfCell(t, h, "Thrill", ThaiUrData.PostState(vm, "thrill", "vas:av:thrill", "post:thrill"));
+            AvfCell(t, h, "Bruit", ThaiUrData.PostState(vm, "bruit", "vas:av:bruit", "post:bruit"));
+            AvfCell(t, h, "Hematoma", ThaiUrData.PostState(vm, "hematoma", "hema", "vas:hematoma"));
+            AvfCell(t, h, "Stop Bleeding > 20 min",
+                ThaiUrData.PostState(vm, "sb", "stop bleeding", "stopbleeding", "vas:sb"));
+            t.Cell().Border(Bw).Height(h, Mm).AlignMiddle().AlignCenter()
                 .Text($"A{ThaiUrData.Num(vm.AvShunt.ANeedleSize)}/V{ThaiUrData.Num(vm.AvShunt.VNeedleSize)}")
                 .Style(ThaiUrText.Base);
         });
     }
 
-    private static void AvfCheck(RowDescriptor r, string label, bool? yes)
+    private static void AvfCell(TableDescriptor t, float heightMm, string label, bool? yes)
     {
-        r.AutoItem().AlignMiddle().Text(label).Style(ThaiUrText.UnitText);
-        r.ConstantItem(1.5f);
-        r.Checkbox(yes == true, sizePt: 6.5f);
-        r.ConstantItem(3f);
-    }
-
-    private static void PostVitalItem(RowDescriptor r, string label, string value)
-    {
-        r.RelativeItem().PaddingHorizontal(1f).Row(inner =>
+        t.Cell().Border(Bw).Height(heightMm, Mm).AlignMiddle().PaddingHorizontal(1.5f).Row(r =>
         {
-            inner.AutoItem().AlignMiddle().Text($"{label} ").Style(ThaiUrText.Bold);
-            inner.RelativeItem().AlignMiddle().Text(string.IsNullOrWhiteSpace(value) ? "-" : value).Style(ThaiUrText.Base);
+            r.RelativeItem().AlignMiddle().Text(label).Style(ThaiUrText.Base);
+            r.ConstantItem(2f);
+            r.Checkbox(yes == true, sizePt: 6.5f);
         });
     }
 }

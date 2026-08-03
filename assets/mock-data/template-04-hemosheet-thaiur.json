@@ -68,17 +68,48 @@
   },
   "assessments": {
     "pre": [
-      { "name": "pain", "checked": false, "text": "" },
+      { "name": "pale", "checked": true, "text": "" },
+      { "name": "edema", "checked": true, "text": "" },
+      { "name": "dys", "checked": false, "text": "" },
+      { "name": "fever", "checked": false, "text": "" },
+      { "name": "crep", "checked": true, "text": "" },
+      { "name": "head", "checked": true, "text": "" },
+      { "name": "vomit", "checked": false, "text": "" },
+      { "name": "ano", "checked": false, "text": "" },
+      { "name": "itch", "checked": true, "text": "" },
+      { "name": "neck", "checked": false, "text": "" },
+      { "name": "anxiety", "checked": false, "text": "" },
+      { "name": "sleep", "checked": true, "text": "" },
+      { "name": "cons", "checked": false, "text": "" },
+      { "name": "pbleed", "checked": false, "text": "" },
       { "name": "thrill", "checked": true, "text": "" },
       { "name": "bruit", "checked": true, "text": "" },
-      { "name": "vas:edema", "checked": false, "text": "" }
+      { "name": "vas:edema", "checked": false, "text": "" },
+      { "name": "inf", "checked": false, "text": "" }
     ],
     "re": [],
     "post": [
-      { "name": "complication.no", "checked": true, "text": "No complication" },
-      { "name": "nursing.monitor_vs", "checked": true, "text": "Monitor V/S" }
+      {
+        "name": "complication",
+        "checked": true,
+        "text": "",
+        "selectedOptions": ["Hypo-tension", "No complication"]
+      },
+      {
+        "name": "nursing",
+        "checked": true,
+        "text": "",
+        "selectedOptions": ["Monitor vital signs"]
+      },
+      {
+        "name": "health",
+        "checked": true,
+        "text": "",
+        "selectedOptions": ["Nutrition", "Fluid control"]
+      }
     ],
     "other": [
+      { "name": "urine", "checked": true, "text": "800" },
       { "name": "nursing_diagnosis", "checked": true, "text": "เฝ้าระวังComplication ระหว่างฟอกเลือดด้วยเครื่องไตเทียม" },
       { "name": "nursing_intervention", "checked": true, "text": "ดูแลผู้ป่วยขณะฟอกเลือด สังเกตอาการผิดปกติ" },
       { "name": "expected_outcomes", "checked": true, "text": "ไม่เกิดภาวะแทรกซ้อน จากการฟอกเลือด" }
@@ -97,7 +128,14 @@
   "nurseRecords": [],
   "doctorRecords": [],
   "medicineRecords": [],
-  "progressNotes": [],
+  "progressNotes": [
+    {
+      "focus": "เฝ้าระวังComplication ระหว่างฟอกเลือดด้วยเครื่องไตเทียม",
+      "a": "BP สูง",
+      "i": "Monitor V/S\nTrendelenburg position",
+      "e": "ไม่เกิดภาวะแทรกซ้อน\nผู้ป่วยปลอดภัย"
+    }
+  ],
   "labs": { "hct": "-", "hb": "-" },
   "signatureNames": {},
   "layoutContext": {
