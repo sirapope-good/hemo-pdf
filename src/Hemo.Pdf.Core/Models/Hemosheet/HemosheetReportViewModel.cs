@@ -152,6 +152,7 @@ public sealed class HemosheetDialysisRecordViewModel
     public int? Hr { get; init; }
     public int? Rr { get; init; }
     public float? Bfr { get; init; }
+    public int? Ap { get; init; }
     public float? Vp { get; init; }
     public float? Tmp { get; init; }
     public float? Dc { get; init; }
@@ -166,6 +167,8 @@ public sealed class HemosheetNurseRecordViewModel
 {
     public DateTime? Timestamp { get; init; }
     public string? Content { get; init; }
+    /// <summary>Nurse who wrote the note — ThaiUR sign column.</summary>
+    public string? CreatorName { get; init; }
 }
 
 public sealed class HemosheetDoctorRecordViewModel

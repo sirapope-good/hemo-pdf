@@ -30,6 +30,8 @@ internal static class HemosheetThaiUrStyle
     public const float MetaRowHeightMm = 5.4f;
     /// <summary>Max wrapped lines for a dialysis-record Note cell before ellipsis.</summary>
     public const int DialysisNoteMaxLines = 4;
+    /// <summary>Max wrapped lines for a Pre/Post nurse-note row before ellipsis.</summary>
+    public const int NurseNoteMaxLines = 4;
     /// <summary>Slightly tighter than data rows so checkbox bands fit one A4 page.</summary>
     public const float CheckRowHeightMm = 4.2f;
     /// <summary>Post-assessment checklist rows (Complication / Nursing / Health) — a touch airier.</summary>

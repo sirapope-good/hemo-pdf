@@ -17,12 +17,12 @@ internal sealed class ThaiUrHemosheetForm
 
     public void Compose(IContainer container, HemosheetReportViewModel vm, PdfReportContext context)
     {
-        // Reserve footer at Pre/Post floor to size dialysis rows, then grow Pre/Post with
-        // leftover so Post Vital / AVF / Nurse / NA snap to the page bottom.
-        var prePostFloorMm = ThaiUrHemosheetFooter.PrePostFloorHeightMm;
+        // Dialysis rows absorb leftover page space so the footer band (checks + Nephrologist |
+        // notes + Post Vital…NA) sits flush at the bottom of page 1 as one unit.
+        var notesFloorMm = ThaiUrHemosheetFooter.NurseNotesFloorHeightMm(vm);
         var aboveDialysisMm = EstimateAboveDialysisMm(vm);
-        var bottomFloorMm = ThaiUrHemosheetFooter.BottomBlockHeightMm(vm, prePostFloorMm);
-        var (dialysisRows, prePostMm) = BudgetDialysisRowsAndPrePost(vm, aboveDialysisMm, bottomFloorMm, prePostFloorMm);
+        var bottomFloorMm = ThaiUrHemosheetFooter.BottomBlockHeightMm(vm, notesFloorMm);
+        var dialysisRows = BudgetDialysisRows(vm, aboveDialysisMm, bottomFloorMm);
 
         container
             .DefaultTextStyle(ThaiUrText.Base)
@@ -35,10 +35,10 @@ internal sealed class ThaiUrHemosheetForm
                     main.Item().Element(c => NursingPlan(c, vm));
                     main.Item().Element(c => DialysisTable(c, vm, dialysisRows));
                 });
-                page.Item().ShowEntire().Border(Bw).Column(bottom =>
+                page.Item().Border(Bw).Column(mid =>
                 {
-                    bottom.Item().Element(c => FluidSummaryRow(c, vm));
-                    bottom.Item().Element(c => ThaiUrHemosheetFooter.Compose(c, vm, prePostMm));
+                    mid.Item().Element(c => FluidSummaryRow(c, vm));
+                    mid.Item().Element(c => ThaiUrHemosheetFooter.ComposeBand(c, vm));
                 });
             });
     }
@@ -49,26 +49,27 @@ internal sealed class ThaiUrHemosheetForm
         var headerMm = HemosheetThaiUrStyle.TitleHeightMm + HemosheetThaiUrStyle.MetaRowHeightMm;
         var topMm = Math.Max(PredialysisTotalHeightMm(), PrescriptionTotalHeightMm());
         var planRows = ThaiUrData.NursingPlanRows(vm).Count;
-        // Slight pad: Focus/I/E often wrap past Rh.
-        var nursingMm = HemosheetThaiUrStyle.HeaderBarHeightMm + planRows * Rh * 1.2f;
+        var nursingMm = HemosheetThaiUrStyle.HeaderBarHeightMm + planRows * Rh;
         return headerMm + topMm + nursingMm;
     }
 
     /// <summary>
-    /// Dialysis rows fill most leftover; remaining fraction grows Pre/Post HD so
-    /// Post Vital / AVF / Nurse / NA (and Nephrologist) sit flush at the page bottom.
+    /// Dialysis rows fill leftover page space. Always keep at least one blank beyond real records
+    /// (overridden when FixedLines / budget needs more).
     /// </summary>
-    private static (int DialysisRows, float PrePostMm) BudgetDialysisRowsAndPrePost(
+    private static int BudgetDialysisRows(
         HemosheetReportViewModel vm,
         float aboveDialysisMm,
-        float bottomFloorMm,
-        float prePostFloorMm)
+        float bottomFloorMm)
     {
         var pageContentMm = 297f
             - 2f * HemosheetThaiUrStyle.PageMarginMm
             - ThaiUrHemosheetFooter.PageNumberFooterMm;
 
-        var minRows = Math.Max(vm.LayoutContext.ReportSettings.FixedLines.Dialysis, vm.DialysisRecords.Count);
+        // One blank slot past real data; FixedLines / page budget can raise it further.
+        var minRows = Math.Max(
+            vm.LayoutContext.ReportSettings.FixedLines.Dialysis,
+            vm.DialysisRecords.Count + 1);
         if (minRows <= 0) minRows = 8;
 
         const float dialysisHeaderMm = Rh + 3.2f;
@@ -78,21 +79,7 @@ internal sealed class ThaiUrHemosheetForm
             - bottomFloorMm;
 
         var maxRowsBySpace = (int)Math.Floor((availableForDialysisMm - dialysisHeaderMm) / Rh);
-        var dialysisRows = maxRowsBySpace < minRows ? minRows : maxRowsBySpace;
-
-        // After locking dialysis rows, dump leftover into Pre/Post so the strip rows snap down.
-        var stripMm = HemosheetThaiUrStyle.PostStripRowHeightMm;
-        var rightFixedWithoutPrePostMm =
-            ThaiUrHemosheetFooter.HealthMedRowHeightMm(vm) + 4f * stripMm;
-        var dialysisMm = dialysisHeaderMm + dialysisRows * Rh;
-        var maxFooterMm = pageContentMm
-            - ThaiUrHemosheetFooter.LayoutSafetyMm
-            - aboveDialysisMm
-            - dialysisMm
-            - ThaiUrHemosheetFooter.FluidSummaryHeightMm;
-
-        var prePostMm = Math.Max(prePostFloorMm, maxFooterMm - rightFixedWithoutPrePostMm);
-        return (dialysisRows, prePostMm);
+        return maxRowsBySpace < minRows ? minRows : maxRowsBySpace;
     }
 
     /// <summary>
@@ -642,24 +629,28 @@ internal sealed class ThaiUrHemosheetForm
             for (var i = 0; i < fixedLines; i++)
             {
                 var rec = i < vm.DialysisRecords.Count ? vm.DialysisRecords[i] : null;
-                var cells = new[]
-                {
-                    ThaiUrData.Time(rec?.Timestamp),
-                    rec is null ? "" : ThaiUrData.Bp(rec.Bps, rec.Bpd),
-                    rec is null ? "" : (ThaiUrData.Map(rec.Bps, rec.Bpd) ?? ""),
-                    ThaiUrData.Num(rec?.Hr),
-                    ThaiUrData.Num(rec?.Bfr),
-                    "",
-                    ThaiUrData.Num(rec?.Vp),
-                    ThaiUrData.Num(rec?.Tmp),
-                    ThaiUrData.Num(rec?.Dc),
-                    rec?.UfRate is not null ? ThaiUrData.Num(rec.UfRate * 1000) : "",
-                    rec?.UfTotal is not null ? ThaiUrData.Num(rec.UfTotal * 1000) : "",
-                };
+                // Placeholder rows stay fully blank — Num(null) would paint "-" which looks filled-in.
+                var cells = rec is null
+                    ? new string[DialysisColumnDefs.Length]
+                    : new[]
+                    {
+                        ThaiUrData.Time(rec.Timestamp),
+                        ThaiUrData.Bp(rec.Bps, rec.Bpd),
+                        ThaiUrData.Map(rec.Bps, rec.Bpd) ?? "",
+                        ThaiUrData.Num(rec.Hr),
+                        ThaiUrData.Num(rec.Bfr),
+                        ThaiUrData.Num(rec.Ap),
+                        ThaiUrData.Num(rec.Vp),
+                        ThaiUrData.Num(rec.Tmp),
+                        ThaiUrData.Num(rec.Dc),
+                        rec.UfRate is not null ? ThaiUrData.Num(rec.UfRate * 1000) : "",
+                        rec.UfTotal is not null ? ThaiUrData.Num(rec.UfTotal * 1000) : "",
+                    };
                 foreach (var value in cells)
                 {
                     t.Cell().Border(Bw).MinHeight(Rh, Mm).AlignMiddle().AlignCenter()
-                        .Text(string.IsNullOrWhiteSpace(value) ? "" : value).Style(ThaiUrText.Dialysis);
+                        .Text(string.IsNullOrWhiteSpace(value) || value == "-" ? "" : value)
+                        .Style(ThaiUrText.Dialysis);
                 }
                 // Grow with wrapped note (up to DialysisNoteMaxLines); sibling cells MinHeight so the row expands together.
                 t.Cell().Border(Bw).MinHeight(Rh, Mm).PaddingHorizontal(1f).PaddingVertical(0.5f).AlignMiddle()

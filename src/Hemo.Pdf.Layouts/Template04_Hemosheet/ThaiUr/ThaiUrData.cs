@@ -272,6 +272,8 @@ internal static class ThaiUrData
     /// ThaiUR Nursing Diagnosis / Intervention / Outcomes from Nurse Processing (Progress Notes).
     /// Focus → Diagnosis; I → Intervention; E → Evaluation.
     /// Newlines inside I/E (UI "+" lines) expand to extra table rows; Focus stays on the first row of each note.
+    /// Always keeps exactly one blank trailing row (or a single blank when empty). Do not pad to
+    /// FixedLines.ProgressNote — Hemopro defaults that to 6 and floods empty rows.
     /// </summary>
     public static IReadOnlyList<(string Diagnosis, string Intervention, string Outcome)> NursingPlanRows(
         HemosheetReportViewModel vm)
@@ -298,8 +300,8 @@ internal static class ThaiUrData
             }
         }
 
-        if (rows.Count == 0)
-            rows.Add(("", "", ""));
+        // One blank slot only (empty sheet → single blank; with data → one trailing blank).
+        rows.Add(("", "", ""));
 
         return rows;
     }

@@ -220,6 +220,143 @@ public class ThaiUrDataTests
     }
 
     [Fact]
+    public void NurseNoteSlots_AreBetweenTwoAndFour_FromNurseRecords()
+    {
+        Assert.Equal(2, ThaiUrHemosheetFooter.NurseNoteSlotCount(new HemosheetReportViewModel()));
+        Assert.Equal(2, ThaiUrHemosheetFooter.NurseNoteSlotCount(new HemosheetReportViewModel
+        {
+            NurseRecords = [new() { Content = "only one" }],
+        }));
+        Assert.Equal(3, ThaiUrHemosheetFooter.NurseNoteSlotCount(new HemosheetReportViewModel
+        {
+            NurseRecords =
+            [
+                new() { Content = "a" },
+                new() { Content = "b" },
+                new() { Content = "c" },
+            ],
+        }));
+        Assert.Equal(4, ThaiUrHemosheetFooter.NurseNoteSlotCount(new HemosheetReportViewModel
+        {
+            NurseRecords =
+            [
+                new() { Content = "1" },
+                new() { Content = "2" },
+                new() { Content = "3" },
+                new() { Content = "4" },
+                new() { Content = "5" },
+            ],
+        }));
+
+        var slots = ThaiUrHemosheetFooter.BuildNurseNoteSlots(new HemosheetReportViewModel
+        {
+            NurseRecords =
+            [
+                new() { Content = "first" },
+                new() { Content = "mid" },
+                new() { Content = "last" },
+            ],
+        });
+        Assert.Equal(3, slots.Count);
+        Assert.Equal("Pre HD", slots[0].Label);
+        Assert.Equal("", slots[1].Label);
+        Assert.Equal("Post HD", slots[2].Label);
+        Assert.Equal("mid", slots[1].Content);
+    }
+
+    [Theory]
+    [InlineData("", 1)]
+    [InlineData("-", 1)]
+    [InlineData("short note", 1)]
+    [InlineData("012345678901234567890123456789012345678901234567890123456789", 2)] // 60 chars → 2 lines @ 56/line
+    public void EstimateNoteLines_ClampsByContentLength(string display, int expectedLines)
+    {
+        Assert.Equal(expectedLines, ThaiUrHemosheetFooter.EstimateNoteLines(display));
+    }
+
+    [Fact]
+    public void EstimateNoteLines_CapsAtNurseNoteMaxLines()
+    {
+        var longText = new string('x', NoteCharsPerLineForTest * 10);
+        Assert.Equal(
+            HemosheetThaiUrStyle.NurseNoteMaxLines,
+            ThaiUrHemosheetFooter.EstimateNoteLines(longText));
+    }
+
+    [Fact]
+    public void EstimateNoteRowHeight_AddsTighterHeightForWrappedLines()
+    {
+        var oneLine = ThaiUrHemosheetFooter.EstimateNoteRowHeightMm("short");
+        var twoLines = ThaiUrHemosheetFooter.EstimateNoteRowHeightMm(new string('x', NoteCharsPerLineForTest + 1));
+        Assert.True(twoLines > oneLine);
+        Assert.True(twoLines < oneLine * 2); // wrapped extras are tighter than a full first row
+    }
+
+    [Fact]
+    public void NurseNotesFloorHeight_GrowsWhenContentWraps()
+    {
+        var shortVm = new HemosheetReportViewModel
+        {
+            NurseRecords =
+            [
+                new() { Content = "pre" },
+                new() { Content = "post" },
+            ],
+        };
+        var longVm = new HemosheetReportViewModel
+        {
+            NurseRecords =
+            [
+                new() { Content = new string('a', 120) },
+                new() { Content = new string('b', 120) },
+            ],
+        };
+
+        Assert.True(
+            ThaiUrHemosheetFooter.NurseNotesFloorHeightMm(longVm)
+            > ThaiUrHemosheetFooter.NurseNotesFloorHeightMm(shortVm));
+    }
+
+    // Mirrors ThaiUrHemosheetFooter.NoteCharsPerLine (private) for test expectations.
+    private const int NoteCharsPerLineForTest = 56;
+
+    [Fact]
+    public void NurseNoteSlots_PreferCreatorName_ThenSignatureNames()
+    {
+        var fromAuthor = ThaiUrHemosheetFooter.BuildNurseNoteSlots(new HemosheetReportViewModel
+        {
+            NurseRecords =
+            [
+                new() { Content = "pre", CreatorName = "Nurse A" },
+                new() { Content = "post", CreatorName = "Nurse B" },
+            ],
+            SignatureNames = new Dictionary<string, string>
+            {
+                ["pre_hd"] = "Sig Pre",
+                ["post_hd"] = "Sig Post",
+            },
+        });
+        Assert.Equal("Nurse A", fromAuthor[0].Signer);
+        Assert.Equal("Nurse B", fromAuthor[1].Signer);
+
+        var fromSignature = ThaiUrHemosheetFooter.BuildNurseNoteSlots(new HemosheetReportViewModel
+        {
+            NurseRecords =
+            [
+                new() { Content = "pre" },
+                new() { Content = "post" },
+            ],
+            SignatureNames = new Dictionary<string, string>
+            {
+                ["PRE_HD"] = "Sig Pre",
+                ["post_hd"] = "Sig Post",
+            },
+        });
+        Assert.Equal("Sig Pre", fromSignature[0].Signer);
+        Assert.Equal("Sig Post", fromSignature[1].Signer);
+    }
+
+    [Fact]
     public void Checked_MatchesSelectedOptionsDisplayNames_FromLiveBeShape()
     {
         var vm = new HemosheetReportViewModel
@@ -300,18 +437,39 @@ public class ThaiUrDataTests
         };
 
         var rows = ThaiUrData.NursingPlanRows(vm);
-        Assert.Equal(4, rows.Count);
+        Assert.Equal(5, rows.Count); // 4 content lines + 1 trailing blank
         Assert.Equal(("Diagnosis A", "Intervene 1", "Outcome 1"), rows[0]);
         Assert.Equal(("", "Intervene 2", ""), rows[1]);
         Assert.Equal(("Diagnosis B", "Intervene B", "Outcome B1"), rows[2]);
         Assert.Equal(("", "", "Outcome B2"), rows[3]);
+        Assert.Equal(("", "", ""), rows[4]);
     }
 
     [Fact]
-    public void NursingPlanRows_EmptyNotes_YieldsBlankPlaceholderRow()
+    public void NursingPlanRows_EmptyNotes_YieldsSingleBlankRow()
     {
         var rows = ThaiUrData.NursingPlanRows(new HemosheetReportViewModel());
         Assert.Single(rows);
         Assert.Equal(("", "", ""), rows[0]);
+    }
+
+    [Fact]
+    public void NursingPlanRows_AddsOneTrailingBlank_NotFixedLinesProgressNote()
+    {
+        var vm = new HemosheetReportViewModel
+        {
+            ProgressNotes = [new() { Focus = "Only one", I = "I", E = "E" }],
+            LayoutContext = new HemosheetLayoutContextViewModel
+            {
+                ReportSettings = new HemosheetReportSettingsViewModel
+                {
+                    FixedLines = new HemosheetFixedLinesViewModel { ProgressNote = 6 },
+                },
+            },
+        };
+        var rows = ThaiUrData.NursingPlanRows(vm);
+        Assert.Equal(2, rows.Count);
+        Assert.Equal(("Only one", "I", "E"), rows[0]);
+        Assert.Equal(("", "", ""), rows[1]);
     }
 }

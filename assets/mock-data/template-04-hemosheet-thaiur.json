@@ -117,16 +117,20 @@
     ]
   },
   "dialysisRecords": [
-    { "timestamp": "2026-06-24T06:27:00Z", "bps": 124, "bpd": 64, "hr": 84, "bfr": 248, "vp": 52, "tmp": 91, "dc": 14, "ufRate": 0.43, "ufTotal": 0 },
-    { "timestamp": "2026-06-24T06:57:00Z", "bps": 136, "bpd": 55, "hr": 89, "bfr": 248, "vp": 49, "tmp": 93, "dc": 13.7, "ufRate": 0.44, "ufTotal": 0.17 },
-    { "timestamp": "2026-06-24T07:27:00Z", "bps": 140, "bpd": 73, "hr": 95, "bfr": 248, "vp": 38, "tmp": 92, "dc": 13.7, "ufRate": 0.4, "ufTotal": 0.37 },
-    { "timestamp": "2026-06-24T07:57:00Z", "bps": 143, "bpd": 68, "hr": 93, "bfr": 248, "vp": 42, "tmp": 26, "dc": 13.7, "ufRate": 0.44, "ufTotal": 0.59 },
-    { "timestamp": "2026-06-24T08:27:00Z", "bps": 146, "bpd": 68, "hr": 93, "bfr": 248, "vp": 42, "tmp": 98, "dc": 13.7, "ufRate": 0.44, "ufTotal": 0.62 },
-    { "timestamp": "2026-06-24T08:57:00Z", "bps": 134, "bpd": 72, "hr": 92, "bfr": 248, "vp": 42, "tmp": 98, "dc": 13.7, "ufRate": 0.44, "ufTotal": 0.94 },
-    { "timestamp": "2026-06-24T09:27:00Z", "bps": 140, "bpd": 69, "hr": 92, "bfr": 248, "vp": 50, "tmp": 89, "dc": 13.7, "ufRate": 0.44, "ufTotal": 1.3 },
-    { "timestamp": "2026-06-24T10:27:00Z", "bps": 133, "bpd": 67, "hr": 89, "bfr": 248, "vp": 54, "tmp": 200, "dc": 13.7, "ufRate": 0.44, "ufTotal": 1.7 }
+    { "timestamp": "2026-06-24T06:27:00Z", "bps": 124, "bpd": 64, "hr": 84, "bfr": 248, "ap": -80, "vp": 52, "tmp": 91, "dc": 14, "ufRate": 0.43, "ufTotal": 0 },
+    { "timestamp": "2026-06-24T06:57:00Z", "bps": 136, "bpd": 55, "hr": 89, "bfr": 248, "ap": -78, "vp": 49, "tmp": 93, "dc": 13.7, "ufRate": 0.44, "ufTotal": 0.17 },
+    { "timestamp": "2026-06-24T07:27:00Z", "bps": 140, "bpd": 73, "hr": 95, "bfr": 248, "ap": -82, "vp": 38, "tmp": 92, "dc": 13.7, "ufRate": 0.4, "ufTotal": 0.37 },
+    { "timestamp": "2026-06-24T07:57:00Z", "bps": 143, "bpd": 68, "hr": 93, "bfr": 248, "ap": -75, "vp": 42, "tmp": 26, "dc": 13.7, "ufRate": 0.44, "ufTotal": 0.59 },
+    { "timestamp": "2026-06-24T08:27:00Z", "bps": 146, "bpd": 68, "hr": 93, "bfr": 248, "ap": -79, "vp": 42, "tmp": 98, "dc": 13.7, "ufRate": 0.44, "ufTotal": 0.62 },
+    { "timestamp": "2026-06-24T08:57:00Z", "bps": 134, "bpd": 72, "hr": 92, "bfr": 248, "ap": -81, "vp": 42, "tmp": 98, "dc": 13.7, "ufRate": 0.44, "ufTotal": 0.94 },
+    { "timestamp": "2026-06-24T09:27:00Z", "bps": 140, "bpd": 69, "hr": 92, "bfr": 248, "ap": -77, "vp": 50, "tmp": 89, "dc": 13.7, "ufRate": 0.44, "ufTotal": 1.3 },
+    { "timestamp": "2026-06-24T10:27:00Z", "bps": 133, "bpd": 67, "hr": 89, "bfr": 248, "ap": -76, "vp": 54, "tmp": 200, "dc": 13.7, "ufRate": 0.44, "ufTotal": 1.7 }
   ],
-  "nurseRecords": [],
+  "nurseRecords": [
+    { "timestamp": "2026-06-24T06:30:00Z", "content": "Pre HD assessment completed", "creatorName": "RN Somchai" },
+    { "timestamp": "2026-06-24T08:00:00Z", "content": "Mid treatment observation", "creatorName": "RN Malee" },
+    { "timestamp": "2026-06-24T10:30:00Z", "content": "Post HD stable", "creatorName": "RN Malee" }
+  ],
   "doctorRecords": [],
   "medicineRecords": [],
   "progressNotes": [
@@ -138,7 +142,10 @@
     }
   ],
   "labs": { "hct": "-", "hb": "-" },
-  "signatureNames": {},
+  "signatureNames": {
+    "pre_hd": "RN Somchai",
+    "post_hd": "RN Malee"
+  },
   "layoutContext": {
     "layoutProfile": "ThaiUr",
     "dialysisMode": "HD",

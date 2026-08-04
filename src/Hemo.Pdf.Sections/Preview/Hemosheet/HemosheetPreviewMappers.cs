@@ -407,15 +407,22 @@ public static class HemosheetPreviewMappers
             return null;
         }
 
-        vm.SignatureNames.TryGetValue("pre_hd", out var preSigner);
-        vm.SignatureNames.TryGetValue("post_hd", out var postSigner);
+        var preRecord = vm.NurseRecords.FirstOrDefault();
+        var postRecord = vm.NurseRecords.Skip(1).FirstOrDefault();
+        vm.SignatureNames.TryGetValue("pre_hd", out var preSig);
+        vm.SignatureNames.TryGetValue("post_hd", out var postSig);
+
+        static string? Prefer(string? author, string? signature) =>
+            !string.IsNullOrWhiteSpace(author) ? author.Trim()
+            : !string.IsNullOrWhiteSpace(signature) ? signature.Trim()
+            : null;
 
         return new PrePostHdNotesReportBlock
         {
             PreHdContent = pre,
-            PreHdSigner = preSigner,
+            PreHdSigner = Prefer(preRecord?.CreatorName, preSig),
             PostHdContent = post,
-            PostHdSigner = postSigner,
+            PostHdSigner = Prefer(postRecord?.CreatorName, postSig),
         };
     }
 
