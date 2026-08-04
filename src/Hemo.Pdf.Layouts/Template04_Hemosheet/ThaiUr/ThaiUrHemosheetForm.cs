@@ -17,6 +17,9 @@ internal sealed class ThaiUrHemosheetForm
 
     public void Compose(IContainer container, HemosheetReportViewModel vm, PdfReportContext context)
     {
+        var mainBandMm = EstimateMainBandHeightMm(vm);
+        var prePostMm = ThaiUrHemosheetFooter.ComputePrePostTotalHeightMm(vm, mainBandMm);
+
         // No single outer Border around the whole column — that blocks paging when a Note
         // grows and fluid+footer must move to page 2 as one block (ShowEntire).
         container
@@ -30,13 +33,32 @@ internal sealed class ThaiUrHemosheetForm
                     main.Item().Element(c => NursingPlan(c, vm));
                     main.Item().Element(c => DialysisTable(c, vm));
                 });
-                // Fluid + footer stay together; if they no longer fit under a tall Note, whole band → next page.
+                // Fluid + footer stay together; Pre/Post HD height is pre-budgeted so bottom
+                // strips snap to the page bottom without page-level ExtendVertical.
                 page.Item().ShowEntire().Border(Bw).Column(bottom =>
                 {
                     bottom.Item().Element(c => FluidSummaryRow(c, vm));
-                    bottom.Item().Element(c => ThaiUrHemosheetFooter.Compose(c, vm));
+                    bottom.Item().Element(c => ThaiUrHemosheetFooter.Compose(c, vm, prePostMm));
                 });
             });
+    }
+
+    /// <summary>
+    /// Content-sized estimate of Header+TopBand+Nursing+Dialysis (mm). Used only to budget
+    /// Pre/Post HD expansion; wrapped dialysis notes may add a little extra height in practice.
+    /// </summary>
+    private static float EstimateMainBandHeightMm(HemosheetReportViewModel vm)
+    {
+        // Patient meta RowSpan(2) drives header height (5 meta lines).
+        const float headerMm = 5f * Rh;
+        var topMm = Math.Max(PredialysisTotalHeightMm(), PrescriptionTotalHeightMm());
+        var planRows = Math.Max(1, ThaiUrData.NursingPlanRows(vm).Count);
+        var nursingMm = HemosheetThaiUrStyle.HeaderBarHeightMm + planRows * Rh;
+        var fixedLines = Math.Max(vm.LayoutContext.ReportSettings.FixedLines.Dialysis, vm.DialysisRecords.Count);
+        if (fixedLines <= 0) fixedLines = 8;
+        const float unitRowMm = 3.2f;
+        var dialysisMm = Rh + unitRowMm + fixedLines * Rh;
+        return headerMm + topMm + nursingMm + dialysisMm;
     }
 
     /// <summary>
@@ -572,7 +594,11 @@ internal sealed class ThaiUrHemosheetForm
         });
     }
 
-    /// <summary>Horizontal fluid boxes directly under the dialysis record table.</summary>
+    /// <summary>
+    /// Horizontal fluid boxes under the dialysis record table.
+    /// First 5 cells share the fixed dialysis columns (Time…Total UF); last cell (Net fluid balance)
+    /// uses the remaining Relative width — same as the Note column above.
+    /// </summary>
     private static void FluidSummaryRow(IContainer c, HemosheetReportViewModel vm)
     {
         var boxes = new (string Label, string Value)[]
@@ -585,12 +611,16 @@ internal sealed class ThaiUrHemosheetForm
             ("Net fluid balance", ThaiUrData.Ml(ThaiUrData.NetFluidBalanceMl(vm))),
         };
 
+        var fixedColsMm = DialysisColumns.Sum(col => col.Mm);
+        var leadingCellMm = fixedColsMm / 5f;
+
         c.Table(t =>
         {
             t.ColumnsDefinition(cols =>
             {
-                foreach (var _ in boxes)
-                    cols.RelativeColumn();
+                for (var i = 0; i < 5; i++)
+                    cols.ConstantColumn(leadingCellMm, Mm);
+                cols.RelativeColumn();
             });
 
             foreach (var (label, value) in boxes)

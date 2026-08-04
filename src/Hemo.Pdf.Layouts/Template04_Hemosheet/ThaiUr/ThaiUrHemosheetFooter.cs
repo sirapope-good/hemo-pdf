@@ -17,6 +17,24 @@ internal static class ThaiUrHemosheetFooter
     /// <summary>Reserved height for Pre/Post HD note body (~2.5 text lines at ThaiUR base size).</summary>
     private const float NoteBodyMinHeightMm = 11.5f;
 
+    /// <summary>Shared label column for Post Vital and AVF/AVG so the first vertical rule aligns.</summary>
+    private const float PostStripLabelMm = 18f;
+
+    private const float MedColHeaderMm = 5.5f;
+    private const float FluidSummaryHeightMm = 6.5f;
+
+    /// <summary>
+    /// Approx. height of the default page-number strip under page content.
+    /// Used only to budget Pre/Post HD expansion on a single A4 page.
+    /// </summary>
+    private const float PageNumberFooterMm = 7f;
+
+    /// <summary>
+    /// Headroom for borders / estimate error so Pre/Post expansion does not push
+    /// fluid+footer onto a second page.
+    /// </summary>
+    private const float LayoutSafetyMm = 3f;
+
     private static readonly string[] ComplicationItems =
     [
         "Hypotension", "Hypertension", "Muscle cramp", "Headache", "Nausea / Vomitting", "Fever",
@@ -41,18 +59,71 @@ internal static class ThaiUrHemosheetFooter
         "Nutrition", "Vascular Access", "Exercise", "Personal hygine", "Medication", "Fluid control", "KT",
     ];
 
-    public static void Compose(IContainer c, HemosheetReportViewModel vm)
+    public static void Compose(IContainer c, HemosheetReportViewModel vm, float prePostTotalHeightMm)
     {
-        // Left block = Complication | Nursing, with Nephrologist spanning both (long doctor names).
-        // Right block = Health | Med, then Pre/Post, then vitals/signatures.
-        // Content-sized only — no ExtendVertical here (footer lives under ShowEntire with
-        // unconstrained column height; ExtendVertical causes DocumentLayoutException).
+        var panelMm = AssessmentPanelHeightMm();
+        var healthMedMm = HealthMedRowHeightMm(vm);
+        var stripMm = HemosheetThaiUrStyle.PostStripRowHeightMm;
+        var rightBelowMm = 4f * stripMm;
+        var rightMm = healthMedMm + prePostTotalHeightMm + rightBelowMm;
+        var leftMm = Math.Max(panelMm + stripMm, rightMm);
+        var leftSpacerMm = Math.Max(0f, leftMm - panelMm - stripMm);
+
         c.Row(row =>
         {
-            row.ConstantItem(76, Mm).Border(Bw).Element(left => AssessmentAndNephrologistColumn(left, vm));
-            row.RelativeItem().Border(Bw).Element(right => HealthMedAndNotesColumn(right, vm));
+            row.ConstantItem(76, Mm).Border(Bw)
+                .Element(left => AssessmentAndNephrologistColumn(left, vm, panelMm, leftSpacerMm));
+            row.RelativeItem().Border(Bw)
+                .Element(right => HealthMedAndNotesColumn(right, vm, healthMedMm, prePostTotalHeightMm));
         });
     }
+
+    /// <summary>
+    /// Budget Pre+Post HD height so bottom strips snap to the page bottom on a single-page
+    /// report. Avoids page-level ExtendVertical (which balloons across extra pages in QuestPDF).
+    /// When the band cannot grow without overflowing, keeps the floor height only — do not
+    /// pre-size for a speculative page-2 fill (that forces an unnecessary second page).
+    /// </summary>
+    public static float ComputePrePostTotalHeightMm(HemosheetReportViewModel vm, float mainBandHeightMm)
+    {
+        var pageContentMm = 297f
+            - 2f * HemosheetThaiUrStyle.PageMarginMm
+            - PageNumberFooterMm;
+        var fluidMm = FluidSummaryHeightMm;
+        var healthMedMm = HealthMedRowHeightMm(vm);
+        var stripMm = HemosheetThaiUrStyle.PostStripRowHeightMm;
+        var panelMm = AssessmentPanelHeightMm();
+        var leftMm = panelMm + stripMm;
+        var rightFixedMm = healthMedMm + 4f * stripMm;
+        var prePostFloorMm = 2f * NoteBodyMinHeightMm;
+        var matchLeftMm = Math.Max(prePostFloorMm, leftMm - rightFixedMm);
+
+        // Largest Pre/Post that still keeps main+fluid+footer on one page.
+        var maxOnSamePageMm = pageContentMm - LayoutSafetyMm - mainBandHeightMm - fluidMm - rightFixedMm;
+        if (maxOnSamePageMm < prePostFloorMm)
+            return prePostFloorMm;
+
+        // Prefer filling leftover page space; never shrink below the left-column match.
+        return Math.Max(matchLeftMm, maxOnSamePageMm);
+    }
+
+    public static float AssessmentPanelHeightMm() => Math.Max(
+        CheckPanelHeightMm(ComplicationItems, TechnicalItems),
+        CheckPanelHeightMm(NursingItems, null));
+
+    public static float HealthEducationHeightMm() =>
+        HemosheetThaiUrStyle.HeaderBarHeightMm
+        + HealthItems.Length * HemosheetThaiUrStyle.PostCheckRowHeightMm;
+
+    public static float MedicationNaturalHeightMm(HemosheetReportViewModel vm)
+    {
+        var lines = Math.Max(vm.LayoutContext.ReportSettings.FixedLines.Medicine, vm.MedicineRecords.Count);
+        if (lines <= 0) lines = 2;
+        return HemosheetThaiUrStyle.HeaderBarHeightMm + MedColHeaderMm + lines * Rh + Rh;
+    }
+
+    public static float HealthMedRowHeightMm(HemosheetReportViewModel vm) =>
+        Math.Max(HealthEducationHeightMm(), MedicationNaturalHeightMm(vm));
 
     private static float CheckPanelHeightMm(string[] items, string[]? items2)
     {
@@ -63,13 +134,12 @@ internal static class ThaiUrHemosheetFooter
         return h;
     }
 
-    private static void AssessmentAndNephrologistColumn(IContainer c, HemosheetReportViewModel vm)
+    private static void AssessmentAndNephrologistColumn(
+        IContainer c,
+        HemosheetReportViewModel vm,
+        float panelMm,
+        float spacerMm)
     {
-        // Match panel heights via MinHeight (taller of Complication+Technical vs Nursing).
-        var panelMm = Math.Max(
-            CheckPanelHeightMm(ComplicationItems, TechnicalItems),
-            CheckPanelHeightMm(NursingItems, null));
-
         c.Column(col =>
         {
             col.Item().MinHeight(panelMm, Mm).Row(r =>
@@ -79,24 +149,34 @@ internal static class ThaiUrHemosheetFooter
                 r.RelativeItem().Border(Bw).MinHeight(panelMm, Mm).Element(nm =>
                     CheckGroup(nm, vm, "Nursing management", NursingItems, null, null));
             });
-            col.Item().Border(Bw).Height(HemosheetThaiUrStyle.PostStripRowHeightMm, Mm).Row(r =>
-            {
-                r.ConstantItem(24, Mm).LabelBold("Nephrologist");
-                r.RelativeItem().Value(vm.DoctorName ?? vm.Patient.DoctorName);
-            });
+            if (spacerMm > 0.05f)
+                col.Item().Height(spacerMm, Mm);
+            col.Item().Border(Bw).Height(HemosheetThaiUrStyle.PostStripRowHeightMm, Mm)
+                .AlignMiddle().AlignCenter()
+                .Text(text =>
+                {
+                    text.Span("Nephrologist ").Style(ThaiUrText.Bold);
+                    var doctor = vm.DoctorName ?? vm.Patient.DoctorName;
+                    text.Span(string.IsNullOrWhiteSpace(doctor) ? "-" : doctor).Style(ThaiUrText.Base);
+                });
         });
     }
 
-    private static void HealthMedAndNotesColumn(IContainer c, HemosheetReportViewModel vm)
+    private static void HealthMedAndNotesColumn(
+        IContainer c,
+        HemosheetReportViewModel vm,
+        float healthMedMm,
+        float prePostTotalHeightMm)
     {
+        var eachNoteMm = prePostTotalHeightMm / 2f;
         c.Column(col =>
         {
-            col.Item().Row(r =>
+            col.Item().Height(healthMedMm, Mm).Row(r =>
             {
-                r.ConstantItem(42, Mm).AlignTop().Border(Bw).Element(he => HealthEducation(he, vm));
-                r.RelativeItem().AlignTop().Border(Bw).Element(med => MedicationTable(med, vm));
+                r.ConstantItem(42, Mm).Border(Bw).Element(he => HealthEducation(he, vm));
+                r.RelativeItem().Border(Bw).Element(med => MedicationTable(med, vm, healthMedMm));
             });
-            col.Item().Element(n => PrePostHdNotes(n, vm));
+            col.Item().Height(prePostTotalHeightMm, Mm).Element(n => PrePostHdNotes(n, vm, eachNoteMm));
             col.Item().Element(pv => PostVital(pv, vm));
             col.Item().Element(av => AvfRow(av, vm));
             col.Item().Border(Bw).Height(HemosheetThaiUrStyle.PostStripRowHeightMm, Mm).Row(r =>
@@ -150,8 +230,13 @@ internal static class ThaiUrHemosheetFooter
         });
     }
 
-    private static void MedicationTable(IContainer c, HemosheetReportViewModel vm)
+    private static void MedicationTable(IContainer c, HemosheetReportViewModel vm, float targetHeightMm)
     {
+        var lines = Math.Max(vm.LayoutContext.ReportSettings.FixedLines.Medicine, vm.MedicineRecords.Count);
+        if (lines <= 0) lines = 2;
+        var aboveHctMm = HemosheetThaiUrStyle.HeaderBarHeightMm + MedColHeaderMm + lines * Rh;
+        var spacerMm = Math.Max(0f, targetHeightMm - aboveHctMm - Rh);
+
         c.Column(col =>
         {
             col.Item().HeaderBar("Medication duration HD");
@@ -163,29 +248,33 @@ internal static class ThaiUrHemosheetFooter
                     cols.ConstantColumn(16, Mm);
                     cols.ConstantColumn(14, Mm);
                 });
-                // Column header row needs explicit height + AlignMiddle (text-only cells collapse too short).
-                const float medColHeaderMm = 5.5f;
-                t.Cell().Border(Bw).Height(medColHeaderMm, Mm).AlignMiddle().AlignCenter()
+                t.Cell().Border(Bw).Height(MedColHeaderMm, Mm).AlignMiddle().AlignCenter()
                     .Text("Name/Dose/Route").Style(ThaiUrText.Bold);
-                t.Cell().Border(Bw).Height(medColHeaderMm, Mm).AlignMiddle().AlignCenter()
+                t.Cell().Border(Bw).Height(MedColHeaderMm, Mm).AlignMiddle().AlignCenter()
                     .Text("Time").Style(ThaiUrText.Bold);
-                t.Cell().Border(Bw).Height(medColHeaderMm, Mm).AlignMiddle().AlignCenter()
+                t.Cell().Border(Bw).Height(MedColHeaderMm, Mm).AlignMiddle().AlignCenter()
                     .Text("Sign").Style(ThaiUrText.Bold);
 
-                var lines = Math.Max(vm.LayoutContext.ReportSettings.FixedLines.Medicine, vm.MedicineRecords.Count);
-                if (lines <= 0) lines = 2;
                 for (var i = 0; i < lines; i++)
                 {
                     var m = i < vm.MedicineRecords.Count ? vm.MedicineRecords[i] : null;
                     var name = m is null ? "" : $"{m.MedicineName} {ThaiUrData.Num(m.Quantity)} {m.Route}".Trim();
-                    // Outer table frame only — no per-row horizontal rules (matches Telerik panel look).
                     t.Cell().BorderLeft(Bw).BorderRight(Bw).MinHeight(Rh, Mm).PaddingLeft(1f).AlignMiddle()
                         .Text(name).Style(ThaiUrText.Base);
                     t.Cell().BorderRight(Bw).MinHeight(Rh, Mm).ValueCentered(ThaiUrData.Time(m?.Timestamp));
                     t.Cell().BorderRight(Bw).MinHeight(Rh, Mm);
                 }
             });
-            // Telerik places Hct/Hb under the medication column, not Health education.
+            // Continue Name|Time|Sign vertical rules through leftover space down to Hct/Hb.
+            if (spacerMm > 0.05f)
+            {
+                col.Item().Height(spacerMm, Mm).Row(r =>
+                {
+                    r.RelativeItem(3).BorderLeft(Bw).BorderRight(Bw);
+                    r.ConstantItem(16, Mm).BorderRight(Bw);
+                    r.ConstantItem(14, Mm).BorderRight(Bw);
+                });
+            }
             col.Item().Border(Bw).Height(Rh, Mm).Row(lab =>
             {
                 lab.RelativeItem().Label($"Hct: {vm.Labs.Hct ?? "-"}");
@@ -194,7 +283,7 @@ internal static class ThaiUrHemosheetFooter
         });
     }
 
-    private static void PrePostHdNotes(IContainer c, HemosheetReportViewModel vm)
+    private static void PrePostHdNotes(IContainer c, HemosheetReportViewModel vm, float eachNoteMm)
     {
         var pre = vm.NurseRecords.FirstOrDefault()?.Content;
         var post = vm.NurseRecords.Skip(1).FirstOrDefault()?.Content
@@ -202,27 +291,28 @@ internal static class ThaiUrHemosheetFooter
         vm.SignatureNames.TryGetValue("pre_hd", out var preSigner);
         vm.SignatureNames.TryGetValue("post_hd", out var postSigner);
 
-        c.Table(t =>
+        c.Column(col =>
         {
-            t.ColumnsDefinition(cols =>
-            {
-                cols.RelativeColumn();
-                cols.ConstantColumn(28, Mm);
-            });
-
-            NoteRow(t, "Pre HD", pre, preSigner);
-            NoteRow(t, "Post HD", post, postSigner);
+            col.Item().Height(eachNoteMm, Mm).Element(n => NoteRow(n, "Pre HD", pre, preSigner));
+            col.Item().Height(eachNoteMm, Mm).Element(n => NoteRow(n, "Post HD", post, postSigner));
         });
 
-        static void NoteRow(TableDescriptor t, string label, string? content, string? signer)
+        static void NoteRow(IContainer container, string label, string? content, string? signer)
         {
             var body = string.IsNullOrWhiteSpace(content) ? "" : content.Trim();
-            // Reserve ~2–3 lines even when empty; grow with real text via MinHeight.
-            t.Cell().Border(Bw).MinHeight(NoteBodyMinHeightMm, Mm).Padding(1f).AlignTop()
-                .Text(string.IsNullOrEmpty(body) ? label : $"{label} {body}")
-                .Style(ThaiUrText.Base);
-            t.Cell().Border(Bw).MinHeight(NoteBodyMinHeightMm, Mm).Padding(1f).AlignBottom().AlignRight()
-                .Text(signer ?? "").Style(ThaiUrText.Base);
+            container.Table(t =>
+            {
+                t.ColumnsDefinition(cols =>
+                {
+                    cols.RelativeColumn();
+                    cols.ConstantColumn(28, Mm);
+                });
+                t.Cell().Border(Bw).ExtendVertical().Padding(1f).AlignTop()
+                    .Text(string.IsNullOrEmpty(body) ? label : $"{label} {body}")
+                    .Style(ThaiUrText.Base);
+                t.Cell().Border(Bw).ExtendVertical().Padding(1f).AlignBottom().AlignRight()
+                    .Text(signer ?? "").Style(ThaiUrText.Base);
+            });
         }
     }
 
@@ -234,7 +324,7 @@ internal static class ThaiUrHemosheetFooter
         {
             t.ColumnsDefinition(cols =>
             {
-                cols.ConstantColumn(18, Mm);
+                cols.ConstantColumn(PostStripLabelMm, Mm);
                 cols.RelativeColumn();
                 cols.RelativeColumn();
                 cols.RelativeColumn();
@@ -263,18 +353,17 @@ internal static class ThaiUrHemosheetFooter
 
     private static void AvfRow(IContainer c, HemosheetReportViewModel vm)
     {
-        // One bordered cell per checkbox (matches Telerik AVF/AVG strip).
+        // Needle A/V sizes are already shown under Vascular Access — omit here.
         var h = HemosheetThaiUrStyle.PostStripRowHeightMm;
         c.Table(t =>
         {
             t.ColumnsDefinition(cols =>
             {
-                cols.ConstantColumn(16, Mm);
+                cols.ConstantColumn(PostStripLabelMm, Mm);
                 cols.RelativeColumn();
                 cols.RelativeColumn();
                 cols.RelativeColumn();
                 cols.RelativeColumn(1.5f);
-                cols.ConstantColumn(18, Mm);
             });
             t.Cell().Border(Bw).Height(h, Mm).AlignMiddle().PaddingLeft(1f)
                 .Text("AVF/AVG").Style(ThaiUrText.Bold);
@@ -283,9 +372,6 @@ internal static class ThaiUrHemosheetFooter
             AvfCell(t, h, "Hematoma", ThaiUrData.PostState(vm, "hematoma", "hema", "vas:hematoma"));
             AvfCell(t, h, "Stop Bleeding > 20 min",
                 ThaiUrData.PostState(vm, "sb", "stop bleeding", "stopbleeding", "vas:sb"));
-            t.Cell().Border(Bw).Height(h, Mm).AlignMiddle().AlignCenter()
-                .Text($"A{ThaiUrData.Num(vm.AvShunt.ANeedleSize)}/V{ThaiUrData.Num(vm.AvShunt.VNeedleSize)}")
-                .Style(ThaiUrText.Base);
         });
     }
 
