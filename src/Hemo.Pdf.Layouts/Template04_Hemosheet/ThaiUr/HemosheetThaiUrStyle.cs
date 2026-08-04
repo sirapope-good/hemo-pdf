@@ -24,6 +24,10 @@ internal static class HemosheetThaiUrStyle
     public const float BorderWidth = 0.4f;
 
     public const float RowHeightMm = 4.6f;
+    /// <summary>
+    /// Patient meta / Diagnosis rows — taller than body Rh so Thai diacritics clear cell borders.
+    /// </summary>
+    public const float MetaRowHeightMm = 5.4f;
     /// <summary>Max wrapped lines for a dialysis-record Note cell before ellipsis.</summary>
     public const int DialysisNoteMaxLines = 4;
     /// <summary>Slightly tighter than data rows so checkbox bands fit one A4 page.</summary>
@@ -33,7 +37,11 @@ internal static class HemosheetThaiUrStyle
     /// <summary>Post Vital / AVF / signature strip under notes.</summary>
     public const float PostStripRowHeightMm = 5.2f;
     public const float HeaderBarHeightMm = 5.0f;
-    public const float TitleHeightMm = 18.4f;
+    /// <summary>
+    /// Logo + title row. Sized so RowSpan(2) meta column equals 5× MetaRowHeightMm
+    /// (title + diagnosis) and Thai name lines are not clipped.
+    /// </summary>
+    public const float TitleHeightMm = 21.6f;
     public const float PageMarginMm = 2f;
     public const float ContentWidthMm = 205.7f;
     public const float AssessmentColumnWidthMm = 100f;

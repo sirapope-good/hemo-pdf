@@ -154,6 +154,13 @@ internal static class ThaiUrData
     public static bool? PreOrOtherState(HemosheetReportViewModel vm, params string[] keys) =>
         PreState(vm, keys) ?? OtherState(vm, keys);
 
+    /// <summary>
+    /// Free-text / number from assessment item. Pre first, then Other
+    /// (Pain score is seed Pre <c>pain</c>; Urine ml/day is typically Other <c>urine</c>).
+    /// </summary>
+    public static string? PreOrOtherText(HemosheetReportViewModel vm, params string[] keys) =>
+        FindText(vm.Assessments.Pre, keys) ?? FindText(vm.Assessments.Other, keys);
+
     private static bool? State(IEnumerable<HemosheetAssessmentItemViewModel> items, string[] keys)
     {
         // Prefer keys in caller order so ThaiUR shorts (inf) win over seed aliases (inflame)
@@ -163,6 +170,18 @@ internal static class ThaiUrData
             var item = items.FirstOrDefault(i => NameMatches(i.Name, key));
             if (item is not null)
                 return item.Checked;
+        }
+
+        return null;
+    }
+
+    private static string? FindText(IEnumerable<HemosheetAssessmentItemViewModel> items, string[] keys)
+    {
+        foreach (var key in keys)
+        {
+            var item = items.FirstOrDefault(i => NameMatches(i.Name, key));
+            if (item is not null)
+                return string.IsNullOrWhiteSpace(item.Text) ? null : item.Text.Trim();
         }
 
         return null;

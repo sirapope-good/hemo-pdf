@@ -17,23 +17,20 @@ internal static class ThaiUrHemosheetFooter
     /// <summary>Reserved height for Pre/Post HD note body (~2.5 text lines at ThaiUR base size).</summary>
     private const float NoteBodyMinHeightMm = 11.5f;
 
+    /// <summary>Minimum combined Pre+Post HD height when the page has little leftover.</summary>
+    public static float PrePostFloorHeightMm => 2f * NoteBodyMinHeightMm;
+
     /// <summary>Shared label column for Post Vital and AVF/AVG so the first vertical rule aligns.</summary>
     private const float PostStripLabelMm = 18f;
 
     private const float MedColHeaderMm = 5.5f;
-    private const float FluidSummaryHeightMm = 6.5f;
+    public const float FluidSummaryHeightMm = 6.5f;
 
-    /// <summary>
-    /// Approx. height of the default page-number strip under page content.
-    /// Used only to budget Pre/Post HD expansion on a single A4 page.
-    /// </summary>
-    private const float PageNumberFooterMm = 7f;
+    /// <summary>Approx. height of the default page-number strip under page content.</summary>
+    public const float PageNumberFooterMm = 7f;
 
-    /// <summary>
-    /// Headroom for borders / estimate error so Pre/Post expansion does not push
-    /// fluid+footer onto a second page.
-    /// </summary>
-    private const float LayoutSafetyMm = 3f;
+    /// <summary>Headroom so slight wrap / border error does not push ShowEntire(footer) to page 2.</summary>
+    public const float LayoutSafetyMm = 4f;
 
     private static readonly string[] ComplicationItems =
     [
@@ -79,32 +76,40 @@ internal static class ThaiUrHemosheetFooter
     }
 
     /// <summary>
-    /// Budget Pre+Post HD height so bottom strips snap to the page bottom on a single-page
-    /// report. Avoids page-level ExtendVertical (which balloons across extra pages in QuestPDF).
-    /// When the band cannot grow without overflowing, keeps the floor height only — do not
-    /// pre-size for a speculative page-2 fill (that forces an unnecessary second page).
+    /// Fluid summary + footer band height with the given Pre/Post HD total.
+    /// Used to reserve space on page 1 before sizing dialysis rows (no ExtendVertical —
+    /// that steals the whole page and ShowEntire then jumps the footer to page 2).
+    /// </summary>
+    public static float BottomBlockHeightMm(HemosheetReportViewModel vm, float prePostTotalHeightMm)
+    {
+        var panelMm = AssessmentPanelHeightMm();
+        var healthMedMm = HealthMedRowHeightMm(vm);
+        var stripMm = HemosheetThaiUrStyle.PostStripRowHeightMm;
+        var rightMm = healthMedMm + prePostTotalHeightMm + 4f * stripMm;
+        var footerMm = Math.Max(panelMm + stripMm, rightMm);
+        return FluidSummaryHeightMm + footerMm;
+    }
+
+    /// <summary>
+    /// Legacy leftover budget for Pre+Post HD. Prefer dialysis row budgeting in the form composer.
     /// </summary>
     public static float ComputePrePostTotalHeightMm(HemosheetReportViewModel vm, float mainBandHeightMm)
     {
         var pageContentMm = 297f
             - 2f * HemosheetThaiUrStyle.PageMarginMm
             - PageNumberFooterMm;
-        var fluidMm = FluidSummaryHeightMm;
-        var healthMedMm = HealthMedRowHeightMm(vm);
-        var stripMm = HemosheetThaiUrStyle.PostStripRowHeightMm;
-        var panelMm = AssessmentPanelHeightMm();
-        var leftMm = panelMm + stripMm;
-        var rightFixedMm = healthMedMm + 4f * stripMm;
-        var prePostFloorMm = 2f * NoteBodyMinHeightMm;
-        var matchLeftMm = Math.Max(prePostFloorMm, leftMm - rightFixedMm);
+        var bottomFloorMm = BottomBlockHeightMm(vm, PrePostFloorHeightMm);
+        // mainBand already includes dialysis; this helper is only for older call sites.
+        var maxOnSamePageMm = pageContentMm
+            - LayoutSafetyMm
+            - mainBandHeightMm
+            - bottomFloorMm
+            + PrePostFloorHeightMm;
 
-        // Largest Pre/Post that still keeps main+fluid+footer on one page.
-        var maxOnSamePageMm = pageContentMm - LayoutSafetyMm - mainBandHeightMm - fluidMm - rightFixedMm;
-        if (maxOnSamePageMm < prePostFloorMm)
-            return prePostFloorMm;
+        if (maxOnSamePageMm < PrePostFloorHeightMm)
+            return PrePostFloorHeightMm;
 
-        // Prefer filling leftover page space; never shrink below the left-column match.
-        return Math.Max(matchLeftMm, maxOnSamePageMm);
+        return maxOnSamePageMm;
     }
 
     public static float AssessmentPanelHeightMm() => Math.Max(

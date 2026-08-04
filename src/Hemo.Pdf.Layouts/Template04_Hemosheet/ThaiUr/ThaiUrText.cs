@@ -103,6 +103,30 @@ internal static class ThaiUrText
         });
     }
 
+    /// <summary>
+    /// Telerik TopLeftPanel rows: Urine / Pain score — label | Y | N | value | unit.
+    /// </summary>
+    public static void YesNoValue(
+        this IContainer c,
+        string label,
+        bool? yes,
+        string? value,
+        string unit,
+        float labelMm = 18f,
+        float yColMm = 10f,
+        float nColMm = 10f,
+        float unitMm = 12f)
+    {
+        c.Row(r =>
+        {
+            r.ConstantItem(labelMm, Unit.Millimetre).AlignMiddle().PaddingLeft(1f).Text(label).Style(Base);
+            YnCell(r, yColMm, "Y", yes == true);
+            YnCell(r, nColMm, "N", yes == false);
+            r.RelativeItem().Value(value);
+            r.ConstantItem(unitMm, Unit.Millimetre).AlignMiddle().Text(unit).Style(UnitText);
+        });
+    }
+
     private static void YnCell(RowDescriptor row, float widthMm, string letter, bool isChecked)
     {
         row.ConstantItem(widthMm, Unit.Millimetre).AlignMiddle().Row(yn =>

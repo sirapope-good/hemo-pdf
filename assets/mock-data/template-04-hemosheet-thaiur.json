@@ -68,6 +68,7 @@
   },
   "assessments": {
     "pre": [
+      { "name": "pain", "checked": true, "text": "3" },
       { "name": "pale", "checked": true, "text": "" },
       { "name": "edema", "checked": true, "text": "" },
       { "name": "dys", "checked": false, "text": "" },

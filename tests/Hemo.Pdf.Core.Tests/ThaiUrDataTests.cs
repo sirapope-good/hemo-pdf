@@ -203,6 +203,23 @@ public class ThaiUrDataTests
     }
 
     [Fact]
+    public void PreOrOtherText_ReadsPainScoreFromPre_AndUrineMlFromOther()
+    {
+        var vm = new HemosheetReportViewModel
+        {
+            Assessments = new HemosheetAssessmentsViewModel
+            {
+                Pre = [new() { Name = "pain", Checked = true, Text = "3" }],
+                Other = [new() { Name = "urine", Checked = true, Text = "800" }],
+            },
+        };
+
+        Assert.Equal("3", ThaiUrData.PreOrOtherText(vm, "pain"));
+        Assert.True(ThaiUrData.PreOrOtherState(vm, "pain"));
+        Assert.Equal("800", ThaiUrData.PreOrOtherText(vm, "urine"));
+    }
+
+    [Fact]
     public void Checked_MatchesSelectedOptionsDisplayNames_FromLiveBeShape()
     {
         var vm = new HemosheetReportViewModel
