@@ -14,6 +14,9 @@ internal static class HemosheetThaiUrStyle
 
     public const float BaseFontSize = 7.5f;
     public const float UnitFontSize = 5.5f;
+    /// <summary>Dialysis record table + fluid summary — slightly denser than body text.</summary>
+    public const float DialysisFontSize = 6.5f;
+    public const float DialysisUnitFontSize = 5f;
     public const float TitleFontSize = 18f;
 
     public const string HeaderBackground = "#C0C0FF";

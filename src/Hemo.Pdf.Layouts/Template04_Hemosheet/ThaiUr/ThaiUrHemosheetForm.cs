@@ -521,19 +521,30 @@ internal sealed class ThaiUrHemosheetForm
         });
     }
 
-    private static readonly (string Head, string Unit, float Mm)[] DialysisColumns =
+    // Leading numeric columns (Time…UFR). Total UF width = sum(leading)/4 so each of the five
+    // fluid-summary cells under the fixed band matches the Total UF column exactly.
+    private static readonly (string Head, string Unit, float Mm)[] DialysisLeadingColumns =
     [
         ("Time", "", 12f), ("BP", "mmHg", 15f), ("MAP", "mmHg", 10f), ("Pulse", "/min", 10f),
         ("EBFR", "ml/min", 11f), ("AP", "mmHg", 10f), ("VP", "mmHg", 10f), ("TMP", "mmHg", 10f),
-        ("Cond.", "mS/cm", 12f), ("UFR", "ml/hr", 12f), ("Total UF", "ml", 14f),
+        ("Cond.", "mS/cm", 12f), ("UFR", "ml/hr", 12f),
     ];
+
+    private static readonly (string Head, string Unit, float Mm)[] DialysisColumns = BuildDialysisColumns();
+
+    private static (string Head, string Unit, float Mm)[] BuildDialysisColumns()
+    {
+        var leadingSumMm = DialysisLeadingColumns.Sum(c => c.Mm);
+        var totalUfMm = leadingSumMm / 4f;
+        return [.. DialysisLeadingColumns, ("Total UF", "ml", totalUfMm)];
+    }
 
     private static void DialysisTable(IContainer c, HemosheetReportViewModel vm)
     {
         var fixedLines = Math.Max(vm.LayoutContext.ReportSettings.FixedLines.Dialysis, vm.DialysisRecords.Count);
         if (fixedLines <= 0) fixedLines = 8;
 
-        c.Table(t =>
+        c.DefaultTextStyle(ThaiUrText.Dialysis).Table(t =>
         {
             t.ColumnsDefinition(cols =>
             {
@@ -547,18 +558,18 @@ internal sealed class ThaiUrHemosheetForm
             {
                 t.Cell().Border(Bw).Background(HemosheetThaiUrStyle.HeaderBackground)
                     .AlignCenter().AlignMiddle().Height(Rh, Mm)
-                    .Text(col.Head).Style(ThaiUrText.Bold);
+                    .Text(col.Head).Style(ThaiUrText.DialysisBold);
             }
             t.Cell().Border(Bw).Background(HemosheetThaiUrStyle.HeaderBackground)
                 .AlignCenter().AlignMiddle().Height(Rh, Mm)
-                .Text("Note").Style(ThaiUrText.Bold);
+                .Text("Note").Style(ThaiUrText.DialysisBold);
 
             // Header row 2: units (separate cells with horizontal divider)
             foreach (var col in DialysisColumns)
             {
                 t.Cell().Border(Bw).Background(HemosheetThaiUrStyle.HeaderBackground)
                     .AlignCenter().AlignMiddle().Height(3.2f, Mm)
-                    .Text(col.Unit).Style(ThaiUrText.UnitText);
+                    .Text(col.Unit).Style(ThaiUrText.DialysisUnit);
             }
             t.Cell().Border(Bw).Background(HemosheetThaiUrStyle.HeaderBackground)
                 .Height(3.2f, Mm);
@@ -581,12 +592,15 @@ internal sealed class ThaiUrHemosheetForm
                     rec?.UfTotal is not null ? ThaiUrData.Num(rec.UfTotal * 1000) : "",
                 };
                 foreach (var value in cells)
-                    t.Cell().Border(Bw).MinHeight(Rh, Mm).AlignMiddle().ValueCentered(value);
+                {
+                    t.Cell().Border(Bw).MinHeight(Rh, Mm).AlignMiddle().AlignCenter()
+                        .Text(string.IsNullOrWhiteSpace(value) ? "" : value).Style(ThaiUrText.Dialysis);
+                }
                 // Grow with wrapped note (up to DialysisNoteMaxLines); sibling cells MinHeight so the row expands together.
                 t.Cell().Border(Bw).MinHeight(Rh, Mm).PaddingHorizontal(1f).PaddingVertical(0.5f).AlignMiddle()
                     .Text(text =>
                     {
-                        text.DefaultTextStyle(ThaiUrText.Base);
+                        text.DefaultTextStyle(ThaiUrText.Dialysis);
                         text.ClampLines(HemosheetThaiUrStyle.DialysisNoteMaxLines, "\u2026");
                         text.Span(rec?.Note ?? "");
                     });
@@ -596,8 +610,8 @@ internal sealed class ThaiUrHemosheetForm
 
     /// <summary>
     /// Horizontal fluid boxes under the dialysis record table.
-    /// First 5 cells share the fixed dialysis columns (Time…Total UF); last cell (Net fluid balance)
-    /// uses the remaining Relative width — same as the Note column above.
+    /// First 5 cells are equal to the Total UF column width (leading cols sum / 4); last cell
+    /// (Net fluid balance) uses the remaining Relative width — same as the Note column above.
     /// </summary>
     private static void FluidSummaryRow(IContainer c, HemosheetReportViewModel vm)
     {
@@ -611,15 +625,15 @@ internal sealed class ThaiUrHemosheetForm
             ("Net fluid balance", ThaiUrData.Ml(ThaiUrData.NetFluidBalanceMl(vm))),
         };
 
-        var fixedColsMm = DialysisColumns.Sum(col => col.Mm);
-        var leadingCellMm = fixedColsMm / 5f;
+        // Equals DialysisColumns[^1].Mm (= leading sum / 4) so Total UF cells share one vertical rule.
+        var totalUfColMm = DialysisColumns[^1].Mm;
 
-        c.Table(t =>
+        c.DefaultTextStyle(ThaiUrText.Dialysis).Table(t =>
         {
             t.ColumnsDefinition(cols =>
             {
                 for (var i = 0; i < 5; i++)
-                    cols.ConstantColumn(leadingCellMm, Mm);
+                    cols.ConstantColumn(totalUfColMm, Mm);
                 cols.RelativeColumn();
             });
 
@@ -627,8 +641,8 @@ internal sealed class ThaiUrHemosheetForm
             {
                 t.Cell().Border(Bw).MinHeight(6.5f, Mm).Padding(1f).AlignCenter().Column(cc =>
                 {
-                    cc.Item().AlignCenter().Text(label).Style(ThaiUrText.Bold);
-                    cc.Item().AlignCenter().Text(value).Style(ThaiUrText.Base);
+                    cc.Item().AlignCenter().Text(label).Style(ThaiUrText.DialysisBold);
+                    cc.Item().AlignCenter().Text(value).Style(ThaiUrText.Dialysis);
                 });
             }
         });

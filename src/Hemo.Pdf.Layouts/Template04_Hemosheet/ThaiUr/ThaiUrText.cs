@@ -20,6 +20,12 @@ internal static class ThaiUrText
 
     public static TextStyle UnitText => Base.FontSize(HemosheetThaiUrStyle.UnitFontSize);
 
+    public static TextStyle Dialysis => Base.FontSize(HemosheetThaiUrStyle.DialysisFontSize);
+
+    public static TextStyle DialysisBold => Dialysis.Bold();
+
+    public static TextStyle DialysisUnit => Dialysis.FontSize(HemosheetThaiUrStyle.DialysisUnitFontSize);
+
     public static TextStyle Title => Base.FontSize(HemosheetThaiUrStyle.TitleFontSize).Bold();
 
     public static IContainer Cell(this IContainer c) => c.Border(HemosheetThaiUrStyle.BorderWidth);
