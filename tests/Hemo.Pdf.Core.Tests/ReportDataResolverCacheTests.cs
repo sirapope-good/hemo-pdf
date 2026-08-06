@@ -26,7 +26,7 @@ public class ReportDataResolverCacheTests
         var resolver = new ReportDataResolver(options, client, accessor, cache);
         var request = new GeneratePdfRequest
         {
-            ReportTemplateId = "template-04-hemosheet",
+            ReportTemplateId = "clinical-03-hemodialysis-record",
             TenantCode = "local",
             EntityId = "hemo-1",
             Data = default,
@@ -51,7 +51,7 @@ public class ReportDataResolverCacheTests
             CancellationToken cancellationToken)
         {
             RecordCalls++;
-            var json = """{"id":"hemo-1","layoutContext":{"hemoPdfTemplateId":"template-04-hemosheet","layoutProfile":"ThaiUr"}}""";
+            var json = """{"id":"hemo-1","layoutContext":{"hemoPdfTemplateId":"clinical-03-hemodialysis-record","layoutProfile":"ThaiUr"}}""";
             return Task.FromResult(JsonDocument.Parse(json).RootElement.Clone());
         }
 

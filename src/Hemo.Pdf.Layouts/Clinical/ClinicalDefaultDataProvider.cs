@@ -4,9 +4,12 @@ using Hemo.Pdf.Core.Constants;
 using Hemo.Pdf.Core.Context;
 using Hemo.Pdf.Core.Models;
 
-namespace Hemo.Pdf.Layouts.Generic;
+namespace Hemo.Pdf.Layouts.Clinical;
 
-public sealed class GenericTemplateDataProvider : IReportDataProvider
+/// <summary>
+/// Foundation scaffold data for clinical reports other than Hemodialysis Record (#03).
+/// </summary>
+public sealed class ClinicalDefaultDataProvider : IReportDataProvider
 {
     public Task<object> GetDataAsync(PdfReportContext context, CancellationToken cancellationToken)
     {
@@ -14,21 +17,29 @@ public sealed class GenericTemplateDataProvider : IReportDataProvider
 
         var title = context.Metadata.Title;
         if (string.IsNullOrWhiteSpace(title)
-            && ClinicalReportCatalog.TryGetDefinition(context.ReportTemplateId, out var clinical))
+            && ClinicalReportCatalog.TryGetDefinition(context.ReportTemplateId, out var definition))
         {
-            title = clinical!.DisplayName;
+            title = definition!.DisplayName;
         }
 
-        var rows = new List<KeyValuePair<string, string?>>();
+        if (string.IsNullOrWhiteSpace(title))
+            title = context.ReportTemplateId;
+
+        var rows = new List<KeyValuePair<string, string?>>
+        {
+            new("Report", title),
+            new("Layout", "Default (scaffold)"),
+            new(
+                "Note",
+                "Foundation placeholder — body pixel-parity not implemented yet."),
+        };
 
         if (context.Data is JsonElement json && json.ValueKind == JsonValueKind.Object)
         {
             foreach (var property in json.EnumerateObject())
             {
                 if (property.Value.ValueKind is JsonValueKind.Object or JsonValueKind.Array)
-                {
                     continue;
-                }
 
                 rows.Add(new KeyValuePair<string, string?>(property.Name, FormatJsonValue(property.Value)));
             }
@@ -37,7 +48,7 @@ public sealed class GenericTemplateDataProvider : IReportDataProvider
         var viewModel = new SimpleReportViewModel
         {
             Title = title,
-            Subtitle = context.Metadata.Subtitle,
+            Subtitle = context.Metadata.Subtitle ?? "Clinical report pack — Default structure",
             Rows = rows,
         };
 

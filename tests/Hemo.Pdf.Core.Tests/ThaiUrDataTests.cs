@@ -1,5 +1,6 @@
 using Hemo.Pdf.Core.Models.Hemosheet;
 using Hemo.Pdf.Layouts.Template04_Hemosheet.ThaiUr;
+using Hemo.Pdf.Sections.ThaiUr;
 
 namespace Hemo.Pdf.Core.Tests;
 

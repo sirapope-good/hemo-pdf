@@ -1,13 +1,13 @@
 using System.Globalization;
 using Hemo.Pdf.Core.Models.Hemosheet;
 
-namespace Hemo.Pdf.Layouts.Template04_Hemosheet.ThaiUr;
+namespace Hemo.Pdf.Sections.ThaiUr;
 
 /// <summary>
 /// Read helpers that turn the <see cref="HemosheetReportViewModel"/> into the display strings /
 /// checkbox states the ThaiUR form expects. Kept separate from layout so binding rules are testable.
 /// </summary>
-internal static class ThaiUrData
+public static class ThaiUrData
 {
     private static readonly CultureInfo Culture = CultureInfo.InvariantCulture;
 
@@ -191,7 +191,7 @@ internal static class ThaiUrData
     /// Match seed names (<c>pale</c>), Telerik shorts (<c>crep</c>), aliases (<c>vas:edema</c>),
     /// and dotted keys (<c>complication.hypo</c>).
     /// </summary>
-    internal static bool NameMatches(string? name, string key)
+    public static bool NameMatches(string? name, string key)
     {
         if (string.IsNullOrWhiteSpace(name) || string.IsNullOrWhiteSpace(key))
             return false;
@@ -245,7 +245,7 @@ internal static class ThaiUrData
         return false;
     }
 
-    internal static bool TokenEquals(string? a, string? b)
+    public static bool TokenEquals(string? a, string? b)
     {
         if (string.IsNullOrWhiteSpace(a) || string.IsNullOrWhiteSpace(b))
             return false;
@@ -306,7 +306,7 @@ internal static class ThaiUrData
         return rows;
     }
 
-    internal static string[] SplitNoteLines(string? text)
+    public static string[] SplitNoteLines(string? text)
     {
         if (string.IsNullOrWhiteSpace(text))
             return [];

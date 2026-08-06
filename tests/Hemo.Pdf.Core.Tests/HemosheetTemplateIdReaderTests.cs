@@ -14,28 +14,39 @@ public class HemosheetTemplateIdReaderTests
     public void ReadHemoPdfTemplateId_FromCamelCaseLayoutContext()
     {
         var data = JsonDocument.Parse(
-            """{"id":"hemo-1","layoutContext":{"hemoPdfTemplateId":"template-04-hemosheet","layoutProfile":"ThaiUr"}}""")
+            """{"id":"hemo-1","layoutContext":{"hemoPdfTemplateId":"clinical-03-hemodialysis-record","layoutProfile":"ThaiUr"}}""")
             .RootElement;
 
-        Assert.Equal(ReportTemplates.Hemosheet, HemosheetTemplateIdReader.ReadHemoPdfTemplateId(data));
+        Assert.Equal(ClinicalReportCatalog.HemodialysisRecord, HemosheetTemplateIdReader.ReadHemoPdfTemplateId(data));
     }
 
     [Fact]
     public void Normalize_DocumentTypeAlias_MapsToHemosheetEngine()
     {
-        Assert.Equal(ReportTemplates.Hemosheet, HemosheetTemplateIdReader.NormalizeReportTemplateId("hemosheet"));
-        Assert.Equal(ReportTemplates.Hemosheet, HemosheetTemplateIdReader.NormalizeReportTemplateId("Hemosheet"));
+        Assert.Equal(ClinicalReportCatalog.HemodialysisRecord, HemosheetTemplateIdReader.NormalizeReportTemplateId("hemosheet"));
+        Assert.Equal(ClinicalReportCatalog.HemodialysisRecord, HemosheetTemplateIdReader.NormalizeReportTemplateId("Hemosheet"));
+        Assert.Equal(
+            ClinicalReportCatalog.HemodialysisRecord,
+            HemosheetTemplateIdReader.NormalizeReportTemplateId(ClinicalReportCatalog.HemodialysisRecord));
+    }
+
+    [Fact]
+    public void Normalize_LegacyEngineAlias_MapsToClinical03()
+    {
+        Assert.Equal(
+            ClinicalReportCatalog.HemodialysisRecord,
+            HemosheetTemplateIdReader.NormalizeReportTemplateId(ClinicalReportCatalog.LegacyEngineAlias));
     }
 
     [Fact]
     public void Resolve_PrefersLayoutContextOverRequestAlias()
     {
         var data = JsonDocument.Parse(
-            """{"layoutContext":{"hemoPdfTemplateId":"template-04-hemosheet"}}""")
+            """{"layoutContext":{"hemoPdfTemplateId":"clinical-03-hemodialysis-record"}}""")
             .RootElement;
 
         Assert.Equal(
-            ReportTemplates.Hemosheet,
+            ClinicalReportCatalog.HemodialysisRecord,
             HemosheetTemplateIdReader.Resolve("hemosheet", data));
     }
 }
@@ -46,7 +57,7 @@ public class ReportDataResolverTemplateIdTests
     public async Task ServerFetch_UsesHemoPdfTemplateId_FromReportData()
     {
         var client = new FixedReportDataClient(
-            """{"id":"hemo-1","layoutContext":{"hemoPdfTemplateId":"template-04-hemosheet","layoutProfile":"ThaiUr"}}""");
+            """{"id":"hemo-1","layoutContext":{"hemoPdfTemplateId":"clinical-03-hemodialysis-record","layoutProfile":"ThaiUr"}}""");
         var resolver = CreateResolver(client, useServerFetch: true);
         var request = new GeneratePdfRequest
         {
@@ -59,7 +70,7 @@ public class ReportDataResolverTemplateIdTests
 
         var resolved = await resolver.ResolveAsync(request, CancellationToken.None);
 
-        Assert.Equal(ReportTemplates.Hemosheet, resolved.ReportTemplateId);
+        Assert.Equal(ClinicalReportCatalog.HemodialysisRecord, resolved.ReportTemplateId);
         Assert.Equal(JsonValueKind.Object, resolved.Data.ValueKind);
     }
 
@@ -67,7 +78,7 @@ public class ReportDataResolverTemplateIdTests
     public async Task ClientPayload_UsesHemoPdfTemplateId_FromData()
     {
         var data = JsonDocument.Parse(
-            """{"id":"hemo-1","layoutContext":{"hemoPdfTemplateId":"template-04-hemosheet"}}""")
+            """{"id":"hemo-1","layoutContext":{"hemoPdfTemplateId":"clinical-03-hemodialysis-record"}}""")
             .RootElement.Clone();
         var resolver = CreateResolver(new CountingUnusedClient(), useServerFetch: false);
         var request = new GeneratePdfRequest
@@ -80,7 +91,7 @@ public class ReportDataResolverTemplateIdTests
 
         var resolved = await resolver.ResolveAsync(request, CancellationToken.None);
 
-        Assert.Equal(ReportTemplates.Hemosheet, resolved.ReportTemplateId);
+        Assert.Equal(ClinicalReportCatalog.HemodialysisRecord, resolved.ReportTemplateId);
     }
 
     private static ReportDataResolver CreateResolver(IHemosheetReportDataClient client, bool useServerFetch)

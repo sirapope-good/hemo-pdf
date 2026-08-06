@@ -3,12 +3,12 @@ using QuestPDF.Fluent;
 using QuestPDF.Helpers;
 using QuestPDF.Infrastructure;
 
-namespace Hemo.Pdf.Layouts.Template04_Hemosheet.ThaiUr;
+namespace Hemo.Pdf.Sections.ThaiUr;
 
 /// <summary>
-/// Shared styling primitives for the ThaiUR Hemosheet form.
+/// Shared styling primitives for ThaiUR clinical report chrome and Hemosheet form.
 /// </summary>
-internal static class ThaiUrText
+public static class ThaiUrText
 {
     public static TextStyle Base => TextStyle.Default
         .FontFamily(HemosheetThaiUrStyle.FontFamily)

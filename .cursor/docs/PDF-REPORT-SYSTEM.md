@@ -331,6 +331,7 @@ flowchart LR
 | **Dual pipeline PDF + ReportDocument** | Hemosheet maintain `ComposePdf` + `MapToPreview`; Hemopro preview ใช้ JSON DOM (ยกเว้น ThaiUr), print ใช้ PDF | ต้นทุนเพิ่ม template/section สูง — ยอมรับเพื่อความรู้สึก Telerik |
 | **ThaiUr preview** | FE บังคับ PDF-as-preview สำหรับ `layoutProfile=ThaiUr` | ปิด drift DOM≠PDF สำหรับ profile นี้ |
 | **Client-trust DTO** | เมื่อ `UseServerFetch=true` Hemo-PDF ดึง report-data จาก Web.Api (JWT forward); ปิด flag = กลับ client-trust | เปิด UseServerFetch ใน Dev; production ควรเปิดคู่ flag FE |
+| **Clinical pack profile จาก `.trdp` (DEV)** | แพ็คกลาง 16 รายงานใช้ `HemosheetTemplate` → `HemosheetTemplateCatalog` → `LayoutProfile` เป็นตัวชี้ชั่วคราว (ThaiUR override เฉพาะ #03). Canonical engine id = `clinical-03-hemodialysis-record` (alias เก่า: `hemosheet`, `template-04-hemosheet`) | **TODO(prod):** resolve จาก `tenantCode` / setting แยก — อย่าพึ่งชื่อไฟล์ `.trdp` ก่อน production |
 | **Telerik fallback** | `useHemoPdfPreview` + `tr-viewer` ยัง active; plugin send ยังใช้ Report.Api | dual stack จนกว่าจะ cutover |
 | **Layout resolver ทำซ้ำกับ .trdp** | กติกา visibility อยู่ทั้งใน `.trdp` และ `HemosheetLayoutResolver` | sync 2 ที่จนกว่าจะเลิก Telerik |
 | **ยังเป็น copy (ไม่ใช่ package จริง)** | sync script ลด drift แต่ยังเป็น source copy | รัน sync เมื่อ lib เปลี่ยน |
@@ -383,7 +384,8 @@ npm run sync:report-viewer -- --check # CI: fail ถ้า out of sync
 | Guard | `src/Hemo.Pdf.Application/Guards/SignatureRequiredGuard.cs` |
 | Template registration | `src/Hemo.Pdf.Layouts/.../TemplateRegistration.cs` + `TemplateReport*RendererFactory` |
 | Preview models | `src/Hemo.Pdf.Core/Models/Preview/{ReportDocument,ReportBlock}.cs` |
-| Template constants | `src/Hemo.Pdf.Core/Constants/ReportTemplates.cs` |
+| Template constants | `src/Hemo.Pdf.Core/Constants/ClinicalReportCatalog.cs` (clinical-01…16) |
+| clinical-03 layout | Default/ThaiUr → dense form (ThaiUR-borrowed); Rama → UniquePlanner |
 | Block → PDF | `src/Hemo.Pdf.Sections/Content/ReportBlockPdfComposer.cs` |
 | Hemosheet planner | `src/Hemo.Pdf.Layouts/Hemosheet/HemosheetLayoutPlanner.cs` |
 | Section renderer interface | `src/Hemo.Pdf.Layouts/Hemosheet/IHemosheetSectionRenderer.cs` |

@@ -88,7 +88,7 @@ public class HemosheetPreviewMapperTests
 
         var context = new PdfReportContext
         {
-            ReportTemplateId = "template-04-hemosheet",
+            ReportTemplateId = "clinical-03-hemodialysis-record",
             TenantCode = "tenant-demo-a",
             Metadata = new ReportMetadata { Title = "Hemodialysis Record", ReportCode = "HS-001" },
             Branding = new CustomerBrandingProfile { DisplayName = "Demo Hospital" },

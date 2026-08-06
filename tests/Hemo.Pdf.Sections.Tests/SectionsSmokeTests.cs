@@ -30,7 +30,7 @@ public class ConfigurableHeaderSectionTests
         var section = new ConfigurableHeaderSection();
         var context = new PdfReportContext
         {
-            ReportTemplateId = ReportTemplates.LabResult,
+            ReportTemplateId = ClinicalReportCatalog.Lab,
             TenantCode = "tenant-demo-a",
             Branding = new CustomerBrandingProfile
             {

@@ -10,22 +10,16 @@ using Hemo.Pdf.Core.Models;
 
 namespace Hemo.Pdf.Core.Tests;
 
-public class ReportTemplatesTests
+public class ClinicalReportRequiresSignatureTests
 {
     [Theory]
-    [InlineData(ReportTemplates.DialysisSession, true)]
-    [InlineData(ReportTemplates.LabResult, false)]
-    [InlineData(ReportTemplates.Prescription, true)]
-    [InlineData(ReportTemplates.Summary, false)]
+    [InlineData(ClinicalReportCatalog.Lab, false)]
+    [InlineData(ClinicalReportCatalog.Prescription, true)]
+    [InlineData(ClinicalReportCatalog.HdSummary, false)]
+    [InlineData(ClinicalReportCatalog.HemodialysisRecord, true)]
     public void RequiresSignature_ReturnsExpected(string templateId, bool expected)
     {
-        Assert.Equal(expected, ReportTemplates.RequiresSignature(templateId));
-    }
-
-    [Fact]
-    public void All_ContainsTwelveTemplates()
-    {
-        Assert.Equal(12, ReportTemplates.All.Count);
+        Assert.Equal(expected, ClinicalReportCatalog.RequiresSignature(templateId));
     }
 }
 
@@ -37,7 +31,7 @@ public class SignatureRequiredGuardTests
         var guard = new SignatureRequiredGuard(new ReportSignatureResolver(new UnsignedSignatureStore()));
         var request = new GeneratePdfRequest
         {
-            ReportTemplateId = ReportTemplates.DialysisSession,
+            ReportTemplateId = ClinicalReportCatalog.HemodialysisRecord,
             TenantCode = "tenant-demo-a",
             EntityId = "session-1",
             Data = JsonDocument.Parse("{}").RootElement,
@@ -53,7 +47,7 @@ public class SignatureRequiredGuardTests
         var guard = new SignatureRequiredGuard(new ReportSignatureResolver(new UnsignedSignatureStore()));
         var request = new GeneratePdfRequest
         {
-            ReportTemplateId = ReportTemplates.Hemosheet,
+            ReportTemplateId = ClinicalReportCatalog.HemodialysisRecord,
             TenantCode = "tenant-demo-a",
             EntityId = "template--1",
             Data = JsonDocument.Parse("""{"id":"00000000-0000-0000-0000-000000000000"}""").RootElement,
@@ -69,7 +63,7 @@ public class SignatureRequiredGuardTests
         var guard = new SignatureRequiredGuard(new ReportSignatureResolver(new MockSignatureStore()));
         var request = new GeneratePdfRequest
         {
-            ReportTemplateId = ReportTemplates.DialysisSession,
+            ReportTemplateId = ClinicalReportCatalog.HemodialysisRecord,
             TenantCode = "tenant-demo-a",
             EntityId = "session-1",
             Data = JsonDocument.Parse("{}").RootElement,
@@ -98,7 +92,7 @@ public class ReportSignatureResolverTests
         var resolver = new ReportSignatureResolver(new UnsignedSignatureStore());
         var request = new GeneratePdfRequest
         {
-            ReportTemplateId = ReportTemplates.Hemosheet,
+            ReportTemplateId = ClinicalReportCatalog.HemodialysisRecord,
             TenantCode = "tenant-demo-a",
             EntityId = "hemo-1",
             Data = JsonDocument.Parse("""{"doctorSignatureBase64":"abc"}""").RootElement,
@@ -115,7 +109,7 @@ public class ReportSignatureResolverTests
         var resolver = new ReportSignatureResolver(new UnsignedSignatureStore());
         var request = new GeneratePdfRequest
         {
-            ReportTemplateId = ReportTemplates.Hemosheet,
+            ReportTemplateId = ClinicalReportCatalog.HemodialysisRecord,
             TenantCode = "tenant-demo-a",
             EntityId = "hemo-1",
             Data = JsonDocument.Parse("""{"doctorSignatureBase64":"abc","doctorName":"Dr A"}""").RootElement,
@@ -133,7 +127,7 @@ public class ReportSignatureResolverTests
         var resolver = new ReportSignatureResolver(store);
         var request = new GeneratePdfRequest
         {
-            ReportTemplateId = ReportTemplates.LabResult,
+            ReportTemplateId = ClinicalReportCatalog.Lab,
             TenantCode = "tenant-demo-a",
             EntityId = "lab-1",
             Data = JsonDocument.Parse("{}").RootElement,
@@ -230,7 +224,7 @@ public class GeneratePdfRequestValidatorTests
         accessor.SetTenantCode("local");
         var request = new GeneratePdfRequest
         {
-            ReportTemplateId = ReportTemplates.LabResult,
+            ReportTemplateId = ClinicalReportCatalog.Lab,
             TenantCode = "other",
             EntityId = "e1",
             Data = JsonDocument.Parse("{}").RootElement,
@@ -247,7 +241,7 @@ public class GeneratePdfRequestValidatorTests
         accessor.SetTenantCode("local");
         var request = new GeneratePdfRequest
         {
-            ReportTemplateId = ReportTemplates.LabResult,
+            ReportTemplateId = ClinicalReportCatalog.Lab,
             TenantCode = "local",
             Data = JsonDocument.Parse("{}").RootElement,
         };
@@ -263,7 +257,7 @@ public class GeneratePdfRequestValidatorTests
         accessor.SetTenantCode("local");
         var request = new GeneratePdfRequest
         {
-            ReportTemplateId = ReportTemplates.LabResult,
+            ReportTemplateId = ClinicalReportCatalog.Lab,
             TenantCode = "local",
             EntityId = "a",
             Data = JsonDocument.Parse("""{"id":"b"}""").RootElement,
@@ -280,7 +274,7 @@ public class GeneratePdfRequestValidatorTests
         accessor.SetTenantCode("local");
         var request = new GeneratePdfRequest
         {
-            ReportTemplateId = ReportTemplates.Hemosheet,
+            ReportTemplateId = ClinicalReportCatalog.HemodialysisRecord,
             TenantCode = "local",
             EntityId = "template--1",
             Data = JsonDocument.Parse("""{"id":"00000000-0000-0000-0000-000000000000"}""").RootElement,
@@ -297,7 +291,7 @@ public class GeneratePdfRequestValidatorTests
         accessor.SetTenantCode("local");
         var request = new GeneratePdfRequest
         {
-            ReportTemplateId = ReportTemplates.LabResult,
+            ReportTemplateId = ClinicalReportCatalog.Lab,
             TenantCode = "local",
             EntityId = "hemo-1",
             Data = JsonDocument.Parse("""{"id":"hemo-1"}""").RootElement,
@@ -314,7 +308,7 @@ public class HemosheetFetchSpecTests
     {
         var request = new GeneratePdfRequest
         {
-            ReportTemplateId = ReportTemplates.Hemosheet,
+            ReportTemplateId = ClinicalReportCatalog.HemodialysisRecord,
             TenantCode = "local",
             EntityId = "template-1",
             Data = default,
@@ -329,7 +323,7 @@ public class HemosheetFetchSpecTests
     {
         var request = new GeneratePdfRequest
         {
-            ReportTemplateId = ReportTemplates.Hemosheet,
+            ReportTemplateId = ClinicalReportCatalog.HemodialysisRecord,
             TenantCode = "local",
             EntityId = "template--1",
             Data = default,

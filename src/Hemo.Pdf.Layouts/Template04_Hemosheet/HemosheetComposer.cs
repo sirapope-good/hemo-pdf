@@ -3,10 +3,12 @@ using Hemo.Pdf.Core.Constants;
 using Hemo.Pdf.Core.Context;
 using Hemo.Pdf.Core.Models.Hemosheet;
 using Hemo.Pdf.Layouts.Base;
+using Hemo.Pdf.Layouts.Clinical;
 using Hemo.Pdf.Layouts.Hemosheet;
 using Hemo.Pdf.Layouts.Template04_Hemosheet.ThaiUr;
 using Hemo.Pdf.Rendering;
 using Hemo.Pdf.Sections.Abstractions;
+using Hemo.Pdf.Sections.ThaiUr;
 using QuestPDF.Fluent;
 using QuestPDF.Infrastructure;
 
@@ -33,10 +35,11 @@ public sealed class HemosheetComposer : BaseReportComposer<HemosheetReportViewMo
     {
         var viewModel = (HemosheetReportViewModel)dataModel;
 
-        // The ThaiUR "Hemodialysis Record" is a dense, self-contained single-page form (own header
-        // and footer), so it bypasses the block-flow planner and header/footer resolvers to match
-        // the Telerik original pixel-for-pixel. Default/Rama keep the flexible block-flow path.
-        if (viewModel.LayoutContext.LayoutProfile == HemosheetLayoutProfile.ThaiUr)
+        // clinical-03 Default borrows the ThaiUR dense form; ThaiUr uses the same form as override.
+        // Rama keeps the unique block-flow planner. TODO: refine Default structure separately later.
+        if (ClinicalReportLayoutResolver.UsesHemosheetForm(
+                ClinicalReportCatalog.HemodialysisRecord,
+                viewModel.LayoutContext.LayoutProfile))
         {
             const float margin = HemosheetThaiUrStyle.PageMarginMm;
             return new QuestLayout

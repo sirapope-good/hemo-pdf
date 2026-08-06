@@ -1,5 +1,6 @@
 using Hemo.Pdf.Core.Context;
 using Hemo.Pdf.Core.Models.Hemosheet;
+using Hemo.Pdf.Sections.ThaiUr;
 using QuestPDF.Fluent;
 using QuestPDF.Helpers;
 using QuestPDF.Infrastructure;
@@ -7,7 +8,9 @@ using QuestPDF.Infrastructure;
 namespace Hemo.Pdf.Layouts.Template04_Hemosheet.ThaiUr;
 
 /// <summary>
-/// Pixel-parity reproduction of the Telerik "Hemodialysis Record" (Hemosheet-ThaiUR.trdp).
+/// Dense Hemodialysis Record form used as clinical-03 Default (borrowed from ThaiUR)
+/// and as the ThaiUR override. Refine Default structure later without breaking ThaiUr.
+/// Pixel-parity baseline: Telerik Hemosheet-ThaiUR.trdp.
 /// </summary>
 internal sealed class ThaiUrHemosheetForm
 {

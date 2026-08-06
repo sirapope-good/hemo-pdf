@@ -2,14 +2,14 @@ using Hemo.Pdf.Core.Models.Hemosheet;
 using QuestPDF.Fluent;
 using QuestPDF.Infrastructure;
 
-namespace Hemo.Pdf.Layouts.Template04_Hemosheet.ThaiUr;
+namespace Hemo.Pdf.Sections.ThaiUr;
 
 /// <summary>
-/// Shared ThaiUR report header: logo | title | patient meta, then Diagnosis / Drug Allergy
-/// (and optional Date + HD NO. cell). Reusable across ThaiUR reports via
+/// Shared ThaiUR clinical report header: logo | title | patient meta, then Diagnosis / Drug Allergy
+/// (and optional Date + HD NO. cell). Reusable across the clinical report pack via
 /// <see cref="HemosheetReportSettingsViewModel.ShowDateAndHdNo"/>.
 /// </summary>
-internal static class ThaiUrReportHeader
+public static class ThaiUrReportHeader
 {
     private const Unit Mm = Unit.Millimetre;
     private const float Bw = HemosheetThaiUrStyle.BorderWidth;

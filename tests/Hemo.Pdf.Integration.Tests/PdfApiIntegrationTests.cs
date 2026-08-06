@@ -8,6 +8,7 @@ using System.Text.Json;
 using Hemo.Pdf.Api;
 using Hemo.Pdf.Api.Auth;
 using Hemo.Pdf.Application;
+using Hemo.Pdf.Core.Constants;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.IdentityModel.Tokens;
@@ -33,7 +34,7 @@ public class PdfApiIntegrationTests : IClassFixture<PdfApiWebApplicationFactory>
     [Fact]
     public async Task GeneratePdf_WithTenantDemoA_ReturnsPdfBytes()
     {
-        var response = await PostGenerateAsync("tenant-demo-a", "template-02-lab-result");
+        var response = await PostGenerateAsync("tenant-demo-a", "clinical-07-lab");
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
         Assert.Equal("application/pdf", response.Content.Headers.ContentType?.MediaType);
         Assert.Contains("no-store", response.Headers.CacheControl?.ToString() ?? "");
@@ -46,8 +47,8 @@ public class PdfApiIntegrationTests : IClassFixture<PdfApiWebApplicationFactory>
     [Fact]
     public async Task GeneratePdf_TenantA_And_TenantB_ProduceDifferentPdfs()
     {
-        var responseA = await PostGenerateAsync("tenant-demo-a", "template-02-lab-result");
-        var responseB = await PostGenerateAsync("tenant-demo-b", "template-02-lab-result");
+        var responseA = await PostGenerateAsync("tenant-demo-a", "clinical-07-lab");
+        var responseB = await PostGenerateAsync("tenant-demo-b", "clinical-07-lab");
 
         var bytesA = await responseA.Content.ReadAsByteArrayAsync();
         var bytesB = await responseB.Content.ReadAsByteArrayAsync();
@@ -58,22 +59,26 @@ public class PdfApiIntegrationTests : IClassFixture<PdfApiWebApplicationFactory>
     }
 
     [Fact]
-    public async Task GeneratePdf_AllTwelveTemplates_ReturnPdf()
+    public async Task GeneratePdf_ClinicalPack_ReturnPdf()
     {
         var templates = new[]
         {
-            "template-01-dialysis-session",
-            "template-02-lab-result",
-            "template-03-prescription",
-            "template-04-hemosheet",
-            "template-05-nurse-record",
-            "template-06-doctor-record",
-            "template-07-med-history",
-            "template-08-adequacy",
-            "template-09-assessment",
-            "template-10-admission",
-            "template-11-progress-note",
-            "template-12-summary",
+            ClinicalReportCatalog.HctEpo,
+            ClinicalReportCatalog.EpoDrug,
+            ClinicalReportCatalog.HemodialysisRecord,
+            ClinicalReportCatalog.Prescription,
+            ClinicalReportCatalog.ProgressNote,
+            ClinicalReportCatalog.Medication,
+            ClinicalReportCatalog.Lab,
+            ClinicalReportCatalog.ConsentTh,
+            ClinicalReportCatalog.ConsentEn,
+            ClinicalReportCatalog.PatientData,
+            ClinicalReportCatalog.Admission,
+            ClinicalReportCatalog.EducationTh,
+            ClinicalReportCatalog.EducationEn,
+            ClinicalReportCatalog.MarMonth,
+            ClinicalReportCatalog.HdSummary,
+            ClinicalReportCatalog.AdequacySummary,
         };
 
         foreach (var templateId in templates)
@@ -90,10 +95,10 @@ public class PdfApiIntegrationTests : IClassFixture<PdfApiWebApplicationFactory>
     {
         var response = await PostGenerateAsync(
             "tenant-demo-a",
-            "template-02-lab-result",
+            "clinical-07-lab",
             new
             {
-                reportTemplateId = "template-02-lab-result",
+                reportTemplateId = "clinical-07-lab",
                 tenantCode = "tenant-demo-a",
                 entityId = "test-entity-1",
                 data = new { patientName = "Test Patient" },
@@ -115,10 +120,10 @@ public class PdfApiIntegrationTests : IClassFixture<PdfApiWebApplicationFactory>
     {
         var response = await PostGenerateAsync(
             "tenant-demo-a",
-            "template-02-lab-result",
+            "clinical-07-lab",
             new
             {
-                reportTemplateId = "template-02-lab-result",
+                reportTemplateId = "clinical-07-lab",
                 tenantCode = "tenant-demo-a",
                 entityId = "a",
                 data = new { id = "b", patientName = "Test Patient" },
@@ -132,10 +137,10 @@ public class PdfApiIntegrationTests : IClassFixture<PdfApiWebApplicationFactory>
     {
         var response = await PostGenerateAsync(
             "tenant-demo-a",
-            "template-02-lab-result",
+            "clinical-07-lab",
             new
             {
-                reportTemplateId = "template-02-lab-result",
+                reportTemplateId = "clinical-07-lab",
                 tenantCode = "tenant-demo-b",
                 entityId = "test-entity-1",
                 data = new { patientName = "Test Patient" },
@@ -171,7 +176,7 @@ public class PdfApiIntegrationTests : IClassFixture<PdfApiWebApplicationFactory>
     [Fact]
     public async Task Preview_ReturnsJson_WithBlocks()
     {
-        var response = await PostPreviewAsync("tenant-demo-a", "template-02-lab-result");
+        var response = await PostPreviewAsync("tenant-demo-a", "clinical-07-lab");
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
         Assert.Equal("application/json", response.Content.Headers.ContentType?.MediaType);
 
@@ -179,27 +184,25 @@ public class PdfApiIntegrationTests : IClassFixture<PdfApiWebApplicationFactory>
         using var document = JsonDocument.Parse(json);
         var root = document.RootElement;
 
-        Assert.Equal("template-02-lab-result", root.GetProperty("meta").GetProperty("templateId").GetString());
+        Assert.Equal("clinical-07-lab", root.GetProperty("meta").GetProperty("templateId").GetString());
         Assert.True(root.GetProperty("pages")[0].GetProperty("blocks").GetArrayLength() > 0);
     }
 
     [Fact]
-    public async Task Preview_AllTwelveTemplates_ReturnDocument()
+    public async Task Preview_ClinicalPack_ReturnDocument()
     {
         var templates = new[]
         {
-            "template-01-dialysis-session",
-            "template-02-lab-result",
-            "template-03-prescription",
-            "template-04-hemosheet",
-            "template-05-nurse-record",
-            "template-06-doctor-record",
-            "template-07-med-history",
-            "template-08-adequacy",
-            "template-09-assessment",
-            "template-10-admission",
-            "template-11-progress-note",
-            "template-12-summary",
+            ClinicalReportCatalog.Lab,
+            ClinicalReportCatalog.Prescription,
+            ClinicalReportCatalog.HemodialysisRecord,
+            ClinicalReportCatalog.Medication,
+            ClinicalReportCatalog.ProgressNote,
+            ClinicalReportCatalog.AdequacySummary,
+            ClinicalReportCatalog.Admission,
+            ClinicalReportCatalog.HdSummary,
+            ClinicalReportCatalog.ConsentTh,
+            ClinicalReportCatalog.HctEpo,
         };
 
         foreach (var templateId in templates)
@@ -216,8 +219,8 @@ public class PdfApiIntegrationTests : IClassFixture<PdfApiWebApplicationFactory>
     [Fact]
     public async Task Preview_TenantA_And_TenantB_DifferentBranding()
     {
-        var responseA = await PostPreviewAsync("tenant-demo-a", "template-02-lab-result");
-        var responseB = await PostPreviewAsync("tenant-demo-b", "template-02-lab-result");
+        var responseA = await PostPreviewAsync("tenant-demo-a", "clinical-07-lab");
+        var responseB = await PostPreviewAsync("tenant-demo-b", "clinical-07-lab");
 
         var jsonA = await responseA.Content.ReadAsStringAsync();
         var jsonB = await responseB.Content.ReadAsStringAsync();
@@ -238,10 +241,10 @@ public class PdfApiIntegrationTests : IClassFixture<PdfApiWebApplicationFactory>
     {
         var response = await PostPreviewAsync(
             "tenant-demo-a",
-            "template-01-dialysis-session",
+            ClinicalReportCatalog.HemodialysisRecord,
             new
             {
-                reportTemplateId = "template-01-dialysis-session",
+                reportTemplateId = ClinicalReportCatalog.HemodialysisRecord,
                 tenantCode = "tenant-demo-a",
                 entityId = "session-1",
                 data = new { patientName = "Test Patient" },
@@ -260,10 +263,10 @@ public class PdfApiIntegrationTests : IClassFixture<PdfApiWebApplicationFactory>
     {
         var response = await PostGenerateAsync(
             "tenant-demo-a",
-            "template-01-dialysis-session",
+            ClinicalReportCatalog.HemodialysisRecord,
             new
             {
-                reportTemplateId = "template-01-dialysis-session",
+                reportTemplateId = ClinicalReportCatalog.HemodialysisRecord,
                 tenantCode = "tenant-demo-a",
                 entityId = "session-1",
                 data = new { patientName = "Test Patient" },
@@ -298,10 +301,10 @@ public class PdfApiIntegrationTests : IClassFixture<PdfApiWebApplicationFactory>
 
         var response = await PostPreviewAsync(
             "tenant-demo-a",
-            "template-04-hemosheet",
+            "clinical-03-hemodialysis-record",
             new
             {
-                reportTemplateId = "template-04-hemosheet",
+                reportTemplateId = "clinical-03-hemodialysis-record",
                 tenantCode = "tenant-demo-a",
                 entityId,
                 data = data.RootElement,
@@ -335,10 +338,10 @@ public class PdfApiIntegrationTests : IClassFixture<PdfApiWebApplicationFactory>
 
         var response = await PostGenerateAsync(
             "tenant-demo-a",
-            "template-04-hemosheet",
+            "clinical-03-hemodialysis-record",
             new
             {
-                reportTemplateId = "template-04-hemosheet",
+                reportTemplateId = "clinical-03-hemodialysis-record",
                 tenantCode = "tenant-demo-a",
                 entityId,
                 data = data.RootElement,
@@ -488,7 +491,7 @@ public class JwtHttpIntegrationTests : IClassFixture<JwtPdfApiWebApplicationFact
         {
             Content = JsonContent.Create(new
             {
-                reportTemplateId = "template-02-lab-result",
+                reportTemplateId = "clinical-07-lab",
                 tenantCode = "local",
                 entityId = "e1",
                 data = new { patientName = "A" },
@@ -508,7 +511,7 @@ public class JwtHttpIntegrationTests : IClassFixture<JwtPdfApiWebApplicationFact
         {
             Content = JsonContent.Create(new
             {
-                reportTemplateId = "template-02-lab-result",
+                reportTemplateId = "clinical-07-lab",
                 tenantCode = "local",
                 entityId = "e1",
                 data = new { patientName = "A" },
@@ -530,7 +533,7 @@ public class JwtHttpIntegrationTests : IClassFixture<JwtPdfApiWebApplicationFact
         {
             Content = JsonContent.Create(new
             {
-                reportTemplateId = "template-02-lab-result",
+                reportTemplateId = "clinical-07-lab",
                 tenantCode = "local",
                 entityId = "e1",
                 data = new { patientName = "A" },

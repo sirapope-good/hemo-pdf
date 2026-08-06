@@ -1,6 +1,5 @@
 using Hemo.Pdf.Core.Constants;
 using Hemo.Pdf.Layouts.Preview.Generic;
-using Hemo.Pdf.Layouts.Preview.Template01_DialysisSession;
 using Hemo.Pdf.Layouts.Preview.Template04_Hemosheet;
 
 namespace Hemo.Pdf.Layouts;
@@ -10,20 +9,18 @@ public static class TemplateReportPreviewRendererFactory
     private static readonly IReadOnlyDictionary<string, Type> DedicatedRenderers =
         new Dictionary<string, Type>(StringComparer.OrdinalIgnoreCase)
         {
-            [ReportTemplates.DialysisSession] = typeof(DialysisSessionReportPreviewRenderer),
-            [ReportTemplates.Hemosheet] = typeof(HemosheetReportPreviewRenderer),
+            [ClinicalReportCatalog.HemodialysisRecord] = typeof(HemosheetReportPreviewRenderer),
+            [ClinicalReportCatalog.LegacyEngineAlias] = typeof(HemosheetReportPreviewRenderer),
         };
 
     public static Type ResolveRendererType(string reportTemplateId)
     {
-        if (DedicatedRenderers.TryGetValue(reportTemplateId, out var dedicated))
+        var engineId = ClinicalReportCatalog.ResolveEngineTemplateId(reportTemplateId);
+
+        if (DedicatedRenderers.TryGetValue(reportTemplateId, out var dedicated)
+            || DedicatedRenderers.TryGetValue(engineId, out dedicated))
         {
             return dedicated;
-        }
-
-        if (ReportTemplates.IsKnown(reportTemplateId))
-        {
-            return typeof(GenericReportPreviewRenderer);
         }
 
         return typeof(GenericReportPreviewRenderer);
@@ -37,6 +34,8 @@ public static class TemplateReportPreviewRendererFactory
         {
             registrations.Add((templateId, ResolveRendererType(templateId)));
         }
+
+        registrations.Add((ClinicalReportCatalog.LegacyEngineAlias, typeof(HemosheetReportPreviewRenderer)));
 
         return registrations;
     }

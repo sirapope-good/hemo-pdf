@@ -5,16 +5,10 @@ namespace Hemo.Pdf.Application;
 
 /// <summary>
 /// Resolves Hemo-PDF engine template id from Web.Api report-data
-/// (<c>layoutContext.hemoPdfTemplateId</c> ← HemoAdmin Hemosheet template via catalog).
+/// (<c>layoutContext.hemoPdfTemplateId</c>) or request aliases.
 /// </summary>
 public static class HemosheetTemplateIdReader
 {
-    /// <summary>Document-type aliases Hemopro may send instead of an engine template id.</summary>
-    private static readonly HashSet<string> DocumentTypeAliases = new(StringComparer.OrdinalIgnoreCase)
-    {
-        "hemosheet",
-    };
-
     public static string? ReadHemoPdfTemplateId(JsonElement data)
     {
         if (data.ValueKind != JsonValueKind.Object)
@@ -39,27 +33,22 @@ public static class HemosheetTemplateIdReader
             return null;
 
         var value = templateId.GetString()?.Trim();
-        return string.IsNullOrEmpty(value) ? null : value;
+        return string.IsNullOrEmpty(value) ? null : ClinicalReportCatalog.ResolveEngineTemplateId(value);
     }
 
     /// <summary>
-    /// Maps Hemopro document-type keys (e.g. <c>hemosheet</c>) to engine ids.
-    /// Known <c>template-*</c> ids pass through unchanged.
+    /// Maps legacy aliases (<c>hemosheet</c>, <c>template-04-hemosheet</c>) to
+    /// <see cref="ClinicalReportCatalog.HemodialysisRecord"/>. Known <c>clinical-*</c> ids pass through.
     /// </summary>
     public static string NormalizeReportTemplateId(string? reportTemplateId)
     {
         var trimmed = reportTemplateId?.Trim();
         if (string.IsNullOrEmpty(trimmed))
         {
-            return ReportTemplates.Hemosheet;
+            return ClinicalReportCatalog.HemodialysisRecord;
         }
 
-        if (DocumentTypeAliases.Contains(trimmed))
-        {
-            return ReportTemplates.Hemosheet;
-        }
-
-        return trimmed;
+        return ClinicalReportCatalog.ResolveEngineTemplateId(trimmed);
     }
 
     public static string Resolve(string? requestTemplateId, JsonElement data) =>

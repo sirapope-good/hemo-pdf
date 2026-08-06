@@ -1,0 +1,77 @@
+using Hemo.Pdf.Core.Constants;
+using Hemo.Pdf.Core.Models.Hemosheet;
+using Hemo.Pdf.Layouts.Clinical;
+
+namespace Hemo.Pdf.Core.Tests;
+
+public class ClinicalReportCatalogTests
+{
+    [Fact]
+    public void All_ContainsSixteenReports()
+    {
+        Assert.Equal(16, ClinicalReportCatalog.All.Count);
+    }
+
+    [Theory]
+    [InlineData(ClinicalReportCatalog.HemodialysisRecord, true)]
+    [InlineData(ClinicalReportCatalog.LegacyEngineAlias, true)]
+    [InlineData(ClinicalReportCatalog.LegacyDocumentTypeAlias, true)]
+    [InlineData(ClinicalReportCatalog.HctEpo, true)]
+    [InlineData("unknown", false)]
+    public void IsKnown_RecognizesPackAndAliases(string id, bool expected)
+    {
+        Assert.Equal(expected, ClinicalReportCatalog.IsKnown(id));
+    }
+
+    [Theory]
+    [InlineData(ClinicalReportCatalog.HemodialysisRecord, true)]
+    [InlineData(ClinicalReportCatalog.LegacyEngineAlias, true)]
+    [InlineData(ClinicalReportCatalog.Lab, false)]
+    public void IsHemodialysisRecord_OnlyNumber03(string id, bool expected)
+    {
+        Assert.Equal(expected, ClinicalReportCatalog.IsHemodialysisRecord(id));
+    }
+
+    [Fact]
+    public void ResolveEngineTemplateId_CollapsesAliasesToClinical03()
+    {
+        Assert.Equal(
+            ClinicalReportCatalog.HemodialysisRecord,
+            ClinicalReportCatalog.ResolveEngineTemplateId(ClinicalReportCatalog.HemodialysisRecord));
+        Assert.Equal(
+            ClinicalReportCatalog.HemodialysisRecord,
+            ClinicalReportCatalog.ResolveEngineTemplateId(ClinicalReportCatalog.LegacyEngineAlias));
+        Assert.Equal(
+            ClinicalReportCatalog.HemodialysisRecord,
+            ClinicalReportCatalog.ResolveEngineTemplateId(ClinicalReportCatalog.LegacyDocumentTypeAlias));
+        Assert.Equal(
+            ClinicalReportCatalog.Lab,
+            ClinicalReportCatalog.ResolveEngineTemplateId(ClinicalReportCatalog.Lab));
+    }
+
+    [Fact]
+    public void DefaultScaffoldIds_ExcludesHemodialysisRecord()
+    {
+        var ids = ClinicalReportCatalog.DefaultScaffoldIds.ToList();
+        Assert.Equal(15, ids.Count);
+        Assert.DoesNotContain(ClinicalReportCatalog.HemodialysisRecord, ids);
+    }
+}
+
+public class ClinicalReportLayoutResolverTests
+{
+    [Theory]
+    [InlineData(ClinicalReportCatalog.HemodialysisRecord, HemosheetLayoutProfile.Default, ClinicalLayoutKind.HemosheetForm)]
+    [InlineData(ClinicalReportCatalog.HemodialysisRecord, HemosheetLayoutProfile.ThaiUr, ClinicalLayoutKind.HemosheetForm)]
+    [InlineData(ClinicalReportCatalog.LegacyEngineAlias, HemosheetLayoutProfile.ThaiUr, ClinicalLayoutKind.HemosheetForm)]
+    [InlineData(ClinicalReportCatalog.HemodialysisRecord, HemosheetLayoutProfile.Rama, ClinicalLayoutKind.UniquePlanner)]
+    [InlineData(ClinicalReportCatalog.Lab, HemosheetLayoutProfile.ThaiUr, ClinicalLayoutKind.UniquePlanner)]
+    [InlineData(ClinicalReportCatalog.Lab, HemosheetLayoutProfile.Default, ClinicalLayoutKind.UniquePlanner)]
+    public void Resolve_DefaultAndThaiUrUseForm_RamaUsesPlanner(
+        string reportId,
+        HemosheetLayoutProfile profile,
+        ClinicalLayoutKind expected)
+    {
+        Assert.Equal(expected, ClinicalReportLayoutResolver.Resolve(reportId, profile));
+    }
+}

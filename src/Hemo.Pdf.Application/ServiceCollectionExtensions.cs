@@ -70,7 +70,7 @@ public static class ServiceCollectionExtensions
         services.AddScoped<ISectionResolver<IReportHeaderSection>>(sp =>
             new SectionResolver<IReportHeaderSection>(
                 [
-                    ("*", ReportTemplates.Hemosheet, typeof(HemosheetHeaderSection)),
+                    ("*", ClinicalReportCatalog.HemodialysisRecord, typeof(HemosheetHeaderSection)),
                 ],
                 sp,
                 typeof(ConfigurableHeaderSection)));
@@ -78,7 +78,7 @@ public static class ServiceCollectionExtensions
         services.AddScoped<ISectionResolver<IReportFooterSection>>(sp =>
             new SectionResolver<IReportFooterSection>(
                 [
-                    ("*", ReportTemplates.Hemosheet, typeof(HemosheetFooterSection)),
+                    ("*", ClinicalReportCatalog.HemodialysisRecord, typeof(HemosheetFooterSection)),
                 ],
                 sp,
                 typeof(ConfigurableFooterSection)));

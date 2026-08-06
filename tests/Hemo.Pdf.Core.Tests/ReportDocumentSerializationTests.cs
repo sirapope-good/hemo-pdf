@@ -18,7 +18,7 @@ public class ReportDocumentSerializationTests
         {
             Meta = new ReportDocumentMeta
             {
-                TemplateId = "template-02-lab-result",
+                TemplateId = "clinical-07-lab",
                 Title = "ผล Lab",
                 PageSize = "A4",
                 GeneratedAt = "2026-07-06T10:00:00Z",
@@ -78,7 +78,7 @@ public class ReportDocumentSerializationTests
         var restored = JsonSerializer.Deserialize<ReportDocument>(json, JsonOptions);
 
         Assert.NotNull(restored);
-        Assert.Equal("template-02-lab-result", restored.Meta.TemplateId);
+        Assert.Equal("clinical-07-lab", restored.Meta.TemplateId);
         Assert.Single(restored.Pages);
         Assert.Equal(5, restored.Pages[0].Blocks.Count);
         Assert.IsType<PatientInfoReportBlock>(restored.Pages[0].Blocks[0]);

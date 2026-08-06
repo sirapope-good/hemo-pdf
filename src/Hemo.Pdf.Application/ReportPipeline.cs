@@ -15,7 +15,7 @@ internal static class ReportPipeline
     {
         var branding = await brandingResolver.ResolveAsync(request.TenantCode, cancellationToken);
         var signatures = await signatureResolver.ResolveAsync(request, cancellationToken);
-        ReportTemplates.TryGetDefinition(request.ReportTemplateId, out var templateDefinition);
+        var templateDefinition = ResolveDefinition(request.ReportTemplateId);
 
         return new PdfReportContext
         {
@@ -28,6 +28,12 @@ internal static class ReportPipeline
             Parameters = request.Parameters ?? new Dictionary<string, object?>(),
             Metadata = BuildMetadata(request, branding, templateDefinition),
         };
+    }
+
+    private static ReportTemplateDefinition? ResolveDefinition(string reportTemplateId)
+    {
+        ClinicalReportCatalog.TryGetDefinition(reportTemplateId, out var clinical);
+        return clinical;
     }
 
     private static ReportMetadata BuildMetadata(

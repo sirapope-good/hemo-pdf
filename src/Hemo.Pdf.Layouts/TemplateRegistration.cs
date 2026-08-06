@@ -1,11 +1,10 @@
 using Hemo.Pdf.Core.Constants;
+using Hemo.Pdf.Layouts.Clinical;
 using Hemo.Pdf.Layouts.Hemosheet;
 using Hemo.Pdf.Layouts.Generic;
 using Hemo.Pdf.Layouts.Placeholder;
 using Hemo.Pdf.Layouts.Preview.Generic;
-using Hemo.Pdf.Layouts.Preview.Template01_DialysisSession;
 using Hemo.Pdf.Layouts.Preview.Template04_Hemosheet;
-using Hemo.Pdf.Layouts.Template01_DialysisSession;
 using Hemo.Pdf.Layouts.Template04_Hemosheet;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -15,8 +14,9 @@ public static class TemplateRegistration
 {
     public static Type FallbackRendererType => typeof(PlaceholderReportRenderer);
 
+    /// <summary>Clinical pack only (<c>clinical-01</c>…<c>16</c>).</summary>
     public static IReadOnlyList<string> AllTemplateIds { get; } =
-        ReportTemplates.All.Select(template => template.Id).ToList();
+        ClinicalReportCatalog.All.Select(t => t.Id).ToList();
 
     public static IServiceCollection AddTemplateServices(this IServiceCollection services)
     {
@@ -28,14 +28,12 @@ public static class TemplateRegistration
         services.AddScoped<GenericTemplateComposer>();
         services.AddScoped<GenericTemplateReportRenderer>();
 
-        services.AddScoped<DialysisSessionDataProvider>();
-        services.AddScoped<DialysisSessionComposer>();
-        services.AddScoped<DialysisSessionReportRenderer>();
+        services.AddScoped<ClinicalDefaultDataProvider>();
+        services.AddScoped<ClinicalDefaultComposer>();
+        services.AddScoped<ClinicalDefaultReportRenderer>();
 
         services.AddScoped<GenericReportDocumentComposer>();
         services.AddScoped<GenericReportPreviewRenderer>();
-        services.AddScoped<DialysisSessionReportDocumentComposer>();
-        services.AddScoped<DialysisSessionReportPreviewRenderer>();
 
         services.AddScoped<Hemosheet.HemosheetLayoutPlanner>();
         services.AddScoped<Hemosheet.IHemosheetLayoutPlanner>(sp => sp.GetRequiredService<Hemosheet.HemosheetLayoutPlanner>());

@@ -12,7 +12,7 @@ public class PreviewMapperTests
     private static PdfReportContext CreateContext() =>
         new()
         {
-            ReportTemplateId = ReportTemplates.LabResult,
+            ReportTemplateId = ClinicalReportCatalog.Lab,
             TenantCode = "tenant-demo-a",
             Branding = new CustomerBrandingProfile
             {

@@ -17,7 +17,7 @@ public sealed class GeneratePdfOperationFilter : IOperationFilter
 
         mediaType.Example = new OpenApiObject
         {
-            ["reportTemplateId"] = new OpenApiString("template-02-lab-result"),
+            ["reportTemplateId"] = new OpenApiString("clinical-07-lab"),
             ["tenantCode"] = new OpenApiString("tenant-demo-a"),
             ["entityId"] = new OpenApiString("test-entity-1"),
             ["data"] = new OpenApiObject

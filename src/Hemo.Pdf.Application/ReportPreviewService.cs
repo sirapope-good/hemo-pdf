@@ -1,9 +1,10 @@
 using Hemo.Pdf.Core.Abstractions;
 using Hemo.Pdf.Core.Constants;
 using Hemo.Pdf.Core.Models;
+using Hemo.Pdf.Core.Models.Hemosheet;
 using Hemo.Pdf.Core.Models.Preview;
+using Hemo.Pdf.Layouts.Clinical;
 using Hemo.Pdf.Sections.Preview;
-using Microsoft.Extensions.Options;
 
 namespace Hemo.Pdf.Application;
 
@@ -33,11 +34,10 @@ public sealed class ReportPreviewService : IReportPreviewService
 
         var layoutProfile = HemosheetLayoutProfileReader.ReadLayoutProfile(request.Data) ?? "Default";
 
-        // ThaiUr uses PDF-as-preview (DOM planner does not mirror that composer).
-        // Skip branding/signature context build — FE will call generate next (cached report-data).
-        if (HemosheetLayoutProfileReader.IsThaiUr(request.Data))
+        // Dense hemosheet form (Default borrowed from ThaiUR, and ThaiUr override) has no DOM planner mirror.
+        if (UsesHemosheetFormPdfPreview(request, layoutProfile))
         {
-            return BuildThaiUrPdfModeDocument(request, layoutProfile);
+            return BuildHemosheetFormPdfModeDocument(request, layoutProfile);
         }
 
         var context = await ReportPipeline.BuildContextAsync(
@@ -51,10 +51,20 @@ public sealed class ReportPreviewService : IReportPreviewService
         return WithPreviewMode(document, "dom", layoutProfile);
     }
 
-    private static ReportDocument BuildThaiUrPdfModeDocument(GeneratePdfRequest request, string layoutProfile)
+    private static bool UsesHemosheetFormPdfPreview(GeneratePdfRequest request, string layoutProfileName)
     {
-        ReportTemplates.TryGetDefinition(request.ReportTemplateId, out var templateDefinition);
-        var title = templateDefinition?.DisplayName ?? request.ReportTemplateId;
+        if (!ClinicalReportCatalog.IsHemodialysisRecord(request.ReportTemplateId))
+            return false;
+
+        if (!Enum.TryParse(layoutProfileName, ignoreCase: true, out HemosheetLayoutProfile profile))
+            profile = HemosheetLayoutProfile.Default;
+
+        return ClinicalReportLayoutResolver.UsesHemosheetForm(request.ReportTemplateId, profile);
+    }
+
+    private static ReportDocument BuildHemosheetFormPdfModeDocument(GeneratePdfRequest request, string layoutProfile)
+    {
+        var title = ResolveDisplayName(request.ReportTemplateId);
 
         return new ReportDocument
         {
@@ -72,6 +82,13 @@ public sealed class ReportPreviewService : IReportPreviewService
             Pages = [],
             Footer = new ReportFooterBlock(),
         };
+    }
+
+    private static string ResolveDisplayName(string reportTemplateId)
+    {
+        if (ClinicalReportCatalog.TryGetDefinition(reportTemplateId, out var clinical))
+            return clinical!.DisplayName;
+        return reportTemplateId;
     }
 
     private static ReportDocument WithPreviewMode(ReportDocument document, string previewMode, string? layoutProfile)

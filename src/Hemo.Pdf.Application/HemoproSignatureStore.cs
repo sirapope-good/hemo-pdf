@@ -27,7 +27,7 @@ public sealed class HemoproSignatureStore : ISignatureStore
 
     public static ReportSignatureContext? TryResolveFromData(string reportTemplateId, JsonElement data)
     {
-        if (!string.Equals(reportTemplateId, ReportTemplates.Hemosheet, StringComparison.OrdinalIgnoreCase)
+        if (!ClinicalReportCatalog.IsHemodialysisRecord(reportTemplateId)
             || data.ValueKind != JsonValueKind.Object)
         {
             return null;

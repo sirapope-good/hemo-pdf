@@ -1,12 +1,13 @@
 using Hemo.Pdf.Core.Constants;
 
-namespace Hemo.Pdf.Layouts.Template04_Hemosheet.ThaiUr;
+namespace Hemo.Pdf.Sections.ThaiUr;
 
 /// <summary>
 /// Pixel-parity style profile for the ThaiUR "Hemodialysis Record" Hemosheet layout,
 /// transcribed from Hemo-Report/Hemosheet-ThaiUR.trdp (see .cursor/docs/hemosheet-thaiur-spec.md).
+/// Shared so other clinical reports can reuse the same chrome metrics.
 /// </summary>
-internal static class HemosheetThaiUrStyle
+public static class HemosheetThaiUrStyle
 {
     // Sarabun is embedded via FontRegistration (assets/fonts/sarabun) — required for Thai glyphs
     // in Docker/Linux where Microsoft Sans Serif is unavailable.

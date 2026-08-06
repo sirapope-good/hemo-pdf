@@ -16,7 +16,7 @@ public sealed class SignatureRequiredGuard : IPdfGenerationGuard
 
     public async Task EnsureCanGenerateAsync(GeneratePdfRequest request, CancellationToken cancellationToken)
     {
-        if (!ReportTemplates.RequiresSignature(request.ReportTemplateId))
+        if (!ClinicalReportCatalog.RequiresSignature(request.ReportTemplateId))
             return;
 
         // Empty template forms are never fully signed — allow generate/print for layout review.
