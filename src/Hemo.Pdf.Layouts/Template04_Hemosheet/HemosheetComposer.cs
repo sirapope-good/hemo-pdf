@@ -5,9 +5,11 @@ using Hemo.Pdf.Core.Models.Hemosheet;
 using Hemo.Pdf.Layouts.Base;
 using Hemo.Pdf.Layouts.Clinical;
 using Hemo.Pdf.Layouts.Hemosheet;
+using Hemo.Pdf.Layouts.Template04_Hemosheet.Default;
 using Hemo.Pdf.Layouts.Template04_Hemosheet.ThaiUr;
 using Hemo.Pdf.Rendering;
 using Hemo.Pdf.Sections.Abstractions;
+using Hemo.Pdf.Sections.Default;
 using Hemo.Pdf.Sections.ThaiUr;
 using QuestPDF.Fluent;
 using QuestPDF.Infrastructure;
@@ -19,6 +21,7 @@ public sealed class HemosheetComposer : BaseReportComposer<HemosheetReportViewMo
     private readonly IHemosheetLayoutPlanner _planner;
     private readonly HemosheetSectionRendererRegistry _renderers;
     private readonly ThaiUrHemosheetForm _thaiUrForm = new();
+    private readonly DefaultHemosheetForm _defaultForm = new();
 
     public HemosheetComposer(
         IHemosheetLayoutPlanner planner,
@@ -34,14 +37,17 @@ public sealed class HemosheetComposer : BaseReportComposer<HemosheetReportViewMo
     public override object Compose(object dataModel, PdfReportContext context)
     {
         var viewModel = (HemosheetReportViewModel)dataModel;
+        var kind = ClinicalReportLayoutResolver.Resolve(
+            ClinicalReportCatalog.HemodialysisRecord,
+            viewModel.LayoutContext.LayoutProfile);
 
-        // clinical-03 Default borrows the ThaiUR dense form; ThaiUr uses the same form as override.
-        // Rama keeps the unique block-flow planner. TODO: refine Default structure separately later.
-        if (ClinicalReportLayoutResolver.UsesHemosheetForm(
-                ClinicalReportCatalog.HemodialysisRecord,
-                viewModel.LayoutContext.LayoutProfile))
+        // ThaiUr → purple dense form; Default → CICM dense form; Rama → block planner.
+        if (kind is ClinicalLayoutKind.ThaiUrForm or ClinicalLayoutKind.DefaultForm)
         {
-            const float margin = HemosheetThaiUrStyle.PageMarginMm;
+            var margin = kind == ClinicalLayoutKind.ThaiUrForm
+                ? HemosheetThaiUrStyle.PageMarginMm
+                : HemosheetDefaultStyle.PageMarginMm;
+
             return new QuestLayout
             {
                 MarginMillimeters = margin,
@@ -50,7 +56,13 @@ public sealed class HemosheetComposer : BaseReportComposer<HemosheetReportViewMo
                 MarginLeft = margin,
                 MarginRight = margin,
                 Header = null,
-                Content = c => _thaiUrForm.Compose(c, viewModel, context),
+                Content = c =>
+                {
+                    if (kind == ClinicalLayoutKind.ThaiUrForm)
+                        _thaiUrForm.Compose(c, viewModel, context);
+                    else
+                        _defaultForm.Compose(c, viewModel, context);
+                },
                 Footer = null,
             };
         }

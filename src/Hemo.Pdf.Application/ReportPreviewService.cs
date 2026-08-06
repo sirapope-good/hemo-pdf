@@ -34,7 +34,7 @@ public sealed class ReportPreviewService : IReportPreviewService
 
         var layoutProfile = HemosheetLayoutProfileReader.ReadLayoutProfile(request.Data) ?? "Default";
 
-        // Dense hemosheet form (Default borrowed from ThaiUR, and ThaiUr override) has no DOM planner mirror.
+        // Dense hemosheet forms (Default CICM + ThaiUr purple) have no DOM planner mirror.
         if (UsesHemosheetFormPdfPreview(request, layoutProfile))
         {
             return BuildHemosheetFormPdfModeDocument(request, layoutProfile);

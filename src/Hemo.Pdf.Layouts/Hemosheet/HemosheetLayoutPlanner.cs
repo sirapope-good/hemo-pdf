@@ -12,7 +12,9 @@ public sealed class HemosheetLayoutPlanner : IHemosheetLayoutPlanner
 
     private static readonly string[] HdfDialysisColumns =
     [
-        "เวลา", "BP", "HR", "RR", "BFR", "VP", "TMP", "DC", "NSS", "UF Rate", "HDF Vol.", "Total", "หมายเหตุ",
+        "เวลา", "BP", "HR", "RR", "BFR", "VP",
+        "Substitute total", "Substitute rate",
+        "TMP", "DC", "NSS", "UF Rate", "Total", "หมายเหตุ",
     ];
 
     private readonly HemosheetLayoutProfileRegistry _profileRegistry;

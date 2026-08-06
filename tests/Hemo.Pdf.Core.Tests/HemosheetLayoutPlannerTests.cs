@@ -24,7 +24,8 @@ public class HemosheetLayoutPlannerTests
 
         Assert.Contains(plans, p => p.SectionId == HemosheetSectionId.VascularAccess && p.Variant == "av-fistula");
         var dialysis = plans.Single(p => p.SectionId == HemosheetSectionId.DialysisRecords);
-        Assert.DoesNotContain("HDF Vol.", dialysis.VisibleColumns);
+        Assert.DoesNotContain("Substitute total", dialysis.VisibleColumns);
+        Assert.DoesNotContain("Substitute rate", dialysis.VisibleColumns);
     }
 
     [Fact]
@@ -63,7 +64,8 @@ public class HemosheetLayoutPlannerTests
             });
 
         var dialysis = _planner.Plan(vm).Single(p => p.SectionId == HemosheetSectionId.DialysisRecords);
-        Assert.Contains("HDF Vol.", dialysis.VisibleColumns);
+        Assert.Contains("Substitute total", dialysis.VisibleColumns);
+        Assert.Contains("Substitute rate", dialysis.VisibleColumns);
         Assert.Contains("Total", dialysis.VisibleColumns);
     }
 

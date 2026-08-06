@@ -359,13 +359,110 @@ public class PdfApiIntegrationTests : IClassFixture<PdfApiWebApplicationFactory>
         Assert.True(bytes.Length > 100);
         Assert.Equal((byte)'%', bytes[0]);
 
-        var pdfAscii = System.Text.Encoding.ASCII.GetString(bytes);
-        var pageCount = System.Text.RegularExpressions.Regex.Matches(pdfAscii, @"/Type\s*/Page[^s]").Count;
-        Assert.Equal(1, pageCount);
-
         var outDir = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "output"));
         Directory.CreateDirectory(outDir);
         await File.WriteAllBytesAsync(Path.Combine(outDir, "hemosheet-thaiur.pdf"), bytes);
+
+        var pageCount = CountPdfPages(bytes);
+        // ThaiUR mock has 8 dialysis records; dense form may use a 2nd page when footer is tall.
+        Assert.InRange(pageCount, 1, 2);
+    }
+
+    [Fact]
+    public async Task GeneratePdf_HemosheetDefault_ReturnsSinglePagePdf()
+    {
+        var mockPath = Path.GetFullPath(Path.Combine(
+            AppContext.BaseDirectory,
+            "..", "..", "..", "..", "..",
+            "assets", "mock-data", "template-04-hemosheet-hd-av.json"));
+
+        var jsonText = await File.ReadAllTextAsync(mockPath);
+        using var data = JsonDocument.Parse(jsonText);
+        var entityId = data.RootElement.GetProperty("id").GetString()!;
+
+        var response = await PostGenerateAsync(
+            "tenant-demo-a",
+            "clinical-03-hemodialysis-record",
+            new
+            {
+                reportTemplateId = "clinical-03-hemodialysis-record",
+                tenantCode = "tenant-demo-a",
+                entityId,
+                data = data.RootElement,
+                signatures = new
+                {
+                    isFullySigned = true,
+                    signatures = new[] { new { signerName = "Nurse" } },
+                },
+            });
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.Equal("application/pdf", response.Content.Headers.ContentType?.MediaType);
+
+        var bytes = await response.Content.ReadAsByteArrayAsync();
+        Assert.True(bytes.Length > 100);
+        Assert.Equal((byte)'%', bytes[0]);
+
+        var outDir = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "output"));
+        Directory.CreateDirectory(outDir);
+        await File.WriteAllBytesAsync(Path.Combine(outDir, "hemosheet-default.pdf"), bytes);
+
+        var pageCount = CountPdfPages(bytes);
+        Assert.Equal(1, pageCount);
+    }
+
+    [Fact]
+    public async Task GeneratePdf_HemosheetDefaultHdf_IncludesSubstituteColumns_SinglePage()
+    {
+        var mockPath = Path.GetFullPath(Path.Combine(
+            AppContext.BaseDirectory,
+            "..", "..", "..", "..", "..",
+            "assets", "mock-data", "template-04-hemosheet-hdf-av.json"));
+
+        var jsonText = await File.ReadAllTextAsync(mockPath);
+        using var data = JsonDocument.Parse(jsonText);
+        var entityId = data.RootElement.GetProperty("id").GetString()!;
+
+        var response = await PostGenerateAsync(
+            "tenant-demo-a",
+            "clinical-03-hemodialysis-record",
+            new
+            {
+                reportTemplateId = "clinical-03-hemodialysis-record",
+                tenantCode = "tenant-demo-a",
+                entityId,
+                data = data.RootElement,
+                signatures = new
+                {
+                    isFullySigned = true,
+                    signatures = new[] { new { signerName = "Nurse" } },
+                },
+            });
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        var bytes = await response.Content.ReadAsByteArrayAsync();
+        Assert.True(bytes.Length > 100);
+        Assert.Equal((byte)'%', bytes[0]);
+
+        var outDir = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "output"));
+        Directory.CreateDirectory(outDir);
+        await File.WriteAllBytesAsync(Path.Combine(outDir, "hemosheet-default-hdf.pdf"), bytes);
+
+        Assert.Equal(1, CountPdfPages(bytes));
+    }
+
+    private static int CountPdfPages(byte[] pdf)
+    {
+        var text = System.Text.Encoding.ASCII.GetString(pdf);
+        // Root page-tree count is reliable; "/Type /Page" can appear more than once per page.
+        var tree = System.Text.RegularExpressions.Regex.Match(
+            text,
+            @"/Type\s*/Pages\b.*?/Count\s+(\d+)",
+            System.Text.RegularExpressions.RegexOptions.Singleline);
+        if (tree.Success && int.TryParse(tree.Groups[1].Value, out var count) && count > 0)
+            return count;
+
+        return System.Text.RegularExpressions.Regex.Matches(text, @"/Type\s*/Page[^s]").Count;
     }
 
     private async Task<HttpResponseMessage> PostPreviewAsync(string tenantCode, string templateId)

@@ -5,50 +5,47 @@ namespace Hemo.Pdf.Layouts.Clinical;
 
 public enum ClinicalLayoutKind
 {
-    /// <summary>
-    /// Block-flow planner path (unique tenant designs such as Rama).
-    /// </summary>
+    /// <summary>Block-flow planner (unique designs such as Rama).</summary>
     UniquePlanner,
 
+    /// <summary>ThaiUR dense form (purple section bars) — Hemosheet-ThaiUR.trdp.</summary>
+    ThaiUrForm,
+
     /// <summary>
-    /// Dense single-page Hemodialysis Record form (clinical-03).
-    /// Borrowed from the ThaiUR override as the pack Default until Default is refined separately.
-    /// Used when profile is Default (no unique design) or ThaiUr.
+    /// Default dense form (CICM-style header/content, no ThaiUR purple chrome) — Hemosheet.trdp.
     /// </summary>
-    HemosheetForm,
+    DefaultForm,
 }
 
 /// <summary>
-/// Chooses layout path for the clinical report pack / hemosheet engine.
+/// Chooses layout path for clinical-03 Hemodialysis Record.
 /// </summary>
 /// <remarks>
-/// DEV: <see cref="HemosheetLayoutProfile"/> currently comes from tenant
-/// <c>GlobalSetting.Hemosheet.Report.HemosheetTemplate</c> (.trdp filename via
-/// HemosheetTemplateCatalog). That same profile is the temporary pointer for which
-/// customer structure the whole clinical pack (16 reports) uses.
-/// TODO(prod): resolve report pack / layout profile from <c>tenantCode</c> (or a
-/// dedicated setting) — do not rely on hemosheet .trdp filename before production.
+/// DEV: profile from HemosheetTemplate .trdp via HemosheetTemplateCatalog.
+/// TODO(prod): resolve from tenantCode / dedicated setting.
 /// </remarks>
 public static class ClinicalReportLayoutResolver
 {
-    /// <summary>
-    /// clinical-03: Default and ThaiUr use the shared Hemosheet form (ThaiUR structure as baseline).
-    /// Rama keeps the unique planner path. Other clinical ids are not composed here.
-    /// </summary>
     public static ClinicalLayoutKind Resolve(string reportTemplateId, HemosheetLayoutProfile profile)
     {
         if (!ClinicalReportCatalog.IsHemodialysisRecord(reportTemplateId))
             return ClinicalLayoutKind.UniquePlanner;
 
-        // Unique customer design (RAMA consent layout, etc.)
-        if (profile == HemosheetLayoutProfile.Rama)
-            return ClinicalLayoutKind.UniquePlanner;
-
-        // Default (Hemosheet.trdp) and ThaiUr both use the ThaiUR-borrowed form for now.
-        // ThaiUr remains the override source; Default will be refined later.
-        return ClinicalLayoutKind.HemosheetForm;
+        return profile switch
+        {
+            HemosheetLayoutProfile.ThaiUr => ClinicalLayoutKind.ThaiUrForm,
+            HemosheetLayoutProfile.Rama => ClinicalLayoutKind.UniquePlanner,
+            _ => ClinicalLayoutKind.DefaultForm,
+        };
     }
 
+    public static bool UsesDenseForm(string reportTemplateId, HemosheetLayoutProfile profile)
+    {
+        var kind = Resolve(reportTemplateId, profile);
+        return kind is ClinicalLayoutKind.ThaiUrForm or ClinicalLayoutKind.DefaultForm;
+    }
+
+    /// <summary>Obsolete name — use <see cref="UsesDenseForm"/>.</summary>
     public static bool UsesHemosheetForm(string reportTemplateId, HemosheetLayoutProfile profile) =>
-        Resolve(reportTemplateId, profile) == ClinicalLayoutKind.HemosheetForm;
+        UsesDenseForm(reportTemplateId, profile);
 }

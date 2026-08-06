@@ -1,5 +1,6 @@
 using Hemo.Pdf.Core.Context;
 using Hemo.Pdf.Core.Models.Hemosheet;
+using Hemo.Pdf.Sections.Hemosheet;
 using Hemo.Pdf.Sections.ThaiUr;
 using QuestPDF.Fluent;
 using QuestPDF.Helpers;
@@ -8,9 +9,9 @@ using QuestPDF.Infrastructure;
 namespace Hemo.Pdf.Layouts.Template04_Hemosheet.ThaiUr;
 
 /// <summary>
-/// Dense Hemodialysis Record form used as clinical-03 Default (borrowed from ThaiUR)
-/// and as the ThaiUR override. Refine Default structure later without breaking ThaiUr.
+/// Dense Hemodialysis Record form for ThaiUR override (purple section bars).
 /// Pixel-parity baseline: Telerik Hemosheet-ThaiUR.trdp.
+/// Default profile uses <c>DefaultHemosheetForm</c> (CICM-style) instead.
 /// </summary>
 internal sealed class ThaiUrHemosheetForm
 {
@@ -75,7 +76,8 @@ internal sealed class ThaiUrHemosheetForm
             vm.DialysisRecords.Count + 1);
         if (minRows <= 0) minRows = 8;
 
-        const float dialysisHeaderMm = Rh + 3.2f;
+        var showHdf = HemosheetDialysisColumns.ShowHdf(vm);
+        var dialysisHeaderMm = HemosheetDialysisColumns.HeaderHeightMm(showHdf, Rh);
         var availableForDialysisMm = pageContentMm
             - ThaiUrHemosheetFooter.LayoutSafetyMm
             - aboveDialysisMm
@@ -503,74 +505,69 @@ internal sealed class ThaiUrHemosheetForm
         });
     }
 
-    // Timeโ€ฆUFR share one equal width; Total UF is one more equal slot; Note fills the rest.
-    // Fluid summary spans: NSSร-2, Glucoseร-2, Extra-fluidร-3, Total fluidร-3, Total UFร-1, Netโ’Note.
-    private const float DialysisDataColMm = 11.2f;
-
-    private static readonly (string Head, string Unit)[] DialysisColumnDefs =
-    [
-        ("Time", ""), ("BP", "mmHg"), ("MAP", "mmHg"), ("Pulse", "/min"),
-        ("EBFR", "ml/min"), ("AP", "mmHg"), ("VP", "mmHg"), ("TMP", "mmHg"),
-        ("Cond.", "mS/cm"), ("UFR", "ml/hr"), ("Total UF", "ml"),
-    ];
-
     private static void DialysisTable(IContainer c, HemosheetReportViewModel vm, int fixedLines)
     {
         if (fixedLines <= 0) fixedLines = 8;
-        const float headerMm = Rh + 3.2f;
+        var showHdf = HemosheetDialysisColumns.ShowHdf(vm);
+        var colMm = HemosheetDialysisColumns.DataColumnWidthMm(showHdf);
+        var headerMm = HemosheetDialysisColumns.HeaderHeightMm(showHdf, Rh);
+        var baseDefs = HemosheetDialysisColumns.BaseColumnDefs;
+        var insertAfter = HemosheetDialysisColumns.SubstituteInsertAfterIndex;
 
         c.DefaultTextStyle(ThaiUrText.Dialysis).Table(t =>
         {
             t.ColumnsDefinition(cols =>
             {
-                foreach (var _ in DialysisColumnDefs)
-                    cols.ConstantColumn(DialysisDataColMm, Mm);
+                for (var i = 0; i < HemosheetDialysisColumns.DataColumnCount(showHdf); i++)
+                    cols.ConstantColumn(colMm, Mm);
                 cols.RelativeColumn();
             });
 
-            // Single header cell per column: title + unit stacked and vertically centered.
-            foreach (var (head, unit) in DialysisColumnDefs)
+            if (showHdf)
             {
-                t.Cell().Border(Bw).Background(HemosheetThaiUrStyle.HeaderBackground)
-                    .Height(headerMm, Mm).AlignCenter().AlignMiddle()
+                for (var i = 0; i <= insertAfter; i++)
+                    DialysisHeaderCell(t, baseDefs[i].Head, baseDefs[i].Unit, headerMm, rowSpan: 2);
+
+                t.Cell().ColumnSpan(2).Border(Bw).Background(HemosheetThaiUrStyle.HeaderBackground)
+                    .Height(headerMm * 0.55f, Mm).AlignCenter().AlignMiddle()
                     .Column(cc =>
                     {
-                        cc.Item().AlignCenter().Text(head).Style(ThaiUrText.DialysisBold);
-                        if (!string.IsNullOrEmpty(unit))
-                            cc.Item().AlignCenter().Text(unit).Style(ThaiUrText.DialysisUnit);
+                        cc.Item().AlignCenter().Text("Substitute").Style(ThaiUrText.DialysisBold);
+                        cc.Item().AlignCenter().Text("(L/hr)").Style(ThaiUrText.DialysisUnit);
                     });
+
+                for (var i = insertAfter + 1; i < baseDefs.Length; i++)
+                    DialysisHeaderCell(t, baseDefs[i].Head, baseDefs[i].Unit, headerMm, rowSpan: 2);
+
+                t.Cell().RowSpan(2).Border(Bw).Background(HemosheetThaiUrStyle.HeaderBackground)
+                    .Height(headerMm, Mm).AlignCenter().AlignMiddle()
+                    .Text("Note").Style(ThaiUrText.DialysisBold);
+
+                foreach (var sub in new[] { "total", "rate" })
+                {
+                    t.Cell().Border(Bw).Background(HemosheetThaiUrStyle.HeaderBackground)
+                        .Height(headerMm * 0.45f, Mm).AlignCenter().AlignMiddle()
+                        .Text(sub).Style(ThaiUrText.DialysisUnit);
+                }
             }
-            t.Cell().Border(Bw).Background(HemosheetThaiUrStyle.HeaderBackground)
-                .Height(headerMm, Mm).AlignCenter().AlignMiddle()
-                .Text("Note").Style(ThaiUrText.DialysisBold);
+            else
+            {
+                foreach (var (head, unit) in baseDefs)
+                    DialysisHeaderCell(t, head, unit, headerMm, rowSpan: 1);
+
+                t.Cell().Border(Bw).Background(HemosheetThaiUrStyle.HeaderBackground)
+                    .Height(headerMm, Mm).AlignCenter().AlignMiddle()
+                    .Text("Note").Style(ThaiUrText.DialysisBold);
+            }
 
             for (var i = 0; i < fixedLines; i++)
             {
                 var rec = i < vm.DialysisRecords.Count ? vm.DialysisRecords[i] : null;
-                // Placeholder rows stay fully blank — Num(null) would paint "-" which looks filled-in.
-                var cells = rec is null
-                    ? new string[DialysisColumnDefs.Length]
-                    : new[]
-                    {
-                        ThaiUrData.Time(rec.Timestamp),
-                        ThaiUrData.Bp(rec.Bps, rec.Bpd),
-                        ThaiUrData.Map(rec.Bps, rec.Bpd) ?? "",
-                        ThaiUrData.Num(rec.Hr),
-                        ThaiUrData.Num(rec.Bfr),
-                        ThaiUrData.Num(rec.Ap),
-                        ThaiUrData.Num(rec.Vp),
-                        ThaiUrData.Num(rec.Tmp),
-                        ThaiUrData.Num(rec.Dc),
-                        rec.UfRate is not null ? ThaiUrData.Num(rec.UfRate * 1000) : "",
-                        rec.UfTotal is not null ? ThaiUrData.Num(rec.UfTotal * 1000) : "",
-                    };
-                foreach (var value in cells)
+                foreach (var value in HemosheetDialysisColumns.CellValues(rec, showHdf))
                 {
                     t.Cell().Border(Bw).MinHeight(Rh, Mm).AlignMiddle().AlignCenter()
-                        .Text(string.IsNullOrWhiteSpace(value) || value == "-" ? "" : value)
-                        .Style(ThaiUrText.Dialysis);
+                        .Text(value).Style(ThaiUrText.Dialysis);
                 }
-                // Grow with wrapped note (up to DialysisNoteMaxLines); sibling cells MinHeight so the row expands together.
                 t.Cell().Border(Bw).MinHeight(Rh, Mm).PaddingHorizontal(1f).PaddingVertical(0.5f).AlignMiddle()
                     .Text(text =>
                     {
@@ -582,28 +579,43 @@ internal sealed class ThaiUrHemosheetForm
         });
     }
 
+    private static void DialysisHeaderCell(
+        TableDescriptor t,
+        string head,
+        string unit,
+        float headerMm,
+        uint rowSpan)
+    {
+        var cell = t.Cell();
+        if (rowSpan > 1)
+            cell = cell.RowSpan(rowSpan);
+
+        cell.Border(Bw).Background(HemosheetThaiUrStyle.HeaderBackground)
+            .Height(headerMm, Mm).AlignCenter().AlignMiddle()
+            .Column(cc =>
+            {
+                cc.Item().AlignCenter().Text(head).Style(ThaiUrText.DialysisBold);
+                if (!string.IsNullOrEmpty(unit))
+                    cc.Item().AlignCenter().Text(unit).Style(ThaiUrText.DialysisUnit);
+            });
+    }
+
     /// <summary>
-    /// Fluid boxes under the dialysis table, sharing the same column grid:
-    /// NSSร-2, 50% Glucoseร-2, Extra-fluidร-3, Total fluidร-3, Total UFร-1, Net fluid balanceโ’Note.
+    /// Fluid boxes under the dialysis table, sharing the same column grid.
+    /// HDF widens Extra-fluid to absorb the two Substitute columns.
     /// </summary>
     private static void FluidSummaryRow(IContainer c, HemosheetReportViewModel vm)
     {
-        var boxes = new (int Span, string Label, string Value)[]
-        {
-            (2, "NSS", ThaiUrData.Ml(ThaiUrData.NssMl(vm))),
-            (2, "50% Glucose", "-"),
-            (3, "Extra-fluid", ThaiUrData.Ml(ThaiUrData.ExtraFluidMl(vm))),
-            (3, "Total fluid replacment", "-"),
-            (1, "Total UF", ThaiUrData.Ml(ThaiUrData.TotalUfMl(vm))),
-            (1, "Net fluid balance", ThaiUrData.Ml(ThaiUrData.NetFluidBalanceMl(vm))),
-        };
+        var showHdf = HemosheetDialysisColumns.ShowHdf(vm);
+        var colMm = HemosheetDialysisColumns.DataColumnWidthMm(showHdf);
+        var boxes = HemosheetDialysisColumns.FluidBoxes(vm, showHdf);
 
         c.DefaultTextStyle(ThaiUrText.Dialysis).Table(t =>
         {
             t.ColumnsDefinition(cols =>
             {
-                foreach (var _ in DialysisColumnDefs)
-                    cols.ConstantColumn(DialysisDataColMm, Mm);
+                for (var i = 0; i < HemosheetDialysisColumns.DataColumnCount(showHdf); i++)
+                    cols.ConstantColumn(colMm, Mm);
                 cols.RelativeColumn();
             });
 

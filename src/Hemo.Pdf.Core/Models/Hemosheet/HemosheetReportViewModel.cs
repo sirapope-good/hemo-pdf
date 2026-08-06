@@ -158,7 +158,10 @@ public sealed class HemosheetDialysisRecordViewModel
     public float? Dc { get; init; }
     public float? Nss { get; init; }
     public float? UfRate { get; init; }
+    /// <summary>Substitution accumulated volume (L) — backend <c>SAV</c>.</summary>
     public float? HdfVolume { get; init; }
+    /// <summary>Substitution rate (L/hr) — backend <c>SRate</c>.</summary>
+    public float? HdfRate { get; init; }
     public float? UfTotal { get; init; }
     public string? Note { get; init; }
 }

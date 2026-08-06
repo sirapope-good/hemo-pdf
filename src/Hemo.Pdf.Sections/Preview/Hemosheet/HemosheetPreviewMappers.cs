@@ -743,6 +743,8 @@ public static class HemosheetPreviewMappers
             "NSS" => 0.6f,
             "UF Rate" => 0.8f,
             "HDF Vol." => 0.8f,
+            "Substitute total" => 0.75f,
+            "Substitute rate" => 0.75f,
             "Total" => 0.7f,
             "หมายเหตุ" => 3.5f,
             _ => 1f,
@@ -809,6 +811,8 @@ public static class HemosheetPreviewMappers
             ["NSS"] = FormatFloat(record.Nss),
             ["UF Rate"] = FormatFloat(record.UfRate),
             ["HDF Vol."] = FormatFloat(record.HdfVolume),
+            ["Substitute total"] = FormatFloat(record.HdfVolume),
+            ["Substitute rate"] = FormatFloat(record.HdfRate),
             ["Total"] = FormatFloat(record.UfTotal),
             ["หมายเหตุ"] = record.Note,
         };

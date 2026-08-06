@@ -61,13 +61,14 @@ public class ClinicalReportCatalogTests
 public class ClinicalReportLayoutResolverTests
 {
     [Theory]
-    [InlineData(ClinicalReportCatalog.HemodialysisRecord, HemosheetLayoutProfile.Default, ClinicalLayoutKind.HemosheetForm)]
-    [InlineData(ClinicalReportCatalog.HemodialysisRecord, HemosheetLayoutProfile.ThaiUr, ClinicalLayoutKind.HemosheetForm)]
-    [InlineData(ClinicalReportCatalog.LegacyEngineAlias, HemosheetLayoutProfile.ThaiUr, ClinicalLayoutKind.HemosheetForm)]
+    [InlineData(ClinicalReportCatalog.HemodialysisRecord, HemosheetLayoutProfile.Default, ClinicalLayoutKind.DefaultForm)]
+    [InlineData(ClinicalReportCatalog.HemodialysisRecord, HemosheetLayoutProfile.ThaiUr, ClinicalLayoutKind.ThaiUrForm)]
+    [InlineData(ClinicalReportCatalog.LegacyEngineAlias, HemosheetLayoutProfile.ThaiUr, ClinicalLayoutKind.ThaiUrForm)]
+    [InlineData(ClinicalReportCatalog.LegacyEngineAlias, HemosheetLayoutProfile.Default, ClinicalLayoutKind.DefaultForm)]
     [InlineData(ClinicalReportCatalog.HemodialysisRecord, HemosheetLayoutProfile.Rama, ClinicalLayoutKind.UniquePlanner)]
     [InlineData(ClinicalReportCatalog.Lab, HemosheetLayoutProfile.ThaiUr, ClinicalLayoutKind.UniquePlanner)]
     [InlineData(ClinicalReportCatalog.Lab, HemosheetLayoutProfile.Default, ClinicalLayoutKind.UniquePlanner)]
-    public void Resolve_DefaultAndThaiUrUseForm_RamaUsesPlanner(
+    public void Resolve_DefaultAndThaiUrUseDenseForms_RamaUsesPlanner(
         string reportId,
         HemosheetLayoutProfile profile,
         ClinicalLayoutKind expected)
