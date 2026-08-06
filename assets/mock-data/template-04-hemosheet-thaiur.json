@@ -153,6 +153,7 @@
     "reportSettings": {
       "hemosheetTemplate": "Hemosheet-ThaiUR.trdp",
       "nurseInShiftEnabled": true,
+      "showDateAndHdNo": true,
       "fixedLines": { "dialysis": 8, "nurse": 4, "medicine": 4, "doctor": 2, "progressNote": 2 }
     },
     "features": {

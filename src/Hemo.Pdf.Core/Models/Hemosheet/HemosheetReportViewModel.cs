@@ -242,6 +242,11 @@ public sealed class HemosheetReportSettingsViewModel
 {
     public string? HemosheetTemplate { get; init; }
     public bool NurseInShiftEnabled { get; init; }
+    /// <summary>
+    /// When true, ThaiUR header shows Date + HD NO. in their own cell beside Diagnosis/Drug Allergy.
+    /// Other reports reusing the header can set false so that cell is omitted (no empty gap).
+    /// </summary>
+    public bool ShowDateAndHdNo { get; init; } = true;
     public HemosheetFixedLinesViewModel FixedLines { get; init; } = new();
 }
 

@@ -40,8 +40,8 @@ internal static class HemosheetThaiUrStyle
     public const float PostStripRowHeightMm = 5.2f;
     public const float HeaderBarHeightMm = 5.0f;
     /// <summary>
-    /// Logo + title row. Sized so RowSpan(2) meta column equals 5× MetaRowHeightMm
-    /// (title + diagnosis) and Thai name lines are not clipped.
+    /// Logo + title + patient-meta row. Sized to 4× MetaRowHeightMm (Name, CN/Age, Coverage, ID Card)
+    /// so Thai name lines are not clipped. Date/HD NO. live in the diagnosis row when enabled.
     /// </summary>
     public const float TitleHeightMm = 21.6f;
     public const float PageMarginMm = 2f;
