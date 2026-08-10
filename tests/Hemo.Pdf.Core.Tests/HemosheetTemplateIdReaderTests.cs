@@ -134,6 +134,24 @@ public class ReportDataResolverTemplateIdTests
             string tenantCode,
             CancellationToken cancellationToken) =>
             throw new NotImplementedException();
+
+        public Task<JsonElement> GetClinical02EpoDrugReportDataAsync(
+            string patientId,
+            string month,
+            int medicineId,
+            string? authorizationHeader,
+            string tenantCode,
+            CancellationToken cancellationToken) =>
+            throw new NotImplementedException();
+
+        public Task<JsonElement> GetMedicinePreparationRoundReportDataAsync(
+            int unitId,
+            string date,
+            int sectionId,
+            string? authorizationHeader,
+            string tenantCode,
+            CancellationToken cancellationToken) =>
+            throw new NotImplementedException();
     }
 
     private sealed class CountingUnusedClient : IHemosheetReportDataClient
@@ -158,6 +176,24 @@ public class ReportDataResolverTemplateIdTests
         public Task<JsonElement> GetClinical01HctEpoReportDataAsync(
             string patientId,
             int year,
+            string? authorizationHeader,
+            string tenantCode,
+            CancellationToken cancellationToken) =>
+            throw new InvalidOperationException("Should not fetch when UseServerFetch is false.");
+
+        public Task<JsonElement> GetClinical02EpoDrugReportDataAsync(
+            string patientId,
+            string month,
+            int medicineId,
+            string? authorizationHeader,
+            string tenantCode,
+            CancellationToken cancellationToken) =>
+            throw new InvalidOperationException("Should not fetch when UseServerFetch is false.");
+
+        public Task<JsonElement> GetMedicinePreparationRoundReportDataAsync(
+            int unitId,
+            string date,
+            int sectionId,
             string? authorizationHeader,
             string tenantCode,
             CancellationToken cancellationToken) =>

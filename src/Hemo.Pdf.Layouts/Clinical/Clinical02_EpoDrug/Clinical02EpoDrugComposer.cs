@@ -1,0 +1,112 @@
+using Hemo.Pdf.Core.Abstractions;
+using Hemo.Pdf.Core.Context;
+using Hemo.Pdf.Core.Models.Clinical;
+using Hemo.Pdf.Layouts.Clinical.Clinical01_HctEpo;
+using Hemo.Pdf.Rendering;
+using Hemo.Pdf.Sections.ThaiUr;
+using QuestPDF.Fluent;
+using QuestPDF.Infrastructure;
+
+namespace Hemo.Pdf.Layouts.Clinical.Clinical02_EpoDrug;
+
+/// <summary>
+/// Dense QuestPDF layout for clinical-02: ThaiUr header + meta band + injection table + co-pay.
+/// </summary>
+public sealed class Clinical02EpoDrugComposer : ILayoutComposer
+{
+    private const Unit Mm = Unit.Millimetre;
+    private const float A4HeightMm = 297f;
+    private const float PageNumberFooterMm = 7f;
+    private const float LayoutSafetyMm = 1.5f;
+    private const float SectionSpacingMm = 2f;
+    private const float MetaBandMm = 8f;
+    private const float MinRowHeightMm = 9f;
+    private const int MinEmptyRows = 8;
+
+    private readonly EpoDrugInjectionTableSection _table = new();
+    private readonly HctEpoCoPayCriteriaSection _coPayCriteria = new();
+
+    public object Compose(object dataModel, PdfReportContext context)
+    {
+        var vm = (EpoDrugReportViewModel)dataModel;
+        var margin = HemosheetThaiUrStyle.PageMarginMm;
+        var rowHeightMm = BudgetRowHeightMm(vm);
+
+        return new QuestLayout
+        {
+            MarginMillimeters = margin,
+            MarginTop = margin,
+            MarginBottom = margin,
+            MarginLeft = margin,
+            MarginRight = margin,
+            Header = null,
+            Content = c => ComposeContent(c, vm, rowHeightMm),
+            Footer = null,
+        };
+    }
+
+    private void ComposeContent(IContainer container, EpoDrugReportViewModel vm, float rowHeightMm)
+    {
+        container.Column(col =>
+        {
+            col.Spacing(SectionSpacingMm);
+            col.Item().Element(c => ThaiUrReportHeader.Compose(c, vm.Header, vm.Title));
+            col.Item().Element(c => ComposeMetaBand(c, vm.Meta));
+            col.Item().Element(c => _table.Compose(c, vm, rowHeightMm));
+            col.Item().Element(c => _coPayCriteria.Compose(c, vm.CoPayCriteria));
+        });
+    }
+
+    private static void ComposeMetaBand(IContainer container, EpoDrugMeta meta)
+    {
+        container
+            .Border(HemosheetThaiUrStyle.BorderWidth)
+            .Padding(2f, Mm)
+            .Row(row =>
+            {
+                row.RelativeItem().Text(t =>
+                {
+                    t.Span("เดือน ").Style(ThaiUrText.Base);
+                    t.Span(meta.MonthLabel).Style(ThaiUrText.Bold);
+                    t.Span("    พ.ศ. ").Style(ThaiUrText.Base);
+                    t.Span(meta.YearBe > 0 ? meta.YearBe.ToString() : string.Empty).Style(ThaiUrText.Bold);
+                });
+
+                row.RelativeItem().Text(t =>
+                {
+                    t.Span("ยา EPO ").Style(ThaiUrText.Base);
+                    t.Span(meta.EpoName ?? string.Empty).Style(ThaiUrText.Bold);
+                });
+
+                row.ConstantItem(42, Mm).AlignRight().Text(t =>
+                {
+                    t.Span("เข็ม/สัปดาห์ ").Style(ThaiUrText.Base);
+                    t.Span(meta.NeedlesPerWeek ?? string.Empty).Style(ThaiUrText.Bold);
+                });
+            });
+    }
+
+    internal static float BudgetRowHeightMm(EpoDrugReportViewModel vm)
+    {
+        var pageContentMm = A4HeightMm
+            - 2f * HemosheetThaiUrStyle.PageMarginMm
+            - PageNumberFooterMm;
+
+        var headerMm = HemosheetThaiUrStyle.TitleHeightMm
+            + HemosheetThaiUrStyle.MetaRowHeightMm;
+        var coPayMm = HctEpoCoPayCriteriaSection.EstimateHeightMm(vm.CoPayCriteria);
+        var tableHeaderMm = HemosheetThaiUrStyle.HeaderBarHeightMm;
+        var rowCount = Math.Max(vm.Rows?.Count ?? 0, MinEmptyRows);
+
+        var availableForRowsMm = pageContentMm
+            - headerMm
+            - MetaBandMm
+            - SectionSpacingMm * 3f
+            - coPayMm
+            - tableHeaderMm
+            - LayoutSafetyMm;
+
+        var rowH = availableForRowsMm / rowCount;
+        return Math.Max(rowH, MinRowHeightMm);
+    }
+}

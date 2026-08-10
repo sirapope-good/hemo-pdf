@@ -89,15 +89,18 @@ public static class ClinicalReportCatalog
     public static bool UsesDensePdfPreview(string? templateId)
     {
         var engineId = ResolveEngineTemplateId(templateId ?? string.Empty);
-        return string.Equals(engineId, HctEpo, StringComparison.OrdinalIgnoreCase);
+        return string.Equals(engineId, HctEpo, StringComparison.OrdinalIgnoreCase)
+            || string.Equals(engineId, EpoDrug, StringComparison.OrdinalIgnoreCase)
+            || string.Equals(engineId, "medicine-preparation-round", StringComparison.OrdinalIgnoreCase);
     }
 
     /// <summary>
     /// Clinical pack ids that still use the Default scaffold body
-    /// (excludes dedicated engines: #01 Hct/EPO, #03 Hemodialysis Record).
+    /// (excludes dedicated engines: #01 Hct/EPO, #02 EPO drug, #03 Hemodialysis Record).
     /// </summary>
     public static IEnumerable<string> DefaultScaffoldIds =>
         Definitions.Keys.Where(id =>
             !string.Equals(id, HemodialysisRecord, StringComparison.OrdinalIgnoreCase)
-            && !string.Equals(id, HctEpo, StringComparison.OrdinalIgnoreCase));
+            && !string.Equals(id, HctEpo, StringComparison.OrdinalIgnoreCase)
+            && !string.Equals(id, EpoDrug, StringComparison.OrdinalIgnoreCase));
 }

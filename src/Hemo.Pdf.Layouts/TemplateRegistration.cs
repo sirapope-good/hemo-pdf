@@ -1,8 +1,10 @@
 using Hemo.Pdf.Core.Constants;
 using Hemo.Pdf.Layouts.Clinical;
 using Hemo.Pdf.Layouts.Clinical.Clinical01_HctEpo;
+using Hemo.Pdf.Layouts.Clinical.Clinical02_EpoDrug;
 using Hemo.Pdf.Layouts.Hemosheet;
 using Hemo.Pdf.Layouts.Generic;
+using Hemo.Pdf.Layouts.MedicinePrep;
 using Hemo.Pdf.Layouts.Placeholder;
 using Hemo.Pdf.Layouts.Preview.Generic;
 using Hemo.Pdf.Layouts.Preview.Template04_Hemosheet;
@@ -36,6 +38,14 @@ public static class TemplateRegistration
         services.AddScoped<Clinical01HctEpoDataProvider>();
         services.AddScoped<Clinical01HctEpoComposer>();
         services.AddScoped<Clinical01HctEpoReportRenderer>();
+
+        services.AddScoped<Clinical02EpoDrugDataProvider>();
+        services.AddScoped<Clinical02EpoDrugComposer>();
+        services.AddScoped<Clinical02EpoDrugReportRenderer>();
+
+        services.AddScoped<MedicinePreparationRoundDataProvider>();
+        services.AddScoped<MedicinePreparationRoundComposer>();
+        services.AddScoped<MedicinePreparationRoundReportRenderer>();
 
         services.AddScoped<GenericReportDocumentComposer>();
         services.AddScoped<GenericReportPreviewRenderer>();

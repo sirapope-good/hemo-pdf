@@ -25,4 +25,20 @@ public interface IHemosheetReportDataClient
         string? authorizationHeader,
         string tenantCode,
         CancellationToken cancellationToken);
+
+    Task<JsonElement> GetClinical02EpoDrugReportDataAsync(
+        string patientId,
+        string month,
+        int medicineId,
+        string? authorizationHeader,
+        string tenantCode,
+        CancellationToken cancellationToken);
+
+    Task<JsonElement> GetMedicinePreparationRoundReportDataAsync(
+        int unitId,
+        string date,
+        int sectionId,
+        string? authorizationHeader,
+        string tenantCode,
+        CancellationToken cancellationToken);
 }

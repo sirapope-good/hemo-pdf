@@ -57,44 +57,65 @@ public sealed class ReportDataResolver
             throw new PdfGenerationBadRequestException("entityId is required for server fetch.");
         }
 
+        // Frontend must not send unresolved Angular route tokens (e.g. ":hemosheetId").
+        if (request.EntityId.StartsWith(":", StringComparison.Ordinal))
+        {
+            throw new PdfGenerationBadRequestException(
+                $"entityId is unresolved ('{request.EntityId}'). Refresh the report page.");
+        }
+
         var authorization = _httpContextAccessor.HttpContext?.Request.Headers.Authorization.ToString();
         var tenantCode = request.TenantCode;
         var parameters = request.Parameters ?? new Dictionary<string, object?>();
         var templateId = HemosheetTemplateIdReader.NormalizeReportTemplateId(request.ReportTemplateId);
+        var fetchKind = ReportDataFetchRegistry.Resolve(templateId);
 
-        JsonElement data;
-        if (string.Equals(templateId, ClinicalReportCatalog.HctEpo, StringComparison.OrdinalIgnoreCase))
+        JsonElement data = fetchKind switch
         {
-            data = await FetchClinical01Async(request, parameters, authorization, tenantCode, cancellationToken);
-        }
-        else
-        {
-            var spec = HemosheetFetchSpec.FromRequest(request);
-            var cacheKey = BuildHemosheetCacheKey(tenantCode, request.EntityId, authorization, spec);
-
-            if (!_cache.TryGetValue(cacheKey, out data))
-            {
-                data = spec.IsTemplate
-                    ? await _reportDataClient.GetTemplateReportDataAsync(
-                        spec.UnitId!.Value,
-                        spec.TemplateMode,
-                        spec.TcvUsePercent,
-                        authorization,
-                        tenantCode,
-                        cancellationToken)
-                    : await _reportDataClient.GetRecordReportDataAsync(
-                        request.EntityId,
-                        spec.TcvUsePercent,
-                        authorization,
-                        tenantCode,
-                        cancellationToken);
-
-                _cache.Set(cacheKey, data, CacheDuration);
-            }
-        }
+            ReportDataFetchKind.Clinical01HctEpoPatientYear =>
+                await FetchClinical01Async(request, parameters, authorization, tenantCode, cancellationToken),
+            ReportDataFetchKind.Clinical02EpoDrugPatientMonthMed =>
+                await FetchClinical02Async(request, parameters, authorization, tenantCode, cancellationToken),
+            ReportDataFetchKind.MedicinePreparationRound =>
+                await FetchMedicinePreparationRoundAsync(request, parameters, authorization, tenantCode, cancellationToken),
+            _ => await FetchHemosheetAsync(request, authorization, tenantCode, cancellationToken),
+        };
 
         // Ignore client Data/Signatures when server fetch is on (trusted SoT).
         return WithResolvedTemplate(request, data, signatures: null, parameters);
+    }
+
+    private async Task<JsonElement> FetchHemosheetAsync(
+        GeneratePdfRequest request,
+        string? authorization,
+        string tenantCode,
+        CancellationToken cancellationToken)
+    {
+        var spec = HemosheetFetchSpec.FromRequest(request);
+        var cacheKey = BuildHemosheetCacheKey(tenantCode, request.EntityId, authorization, spec);
+
+        if (_cache.TryGetValue(cacheKey, out JsonElement cached))
+        {
+            return cached;
+        }
+
+        var data = spec.IsTemplate
+            ? await _reportDataClient.GetTemplateReportDataAsync(
+                spec.UnitId!.Value,
+                spec.TemplateMode,
+                spec.TcvUsePercent,
+                authorization,
+                tenantCode,
+                cancellationToken)
+            : await _reportDataClient.GetRecordReportDataAsync(
+                request.EntityId,
+                spec.TcvUsePercent,
+                authorization,
+                tenantCode,
+                cancellationToken);
+
+        _cache.Set(cacheKey, data, CacheDuration);
+        return data;
     }
 
     private async Task<JsonElement> FetchClinical01Async(
@@ -136,6 +157,208 @@ public sealed class ReportDataResolver
 
         _cache.Set(cacheKey, data, CacheDuration);
         return data;
+    }
+
+    private async Task<JsonElement> FetchClinical02Async(
+        GeneratePdfRequest request,
+        Dictionary<string, object?> parameters,
+        string? authorization,
+        string tenantCode,
+        CancellationToken cancellationToken)
+    {
+        var patientId = HemosheetFetchSpec.ReadString(parameters, "patientId") ?? request.EntityId;
+        if (string.IsNullOrWhiteSpace(patientId))
+        {
+            throw new PdfGenerationBadRequestException("patientId is required for clinical-02 report-data.");
+        }
+
+        var month = HemosheetFetchSpec.ReadString(parameters, "month")
+            ?? HemosheetFetchSpec.ReadString(parameters, "period");
+        if (string.IsNullOrWhiteSpace(month))
+        {
+            throw new PdfGenerationBadRequestException("month (yyyy-MM) is required for clinical-02 report-data.");
+        }
+
+        var medicineId = HemosheetFetchSpec.ReadInt(parameters, "medicineId");
+        // Seed medicines use negative ids (e.g. Eprex = -233). Only missing / 0 are invalid.
+        if (medicineId is null or 0)
+        {
+            throw new PdfGenerationBadRequestException("medicineId is required for clinical-02 report-data.");
+        }
+
+        var monthKey = NormalizeMonthKey(month);
+        var cacheKey = string.Join(
+            '|',
+            "report-data",
+            ClinicalReportCatalog.EpoDrug,
+            tenantCode.Trim().ToLowerInvariant(),
+            patientId.Trim().ToLowerInvariant(),
+            monthKey,
+            medicineId.Value.ToString(CultureInfo.InvariantCulture),
+            AuthFingerprint(authorization));
+
+        if (_cache.TryGetValue(cacheKey, out JsonElement cached))
+        {
+            return cached;
+        }
+
+        var data = await _reportDataClient.GetClinical02EpoDrugReportDataAsync(
+            patientId,
+            monthKey,
+            medicineId.Value,
+            authorization,
+            tenantCode,
+            cancellationToken);
+
+        _cache.Set(cacheKey, data, CacheDuration);
+        return data;
+    }
+
+    private async Task<JsonElement> FetchMedicinePreparationRoundAsync(
+        GeneratePdfRequest request,
+        Dictionary<string, object?> parameters,
+        string? authorization,
+        string tenantCode,
+        CancellationToken cancellationToken)
+    {
+        var unitId = HemosheetFetchSpec.ReadInt(parameters, "unitId");
+        if (unitId is null || (unitId == 0 || unitId < -1))
+        {
+            throw new PdfGenerationBadRequestException(
+                "unitId is required for medicine-preparation-round (valid: >0 or -1).");
+        }
+
+        // Blank printable form — same header chrome, no patient names.
+        if (HemosheetFetchSpec.ReadBool(parameters, HemosheetFetchSpec.TemplateKey))
+        {
+            return BuildMedicinePreparationBlankTemplate(unitId.Value);
+        }
+
+        var date = HemosheetFetchSpec.ReadString(parameters, "date");
+        if (string.IsNullOrWhiteSpace(date))
+        {
+            throw new PdfGenerationBadRequestException("date (yyyy-MM-dd) is required for medicine-preparation-round.");
+        }
+
+        var sectionId = HemosheetFetchSpec.ReadInt(parameters, "sectionId");
+        if (sectionId is null or <= 0)
+        {
+            throw new PdfGenerationBadRequestException("sectionId is required for medicine-preparation-round.");
+        }
+
+        var cacheKey = string.Join(
+            '|',
+            "report-data",
+            ReportDataFetchRegistry.MedicinePreparationRound,
+            tenantCode.Trim().ToLowerInvariant(),
+            unitId.Value.ToString(CultureInfo.InvariantCulture),
+            date.Trim(),
+            sectionId.Value.ToString(CultureInfo.InvariantCulture),
+            AuthFingerprint(authorization));
+
+        if (_cache.TryGetValue(cacheKey, out JsonElement cached))
+        {
+            return cached;
+        }
+
+        var data = await _reportDataClient.GetMedicinePreparationRoundReportDataAsync(
+            unitId.Value,
+            date.Trim(),
+            sectionId.Value,
+            authorization,
+            tenantCode,
+            cancellationToken);
+
+        _cache.Set(cacheKey, data, CacheDuration);
+        return data;
+    }
+
+    /// <summary>
+    /// Anonymous blank sheet: reuses the same header structure without patient identity.
+    /// </summary>
+    private static JsonElement BuildMedicinePreparationBlankTemplate(int unitId)
+    {
+        const int blankRows = 12;
+        var patients = Enumerable.Range(1, blankRows)
+            .Select(i => new
+            {
+                patientId = $"blank-{i}",
+                orderNumber = (int?)i,
+                hospitalNumber = "",
+                name = "",
+                birthDate = (string?)null,
+                allergies = "",
+                coverage = "",
+                medicines = new[]
+                {
+                    new
+                    {
+                        prescriptionId = Guid.Empty,
+                        medicineId = 0,
+                        medicineName = "",
+                        medicineCode = "",
+                        dose = "",
+                        frequency = "",
+                        route = "",
+                        executedByName = "",
+                        cosignedByName = "",
+                        signatureNames = Array.Empty<string>(),
+                    },
+                },
+            })
+            .ToArray();
+
+        var payload = new
+        {
+            title = "Medicine Preparation Round",
+            reportCode = "MED-PRESC-RP-001",
+            isTemplate = true,
+            header = new
+            {
+                unitId,
+                unitName = "",
+                date = (string?)null,
+                sectionId = 0,
+                roundName = "",
+                startTime = (string?)null,
+                endTime = (string?)null,
+                dateTimeDisplay = "",
+            },
+            patients,
+            layoutContext = new
+            {
+                hemoPdfTemplateId = ReportDataFetchRegistry.MedicinePreparationRound,
+            },
+        };
+
+        return JsonSerializer.SerializeToElement(payload);
+    }
+
+    /// <summary>Accepts <c>yyyy-MM</c> or legacy <c>MM-yyyy</c>.</summary>
+    internal static string NormalizeMonthKey(string month)
+    {
+        var trimmed = month.Trim();
+        if (DateOnly.TryParseExact(
+                trimmed + "-01",
+                "yyyy-MM-dd",
+                CultureInfo.InvariantCulture,
+                DateTimeStyles.None,
+                out var yyyyMm))
+        {
+            return $"{yyyyMm.Year:D4}-{yyyyMm.Month:D2}";
+        }
+
+        if (DateOnly.TryParseExact(
+                "01-" + trimmed,
+                "dd-MM-yyyy",
+                CultureInfo.InvariantCulture,
+                DateTimeStyles.None,
+                out var mmYyyy))
+        {
+            return $"{mmYyyy.Year:D4}-{mmYyyy.Month:D2}";
+        }
+
+        throw new PdfGenerationBadRequestException("month must be yyyy-MM (or MM-yyyy).");
     }
 
     private static GeneratePdfRequest WithResolvedTemplate(
