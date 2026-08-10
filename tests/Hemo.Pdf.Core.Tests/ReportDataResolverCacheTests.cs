@@ -63,5 +63,13 @@ public class ReportDataResolverCacheTests
             string tenantCode,
             CancellationToken cancellationToken) =>
             throw new NotImplementedException();
+
+        public Task<JsonElement> GetClinical01HctEpoReportDataAsync(
+            string patientId,
+            int year,
+            string? authorizationHeader,
+            string tenantCode,
+            CancellationToken cancellationToken) =>
+            throw new NotImplementedException();
     }
 }

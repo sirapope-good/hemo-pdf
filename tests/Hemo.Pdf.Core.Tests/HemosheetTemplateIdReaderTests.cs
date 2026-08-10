@@ -126,6 +126,14 @@ public class ReportDataResolverTemplateIdTests
             string tenantCode,
             CancellationToken cancellationToken) =>
             throw new NotImplementedException();
+
+        public Task<JsonElement> GetClinical01HctEpoReportDataAsync(
+            string patientId,
+            int year,
+            string? authorizationHeader,
+            string tenantCode,
+            CancellationToken cancellationToken) =>
+            throw new NotImplementedException();
     }
 
     private sealed class CountingUnusedClient : IHemosheetReportDataClient
@@ -142,6 +150,14 @@ public class ReportDataResolverTemplateIdTests
             int unitId,
             string templateMode,
             bool tcvUsePercent,
+            string? authorizationHeader,
+            string tenantCode,
+            CancellationToken cancellationToken) =>
+            throw new InvalidOperationException("Should not fetch when UseServerFetch is false.");
+
+        public Task<JsonElement> GetClinical01HctEpoReportDataAsync(
+            string patientId,
+            int year,
             string? authorizationHeader,
             string tenantCode,
             CancellationToken cancellationToken) =>

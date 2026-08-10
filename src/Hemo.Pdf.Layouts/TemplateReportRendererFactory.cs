@@ -1,5 +1,6 @@
 using Hemo.Pdf.Core.Constants;
 using Hemo.Pdf.Layouts.Clinical;
+using Hemo.Pdf.Layouts.Clinical.Clinical01_HctEpo;
 using Hemo.Pdf.Layouts.Template04_Hemosheet;
 
 namespace Hemo.Pdf.Layouts;
@@ -9,6 +10,7 @@ public static class TemplateReportRendererFactory
     private static readonly IReadOnlyDictionary<string, Type> DedicatedRenderers =
         new Dictionary<string, Type>(StringComparer.OrdinalIgnoreCase)
         {
+            [ClinicalReportCatalog.HctEpo] = typeof(Clinical01HctEpoReportRenderer),
             [ClinicalReportCatalog.HemodialysisRecord] = typeof(HemosheetReportRenderer),
             [ClinicalReportCatalog.LegacyEngineAlias] = typeof(HemosheetReportRenderer),
         };

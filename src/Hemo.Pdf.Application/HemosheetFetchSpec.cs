@@ -68,6 +68,8 @@ public sealed record HemosheetFetchSpec(
             long l => (int)l,
             double d => (int)d,
             JsonElement el when el.ValueKind == JsonValueKind.Number && el.TryGetInt32(out var n) => n,
+            JsonElement el when el.ValueKind == JsonValueKind.String
+                && int.TryParse(el.GetString(), NumberStyles.Integer, CultureInfo.InvariantCulture, out var fromJsonString) => fromJsonString,
             string s when int.TryParse(s, NumberStyles.Integer, CultureInfo.InvariantCulture, out var parsed) => parsed,
             _ => null,
         };

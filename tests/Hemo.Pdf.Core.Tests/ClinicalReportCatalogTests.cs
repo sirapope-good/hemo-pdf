@@ -50,11 +50,12 @@ public class ClinicalReportCatalogTests
     }
 
     [Fact]
-    public void DefaultScaffoldIds_ExcludesHemodialysisRecord()
+    public void DefaultScaffoldIds_ExcludesDedicatedEngines()
     {
         var ids = ClinicalReportCatalog.DefaultScaffoldIds.ToList();
-        Assert.Equal(15, ids.Count);
+        Assert.Equal(14, ids.Count);
         Assert.DoesNotContain(ClinicalReportCatalog.HemodialysisRecord, ids);
+        Assert.DoesNotContain(ClinicalReportCatalog.HctEpo, ids);
     }
 }
 

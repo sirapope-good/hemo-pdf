@@ -18,6 +18,9 @@ public static class ThaiUrText
 
     public static TextStyle Bold => Base.Bold();
 
+    /// <summary>Muted body text for historical (non-latest) lab values in a month.</summary>
+    public static TextStyle Historical => Base.FontColor(Colors.Grey.Darken1);
+
     public static TextStyle UnitText => Base.FontSize(HemosheetThaiUrStyle.UnitFontSize);
 
     public static TextStyle Dialysis => Base.FontSize(HemosheetThaiUrStyle.DialysisFontSize);

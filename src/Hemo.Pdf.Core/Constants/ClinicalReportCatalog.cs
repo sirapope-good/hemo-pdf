@@ -82,7 +82,12 @@ public static class ClinicalReportCatalog
     public static string ResolveEngineTemplateId(string templateId) =>
         IsHemodialysisRecord(templateId) ? HemodialysisRecord : templateId;
 
-    /// <summary>Clinical pack ids that use the Default scaffold (not the dedicated hemosheet engine).</summary>
+    /// <summary>
+    /// Clinical pack ids that still use the Default scaffold body
+    /// (excludes dedicated engines: #01 Hct/EPO, #03 Hemodialysis Record).
+    /// </summary>
     public static IEnumerable<string> DefaultScaffoldIds =>
-        Definitions.Keys.Where(id => !string.Equals(id, HemodialysisRecord, StringComparison.OrdinalIgnoreCase));
+        Definitions.Keys.Where(id =>
+            !string.Equals(id, HemodialysisRecord, StringComparison.OrdinalIgnoreCase)
+            && !string.Equals(id, HctEpo, StringComparison.OrdinalIgnoreCase));
 }

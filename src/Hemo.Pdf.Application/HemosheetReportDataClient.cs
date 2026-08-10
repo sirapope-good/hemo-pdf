@@ -42,6 +42,18 @@ public sealed class HemosheetReportDataClient : IHemosheetReportDataClient
         return SendAsync(path, authorizationHeader, tenantCode, cancellationToken);
     }
 
+    public Task<JsonElement> GetClinical01HctEpoReportDataAsync(
+        string patientId,
+        int year,
+        string? authorizationHeader,
+        string tenantCode,
+        CancellationToken cancellationToken)
+    {
+        var path =
+            $"api/Patients/{Uri.EscapeDataString(patientId)}/reports/clinical-01-hct-epo/report-data?year={year.ToString(System.Globalization.CultureInfo.InvariantCulture)}";
+        return SendAsync(path, authorizationHeader, tenantCode, cancellationToken);
+    }
+
     private async Task<JsonElement> SendAsync(
         string relativePath,
         string? authorizationHeader,

@@ -6,8 +6,9 @@ namespace Hemo.Pdf.Sections.ThaiUr;
 
 /// <summary>
 /// Shared ThaiUR clinical report header: logo | title | patient meta, then Diagnosis / Drug Allergy
-/// (and optional Date + HD NO. cell). Reusable across the clinical report pack via
-/// <see cref="HemosheetReportSettingsViewModel.ShowDateAndHdNo"/>.
+/// (optional Date + HD NO. cell; optional HD T/Wk on the diagnosis row).
+/// Toggles: <see cref="HemosheetReportSettingsViewModel.ShowDateAndHdNo"/>,
+/// <see cref="HemosheetReportSettingsViewModel.ShowHdPerWeek"/>.
 /// </summary>
 public static class ThaiUrReportHeader
 {
@@ -80,10 +81,20 @@ public static class ThaiUrReportHeader
 
     private static void DiagnosisAllergyRow(RowDescriptor r, HemosheetReportViewModel vm)
     {
+        var showHdPerWeek = vm.LayoutContext.ReportSettings.ShowHdPerWeek;
+
         r.ConstantItem(16, Mm).LabelBold("Diagnosis");
-        r.RelativeItem(2).Value(vm.Patient.Diagnosis ?? vm.Patient.Underlying);
+        r.RelativeItem(showHdPerWeek ? 1.8f : 2f).Value(vm.Patient.Diagnosis ?? vm.Patient.Underlying);
         r.ConstantItem(20, Mm).LabelBold("Drug Allergy");
-        r.RelativeItem(1).Value(ThaiUrData.Allergies(vm));
+        r.RelativeItem(showHdPerWeek ? 1.1f : 1f).Value(ThaiUrData.Allergies(vm));
+
+        if (!showHdPerWeek)
+            return;
+
+        // Paper form: "HD ……… T/Wk" — sessions/week from schedule slots (else Rx Frequency).
+        r.ConstantItem(8, Mm).LabelBold("HD");
+        r.RelativeItem(0.55f).ValueBlank(vm.Patient.HdPerWeek);
+        r.ConstantItem(12, Mm).AlignMiddle().Text("T/Wk").Style(ThaiUrText.Bold);
     }
 
     private static void Logo(IContainer c, HemosheetReportViewModel vm)

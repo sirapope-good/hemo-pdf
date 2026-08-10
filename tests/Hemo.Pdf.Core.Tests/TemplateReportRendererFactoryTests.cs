@@ -1,6 +1,7 @@
 using Hemo.Pdf.Core.Constants;
 using Hemo.Pdf.Layouts;
 using Hemo.Pdf.Layouts.Clinical;
+using Hemo.Pdf.Layouts.Clinical.Clinical01_HctEpo;
 using Hemo.Pdf.Layouts.Template04_Hemosheet;
 
 namespace Hemo.Pdf.Core.Tests;
@@ -10,6 +11,7 @@ public class TemplateReportRendererFactoryTests
     [Theory]
     [InlineData(ClinicalReportCatalog.LegacyEngineAlias, nameof(HemosheetReportRenderer))]
     [InlineData(ClinicalReportCatalog.HemodialysisRecord, nameof(HemosheetReportRenderer))]
+    [InlineData(ClinicalReportCatalog.HctEpo, nameof(Clinical01HctEpoReportRenderer))]
     [InlineData(ClinicalReportCatalog.Lab, nameof(ClinicalDefaultReportRenderer))]
     [InlineData(ClinicalReportCatalog.ConsentEn, nameof(ClinicalDefaultReportRenderer))]
     public void ResolveRendererType_ClinicalPack(string templateId, string expectedTypeName)
@@ -24,8 +26,15 @@ public class TemplateReportRendererFactoryTests
         var regs = TemplateReportRendererFactory.CreateRegistrations();
         Assert.Contains(regs, r => r.ReportTemplateId == ClinicalReportCatalog.Lab);
         Assert.Contains(regs, r => r.ReportTemplateId == ClinicalReportCatalog.HemodialysisRecord);
+        Assert.Contains(regs, r => r.ReportTemplateId == ClinicalReportCatalog.HctEpo);
         Assert.Equal(
             typeof(HemosheetReportRenderer),
             regs.First(r => r.ReportTemplateId == ClinicalReportCatalog.HemodialysisRecord).RendererType);
+        Assert.Equal(
+            typeof(Clinical01HctEpoReportRenderer),
+            regs.First(r => r.ReportTemplateId == ClinicalReportCatalog.HctEpo).RendererType);
+        Assert.Equal(
+            typeof(ClinicalDefaultReportRenderer),
+            regs.First(r => r.ReportTemplateId == ClinicalReportCatalog.Lab).RendererType);
     }
 }

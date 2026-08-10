@@ -54,6 +54,8 @@ public sealed class HemosheetPatientViewModel
     public string? Coverage { get; init; }
     public string? Diagnosis { get; init; }
     public string? Underlying { get; init; }
+    /// <summary>HD sessions per week (e.g. <c>2</c> or <c>2-3</c>). Blank when unknown.</summary>
+    public string? HdPerWeek { get; init; }
 }
 
 public sealed class HemosheetUnitViewModel
@@ -250,6 +252,11 @@ public sealed class HemosheetReportSettingsViewModel
     /// Other reports reusing the header can set false so that cell is omitted (no empty gap).
     /// </summary>
     public bool ShowDateAndHdNo { get; init; } = true;
+    /// <summary>
+    /// When true, Diagnosis/Drug Allergy row also shows <c>HD … T/Wk</c> (value from
+    /// <see cref="HemosheetPatientViewModel.HdPerWeek"/>; blank is fine).
+    /// </summary>
+    public bool ShowHdPerWeek { get; init; }
     public HemosheetFixedLinesViewModel FixedLines { get; init; } = new();
 }
 

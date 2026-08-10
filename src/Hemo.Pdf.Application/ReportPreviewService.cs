@@ -34,8 +34,8 @@ public sealed class ReportPreviewService : IReportPreviewService
 
         var layoutProfile = HemosheetLayoutProfileReader.ReadLayoutProfile(request.Data) ?? "Default";
 
-        // Dense hemosheet forms (Default CICM + ThaiUr purple) have no DOM planner mirror.
-        if (UsesHemosheetFormPdfPreview(request, layoutProfile))
+        // Dense QuestPDF forms (clinical-01 Hct/EPO, clinical-03 hemosheet) have no DOM planner mirror.
+        if (UsesPdfFormPreview(request, layoutProfile))
         {
             return BuildHemosheetFormPdfModeDocument(request, layoutProfile);
         }
@@ -49,6 +49,17 @@ public sealed class ReportPreviewService : IReportPreviewService
         var renderer = _rendererFactory.Create(request.ReportTemplateId);
         var document = await renderer.RenderPreviewAsync(context, cancellationToken);
         return WithPreviewMode(document, "dom", layoutProfile);
+    }
+
+    private static bool UsesPdfFormPreview(GeneratePdfRequest request, string layoutProfileName)
+    {
+        var engineId = ClinicalReportCatalog.ResolveEngineTemplateId(request.ReportTemplateId);
+
+        // clinical-01: dedicated ThaiUr-header + annual table layout (PDF-only preview).
+        if (string.Equals(engineId, ClinicalReportCatalog.HctEpo, StringComparison.OrdinalIgnoreCase))
+            return true;
+
+        return UsesHemosheetFormPdfPreview(request, layoutProfileName);
     }
 
     private static bool UsesHemosheetFormPdfPreview(GeneratePdfRequest request, string layoutProfileName)

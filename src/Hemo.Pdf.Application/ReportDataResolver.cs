@@ -2,6 +2,7 @@ using System.Globalization;
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
+using Hemo.Pdf.Core.Constants;
 using Hemo.Pdf.Core.Exceptions;
 using Hemo.Pdf.Core.Models;
 using Microsoft.AspNetCore.Http;
@@ -59,35 +60,82 @@ public sealed class ReportDataResolver
         var authorization = _httpContextAccessor.HttpContext?.Request.Headers.Authorization.ToString();
         var tenantCode = request.TenantCode;
         var parameters = request.Parameters ?? new Dictionary<string, object?>();
-        var spec = HemosheetFetchSpec.FromRequest(request);
-        var cacheKey = BuildCacheKey(tenantCode, request.EntityId, authorization, spec);
+        var templateId = HemosheetTemplateIdReader.NormalizeReportTemplateId(request.ReportTemplateId);
 
-        if (!_cache.TryGetValue(cacheKey, out JsonElement data))
+        JsonElement data;
+        if (string.Equals(templateId, ClinicalReportCatalog.HctEpo, StringComparison.OrdinalIgnoreCase))
         {
-            data = spec.IsTemplate
-                ? await _reportDataClient.GetTemplateReportDataAsync(
-                    spec.UnitId!.Value,
-                    spec.TemplateMode,
-                    spec.TcvUsePercent,
-                    authorization,
-                    tenantCode,
-                    cancellationToken)
-                : await _reportDataClient.GetRecordReportDataAsync(
-                    request.EntityId,
-                    spec.TcvUsePercent,
-                    authorization,
-                    tenantCode,
-                    cancellationToken);
+            data = await FetchClinical01Async(request, parameters, authorization, tenantCode, cancellationToken);
+        }
+        else
+        {
+            var spec = HemosheetFetchSpec.FromRequest(request);
+            var cacheKey = BuildHemosheetCacheKey(tenantCode, request.EntityId, authorization, spec);
 
-            _cache.Set(cacheKey, data, CacheDuration);
+            if (!_cache.TryGetValue(cacheKey, out data))
+            {
+                data = spec.IsTemplate
+                    ? await _reportDataClient.GetTemplateReportDataAsync(
+                        spec.UnitId!.Value,
+                        spec.TemplateMode,
+                        spec.TcvUsePercent,
+                        authorization,
+                        tenantCode,
+                        cancellationToken)
+                    : await _reportDataClient.GetRecordReportDataAsync(
+                        request.EntityId,
+                        spec.TcvUsePercent,
+                        authorization,
+                        tenantCode,
+                        cancellationToken);
+
+                _cache.Set(cacheKey, data, CacheDuration);
+            }
         }
 
         // Ignore client Data/Signatures when server fetch is on (trusted SoT).
-        // ReportTemplateId comes from layoutContext.hemoPdfTemplateId (HemoAdmin Hemosheet template)
-        // when present; FE may send document-type key "hemosheet" as a wire hint only.
-        // Keep caller's EntityId for template correlation (FE uses template-{unitId});
-        // validator skips id match when IsTemplate.
         return WithResolvedTemplate(request, data, signatures: null, parameters);
+    }
+
+    private async Task<JsonElement> FetchClinical01Async(
+        GeneratePdfRequest request,
+        Dictionary<string, object?> parameters,
+        string? authorization,
+        string tenantCode,
+        CancellationToken cancellationToken)
+    {
+        var patientId = HemosheetFetchSpec.ReadString(parameters, "patientId") ?? request.EntityId;
+        if (string.IsNullOrWhiteSpace(patientId))
+        {
+            throw new PdfGenerationBadRequestException("patientId is required for clinical-01 report-data.");
+        }
+
+        var year = HemosheetFetchSpec.ReadInt(parameters, "year")
+            ?? DateTime.UtcNow.Year;
+
+        var cacheKey = string.Join(
+            '|',
+            "report-data",
+            ClinicalReportCatalog.HctEpo,
+            tenantCode.Trim().ToLowerInvariant(),
+            patientId.Trim().ToLowerInvariant(),
+            year.ToString(CultureInfo.InvariantCulture),
+            AuthFingerprint(authorization));
+
+        if (_cache.TryGetValue(cacheKey, out JsonElement cached))
+        {
+            return cached;
+        }
+
+        var data = await _reportDataClient.GetClinical01HctEpoReportDataAsync(
+            patientId,
+            year,
+            authorization,
+            tenantCode,
+            cancellationToken);
+
+        _cache.Set(cacheKey, data, CacheDuration);
+        return data;
     }
 
     private static GeneratePdfRequest WithResolvedTemplate(
@@ -105,25 +153,26 @@ public sealed class ReportDataResolver
             Parameters = parameters,
         };
 
-    private static string BuildCacheKey(
+    private static string BuildHemosheetCacheKey(
         string tenantCode,
         string entityId,
         string? authorization,
         HemosheetFetchSpec spec)
     {
-        var authFingerprint = string.IsNullOrWhiteSpace(authorization)
-            ? "anon"
-            : Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(authorization)))[..16];
-
         return string.Join(
             '|',
             "report-data",
             tenantCode.Trim().ToLowerInvariant(),
             entityId.Trim().ToLowerInvariant(),
-            authFingerprint,
+            AuthFingerprint(authorization),
             spec.IsTemplate ? "t" : "r",
             spec.UnitId?.ToString(CultureInfo.InvariantCulture) ?? "-",
             spec.TemplateMode,
             spec.TcvUsePercent ? "1" : "0");
     }
+
+    private static string AuthFingerprint(string? authorization) =>
+        string.IsNullOrWhiteSpace(authorization)
+            ? "anon"
+            : Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(authorization)))[..16];
 }
