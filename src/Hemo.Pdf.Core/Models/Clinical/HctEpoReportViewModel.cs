@@ -5,7 +5,7 @@ namespace Hemo.Pdf.Core.Models.Clinical;
 /// <summary>View model for clinical-01 Hemodialysis Review Hct and EPO (annual).</summary>
 public sealed class HctEpoReportViewModel
 {
-    public string Title { get; init; } = "Hemodialysis Review Hct & EPO";
+    public string Title { get; init; } = "Hemodialysis Review Hct and EPO";
 
     public int Year { get; init; }
 
@@ -73,6 +73,8 @@ public sealed class HctEpoCoPayCriteria
 
     public static HctEpoCoPayCriteria CreateDefault() => new()
     {
+        // Fallback only when API omits criteria — keep in sync with
+        // Wasenshi.HemoDialysisPro.Report.Contracts HctEpoCoPayCriteriaDto.CreateDefault.
         Title = "ปริมาณยาที่มีสิทธิได้รับโดยไม่ต้องร่วมจ่าย",
         NhsoRules =
         [
@@ -114,10 +116,13 @@ public sealed class HctEpoSsoRuleRow
     public string HctGe39 { get; init; } = string.Empty;
 }
 
-/// <summary>Thai month abbreviations for the annual Hct/EPO table.</summary>
+/// <summary>
+/// Thai month abbreviations for the annual Hct/EPO table.
+/// Keep in sync with back <c>HctEpoLayoutConstants</c>.
+/// </summary>
 public static class HctEpoMonthLabels
 {
-    /// <summary>Paper form rules ~2 lines; we keep 3 empty slots per month.</summary>
+    /// <summary>Keep in sync with back <c>HctEpoLayoutConstants.SlotsPerMonth</c>.</summary>
     public const int SlotsPerMonth = 3;
 
     public static readonly string[] ThaiShort =
@@ -126,12 +131,21 @@ public static class HctEpoMonthLabels
         "ก.ค.", "ส.ค.", "ก.ย.", "ต.ค.", "พ.ย.", "ธ.ค.",
     ];
 
-    public static IReadOnlyList<HctEpoMonthRow> EmptyYear() =>
-        Enumerable.Range(1, 12)
-            .Select(m => new HctEpoMonthRow
-            {
-                MonthIndex = m,
-                MonthLabel = ThaiShort[m - 1],
-            })
+    public static IReadOnlyList<HctEpoMonthRow> EnsureTwelve(IReadOnlyList<HctEpoMonthRow>? months)
+    {
+        var byIndex = (months ?? Array.Empty<HctEpoMonthRow>())
+            .Where(m => m.MonthIndex is >= 1 and <= 12)
+            .GroupBy(m => m.MonthIndex)
+            .ToDictionary(g => g.Key, g => g.First());
+
+        return Enumerable.Range(1, 12)
+            .Select(i => byIndex.TryGetValue(i, out var row)
+                ? row
+                : new HctEpoMonthRow
+                {
+                    MonthIndex = i,
+                    MonthLabel = ThaiShort[i - 1],
+                })
             .ToList();
+    }
 }

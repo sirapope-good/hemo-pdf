@@ -83,6 +83,16 @@ public static class ClinicalReportCatalog
         IsHemodialysisRecord(templateId) ? HemodialysisRecord : templateId;
 
     /// <summary>
+    /// Dedicated dense QuestPDF engines with no DOM planner mirror (previewMode = pdf).
+    /// Hemodialysis Record (#03) still depends on layout profile — see ReportPreviewService.
+    /// </summary>
+    public static bool UsesDensePdfPreview(string? templateId)
+    {
+        var engineId = ResolveEngineTemplateId(templateId ?? string.Empty);
+        return string.Equals(engineId, HctEpo, StringComparison.OrdinalIgnoreCase);
+    }
+
+    /// <summary>
     /// Clinical pack ids that still use the Default scaffold body
     /// (excludes dedicated engines: #01 Hct/EPO, #03 Hemodialysis Record).
     /// </summary>

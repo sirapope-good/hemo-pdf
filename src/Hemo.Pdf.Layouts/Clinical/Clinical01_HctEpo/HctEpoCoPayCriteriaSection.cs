@@ -30,7 +30,6 @@ public sealed class HctEpoCoPayCriteriaSection
 
     public void Compose(IContainer container, HctEpoCoPayCriteria criteria)
     {
-        // TODO(tenant): allow tenant override / replace of co-pay criteria block.
         container.Column(col =>
         {
             col.Item().Element(c => c.HeaderBar(criteria.Title));

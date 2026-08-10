@@ -12,7 +12,7 @@ public class Clinical01HctEpoSmokeTests
 {
     private const string SampleJson = """
         {
-          "title": "Hemodialysis Review Hct & EPO",
+          "title": "Hemodialysis Review Hct and EPO",
           "year": 2023,
           "header": {
             "logoBase64": null,

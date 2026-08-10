@@ -53,10 +53,7 @@ public sealed class ReportPreviewService : IReportPreviewService
 
     private static bool UsesPdfFormPreview(GeneratePdfRequest request, string layoutProfileName)
     {
-        var engineId = ClinicalReportCatalog.ResolveEngineTemplateId(request.ReportTemplateId);
-
-        // clinical-01: dedicated ThaiUr-header + annual table layout (PDF-only preview).
-        if (string.Equals(engineId, ClinicalReportCatalog.HctEpo, StringComparison.OrdinalIgnoreCase))
+        if (ClinicalReportCatalog.UsesDensePdfPreview(request.ReportTemplateId))
             return true;
 
         return UsesHemosheetFormPdfPreview(request, layoutProfileName);

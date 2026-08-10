@@ -7,6 +7,9 @@ namespace Hemo.Pdf.Core.Formatting;
 /// Formats MedRx schedule text to match the clinician UI
 /// (<c>formatFrequencyText</c> / <c>getLoopDurationFormatted</c> in hemo-front).
 /// Example: <c>2 dose within 1 week(s)</c>.
+/// Clinical-01 receives preformatted <c>FrequencyText</c> from Web.Api
+/// (<c>Wasenshi.HemoDialysisPro.Utils.MedRxFrequencyText</c>); keep this helper
+/// for client-side / other layouts that still pass raw frequency enums.
 /// </summary>
 public static class MedRxFrequencyFormatter
 {

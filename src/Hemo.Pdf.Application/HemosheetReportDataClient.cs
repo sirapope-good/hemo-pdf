@@ -1,5 +1,6 @@
 using System.Net.Http.Headers;
 using System.Text.Json;
+using Hemo.Pdf.Core.Constants;
 using Hemo.Pdf.Core.Exceptions;
 using Microsoft.Extensions.Options;
 
@@ -50,7 +51,7 @@ public sealed class HemosheetReportDataClient : IHemosheetReportDataClient
         CancellationToken cancellationToken)
     {
         var path =
-            $"api/Patients/{Uri.EscapeDataString(patientId)}/reports/clinical-01-hct-epo/report-data?year={year.ToString(System.Globalization.CultureInfo.InvariantCulture)}";
+            $"api/Patients/{Uri.EscapeDataString(patientId)}/reports/{ClinicalReportCatalog.HctEpo}/report-data?year={year.ToString(System.Globalization.CultureInfo.InvariantCulture)}";
         return SendAsync(path, authorizationHeader, tenantCode, cancellationToken);
     }
 
