@@ -91,6 +91,8 @@ public static class ClinicalReportCatalog
     {
         var engineId = ResolveEngineTemplateId(templateId ?? string.Empty);
         return string.Equals(engineId, HctEpo, StringComparison.OrdinalIgnoreCase)
+            || string.Equals(engineId, EpoDrug, StringComparison.OrdinalIgnoreCase)
+            || string.Equals(engineId, "medicine-preparation-round", StringComparison.OrdinalIgnoreCase)
             || IsConsentReport(engineId);
     }
 
@@ -100,11 +102,12 @@ public static class ClinicalReportCatalog
 
     /// <summary>
     /// Clinical pack ids that still use the Default scaffold body
-    /// (excludes dedicated engines: #01 Hct/EPO, #03 Hemodialysis Record, #08/#09 Consent).
+    /// (excludes dedicated engines: #01/#02, #03 Hemodialysis Record, #08/#09 Consent).
     /// </summary>
     public static IEnumerable<string> DefaultScaffoldIds =>
         Definitions.Keys.Where(id =>
             !string.Equals(id, HemodialysisRecord, StringComparison.OrdinalIgnoreCase)
             && !string.Equals(id, HctEpo, StringComparison.OrdinalIgnoreCase)
+            && !string.Equals(id, EpoDrug, StringComparison.OrdinalIgnoreCase)
             && !IsConsentReport(id));
 }

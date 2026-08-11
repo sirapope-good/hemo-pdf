@@ -96,6 +96,15 @@ public sealed class ReportPreviewService : IReportPreviewService
     {
         if (ClinicalReportCatalog.TryGetDefinition(reportTemplateId, out var clinical))
             return clinical!.DisplayName;
+
+        if (string.Equals(
+                reportTemplateId,
+                ReportDataFetchRegistry.MedicinePreparationRound,
+                StringComparison.OrdinalIgnoreCase))
+        {
+            return "Medicine Preparation";
+        }
+
         return reportTemplateId;
     }
 

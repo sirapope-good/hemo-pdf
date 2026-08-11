@@ -1,6 +1,7 @@
 using Hemo.Pdf.Core.Constants;
 using Hemo.Pdf.Layouts.Clinical;
 using Hemo.Pdf.Layouts.Clinical.Clinical01_HctEpo;
+using Hemo.Pdf.Layouts.Clinical.Clinical02_EpoDrug;
 using Hemo.Pdf.Layouts.Clinical.Clinical08_Consent;
 using Hemo.Pdf.Layouts.Template04_Hemosheet;
 
@@ -8,15 +9,20 @@ namespace Hemo.Pdf.Layouts;
 
 public static class TemplateReportRendererFactory
 {
+    private const string MedicinePreparationRound = "medicine-preparation-round";
+
     private static readonly IReadOnlyDictionary<string, Type> DedicatedRenderers =
         new Dictionary<string, Type>(StringComparer.OrdinalIgnoreCase)
         {
             [ClinicalReportCatalog.HctEpo] = typeof(Clinical01HctEpoReportRenderer),
+            [ClinicalReportCatalog.EpoDrug] = typeof(Clinical02EpoDrugReportRenderer),
             [ClinicalReportCatalog.ConsentTh] = typeof(ConsentReportRenderer),
             [ClinicalReportCatalog.ConsentEn] = typeof(ConsentReportRenderer),
             [ClinicalReportCatalog.HemodialysisRecord] = typeof(HemosheetReportRenderer),
             [ClinicalReportCatalog.LegacyEngineAlias] = typeof(HemosheetReportRenderer),
+            [MedicinePreparationRound] = typeof(MedicinePrep.MedicinePreparationRoundReportRenderer),
         };
+
 
     public static Type ResolveRendererType(string reportTemplateId)
     {
@@ -47,6 +53,9 @@ public static class TemplateReportRendererFactory
         }
 
         registrations.Add((ClinicalReportCatalog.LegacyEngineAlias, typeof(HemosheetReportRenderer)));
+        registrations.Add((
+            MedicinePreparationRound,
+            typeof(MedicinePrep.MedicinePreparationRoundReportRenderer)));
 
         return registrations;
     }

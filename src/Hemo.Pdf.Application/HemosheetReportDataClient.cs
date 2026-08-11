@@ -83,6 +83,37 @@ public sealed class HemosheetReportDataClient : IHemosheetReportDataClient
         return SendAsync(path, authorizationHeader, tenantCode, cancellationToken);
     }
 
+    public Task<JsonElement> GetClinical02EpoDrugReportDataAsync(
+        string patientId,
+        string month,
+        int medicineId,
+        string? authorizationHeader,
+        string tenantCode,
+        CancellationToken cancellationToken)
+    {
+        var path =
+            $"api/Patients/{Uri.EscapeDataString(patientId)}/reports/{ClinicalReportCatalog.EpoDrug}/report-data" +
+            $"?month={Uri.EscapeDataString(month)}" +
+            $"&medicineId={medicineId.ToString(System.Globalization.CultureInfo.InvariantCulture)}";
+        return SendAsync(path, authorizationHeader, tenantCode, cancellationToken);
+    }
+
+    public Task<JsonElement> GetMedicinePreparationRoundReportDataAsync(
+        int unitId,
+        string date,
+        int sectionId,
+        string? authorizationHeader,
+        string tenantCode,
+        CancellationToken cancellationToken)
+    {
+        var path =
+            $"api/hd-treatment/reports/{ReportDataFetchRegistry.MedicinePreparationRound}/report-data" +
+            $"?unitId={unitId.ToString(System.Globalization.CultureInfo.InvariantCulture)}" +
+            $"&date={Uri.EscapeDataString(date)}" +
+            $"&sectionId={sectionId.ToString(System.Globalization.CultureInfo.InvariantCulture)}";
+        return SendAsync(path, authorizationHeader, tenantCode, cancellationToken);
+    }
+
     private async Task<JsonElement> SendAsync(
         string relativePath,
         string? authorizationHeader,
@@ -110,6 +141,12 @@ public sealed class HemosheetReportDataClient : IHemosheetReportDataClient
         if (response.StatusCode == System.Net.HttpStatusCode.NotFound)
         {
             throw new PdfGenerationBadRequestException("Report data was not found for the given entity.");
+        }
+
+        if (response.StatusCode == System.Net.HttpStatusCode.BadRequest)
+        {
+            throw new PdfGenerationBadRequestException(
+                $"Web.Api rejected report-data request (400): {Truncate(body)}");
         }
 
         if (response.StatusCode == System.Net.HttpStatusCode.Forbidden

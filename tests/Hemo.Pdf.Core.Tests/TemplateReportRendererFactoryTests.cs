@@ -13,6 +13,8 @@ public class TemplateReportRendererFactoryTests
     [InlineData(ClinicalReportCatalog.LegacyEngineAlias, nameof(HemosheetReportRenderer))]
     [InlineData(ClinicalReportCatalog.HemodialysisRecord, nameof(HemosheetReportRenderer))]
     [InlineData(ClinicalReportCatalog.HctEpo, nameof(Clinical01HctEpoReportRenderer))]
+    [InlineData(ClinicalReportCatalog.EpoDrug, "Clinical02EpoDrugReportRenderer")]
+    [InlineData("medicine-preparation-round", "MedicinePreparationRoundReportRenderer")]
     [InlineData(ClinicalReportCatalog.Lab, nameof(ClinicalDefaultReportRenderer))]
     [InlineData(ClinicalReportCatalog.ConsentEn, nameof(ConsentReportRenderer))]
     [InlineData(ClinicalReportCatalog.ConsentTh, nameof(ConsentReportRenderer))]
@@ -29,6 +31,8 @@ public class TemplateReportRendererFactoryTests
         Assert.Contains(regs, r => r.ReportTemplateId == ClinicalReportCatalog.Lab);
         Assert.Contains(regs, r => r.ReportTemplateId == ClinicalReportCatalog.HemodialysisRecord);
         Assert.Contains(regs, r => r.ReportTemplateId == ClinicalReportCatalog.HctEpo);
+        Assert.Contains(regs, r => r.ReportTemplateId == ClinicalReportCatalog.EpoDrug);
+        Assert.Contains(regs, r => r.ReportTemplateId == "medicine-preparation-round");
         Assert.Equal(
             typeof(HemosheetReportRenderer),
             regs.First(r => r.ReportTemplateId == ClinicalReportCatalog.HemodialysisRecord).RendererType);
