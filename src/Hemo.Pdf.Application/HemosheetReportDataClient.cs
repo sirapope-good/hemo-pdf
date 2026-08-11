@@ -55,6 +55,34 @@ public sealed class HemosheetReportDataClient : IHemosheetReportDataClient
         return SendAsync(path, authorizationHeader, tenantCode, cancellationToken);
     }
 
+    public Task<JsonElement> GetConsentReportDataAsync(
+        string consentId,
+        string language,
+        string? authorizationHeader,
+        string tenantCode,
+        CancellationToken cancellationToken)
+    {
+        var lang = string.IsNullOrWhiteSpace(language) ? "th" : language.Trim().ToLowerInvariant();
+        var path =
+            $"api/Patients/consent/{Uri.EscapeDataString(consentId)}/report-data?lang={Uri.EscapeDataString(lang)}";
+        return SendAsync(path, authorizationHeader, tenantCode, cancellationToken);
+    }
+
+    public Task<JsonElement> GetConsentTemplateReportDataAsync(
+        string patientId,
+        string consentType,
+        string language,
+        string? authorizationHeader,
+        string tenantCode,
+        CancellationToken cancellationToken)
+    {
+        var lang = string.IsNullOrWhiteSpace(language) ? "th" : language.Trim().ToLowerInvariant();
+        var type = string.IsNullOrWhiteSpace(consentType) ? "Treatment" : consentType.Trim();
+        var path =
+            $"api/Patients/{Uri.EscapeDataString(patientId)}/consent/report-data/template?type={Uri.EscapeDataString(type)}&lang={Uri.EscapeDataString(lang)}";
+        return SendAsync(path, authorizationHeader, tenantCode, cancellationToken);
+    }
+
     private async Task<JsonElement> SendAsync(
         string relativePath,
         string? authorizationHeader,

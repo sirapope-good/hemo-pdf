@@ -1,6 +1,7 @@
 using Hemo.Pdf.Core.Constants;
 using Hemo.Pdf.Layouts.Clinical;
 using Hemo.Pdf.Layouts.Clinical.Clinical01_HctEpo;
+using Hemo.Pdf.Layouts.Clinical.Clinical08_Consent;
 using Hemo.Pdf.Layouts.Template04_Hemosheet;
 
 namespace Hemo.Pdf.Layouts;
@@ -11,6 +12,8 @@ public static class TemplateReportRendererFactory
         new Dictionary<string, Type>(StringComparer.OrdinalIgnoreCase)
         {
             [ClinicalReportCatalog.HctEpo] = typeof(Clinical01HctEpoReportRenderer),
+            [ClinicalReportCatalog.ConsentTh] = typeof(ConsentReportRenderer),
+            [ClinicalReportCatalog.ConsentEn] = typeof(ConsentReportRenderer),
             [ClinicalReportCatalog.HemodialysisRecord] = typeof(HemosheetReportRenderer),
             [ClinicalReportCatalog.LegacyEngineAlias] = typeof(HemosheetReportRenderer),
         };

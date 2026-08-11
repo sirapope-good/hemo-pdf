@@ -1,6 +1,7 @@
 using Hemo.Pdf.Core.Constants;
 using Hemo.Pdf.Layouts.Clinical;
 using Hemo.Pdf.Layouts.Clinical.Clinical01_HctEpo;
+using Hemo.Pdf.Layouts.Clinical.Clinical08_Consent;
 using Hemo.Pdf.Layouts.Hemosheet;
 using Hemo.Pdf.Layouts.Generic;
 using Hemo.Pdf.Layouts.Placeholder;
@@ -36,6 +37,10 @@ public static class TemplateRegistration
         services.AddScoped<Clinical01HctEpoDataProvider>();
         services.AddScoped<Clinical01HctEpoComposer>();
         services.AddScoped<Clinical01HctEpoReportRenderer>();
+
+        services.AddScoped<ConsentReportDataProvider>();
+        services.AddScoped<ConsentReportComposer>();
+        services.AddScoped<ConsentReportRenderer>();
 
         services.AddScoped<GenericReportDocumentComposer>();
         services.AddScoped<GenericReportPreviewRenderer>();

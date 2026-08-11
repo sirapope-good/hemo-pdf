@@ -42,8 +42,9 @@ public static class ClinicalReportCatalog
             [ProgressNote] = new() { Id = ProgressNote, DisplayName = "Hemodialysis Progress note", RequiresSignature = true },
             [Medication] = new() { Id = Medication, DisplayName = "Medication Record", RequiresSignature = false },
             [Lab] = new() { Id = Lab, DisplayName = "Laboratory Record", RequiresSignature = false },
-            [ConsentTh] = new() { Id = ConsentTh, DisplayName = "Treatment Consent (TH)", RequiresSignature = true },
-            [ConsentEn] = new() { Id = ConsentEn, DisplayName = "Treatment Consent (EN)", RequiresSignature = true },
+            // Signatures are embedded images in report-data (not hemosheet signing workflow).
+            [ConsentTh] = new() { Id = ConsentTh, DisplayName = "Treatment Consent (TH)", RequiresSignature = false },
+            [ConsentEn] = new() { Id = ConsentEn, DisplayName = "Treatment Consent (EN)", RequiresSignature = false },
             [PatientData] = new() { Id = PatientData, DisplayName = "Patient Data Record", RequiresSignature = false },
             [Admission] = new() { Id = Admission, DisplayName = "Admission Note and History Review", RequiresSignature = false },
             [EducationTh] = new() { Id = EducationTh, DisplayName = "Hemodialysis Patient Education (TH)", RequiresSignature = false },
@@ -89,15 +90,21 @@ public static class ClinicalReportCatalog
     public static bool UsesDensePdfPreview(string? templateId)
     {
         var engineId = ResolveEngineTemplateId(templateId ?? string.Empty);
-        return string.Equals(engineId, HctEpo, StringComparison.OrdinalIgnoreCase);
+        return string.Equals(engineId, HctEpo, StringComparison.OrdinalIgnoreCase)
+            || IsConsentReport(engineId);
     }
+
+    public static bool IsConsentReport(string? templateId) =>
+        string.Equals(templateId, ConsentTh, StringComparison.OrdinalIgnoreCase)
+        || string.Equals(templateId, ConsentEn, StringComparison.OrdinalIgnoreCase);
 
     /// <summary>
     /// Clinical pack ids that still use the Default scaffold body
-    /// (excludes dedicated engines: #01 Hct/EPO, #03 Hemodialysis Record).
+    /// (excludes dedicated engines: #01 Hct/EPO, #03 Hemodialysis Record, #08/#09 Consent).
     /// </summary>
     public static IEnumerable<string> DefaultScaffoldIds =>
         Definitions.Keys.Where(id =>
             !string.Equals(id, HemodialysisRecord, StringComparison.OrdinalIgnoreCase)
-            && !string.Equals(id, HctEpo, StringComparison.OrdinalIgnoreCase));
+            && !string.Equals(id, HctEpo, StringComparison.OrdinalIgnoreCase)
+            && !IsConsentReport(id));
 }

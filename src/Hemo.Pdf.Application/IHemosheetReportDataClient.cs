@@ -25,4 +25,19 @@ public interface IHemosheetReportDataClient
         string? authorizationHeader,
         string tenantCode,
         CancellationToken cancellationToken);
+
+    Task<JsonElement> GetConsentReportDataAsync(
+        string consentId,
+        string language,
+        string? authorizationHeader,
+        string tenantCode,
+        CancellationToken cancellationToken);
+
+    Task<JsonElement> GetConsentTemplateReportDataAsync(
+        string patientId,
+        string consentType,
+        string language,
+        string? authorizationHeader,
+        string tenantCode,
+        CancellationToken cancellationToken);
 }

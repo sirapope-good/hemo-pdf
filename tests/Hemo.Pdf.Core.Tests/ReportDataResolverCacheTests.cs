@@ -71,5 +71,22 @@ public class ReportDataResolverCacheTests
             string tenantCode,
             CancellationToken cancellationToken) =>
             throw new NotImplementedException();
+
+        public Task<JsonElement> GetConsentReportDataAsync(
+            string consentId,
+            string language,
+            string? authorizationHeader,
+            string tenantCode,
+            CancellationToken cancellationToken) =>
+            throw new NotImplementedException();
+
+        public Task<JsonElement> GetConsentTemplateReportDataAsync(
+            string patientId,
+            string consentType,
+            string language,
+            string? authorizationHeader,
+            string tenantCode,
+            CancellationToken cancellationToken) =>
+            throw new NotImplementedException();
     }
 }

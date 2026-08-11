@@ -2,6 +2,7 @@ using Hemo.Pdf.Core.Constants;
 using Hemo.Pdf.Layouts;
 using Hemo.Pdf.Layouts.Clinical;
 using Hemo.Pdf.Layouts.Clinical.Clinical01_HctEpo;
+using Hemo.Pdf.Layouts.Clinical.Clinical08_Consent;
 using Hemo.Pdf.Layouts.Template04_Hemosheet;
 
 namespace Hemo.Pdf.Core.Tests;
@@ -13,7 +14,8 @@ public class TemplateReportRendererFactoryTests
     [InlineData(ClinicalReportCatalog.HemodialysisRecord, nameof(HemosheetReportRenderer))]
     [InlineData(ClinicalReportCatalog.HctEpo, nameof(Clinical01HctEpoReportRenderer))]
     [InlineData(ClinicalReportCatalog.Lab, nameof(ClinicalDefaultReportRenderer))]
-    [InlineData(ClinicalReportCatalog.ConsentEn, nameof(ClinicalDefaultReportRenderer))]
+    [InlineData(ClinicalReportCatalog.ConsentEn, nameof(ConsentReportRenderer))]
+    [InlineData(ClinicalReportCatalog.ConsentTh, nameof(ConsentReportRenderer))]
     public void ResolveRendererType_ClinicalPack(string templateId, string expectedTypeName)
     {
         var type = TemplateReportRendererFactory.ResolveRendererType(templateId);

@@ -67,6 +67,10 @@ public sealed class ReportDataResolver
         {
             data = await FetchClinical01Async(request, parameters, authorization, tenantCode, cancellationToken);
         }
+        else if (ClinicalReportCatalog.IsConsentReport(templateId))
+        {
+            data = await FetchConsentAsync(request, parameters, templateId, authorization, tenantCode, cancellationToken);
+        }
         else
         {
             var spec = HemosheetFetchSpec.FromRequest(request);
@@ -136,6 +140,87 @@ public sealed class ReportDataResolver
 
         _cache.Set(cacheKey, data, CacheDuration);
         return data;
+    }
+
+    private async Task<JsonElement> FetchConsentAsync(
+        GeneratePdfRequest request,
+        Dictionary<string, object?> parameters,
+        string templateId,
+        string? authorization,
+        string tenantCode,
+        CancellationToken cancellationToken)
+    {
+        var lang = HemosheetFetchSpec.ReadString(parameters, "lang")
+            ?? (string.Equals(templateId, ClinicalReportCatalog.ConsentEn, StringComparison.OrdinalIgnoreCase)
+                ? "en"
+                : "th");
+
+        var isTemplate = HemosheetFetchSpec.ReadBool(parameters, HemosheetFetchSpec.TemplateKey);
+        if (isTemplate)
+        {
+            var patientId = HemosheetFetchSpec.ReadString(parameters, "patientId") ?? request.EntityId;
+            if (string.IsNullOrWhiteSpace(patientId))
+            {
+                throw new PdfGenerationBadRequestException("patientId is required for consent template report-data.");
+            }
+
+            var consentType = HemosheetFetchSpec.ReadString(parameters, "type") ?? "Treatment";
+            var cacheKey = string.Join(
+                '|',
+                "report-data",
+                "consent-template",
+                tenantCode.Trim().ToLowerInvariant(),
+                patientId.Trim().ToLowerInvariant(),
+                consentType.Trim().ToLowerInvariant(),
+                lang.Trim().ToLowerInvariant(),
+                AuthFingerprint(authorization));
+
+            if (_cache.TryGetValue(cacheKey, out JsonElement cachedTemplate))
+            {
+                return ConsentDraftOverlay.Apply(cachedTemplate, parameters);
+            }
+
+            var templateData = await _reportDataClient.GetConsentTemplateReportDataAsync(
+                patientId,
+                consentType,
+                lang,
+                authorization,
+                tenantCode,
+                cancellationToken);
+
+            _cache.Set(cacheKey, templateData, CacheDuration);
+            return ConsentDraftOverlay.Apply(templateData, parameters);
+        }
+
+        var consentId = HemosheetFetchSpec.ReadString(parameters, "consentId") ?? request.EntityId;
+        if (string.IsNullOrWhiteSpace(consentId))
+        {
+            throw new PdfGenerationBadRequestException("consentId is required for consent report-data.");
+        }
+
+        var cacheKeyRecord = string.Join(
+            '|',
+            "report-data",
+            "consent",
+            tenantCode.Trim().ToLowerInvariant(),
+            consentId.Trim().ToLowerInvariant(),
+            lang.Trim().ToLowerInvariant(),
+            AuthFingerprint(authorization));
+
+        if (_cache.TryGetValue(cacheKeyRecord, out JsonElement cached))
+        {
+            return ConsentDraftOverlay.Apply(cached, parameters);
+        }
+
+        var data = await _reportDataClient.GetConsentReportDataAsync(
+            consentId,
+            lang,
+            authorization,
+            tenantCode,
+            cancellationToken);
+
+        _cache.Set(cacheKeyRecord, data, CacheDuration);
+        return ConsentDraftOverlay.Apply(data, parameters);
     }
 
     private static GeneratePdfRequest WithResolvedTemplate(
