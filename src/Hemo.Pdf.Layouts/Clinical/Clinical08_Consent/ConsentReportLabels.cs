@@ -28,9 +28,14 @@ internal sealed class ConsentReportLabels
     public required string RoleWitness { get; init; }
     public required string RoleNurse { get; init; }
     public required string PlaceholderName { get; init; }
+    public required string HeaderTitleTreatment { get; init; }
+    public required string HeaderTitlePdpa { get; init; }
 
     public static ConsentReportLabels For(string language) =>
         string.Equals(language, "en", StringComparison.OrdinalIgnoreCase) ? En : Th;
+
+    public string HeaderTitle(bool isTreatment) =>
+        isTreatment ? HeaderTitleTreatment : HeaderTitlePdpa;
 
     public string SignDateLine(ConsentDateParts p) =>
         ReferenceEquals(this, En)
@@ -89,6 +94,8 @@ internal sealed class ConsentReportLabels
         RoleWitness = "พยาน",
         RoleNurse = "พยาบาลไตเทียม",
         PlaceholderName = "...",
+        HeaderTitleTreatment = "หนังสือแสดงความยินยอม",
+        HeaderTitlePdpa = "หนังสือรับทราบ",
     };
 
     private static readonly ConsentReportLabels En = new()
@@ -116,5 +123,7 @@ internal sealed class ConsentReportLabels
         RoleWitness = "Witness",
         RoleNurse = "Hemodialysis nurse",
         PlaceholderName = "...",
+        HeaderTitleTreatment = "Consent Form",
+        HeaderTitlePdpa = "Acknowledgement",
     };
 }

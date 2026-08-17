@@ -2,6 +2,7 @@ using Hemo.Pdf.Core.Abstractions;
 using Hemo.Pdf.Core.Context;
 using Hemo.Pdf.Core.Models.Clinical;
 using Hemo.Pdf.Rendering;
+using Hemo.Pdf.Sections;
 using Hemo.Pdf.Sections.Helpers;
 using Hemo.Pdf.Sections.ThaiUr;
 using QuestPDF.Fluent;
@@ -11,13 +12,14 @@ using QuestPDF.Infrastructure;
 namespace Hemo.Pdf.Layouts.Clinical.Clinical08_Consent;
 
 /// <summary>
-/// Consent body under the shared ThaiUr clinical header (clinical-01…03 standard).
-/// Treatment intro/roles match thaiur-report #08 paper layout.
+/// Consent under the shared ThaiUr header + narrative content frame
+/// (<see cref="NarrativeLayout"/>). Treatment intro/roles match thaiur-report #08 paper.
 /// New-consent <see cref="ConsentReportViewModel.SkeletonExample"/> shows "..." in fill/sign zones.
 /// </summary>
 public sealed class ConsentReportComposer : ILayoutComposer
 {
     private const string Ellipsis = "...";
+    private const float LineHeight = NarrativeLayout.LineHeight;
 
     public object Compose(object dataModel, PdfReportContext context)
     {
@@ -43,38 +45,86 @@ public sealed class ConsentReportComposer : ILayoutComposer
         var isTreatment = !string.Equals(vm.Type, "PDPA", StringComparison.OrdinalIgnoreCase);
         var bodyFont = isEn ? 10.5f : 11f;
 
+        NarrativeLayout.Compose(
+            container,
+            header => ThaiUrReportHeader.Compose(header, vm.Header, labels.HeaderTitle(isTreatment)),
+            body => ComposeFramedBody(body, vm, labels, isTreatment, bodyFont));
+    }
+
+    private static void ComposeFramedBody(
+        IContainer container,
+        ConsentReportViewModel vm,
+        ConsentReportLabels labels,
+        bool isTreatment,
+        float bodyFont)
+    {
         container.Column(col =>
         {
             col.Spacing(0);
-
-            // Standard ThaiUr header (logo | title | Name/CN/Age/Coverage/ID + Diagnosis/Drug Allergy)
-            col.Item().Element(c => ThaiUrReportHeader.Compose(c, vm.Header, vm.Title));
+            col.Item().Element(c => ComposeDocumentTitle(c, vm.Title));
 
             if (isTreatment)
             {
-                col.Item().PaddingTop(8).Element(c => ComposeTreatmentIntro(c, vm, labels, bodyFont));
+                col.Item().PaddingTop(10).Element(c => ComposeTreatmentIntro(c, vm, labels, bodyFont));
             }
             else
             {
-                col.Item().PaddingTop(8).Element(c => ComposePdpaIntro(c, vm, labels, bodyFont));
+                col.Item().PaddingTop(10).Element(c => ComposePdpaIntro(c, vm, labels, bodyFont));
             }
 
-            col.Item().PaddingTop(8).Element(c => ComposeBody(c, vm, bodyFont));
-            col.Item().PaddingTop(14).Element(c => ComposeSignatures(c, vm, labels, isTreatment));
+            col.Item().PaddingTop(10).Element(c => ComposeBody(c, vm, bodyFont));
+            col.Item().PaddingTop(16).ShowEntire().Element(c =>
+                ComposeClosing(c, vm, labels, isTreatment));
+        });
+    }
 
-            if (isTreatment && vm.ExpiryMonths > 0)
+    /// <summary>Full document name, centered at the top of the content frame (smaller than the header title, bold).</summary>
+    private static void ComposeDocumentTitle(IContainer container, string title)
+    {
+        var lines = (title ?? string.Empty)
+            .Split(['\r', '\n'], StringSplitOptions.RemoveEmptyEntries)
+            .Select(line => line.Trim())
+            .Where(line => line.Length > 0)
+            .ToArray();
+        if (lines.Length == 0)
+        {
+            return;
+        }
+
+        container.Column(col =>
+        {
+            col.Spacing(1);
+            foreach (var line in lines)
             {
-                col.Item().PaddingTop(12).Column(note =>
-                {
-                    note.Spacing(2);
-                    note.Item().Text(labels.ValidityNote(vm.ExpiryMonths)).FontSize(9.5f);
-                    note.Item().Text(
-                        vm.SkeletonExample
-                            ? labels.SkeletonValidityRangeLine()
-                            : labels.ValidityRangeLine(vm.SignedDate, vm.ExpiryDate))
-                        .FontSize(9.5f);
-                });
+                col.Item().AlignCenter().Text(line).FontSize(13f).Bold().LineHeight(1.25f);
             }
+        });
+    }
+
+    private static void ComposeClosing(
+        IContainer container,
+        ConsentReportViewModel vm,
+        ConsentReportLabels labels,
+        bool isTreatment)
+    {
+        container.Column(col =>
+        {
+            col.Spacing(0);
+            col.Item().Element(c => ComposeSignatures(c, vm, labels, isTreatment));
+
+            if (!isTreatment || vm.ExpiryMonths <= 0)
+                return;
+
+            col.Item().PaddingTop(12).Column(note =>
+            {
+                note.Spacing(2);
+                note.Item().Text(labels.ValidityNote(vm.ExpiryMonths)).FontSize(9.5f);
+                note.Item().Text(
+                    vm.SkeletonExample
+                        ? labels.SkeletonValidityRangeLine()
+                        : labels.ValidityRangeLine(vm.SignedDate, vm.ExpiryDate))
+                    .FontSize(9.5f);
+            });
         });
     }
 
@@ -102,7 +152,7 @@ public sealed class ConsentReportComposer : ILayoutComposer
             // A) ข้าพเจ้า นาย / นาง / นางสาว … อายุ … ปี
             col.Item().Text(t =>
             {
-                t.DefaultTextStyle(x => x.FontSize(bodyFont).LineHeight(1.45f));
+                t.DefaultTextStyle(x => x.FontSize(bodyFont).LineHeight(LineHeight));
                 t.Span(labels.IAm + " ");
                 ComposeAdultTitles(t, labels, signerTitleGender);
                 t.Span(" ");
@@ -111,28 +161,28 @@ public sealed class ConsentReportComposer : ILayoutComposer
             });
 
             // B) เป็นผู้ป่วย / ผู้มีอำนาจ…เกี่ยวข้องเป็น … ของผู้ป่วยชื่อ
-            col.Item().PaddingTop(6).Row(row =>
+            col.Item().PaddingTop(8).Row(row =>
             {
                 row.AutoItem().Element(c => ComposeChoice(c, labels.AsPatient, asPatient, bodyFont));
             });
 
-            col.Item().PaddingTop(4).Row(row =>
+            col.Item().PaddingTop(6).Row(row =>
             {
                 row.AutoItem().Element(c =>
                     ComposeChoice(c, labels.AsRepresentative, asRep, bodyFont));
                 row.ConstantItem(6);
                 row.RelativeItem().AlignMiddle().Text(t =>
                 {
-                    t.DefaultTextStyle(x => x.FontSize(bodyFont).LineHeight(1.35f));
+                    t.DefaultTextStyle(x => x.FontSize(bodyFont).LineHeight(LineHeight));
                     t.Span(Blank(skeleton ? null : vm.Relationship, "........................"));
                     t.Span($" {labels.OfPatientNamed}");
                 });
             });
 
             // C) patient name line
-            col.Item().PaddingTop(4).Text(t =>
+            col.Item().PaddingTop(6).Text(t =>
             {
-                t.DefaultTextStyle(x => x.FontSize(bodyFont).LineHeight(1.45f));
+                t.DefaultTextStyle(x => x.FontSize(bodyFont).LineHeight(LineHeight));
                 ComposeChildAndAdultTitles(t, labels, asRep ? gender : null);
                 t.Span(" ");
                 if (asRep)
@@ -147,16 +197,16 @@ public sealed class ConsentReportComposer : ILayoutComposer
             });
 
             // D) reasons for representation
-            col.Item().PaddingTop(6).Text(labels.RepresentativeReasonIntro).FontSize(bodyFont).LineHeight(1.4f);
+            col.Item().PaddingTop(8).Text(labels.RepresentativeReasonIntro).FontSize(bodyFont).LineHeight(LineHeight);
 
             var reasonMinor = asRep
                 && vm.PatientAge is int age
                 && age < 18;
-            col.Item().PaddingTop(3).PaddingLeft(12)
+            col.Item().PaddingTop(4).PaddingLeft(12)
                 .Element(c => ComposeChoice(c, labels.ReasonMinor, reasonMinor, bodyFont));
-            col.Item().PaddingTop(2).PaddingLeft(12)
+            col.Item().PaddingTop(4).PaddingLeft(12)
                 .Element(c => ComposeChoice(c, labels.ReasonUnconscious, false, bodyFont));
-            col.Item().PaddingTop(2).PaddingLeft(12).Row(row =>
+            col.Item().PaddingTop(4).PaddingLeft(12).Row(row =>
             {
                 row.AutoItem().Element(c => ComposeChoice(c, labels.ReasonOther, false, bodyFont));
                 row.ConstantItem(6);
@@ -185,13 +235,13 @@ public sealed class ConsentReportComposer : ILayoutComposer
         {
             col.Item().Text(t =>
             {
-                t.DefaultTextStyle(x => x.FontSize(bodyFont).LineHeight(1.4f));
+                t.DefaultTextStyle(x => x.FontSize(bodyFont).LineHeight(LineHeight));
                 t.Span(labels.IAm + " ");
                 t.Span(Blank(name, Ellipsis)).SemiBold();
                 t.Span($" {age} {labels.AgeUnit}");
             });
 
-            col.Item().PaddingTop(5).Row(row =>
+            col.Item().PaddingTop(8).Row(row =>
             {
                 row.AutoItem().Element(c => ComposeChoice(c, labels.AsPatient, asPatient, bodyFont));
                 row.ConstantItem(14);
@@ -257,12 +307,12 @@ public sealed class ConsentReportComposer : ILayoutComposer
     {
         container.Column(col =>
         {
-            col.Spacing(5);
+            col.Spacing(NarrativeLayout.ParagraphSpacing);
             foreach (var paragraph in vm.BodyParagraphs)
             {
                 col.Item().Element(c =>
                 {
-                    var text = c.DefaultTextStyle(x => x.FontSize(bodyFont).LineHeight(1.4f));
+                    var text = c.DefaultTextStyle(x => x.FontSize(bodyFont).LineHeight(LineHeight));
                     if (paragraph.Sub)
                     {
                         text.PaddingLeft(16).Text(paragraph.Text);
@@ -282,7 +332,7 @@ public sealed class ConsentReportComposer : ILayoutComposer
         {
             PdfCheckbox.Render(row, checkedState, 10f);
             row.ConstantItem(5);
-            row.AutoItem().AlignMiddle().Text(label).FontSize(fontSize).LineHeight(1.3f);
+            row.AutoItem().AlignMiddle().Text(label).FontSize(fontSize).LineHeight(LineHeight);
         });
     }
 
@@ -315,12 +365,12 @@ public sealed class ConsentReportComposer : ILayoutComposer
 
         container.Column(col =>
         {
-            col.Spacing(12);
+            col.Spacing(16);
             col.Item().Row(row =>
             {
                 row.RelativeItem().Element(c =>
                     ComposeSignBlock(c, labels, signerName, originalPatient, patientSig, labels.RoleSigner, signDate, skeleton));
-                row.ConstantItem(16);
+                row.ConstantItem(20);
                 row.RelativeItem().Element(c =>
                     ComposeSignBlock(c, labels, doctorName, null, doctorSig, labels.RoleDoctor, signDate, skeleton));
             });
@@ -328,7 +378,7 @@ public sealed class ConsentReportComposer : ILayoutComposer
             {
                 row.RelativeItem().Element(c =>
                     ComposeSignBlock(c, labels, witnessName, null, witnessSig, labels.RoleWitness, signDate, skeleton));
-                row.ConstantItem(16);
+                row.ConstantItem(20);
                 row.RelativeItem().Element(c =>
                     ComposeSignBlock(c, labels, nurseName, null, nurseSig, labels.RoleNurse, signDate, skeleton));
             });
