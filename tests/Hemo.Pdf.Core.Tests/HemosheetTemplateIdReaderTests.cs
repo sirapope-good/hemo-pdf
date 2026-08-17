@@ -161,6 +161,14 @@ public class ReportDataResolverTemplateIdTests
             CancellationToken cancellationToken) =>
             throw new NotImplementedException();
 
+        public Task<JsonElement> GetClinical05ProgressNoteReportDataAsync(
+            string patientId,
+            string month,
+            string? authorizationHeader,
+            string tenantCode,
+            CancellationToken cancellationToken) =>
+            throw new NotImplementedException();
+
         public Task<JsonElement> GetMedicinePreparationRoundReportDataAsync(
             int unitId,
             string date,
@@ -219,6 +227,14 @@ public class ReportDataResolverTemplateIdTests
             string patientId,
             string month,
             int medicineId,
+            string? authorizationHeader,
+            string tenantCode,
+            CancellationToken cancellationToken) =>
+            throw new InvalidOperationException("Should not fetch when UseServerFetch is false.");
+
+        public Task<JsonElement> GetClinical05ProgressNoteReportDataAsync(
+            string patientId,
+            string month,
             string? authorizationHeader,
             string tenantCode,
             CancellationToken cancellationToken) =>

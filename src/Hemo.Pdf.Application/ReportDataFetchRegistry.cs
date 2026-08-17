@@ -8,6 +8,7 @@ public enum ReportDataFetchKind
     HemosheetRecordOrTemplate,
     Clinical01HctEpoPatientYear,
     Clinical02EpoDrugPatientMonthMed,
+    Clinical05ProgressNotePatientMonth,
     MedicinePreparationRound,
     ConsentPatientTemplateOrRecord,
 }
@@ -29,6 +30,9 @@ public static class ReportDataFetchRegistry
 
         if (string.Equals(engineId, ClinicalReportCatalog.EpoDrug, StringComparison.OrdinalIgnoreCase))
             return ReportDataFetchKind.Clinical02EpoDrugPatientMonthMed;
+
+        if (string.Equals(engineId, ClinicalReportCatalog.ProgressNote, StringComparison.OrdinalIgnoreCase))
+            return ReportDataFetchKind.Clinical05ProgressNotePatientMonth;
 
         if (string.Equals(engineId, MedicinePreparationRound, StringComparison.OrdinalIgnoreCase))
             return ReportDataFetchKind.MedicinePreparationRound;

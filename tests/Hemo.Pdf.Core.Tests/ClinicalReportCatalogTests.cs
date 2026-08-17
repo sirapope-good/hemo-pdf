@@ -53,10 +53,11 @@ public class ClinicalReportCatalogTests
     public void DefaultScaffoldIds_ExcludesDedicatedEngines()
     {
         var ids = ClinicalReportCatalog.DefaultScaffoldIds.ToList();
-        Assert.Equal(11, ids.Count);
+        Assert.Equal(10, ids.Count);
         Assert.DoesNotContain(ClinicalReportCatalog.HemodialysisRecord, ids);
         Assert.DoesNotContain(ClinicalReportCatalog.HctEpo, ids);
         Assert.DoesNotContain(ClinicalReportCatalog.EpoDrug, ids);
+        Assert.DoesNotContain(ClinicalReportCatalog.ProgressNote, ids);
         Assert.DoesNotContain(ClinicalReportCatalog.ConsentTh, ids);
         Assert.DoesNotContain(ClinicalReportCatalog.ConsentEn, ids);
     }
@@ -64,6 +65,7 @@ public class ClinicalReportCatalogTests
     [Theory]
     [InlineData(ClinicalReportCatalog.HctEpo, true)]
     [InlineData(ClinicalReportCatalog.EpoDrug, true)]
+    [InlineData(ClinicalReportCatalog.ProgressNote, true)]
     [InlineData("medicine-preparation-round", true)]
     [InlineData(ClinicalReportCatalog.ConsentTh, true)]
     [InlineData(ClinicalReportCatalog.ConsentEn, true)]
