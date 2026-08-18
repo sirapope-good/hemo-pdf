@@ -1,0 +1,13 @@
+{
+  "page": {
+    "size": "A4"
+  },
+  "header": {
+    "widget": "thaiur.header"
+  },
+  "body": [
+    {
+      "widget": "clinical.soap-table"
+    }
+  ]
+}

@@ -1,0 +1,9 @@
+{
+  "title": "Medication Administration Record (PerMonth)",
+  "subtitle": "Clinical report pack — Default structure",
+  "report": "Report",
+  "layout": "Layout",
+  "layoutValue": "Default (scaffold)",
+  "note": "Note",
+  "noteValue": "Foundation placeholder — body pixel-parity not implemented yet."
+}

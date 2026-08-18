@@ -1,0 +1,122 @@
+using System.Text.Json;
+using System.Text.Json.Serialization;
+
+namespace Hemo.Pdf.Core.Hprp;
+
+public sealed class HprpLayout
+{
+    [JsonPropertyName("page")]
+    public HprpPage Page { get; init; } = new();
+
+    [JsonPropertyName("header")]
+    public HprpLayoutNode? Header { get; init; }
+
+    [JsonPropertyName("body")]
+    public IReadOnlyList<HprpLayoutNode> Body { get; init; } = [];
+
+    /// <summary>Hemosheet (and similar) widget plan — interpreted by the C# planner.</summary>
+    [JsonPropertyName("sections")]
+    public IReadOnlyList<HprpSectionNode> Sections { get; init; } = [];
+}
+
+public sealed class HprpPage
+{
+    [JsonPropertyName("size")]
+    public string Size { get; init; } = "A4";
+
+    [JsonPropertyName("marginMm")]
+    public float? MarginMm { get; init; }
+}
+
+public sealed class HprpLayoutNode
+{
+    [JsonPropertyName("type")]
+    public string? Type { get; init; }
+
+    [JsonPropertyName("widget")]
+    public string? Widget { get; init; }
+
+    [JsonPropertyName("when")]
+    public JsonElement When { get; init; }
+
+    [JsonPropertyName("title")]
+    public JsonElement Title { get; init; }
+
+    [JsonPropertyName("content")]
+    public JsonElement Content { get; init; }
+
+    [JsonPropertyName("bind")]
+    public string? Bind { get; init; }
+
+    [JsonPropertyName("bindRows")]
+    public string? BindRows { get; init; }
+
+    [JsonPropertyName("style")]
+    public string? Style { get; init; }
+
+    [JsonPropertyName("columns")]
+    public int Columns { get; init; } = 2;
+
+    [JsonPropertyName("columnHeaders")]
+    public IReadOnlyList<string>? ColumnHeaders { get; init; }
+
+    [JsonPropertyName("fields")]
+    public IReadOnlyList<HprpFieldNode>? Fields { get; init; }
+
+    [JsonPropertyName("rows")]
+    public IReadOnlyList<HprpRowNode>? Rows { get; init; }
+
+    [JsonPropertyName("appendFlatten")]
+    public bool AppendFlatten { get; init; }
+
+    [JsonPropertyName("variant")]
+    public string? Variant { get; init; }
+}
+
+public sealed class HprpFieldNode
+{
+    [JsonPropertyName("label")]
+    public JsonElement Label { get; init; }
+
+    [JsonPropertyName("bind")]
+    public string? Bind { get; init; }
+
+    [JsonPropertyName("content")]
+    public JsonElement Content { get; init; }
+
+    [JsonPropertyName("columnSpan")]
+    public int ColumnSpan { get; init; } = 1;
+}
+
+public sealed class HprpRowNode
+{
+    [JsonPropertyName("label")]
+    public JsonElement Label { get; init; }
+
+    [JsonPropertyName("bind")]
+    public string? Bind { get; init; }
+
+    [JsonPropertyName("content")]
+    public JsonElement Content { get; init; }
+}
+
+public sealed class HprpSectionNode
+{
+    [JsonPropertyName("widget")]
+    public string Widget { get; init; } = "";
+
+    [JsonPropertyName("when")]
+    public JsonElement When { get; init; }
+
+    [JsonPropertyName("variant")]
+    public string? Variant { get; init; }
+
+    [JsonPropertyName("columns")]
+    public IReadOnlyList<string>? Columns { get; init; }
+
+    [JsonPropertyName("columnsWhen")]
+    public Dictionary<string, string[]>? ColumnsWhen { get; init; }
+
+    [JsonPropertyName("fixedLinesFrom")]
+    public string? FixedLinesFrom { get; init; }
+}

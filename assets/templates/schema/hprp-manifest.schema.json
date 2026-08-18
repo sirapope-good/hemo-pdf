@@ -1,0 +1,28 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://hemopro.local/schemas/hprp-manifest.json",
+  "title": "HPRP manifest",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["id", "displayName", "engineVersion", "dataAdapter"],
+  "properties": {
+    "id": { "type": "string", "minLength": 1 },
+    "version": { "type": "string" },
+    "displayName": { "type": "string", "minLength": 1 },
+    "engineVersion": { "type": "integer", "minimum": 1, "maximum": 1 },
+    "dataAdapter": {
+      "type": "string",
+      "enum": [
+        "flatten-dto",
+        "hemosheet-record",
+        "clinical-01-hct-epo",
+        "clinical-02-epo-drug",
+        "clinical-05-progress-note",
+        "consent",
+        "medicine-preparation-round"
+      ]
+    },
+    "requiresSignature": { "type": "boolean" },
+    "language": { "type": "string" }
+  }
+}

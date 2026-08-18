@@ -1,6 +1,8 @@
 using Hemo.Pdf.Core.Abstractions;
 using Hemo.Pdf.Core.Context;
+using Hemo.Pdf.Core.Hprp;
 using Hemo.Pdf.Core.Models.Clinical;
+using Hemo.Pdf.Layouts.Hprp;
 using Hemo.Pdf.Rendering;
 using Hemo.Pdf.Sections;
 using Hemo.Pdf.Sections.Helpers;
@@ -20,11 +22,19 @@ public sealed class ConsentReportComposer : ILayoutComposer
 {
     private const string Ellipsis = "...";
     private const float LineHeight = NarrativeLayout.LineHeight;
+    private readonly IHprpTemplateStore? _templates;
+
+    public ConsentReportComposer(IHprpTemplateStore? templates = null)
+    {
+        _templates = templates;
+    }
 
     public object Compose(object dataModel, PdfReportContext context)
     {
         var vm = (ConsentReportViewModel)dataModel;
         var margin = HemosheetThaiUrStyle.PageMarginMm;
+        var overlay = HprpLabelResolver.Resolve(_templates, context, vm.Language);
+        var labels = ConsentReportLabels.For(vm.Language, overlay);
         return new QuestLayout
         {
             MarginMillimeters = margin,
@@ -33,14 +43,16 @@ public sealed class ConsentReportComposer : ILayoutComposer
             MarginLeft = margin,
             MarginRight = margin,
             Header = null,
-            Content = c => ComposeContent(c, vm),
+            Content = c => ComposeContent(c, vm, labels),
             Footer = null,
         };
     }
 
-    private static void ComposeContent(IContainer container, ConsentReportViewModel vm)
+    private static void ComposeContent(
+        IContainer container,
+        ConsentReportViewModel vm,
+        ConsentReportLabels labels)
     {
-        var labels = ConsentReportLabels.For(vm.Language);
         var isEn = string.Equals(vm.Language, "en", StringComparison.OrdinalIgnoreCase);
         var isTreatment = !string.Equals(vm.Type, "PDPA", StringComparison.OrdinalIgnoreCase);
         var bodyFont = isEn ? 10.5f : 11f;

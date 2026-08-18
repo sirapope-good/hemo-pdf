@@ -1,3 +1,4 @@
+using Hemo.Pdf.Core.Constants;
 using Hemo.Pdf.Core.Context;
 using Hemo.Pdf.Core.Models.Preview;
 using QuestPDF.Fluent;
@@ -53,6 +54,40 @@ public static class ReportBlockPdfComposer
       case VascularAccessReportBlock vascular:
         new KeyValueTableSection().Compose(container, new ReportBlockAdapters.KeyValueRowsAdapter(vascular.Title, vascular.Rows), context);
         break;
+      case TextReportBlock text:
+        ComposeText(container, text);
+        break;
+      case SignatureReportBlock:
+        new SignatureBlockSection().Compose(container, block, context);
+        break;
     }
+  }
+
+  private static void ComposeText(IContainer container, TextReportBlock text)
+  {
+    var style = (text.Style ?? "body").Trim().ToLowerInvariant();
+    container.Column(col =>
+    {
+      if (!string.IsNullOrWhiteSpace(text.Title) && style is not "title" and not "subtitle")
+      {
+        col.Item().Text(text.Title)
+          .FontFamily(PdfStyleDefaults.Body.SectionTitleFontFamily)
+          .FontSize(PdfStyleDefaults.Body.SectionTitleFontSize)
+          .SemiBold();
+      }
+
+      if (string.IsNullOrWhiteSpace(text.Content))
+        return;
+
+      var item = col.Item().Text(text.Content)
+        .FontFamily(PdfStyleDefaults.Body.SectionTitleFontFamily);
+
+      if (style == "title")
+        item.FontSize(PdfStyleDefaults.Body.SectionTitleFontSize).SemiBold();
+      else if (style == "subtitle")
+        item.FontSize(9);
+      else
+        item.FontSize(PdfStyleDefaults.Body.BaseFontSize);
+    });
   }
 }

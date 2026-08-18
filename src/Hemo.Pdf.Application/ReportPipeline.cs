@@ -1,6 +1,7 @@
 using Hemo.Pdf.Core.Abstractions;
 using Hemo.Pdf.Core.Constants;
 using Hemo.Pdf.Core.Context;
+using Hemo.Pdf.Core.Hprp;
 using Hemo.Pdf.Core.Models;
 
 namespace Hemo.Pdf.Application;
@@ -11,11 +12,12 @@ internal static class ReportPipeline
         GeneratePdfRequest request,
         IBrandingResolver brandingResolver,
         IReportSignatureResolver signatureResolver,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken,
+        IHprpTemplateStore? templates = null)
     {
         var branding = await brandingResolver.ResolveAsync(request.TenantCode, cancellationToken);
         var signatures = await signatureResolver.ResolveAsync(request, cancellationToken);
-        var templateDefinition = ResolveDefinition(request.ReportTemplateId);
+        var templateDefinition = ResolveDefinition(request.ReportTemplateId, request.TenantCode, templates);
 
         return new PdfReportContext
         {
@@ -30,8 +32,17 @@ internal static class ReportPipeline
         };
     }
 
-    private static ReportTemplateDefinition? ResolveDefinition(string reportTemplateId)
+    private static ReportTemplateDefinition? ResolveDefinition(
+        string reportTemplateId,
+        string tenantCode,
+        IHprpTemplateStore? templates)
     {
+        if (HprpCatalog.TryGetDefinition(templates, tenantCode, reportTemplateId, out var fromPackage)
+            && fromPackage is not null)
+        {
+            return fromPackage;
+        }
+
         ClinicalReportCatalog.TryGetDefinition(reportTemplateId, out var clinical);
         return clinical;
     }

@@ -1,0 +1,9 @@
+{
+  "id": "clinical-14-mar-month",
+  "version": "1.0.0",
+  "displayName": "Medication Administration Record (PerMonth)",
+  "engineVersion": 1,
+  "dataAdapter": "flatten-dto",
+  "requiresSignature": false,
+  "language": "th"
+}

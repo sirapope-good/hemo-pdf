@@ -1,0 +1,16 @@
+{
+  "page": {
+    "size": "A4"
+  },
+  "header": {
+    "widget": "thaiur.header"
+  },
+  "body": [
+    {
+      "widget": "clinical.epo-drug-table"
+    },
+    {
+      "widget": "clinical.hct-epo-copay"
+    }
+  ]
+}

@@ -1,0 +1,9 @@
+{
+  "id": "clinical-02-epo-drug",
+  "version": "1.0.0",
+  "displayName": "Erythropoietin Drug Record",
+  "engineVersion": 1,
+  "dataAdapter": "clinical-02-epo-drug",
+  "requiresSignature": false,
+  "language": "th"
+}

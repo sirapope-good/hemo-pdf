@@ -1,0 +1,9 @@
+{
+  "id": "clinical-16-adequacy-summary",
+  "version": "1.0.0",
+  "displayName": "Hemodialysis Adequacy Summary",
+  "engineVersion": 1,
+  "dataAdapter": "flatten-dto",
+  "requiresSignature": false,
+  "language": "th"
+}

@@ -13,6 +13,9 @@ public sealed class HemoPdfOptions
 
     public string BrandingRootPath { get; set; } = "../../assets/branding";
 
+    /// <summary>Default unpacked <c>.hprp</c> templates (<c>{id}/manifest.json</c>) plus tenant ZIP overrides under <c>tenants/{tenant}/</c>.</summary>
+    public string TemplatesRootPath { get; set; } = "../../assets/templates";
+
     public JwtOptions Jwt { get; set; } = new();
 
     public WebApiOptions WebApi { get; set; } = new();

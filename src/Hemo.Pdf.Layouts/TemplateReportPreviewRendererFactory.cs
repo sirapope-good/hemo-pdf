@@ -23,6 +23,12 @@ public static class TemplateReportPreviewRendererFactory
             return dedicated;
         }
 
+        if (ClinicalReportCatalog.DefaultScaffoldIds.Contains(engineId, StringComparer.OrdinalIgnoreCase)
+            || ClinicalReportCatalog.DefaultScaffoldIds.Contains(reportTemplateId, StringComparer.OrdinalIgnoreCase))
+        {
+            return typeof(HprpReportPreviewRenderer);
+        }
+
         return typeof(GenericReportPreviewRenderer);
     }
 

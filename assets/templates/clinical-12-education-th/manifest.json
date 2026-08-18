@@ -1,0 +1,9 @@
+{
+  "id": "clinical-12-education-th",
+  "version": "1.0.0",
+  "displayName": "Hemodialysis Patient Education (TH)",
+  "engineVersion": 1,
+  "dataAdapter": "flatten-dto",
+  "requiresSignature": false,
+  "language": "th"
+}

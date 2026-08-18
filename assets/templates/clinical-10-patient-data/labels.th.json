@@ -1,0 +1,9 @@
+{
+  "title": "Patient Data Record",
+  "subtitle": "Clinical report pack — Default structure",
+  "report": "รายงาน",
+  "layout": "เลย์เอาต์",
+  "layoutValue": "Default (scaffold)",
+  "note": "หมายเหตุ",
+  "noteValue": "Foundation placeholder — body pixel-parity not implemented yet."
+}

@@ -1,6 +1,8 @@
 using Hemo.Pdf.Core.Abstractions;
 using Hemo.Pdf.Core.Context;
+using Hemo.Pdf.Core.Hprp;
 using Hemo.Pdf.Core.Models.Clinical;
+using Hemo.Pdf.Layouts.Hprp;
 using Hemo.Pdf.Rendering;
 using Hemo.Pdf.Sections.ThaiUr;
 using QuestPDF.Fluent;
@@ -21,12 +23,19 @@ public sealed class Clinical05ProgressNoteComposer : ILayoutComposer
     private const float MinBlockHeightMm = 90f;
 
     private readonly Clinical05SoapTableSection _table = new();
+    private readonly IHprpTemplateStore? _templates;
+
+    public Clinical05ProgressNoteComposer(IHprpTemplateStore? templates = null)
+    {
+        _templates = templates;
+    }
 
     public object Compose(object dataModel, PdfReportContext context)
     {
         var vm = (Clinical05ProgressNoteReportViewModel)dataModel;
         var margin = HemosheetThaiUrStyle.PageMarginMm;
         var rowHeightMm = BudgetRowHeightMm(vm);
+        var labels = HprpLabelResolver.Resolve(_templates, context);
 
         return new QuestLayout
         {
@@ -36,7 +45,7 @@ public sealed class Clinical05ProgressNoteComposer : ILayoutComposer
             MarginLeft = margin,
             MarginRight = margin,
             Header = c => ComposeRepeatingHeader(c, vm),
-            Content = c => _table.Compose(c, vm, rowHeightMm),
+            Content = c => _table.Compose(c, vm, rowHeightMm, labels),
             Footer = null,
         };
     }

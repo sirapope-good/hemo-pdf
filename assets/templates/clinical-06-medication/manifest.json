@@ -1,0 +1,9 @@
+{
+  "id": "clinical-06-medication",
+  "version": "1.0.0",
+  "displayName": "Medication Record",
+  "engineVersion": 1,
+  "dataAdapter": "flatten-dto",
+  "requiresSignature": false,
+  "language": "th"
+}

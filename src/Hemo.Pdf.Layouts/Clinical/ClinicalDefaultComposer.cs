@@ -1,5 +1,4 @@
 using Hemo.Pdf.Core.Abstractions;
-using Hemo.Pdf.Core.Constants;
 using Hemo.Pdf.Core.Context;
 using Hemo.Pdf.Core.Models;
 using Hemo.Pdf.Layouts.Base;
@@ -10,14 +9,8 @@ using QuestPDF.Infrastructure;
 
 namespace Hemo.Pdf.Layouts.Clinical;
 
-/// <summary>
-/// Default structure shell for clinical pack reports (01–02, 04–16).
-/// Uses shared Configurable header/footer; body is a foundation placeholder.
-/// </summary>
-public sealed class ClinicalDefaultComposer : BaseReportComposer<SimpleReportViewModel>
+public sealed class ClinicalDefaultComposer : BaseReportComposer<HprpBoundViewModel>
 {
-    private readonly KeyValueTableSection _keyValueTable = new();
-
     public ClinicalDefaultComposer(
         ISectionResolver<IReportHeaderSection> headerResolver,
         ISectionResolver<IReportFooterSection> footerResolver)
@@ -27,26 +20,17 @@ public sealed class ClinicalDefaultComposer : BaseReportComposer<SimpleReportVie
 
     protected override void ComposeContent(
         IContainer container,
-        SimpleReportViewModel viewModel,
+        HprpBoundViewModel viewModel,
         PdfReportContext context)
     {
         container.Column(col =>
         {
             col.Spacing(6);
 
-            col.Item().Text(viewModel.Title ?? "Clinical Report")
-                .FontFamily(PdfStyleDefaults.Body.SectionTitleFontFamily)
-                .FontSize(PdfStyleDefaults.Body.SectionTitleFontSize)
-                .SemiBold();
-
-            if (!string.IsNullOrWhiteSpace(viewModel.Subtitle))
+            foreach (var block in viewModel.Blocks)
             {
-                col.Item().Text(viewModel.Subtitle!)
-                    .FontFamily(PdfStyleDefaults.Body.SectionTitleFontFamily)
-                    .FontSize(9);
+                col.Item().Element(c => ReportBlockPdfComposer.Compose(c, block, context));
             }
-
-            col.Item().Element(c => _keyValueTable.Compose(c, viewModel, context));
         });
     }
 }

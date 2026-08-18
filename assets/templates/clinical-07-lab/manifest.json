@@ -1,0 +1,9 @@
+{
+  "id": "clinical-07-lab",
+  "version": "1.0.0",
+  "displayName": "Laboratory Record",
+  "engineVersion": 1,
+  "dataAdapter": "flatten-dto",
+  "requiresSignature": false,
+  "language": "th"
+}

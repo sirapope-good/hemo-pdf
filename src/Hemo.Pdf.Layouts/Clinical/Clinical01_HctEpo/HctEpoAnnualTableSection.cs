@@ -1,3 +1,4 @@
+using Hemo.Pdf.Core.Hprp;
 using Hemo.Pdf.Core.Models.Clinical;
 using Hemo.Pdf.Sections.ThaiUr;
 using QuestPDF.Fluent;
@@ -24,23 +25,27 @@ public sealed class HctEpoAnnualTableSection
 
     private static readonly ColumnSpec[] Columns =
     [
-        new(1.0f, "Hb(g/dL)", Center: true, IsLab: true),
-        new(1.0f, "Hct(%)", Center: true, IsLab: true),
-        new(1.8f, "EPO", Center: false, IsLab: false),
-        new(1.8f, "ความถี่", Center: false, IsLab: false),
-        new(1.2f, "วันฉีด", Center: true, IsLab: false),
-        new(1.4f, "หมายเหตุ", Center: false, IsLab: false),
+        new(1.0f, "colHb", "Hb(g/dL)", Center: true, IsLab: true),
+        new(1.0f, "colHct", "Hct(%)", Center: true, IsLab: true),
+        new(1.8f, "colEpo", "EPO", Center: false, IsLab: false),
+        new(1.8f, "colFrequency", "ความถี่", Center: false, IsLab: false),
+        new(1.2f, "colInjectDay", "วันฉีด", Center: true, IsLab: false),
+        new(1.4f, "colRemarks", "หมายเหตุ", Center: false, IsLab: false),
     ];
 
-    private readonly record struct ColumnSpec(float Weight, string Title, bool Center, bool IsLab);
+    private readonly record struct ColumnSpec(float Weight, string LabelKey, string Title, bool Center, bool IsLab);
 
-    public void Compose(IContainer container, HctEpoReportViewModel vm, float monthRowHeightMm)
+    public void Compose(
+        IContainer container,
+        HctEpoReportViewModel vm,
+        float monthRowHeightMm,
+        IReadOnlyDictionary<string, string>? labels = null)
     {
         var slotHeightMm = monthRowHeightMm / HctEpoMonthLabels.SlotsPerMonth;
 
         container.Column(col =>
         {
-            col.Item().Element(ComposeHeaderRow);
+            col.Item().Element(c => ComposeHeaderRow(c, labels));
 
             foreach (var row in HctEpoMonthLabels.EnsureTwelve(vm.Months))
             {
@@ -49,7 +54,7 @@ public sealed class HctEpoAnnualTableSection
         });
     }
 
-    private static void ComposeHeaderRow(IContainer container)
+    private static void ComposeHeaderRow(IContainer container, IReadOnlyDictionary<string, string>? labels)
     {
         container.Row(row =>
         {
@@ -59,7 +64,7 @@ public sealed class HctEpoAnnualTableSection
                 .Height(HemosheetThaiUrStyle.HeaderBarHeightMm, Mm)
                 .AlignMiddle()
                 .AlignCenter()
-                .Text("วัน/เดือน/ปี")
+                .Text(HprpLabels.Get(labels, "colDate", "วัน/เดือน/ปี"))
                 .Style(ThaiUrText.Bold);
 
             foreach (var col in Columns)
@@ -70,7 +75,7 @@ public sealed class HctEpoAnnualTableSection
                     .Height(HemosheetThaiUrStyle.HeaderBarHeightMm, Mm)
                     .AlignMiddle()
                     .AlignCenter()
-                    .Text(col.Title)
+                    .Text(HprpLabels.Get(labels, col.LabelKey, col.Title))
                     .Style(ThaiUrText.Bold);
             }
         });

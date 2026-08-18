@@ -1,5 +1,6 @@
 using Hemo.Pdf.Core.Abstractions;
 using Hemo.Pdf.Core.Constants;
+using Hemo.Pdf.Core.Hprp;
 using Hemo.Pdf.Core.Models;
 using Hemo.Pdf.Core.Models.Hemosheet;
 using Hemo.Pdf.Core.Models.Preview;
@@ -14,17 +15,20 @@ public sealed class ReportPreviewService : IReportPreviewService
     private readonly IReportSignatureResolver _signatureResolver;
     private readonly IReportPreviewRendererFactory _rendererFactory;
     private readonly ReportRequestPipeline _requestPipeline;
+    private readonly IHprpTemplateStore _templates;
 
     public ReportPreviewService(
         IBrandingResolver brandingResolver,
         IReportSignatureResolver signatureResolver,
         IReportPreviewRendererFactory rendererFactory,
-        ReportRequestPipeline requestPipeline)
+        ReportRequestPipeline requestPipeline,
+        IHprpTemplateStore templates)
     {
         _brandingResolver = brandingResolver;
         _signatureResolver = signatureResolver;
         _rendererFactory = rendererFactory;
         _requestPipeline = requestPipeline;
+        _templates = templates;
     }
 
     public async Task<ReportDocument> PreviewAsync(GeneratePdfRequest request, CancellationToken cancellationToken)
@@ -44,7 +48,8 @@ public sealed class ReportPreviewService : IReportPreviewService
             request,
             _brandingResolver,
             _signatureResolver,
-            cancellationToken);
+            cancellationToken,
+            _templates);
 
         var renderer = _rendererFactory.Create(request.ReportTemplateId);
         var document = await renderer.RenderPreviewAsync(context, cancellationToken);

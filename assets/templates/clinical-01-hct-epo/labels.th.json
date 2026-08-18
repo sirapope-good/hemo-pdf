@@ -1,0 +1,15 @@
+{
+  "colDate": "วัน/เดือน/ปี",
+  "colHb": "Hb(g/dL)",
+  "colHct": "Hct(%)",
+  "colEpo": "EPO",
+  "colFrequency": "ความถี่",
+  "colInjectDay": "วันฉีด",
+  "colRemarks": "หมายเหตุ",
+  "nhso": "สปสช",
+  "nhsoInjections": "จำนวนเข็ม/สัปดาห์",
+  "sso": "ประกันสังคม",
+  "ssoHctLe36": "Hct ≤ 36",
+  "ssoHctGt36": "Hct > 36",
+  "ssoHctGe39": "Hct ≥ 39"
+}

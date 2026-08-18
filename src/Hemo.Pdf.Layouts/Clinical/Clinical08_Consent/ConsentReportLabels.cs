@@ -1,3 +1,4 @@
+using Hemo.Pdf.Core.Hprp;
 using Hemo.Pdf.Core.Models.Clinical;
 
 namespace Hemo.Pdf.Layouts.Clinical.Clinical08_Consent;
@@ -30,30 +31,66 @@ internal sealed class ConsentReportLabels
     public required string PlaceholderName { get; init; }
     public required string HeaderTitleTreatment { get; init; }
     public required string HeaderTitlePdpa { get; init; }
+    public bool IsEnglish { get; init; }
 
-    public static ConsentReportLabels For(string language) =>
-        string.Equals(language, "en", StringComparison.OrdinalIgnoreCase) ? En : Th;
+    public static ConsentReportLabels For(string language, IReadOnlyDictionary<string, string>? overlay = null)
+    {
+        var isEn = string.Equals(language, "en", StringComparison.OrdinalIgnoreCase);
+        var baseLabels = isEn ? En : Th;
+        if (overlay is null || overlay.Count == 0)
+            return baseLabels;
+
+        return new ConsentReportLabels
+        {
+            IAm = HprpLabels.Get(overlay, "iAm", baseLabels.IAm),
+            TitleMr = HprpLabels.Get(overlay, "titleMr", baseLabels.TitleMr),
+            TitleMrs = HprpLabels.Get(overlay, "titleMrs", baseLabels.TitleMrs),
+            TitleMiss = HprpLabels.Get(overlay, "titleMiss", baseLabels.TitleMiss),
+            TitleMaster = HprpLabels.Get(overlay, "titleMaster", baseLabels.TitleMaster),
+            TitleMissChild = HprpLabels.Get(overlay, "titleMissChild", baseLabels.TitleMissChild),
+            AgePrefix = HprpLabels.Get(overlay, "agePrefix", baseLabels.AgePrefix),
+            AgeUnit = HprpLabels.Get(overlay, "ageUnit", baseLabels.AgeUnit),
+            AsPatient = HprpLabels.Get(overlay, "asPatient", baseLabels.AsPatient),
+            AsRepresentative = HprpLabels.Get(overlay, "asRepresentative", baseLabels.AsRepresentative),
+            RelationshipPrefix = HprpLabels.Get(overlay, "relationshipPrefix", baseLabels.RelationshipPrefix),
+            OfPatientNamed = HprpLabels.Get(overlay, "ofPatientNamed", baseLabels.OfPatientNamed),
+            RepresentativeReasonIntro = HprpLabels.Get(overlay, "representativeReasonIntro", baseLabels.RepresentativeReasonIntro),
+            ReasonMinor = HprpLabels.Get(overlay, "reasonMinor", baseLabels.ReasonMinor),
+            ReasonUnconscious = HprpLabels.Get(overlay, "reasonUnconscious", baseLabels.ReasonUnconscious),
+            ReasonOther = HprpLabels.Get(overlay, "reasonOther", baseLabels.ReasonOther),
+            PatientPrefix = HprpLabels.Get(overlay, "patientPrefix", baseLabels.PatientPrefix),
+            SignPrefix = HprpLabels.Get(overlay, "signPrefix", baseLabels.SignPrefix),
+            RoleSigner = HprpLabels.Get(overlay, "roleSigner", baseLabels.RoleSigner),
+            RoleDoctor = HprpLabels.Get(overlay, "roleDoctor", baseLabels.RoleDoctor),
+            RoleWitness = HprpLabels.Get(overlay, "roleWitness", baseLabels.RoleWitness),
+            RoleNurse = HprpLabels.Get(overlay, "roleNurse", baseLabels.RoleNurse),
+            PlaceholderName = HprpLabels.Get(overlay, "placeholderName", baseLabels.PlaceholderName),
+            HeaderTitleTreatment = HprpLabels.Get(overlay, "headerTitleTreatment", baseLabels.HeaderTitleTreatment),
+            HeaderTitlePdpa = HprpLabels.Get(overlay, "headerTitlePdpa", baseLabels.HeaderTitlePdpa),
+            IsEnglish = isEn,
+        };
+    }
 
     public string HeaderTitle(bool isTreatment) =>
         isTreatment ? HeaderTitleTreatment : HeaderTitlePdpa;
 
     public string SignDateLine(ConsentDateParts p) =>
-        ReferenceEquals(this, En)
+        ReferenceEquals(this, En) || IsEnglish
             ? $"Date {Blank(p.Day)} {Blank(p.Month)} {Blank(p.Year)}"
             : $"วันที่ {Blank(p.Day)} เดือน {Blank(p.Month)} พ.ศ. {Blank(p.Year)}";
 
     public string SkeletonSignDateLine() =>
-        ReferenceEquals(this, En)
+        ReferenceEquals(this, En) || IsEnglish
             ? "Date ... ... ..."
             : "วันที่ ... เดือน ... พ.ศ. ...";
 
     public string SkeletonValidityRangeLine() =>
-        ReferenceEquals(this, En)
+        ReferenceEquals(this, En) || IsEnglish
             ? "From ... ... ... to ... ... ..."
             : "วันที่ ... เดือน ... พ.ศ. ... ถึง วันที่ ... เดือน ... พ.ศ. ...";
 
     public string ValidityNote(int months) =>
-        ReferenceEquals(this, En)
+        ReferenceEquals(this, En) || IsEnglish
             ? $"Note: this document is valid for {months} months"
             : $"หมายเหตุ : เอกสารฉบับนี้มีอายุการใช้งาน {months} เดือน";
 
@@ -61,7 +98,7 @@ internal sealed class ConsentReportLabels
     {
         var f = from ?? new ConsentDateParts();
         var t = to ?? new ConsentDateParts();
-        return ReferenceEquals(this, En)
+        return IsEnglish || ReferenceEquals(this, En)
             ? $"From {Blank(f.Day)} {Blank(f.Month, "..........")} {Blank(f.Year)} to {Blank(t.Day)} {Blank(t.Month, "..........")} {Blank(t.Year)}"
             : $"วันที่ {Blank(f.Day)} เดือน {Blank(f.Month, "....................")} พ.ศ. {Blank(f.Year, "..............")} ถึง วันที่ {Blank(t.Day)} เดือน {Blank(t.Month, "....................")} พ.ศ. {Blank(t.Year, "..............")}";
     }
@@ -125,5 +162,6 @@ internal sealed class ConsentReportLabels
         PlaceholderName = "...",
         HeaderTitleTreatment = "Consent Form",
         HeaderTitlePdpa = "Acknowledgement",
+        IsEnglish = true,
     };
 }

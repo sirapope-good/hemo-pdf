@@ -1,0 +1,9 @@
+{
+  "id": "clinical-13-education-en",
+  "version": "1.0.0",
+  "displayName": "Hemodialysis Patient Education (EN)",
+  "engineVersion": 1,
+  "dataAdapter": "flatten-dto",
+  "requiresSignature": false,
+  "language": "en"
+}

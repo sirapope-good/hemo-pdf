@@ -1,0 +1,9 @@
+{
+  "id": "clinical-04-prescription",
+  "version": "1.0.0",
+  "displayName": "Hemodialysis Prescription",
+  "engineVersion": 1,
+  "dataAdapter": "flatten-dto",
+  "requiresSignature": true,
+  "language": "th"
+}

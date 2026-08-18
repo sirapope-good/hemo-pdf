@@ -1,3 +1,4 @@
+using Hemo.Pdf.Core.Hprp;
 using Hemo.Pdf.Core.Models.Clinical;
 using Hemo.Pdf.Sections.ThaiUr;
 using QuestPDF.Fluent;
@@ -14,7 +15,11 @@ public sealed class EpoDrugInjectionTableSection
     private const float Bw = HemosheetThaiUrStyle.BorderWidth;
     private const int MinEmptyRows = 8;
 
-    public void Compose(IContainer container, EpoDrugReportViewModel vm, float rowHeightMm)
+    public void Compose(
+        IContainer container,
+        EpoDrugReportViewModel vm,
+        float rowHeightMm,
+        IReadOnlyDictionary<string, string>? labels = null)
     {
         container.Table(t =>
         {
@@ -27,11 +32,11 @@ public sealed class EpoDrugInjectionTableSection
                 cols.RelativeColumn(1.4f);
             });
 
-            HeaderCell(t, "ว/ด/ป");
-            HeaderCell(t, "เข็มที่");
-            HeaderCell(t, "Sticker");
-            HeaderCell(t, "พยาบาลผู้ฉีด");
-            HeaderCell(t, "หมายเหตุ");
+            HeaderCell(t, HprpLabels.Get(labels, "colDate", "ว/ด/ป"));
+            HeaderCell(t, HprpLabels.Get(labels, "colDose", "เข็มที่"));
+            HeaderCell(t, HprpLabels.Get(labels, "colSticker", "Sticker"));
+            HeaderCell(t, HprpLabels.Get(labels, "colNurse", "พยาบาลผู้ฉีด"));
+            HeaderCell(t, HprpLabels.Get(labels, "colRemarks", "หมายเหตุ"));
 
             var rows = vm.Rows ?? [];
             var drawCount = Math.Max(rows.Count, MinEmptyRows);

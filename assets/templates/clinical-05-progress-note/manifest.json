@@ -1,0 +1,9 @@
+{
+  "id": "clinical-05-progress-note",
+  "version": "1.0.0",
+  "displayName": "Hemodialysis Progress note",
+  "engineVersion": 1,
+  "dataAdapter": "clinical-05-progress-note",
+  "requiresSignature": true,
+  "language": "th"
+}

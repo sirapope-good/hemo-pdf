@@ -1,6 +1,8 @@
 using Hemo.Pdf.Core.Abstractions;
 using Hemo.Pdf.Core.Context;
+using Hemo.Pdf.Core.Hprp;
 using Hemo.Pdf.Core.Models.Clinical;
+using Hemo.Pdf.Layouts.Hprp;
 using Hemo.Pdf.Rendering;
 using Hemo.Pdf.Sections.ThaiUr;
 using QuestPDF.Fluent;
@@ -27,12 +29,19 @@ public sealed class Clinical01HctEpoComposer : ILayoutComposer
 
     private readonly HctEpoAnnualTableSection _annualTable = new();
     private readonly HctEpoCoPayCriteriaSection _coPayCriteria = new();
+    private readonly IHprpTemplateStore? _templates;
+
+    public Clinical01HctEpoComposer(IHprpTemplateStore? templates = null)
+    {
+        _templates = templates;
+    }
 
     public object Compose(object dataModel, PdfReportContext context)
     {
         var vm = (HctEpoReportViewModel)dataModel;
         var margin = HemosheetThaiUrStyle.PageMarginMm;
         var monthRowHeightMm = BudgetMonthRowHeightMm(vm.CoPayCriteria);
+        var labels = HprpLabelResolver.Resolve(_templates, context);
 
         return new QuestLayout
         {
@@ -42,7 +51,7 @@ public sealed class Clinical01HctEpoComposer : ILayoutComposer
             MarginLeft = margin,
             MarginRight = margin,
             Header = null,
-            Content = c => ComposeContent(c, vm, monthRowHeightMm),
+            Content = c => ComposeContent(c, vm, monthRowHeightMm, labels),
             Footer = null,
         };
     }
@@ -50,19 +59,19 @@ public sealed class Clinical01HctEpoComposer : ILayoutComposer
     private void ComposeContent(
         IContainer container,
         HctEpoReportViewModel vm,
-        float monthRowHeightMm)
+        float monthRowHeightMm,
+        IReadOnlyDictionary<string, string> labels)
     {
         container.Column(col =>
         {
             col.Spacing(SectionSpacingMm);
 
-            // Header (natural) + budgeted annual table + co-pay (snaps to bottom of content).
             col.Item().Element(c =>
                 ThaiUrReportHeader.Compose(c, vm.Header, vm.Title));
 
-            col.Item().Element(c => _annualTable.Compose(c, vm, monthRowHeightMm));
+            col.Item().Element(c => _annualTable.Compose(c, vm, monthRowHeightMm, labels));
 
-            col.Item().Element(c => _coPayCriteria.Compose(c, vm.CoPayCriteria));
+            col.Item().Element(c => _coPayCriteria.Compose(c, vm.CoPayCriteria, labels));
         });
     }
 

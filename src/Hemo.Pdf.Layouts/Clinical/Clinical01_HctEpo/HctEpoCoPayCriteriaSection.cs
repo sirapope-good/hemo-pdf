@@ -1,3 +1,4 @@
+using Hemo.Pdf.Core.Hprp;
 using Hemo.Pdf.Core.Models.Clinical;
 using Hemo.Pdf.Sections.ThaiUr;
 using QuestPDF.Fluent;
@@ -28,7 +29,10 @@ public sealed class HctEpoCoPayCriteriaSection
         return titleMm + tablesMm;
     }
 
-    public void Compose(IContainer container, HctEpoCoPayCriteria criteria)
+    public void Compose(
+        IContainer container,
+        HctEpoCoPayCriteria criteria,
+        IReadOnlyDictionary<string, string>? labels = null)
     {
         container.Column(col =>
         {
@@ -36,14 +40,17 @@ public sealed class HctEpoCoPayCriteriaSection
 
             col.Item().Row(row =>
             {
-                row.RelativeItem(1.15f).Element(c => ComposeNhso(c, criteria.NhsoRules));
+                row.RelativeItem(1.15f).Element(c => ComposeNhso(c, criteria.NhsoRules, labels));
                 row.ConstantItem(GapMm, Mm);
-                row.RelativeItem(1.85f).Element(c => ComposeSso(c, criteria.SsoRules));
+                row.RelativeItem(1.85f).Element(c => ComposeSso(c, criteria.SsoRules, labels));
             });
         });
     }
 
-    private static void ComposeNhso(IContainer container, IReadOnlyList<HctEpoNhsoRuleRow> rules)
+    private static void ComposeNhso(
+        IContainer container,
+        IReadOnlyList<HctEpoNhsoRuleRow> rules,
+        IReadOnlyDictionary<string, string>? labels)
     {
         container.Table(t =>
         {
@@ -53,8 +60,8 @@ public sealed class HctEpoCoPayCriteriaSection
                 cols.RelativeColumn(1.4f);
             });
 
-            HeaderCell(t, "สปสช");
-            HeaderCell(t, "จำนวนเข็ม/สัปดาห์");
+            HeaderCell(t, HprpLabels.Get(labels, "nhso", "สปสช"));
+            HeaderCell(t, HprpLabels.Get(labels, "nhsoInjections", "จำนวนเข็ม/สัปดาห์"));
 
             foreach (var rule in rules)
             {
@@ -64,7 +71,10 @@ public sealed class HctEpoCoPayCriteriaSection
         });
     }
 
-    private static void ComposeSso(IContainer container, IReadOnlyList<HctEpoSsoRuleRow> rules)
+    private static void ComposeSso(
+        IContainer container,
+        IReadOnlyList<HctEpoSsoRuleRow> rules,
+        IReadOnlyDictionary<string, string>? labels)
     {
         container.Table(t =>
         {
@@ -76,10 +86,10 @@ public sealed class HctEpoCoPayCriteriaSection
                 cols.RelativeColumn(1.0f);
             });
 
-            HeaderCell(t, "ประกันสังคม");
-            HeaderCell(t, "Hct ≤ 36");
-            HeaderCell(t, "Hct > 36");
-            HeaderCell(t, "Hct ≥ 39");
+            HeaderCell(t, HprpLabels.Get(labels, "sso", "ประกันสังคม"));
+            HeaderCell(t, HprpLabels.Get(labels, "ssoHctLe36", "Hct ≤ 36"));
+            HeaderCell(t, HprpLabels.Get(labels, "ssoHctGt36", "Hct > 36"));
+            HeaderCell(t, HprpLabels.Get(labels, "ssoHctGe39", "Hct ≥ 39"));
 
             foreach (var rule in rules)
             {

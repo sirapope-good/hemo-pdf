@@ -20,4 +20,9 @@
     <ProjectReference Include="..\..\src\Hemo.Pdf.Layouts\Hemo.Pdf.Layouts.csproj" />
     <FrameworkReference Include="Microsoft.AspNetCore.App" />
   </ItemGroup>
+  <ItemGroup>
+    <Content Include="..\..\assets\templates\**\*.*" Link="assets\templates\%(RecursiveDir)%(Filename)%(Extension)">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+  </ItemGroup>
 </Project>

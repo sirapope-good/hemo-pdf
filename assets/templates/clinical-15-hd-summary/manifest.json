@@ -1,0 +1,9 @@
+{
+  "id": "clinical-15-hd-summary",
+  "version": "1.0.0",
+  "displayName": "Hemodialysis Summary",
+  "engineVersion": 1,
+  "dataAdapter": "flatten-dto",
+  "requiresSignature": false,
+  "language": "th"
+}

@@ -59,6 +59,8 @@ public static class TemplateRegistration
 
         services.AddScoped<GenericReportDocumentComposer>();
         services.AddScoped<GenericReportPreviewRenderer>();
+        services.AddScoped<HprpReportDocumentComposer>();
+        services.AddScoped<HprpReportPreviewRenderer>();
 
         services.AddScoped<Hemosheet.HemosheetLayoutPlanner>();
         services.AddScoped<Hemosheet.IHemosheetLayoutPlanner>(sp => sp.GetRequiredService<Hemosheet.HemosheetLayoutPlanner>());

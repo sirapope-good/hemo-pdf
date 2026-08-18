@@ -1,7 +1,9 @@
 using Hemo.Pdf.Core.Abstractions;
 using Hemo.Pdf.Core.Context;
+using Hemo.Pdf.Core.Hprp;
 using Hemo.Pdf.Core.Models.Clinical;
 using Hemo.Pdf.Layouts.Clinical.Clinical01_HctEpo;
+using Hemo.Pdf.Layouts.Hprp;
 using Hemo.Pdf.Rendering;
 using Hemo.Pdf.Sections.ThaiUr;
 using QuestPDF.Fluent;
@@ -25,12 +27,19 @@ public sealed class Clinical02EpoDrugComposer : ILayoutComposer
 
     private readonly EpoDrugInjectionTableSection _table = new();
     private readonly HctEpoCoPayCriteriaSection _coPayCriteria = new();
+    private readonly IHprpTemplateStore? _templates;
+
+    public Clinical02EpoDrugComposer(IHprpTemplateStore? templates = null)
+    {
+        _templates = templates;
+    }
 
     public object Compose(object dataModel, PdfReportContext context)
     {
         var vm = (EpoDrugReportViewModel)dataModel;
         var margin = HemosheetThaiUrStyle.PageMarginMm;
         var rowHeightMm = BudgetRowHeightMm(vm);
+        var labels = HprpLabelResolver.Resolve(_templates, context);
 
         return new QuestLayout
         {
@@ -40,24 +49,31 @@ public sealed class Clinical02EpoDrugComposer : ILayoutComposer
             MarginLeft = margin,
             MarginRight = margin,
             Header = null,
-            Content = c => ComposeContent(c, vm, rowHeightMm),
+            Content = c => ComposeContent(c, vm, rowHeightMm, labels),
             Footer = null,
         };
     }
 
-    private void ComposeContent(IContainer container, EpoDrugReportViewModel vm, float rowHeightMm)
+    private void ComposeContent(
+        IContainer container,
+        EpoDrugReportViewModel vm,
+        float rowHeightMm,
+        IReadOnlyDictionary<string, string> labels)
     {
         container.Column(col =>
         {
             col.Spacing(SectionSpacingMm);
             col.Item().Element(c => ThaiUrReportHeader.Compose(c, vm.Header, vm.Title));
-            col.Item().Element(c => ComposeMetaBand(c, vm.Meta));
-            col.Item().Element(c => _table.Compose(c, vm, rowHeightMm));
-            col.Item().Element(c => _coPayCriteria.Compose(c, vm.CoPayCriteria));
+            col.Item().Element(c => ComposeMetaBand(c, vm.Meta, labels));
+            col.Item().Element(c => _table.Compose(c, vm, rowHeightMm, labels));
+            col.Item().Element(c => _coPayCriteria.Compose(c, vm.CoPayCriteria, labels));
         });
     }
 
-    private static void ComposeMetaBand(IContainer container, EpoDrugMeta meta)
+    private static void ComposeMetaBand(
+        IContainer container,
+        EpoDrugMeta meta,
+        IReadOnlyDictionary<string, string> labels)
     {
         container
             .Border(HemosheetThaiUrStyle.BorderWidth)
@@ -66,21 +82,21 @@ public sealed class Clinical02EpoDrugComposer : ILayoutComposer
             {
                 row.RelativeItem().Text(t =>
                 {
-                    t.Span("เดือน ").Style(ThaiUrText.Base);
+                    t.Span(HprpLabels.Get(labels, "month", "เดือน ") + " ").Style(ThaiUrText.Base);
                     t.Span(meta.MonthLabel).Style(ThaiUrText.Bold);
-                    t.Span("    พ.ศ. ").Style(ThaiUrText.Base);
+                    t.Span("    " + HprpLabels.Get(labels, "yearBe", "พ.ศ.") + " ").Style(ThaiUrText.Base);
                     t.Span(meta.YearBe > 0 ? meta.YearBe.ToString() : string.Empty).Style(ThaiUrText.Bold);
                 });
 
                 row.RelativeItem().Text(t =>
                 {
-                    t.Span("ยา EPO ").Style(ThaiUrText.Base);
+                    t.Span(HprpLabels.Get(labels, "epoName", "ยา EPO") + " ").Style(ThaiUrText.Base);
                     t.Span(meta.EpoName ?? string.Empty).Style(ThaiUrText.Bold);
                 });
 
                 row.ConstantItem(42, Mm).AlignRight().Text(t =>
                 {
-                    t.Span("เข็ม/สัปดาห์ ").Style(ThaiUrText.Base);
+                    t.Span(HprpLabels.Get(labels, "needlesPerWeek", "เข็ม/สัปดาห์") + " ").Style(ThaiUrText.Base);
                     t.Span(meta.NeedlesPerWeek ?? string.Empty).Style(ThaiUrText.Bold);
                 });
             });

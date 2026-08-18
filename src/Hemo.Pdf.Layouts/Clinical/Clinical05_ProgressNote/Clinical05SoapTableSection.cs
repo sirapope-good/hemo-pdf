@@ -1,3 +1,4 @@
+using Hemo.Pdf.Core.Hprp;
 using Hemo.Pdf.Core.Models.Clinical;
 using Hemo.Pdf.Sections.ThaiUr;
 using QuestPDF.Fluent;
@@ -29,7 +30,11 @@ public sealed class Clinical05SoapTableSection
     public const string Normal = "normal";
     public const string Abnormal = "abnormal";
 
-    public void Compose(IContainer container, Clinical05ProgressNoteReportViewModel vm, float rowHeightMm)
+    public void Compose(
+        IContainer container,
+        Clinical05ProgressNoteReportViewModel vm,
+        float rowHeightMm,
+        IReadOnlyDictionary<string, string>? labels = null)
     {
         container.Table(t =>
         {
@@ -43,10 +48,10 @@ public sealed class Clinical05SoapTableSection
 
             t.Header(header =>
             {
-                HeaderCell(header, "DATE");
-                HeaderCell(header, "PROGRESS NOTE");
-                HeaderCell(header, "ORDER FOR ONE DAY");
-                HeaderCell(header, "ORDER FOR CONTINUATION");
+                HeaderCell(header, HprpLabels.Get(labels, "colDate", "DATE"));
+                HeaderCell(header, HprpLabels.Get(labels, "colProgress", "PROGRESS NOTE"));
+                HeaderCell(header, HprpLabels.Get(labels, "colOrderOneDay", "ORDER FOR ONE DAY"));
+                HeaderCell(header, HprpLabels.Get(labels, "colOrderContinuation", "ORDER FOR CONTINUATION"));
             });
 
             var rows = vm.Sessions ?? [];

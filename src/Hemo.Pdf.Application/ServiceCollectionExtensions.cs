@@ -4,6 +4,7 @@ using Hemo.Pdf.Branding;
 using Hemo.Pdf.Core.Abstractions;
 using Hemo.Pdf.Core.Constants;
 using Hemo.Pdf.Core.Factory;
+using Hemo.Pdf.Core.Hprp;
 using Hemo.Pdf.Layouts;
 using Hemo.Pdf.Rendering;
 using Hemo.Pdf.Sections.Abstractions;
@@ -29,6 +30,11 @@ public static class ServiceCollectionExtensions
             branding.RootPath = options.BrandingRootPath;
         });
 
+        services.Configure<Hprp.HprpTemplateOptions>(templates =>
+        {
+            templates.RootPath = options.TemplatesRootPath;
+        });
+
         services.AddSingleton<IPdfRenderer, QuestPdfRenderer>();
         services.AddMemoryCache();
         services.AddScoped<IPdfGenerationService, PdfGenerationService>();
@@ -43,6 +49,7 @@ public static class ServiceCollectionExtensions
 
         services.AddSingleton<IBrandingStore, JsonFileBrandingStore>();
         services.AddScoped<IBrandingResolver, BrandingResolver>();
+        services.AddSingleton<IHprpTemplateStore, Hprp.FileHprpTemplateStore>();
 
         services.AddHttpClient<IHemosheetReportDataClient, HemosheetReportDataClient>(client =>
         {

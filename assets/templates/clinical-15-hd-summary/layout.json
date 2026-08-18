@@ -1,0 +1,48 @@
+{
+  "page": {
+    "size": "A4",
+    "marginMm": 10
+  },
+  "body": [
+    {
+      "type": "text",
+      "style": "title",
+      "bind": "$title"
+    },
+    {
+      "type": "text",
+      "style": "subtitle",
+      "content": {
+        "$label": "subtitle"
+      }
+    },
+    {
+      "type": "key-value-table",
+      "rows": [
+        {
+          "label": {
+            "$label": "report"
+          },
+          "bind": "$title"
+        },
+        {
+          "label": {
+            "$label": "layout"
+          },
+          "content": {
+            "$label": "layoutValue"
+          }
+        },
+        {
+          "label": {
+            "$label": "note"
+          },
+          "content": {
+            "$label": "noteValue"
+          }
+        }
+      ],
+      "appendFlatten": true
+    }
+  ]
+}

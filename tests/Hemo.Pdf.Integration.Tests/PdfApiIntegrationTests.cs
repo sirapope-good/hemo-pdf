@@ -296,7 +296,8 @@ public class PdfApiIntegrationTests : IClassFixture<PdfApiWebApplicationFactory>
             "assets", "mock-data", mockFile));
 
         var jsonText = await File.ReadAllTextAsync(mockPath);
-        using var data = JsonDocument.Parse(jsonText);
+        using var original = JsonDocument.Parse(jsonText);
+        using var data = JsonDocument.Parse(ForceUniquePlannerProfile(original.RootElement));
         var entityId = data.RootElement.GetProperty("id").GetString()!;
 
         var response = await PostPreviewAsync(
@@ -488,6 +489,52 @@ public class PdfApiIntegrationTests : IClassFixture<PdfApiWebApplicationFactory>
 
         return await _client.SendAsync(request);
     }
+
+    /// <summary>
+    /// Default/ThaiUr hemosheet preview is PDF-as-preview (empty pages). DOM block checks need UniquePlanner (Rama).
+    /// </summary>
+    private static string ForceUniquePlannerProfile(JsonElement root)
+    {
+        using var stream = new MemoryStream();
+        using (var writer = new Utf8JsonWriter(stream))
+        {
+            writer.WriteStartObject();
+            foreach (var property in root.EnumerateObject())
+            {
+                if (property.NameEquals("layoutContext") || property.NameEquals("LayoutContext"))
+                {
+                    writer.WritePropertyName(property.Name);
+                    writer.WriteStartObject();
+                    var wroteProfile = false;
+                    foreach (var inner in property.Value.EnumerateObject())
+                    {
+                        if (inner.NameEquals("layoutProfile") || inner.NameEquals("LayoutProfile"))
+                        {
+                            writer.WriteString(inner.Name, "Rama");
+                            wroteProfile = true;
+                        }
+                        else
+                        {
+                            inner.WriteTo(writer);
+                        }
+                    }
+
+                    if (!wroteProfile)
+                        writer.WriteString("layoutProfile", "Rama");
+
+                    writer.WriteEndObject();
+                }
+                else
+                {
+                    property.WriteTo(writer);
+                }
+            }
+
+            writer.WriteEndObject();
+        }
+
+        return Encoding.UTF8.GetString(stream.ToArray());
+    }
 }
 
 public class JwtTokenValidationTests
@@ -675,6 +722,9 @@ public sealed class JwtPdfApiWebApplicationFactory : WebApplicationFactory<Progr
         builder.UseSetting("HemoPdf:UseMockServices", "false");
         builder.UseSetting("HemoPdf:UseServerFetch", "false");
         builder.UseSetting("HemoPdf:BrandingRootPath", brandingPath);
+        var templatesPath = Path.GetFullPath(
+            Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..", "..", "assets", "templates"));
+        builder.UseSetting("HemoPdf:TemplatesRootPath", templatesPath);
         builder.UseSetting("HemoPdf:CorsOrigins:0", "http://localhost:4200");
         builder.UseSetting("HemoPdf:Jwt:Issuer", "http://localhost/");
         builder.UseSetting("HemoPdf:Jwt:Key", "NAmO0mtmIV4ZWSZ92vRlwj810XzFXsnH");

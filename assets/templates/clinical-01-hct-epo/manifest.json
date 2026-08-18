@@ -1,0 +1,9 @@
+{
+  "id": "clinical-01-hct-epo",
+  "version": "1.0.0",
+  "displayName": "Hemodialysis Review Hct and EPO",
+  "engineVersion": 1,
+  "dataAdapter": "clinical-01-hct-epo",
+  "requiresSignature": false,
+  "language": "th"
+}

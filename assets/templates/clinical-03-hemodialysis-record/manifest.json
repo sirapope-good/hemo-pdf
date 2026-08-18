@@ -1,0 +1,9 @@
+{
+  "id": "clinical-03-hemodialysis-record",
+  "version": "1.0.0",
+  "displayName": "Hemodialysis Record",
+  "engineVersion": 1,
+  "dataAdapter": "hemosheet-record",
+  "requiresSignature": true,
+  "language": "th"
+}
