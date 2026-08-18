@@ -2,6 +2,7 @@ using Hemo.Pdf.Core.Constants;
 using Hemo.Pdf.Layouts.Clinical;
 using Hemo.Pdf.Layouts.Clinical.Clinical01_HctEpo;
 using Hemo.Pdf.Layouts.Clinical.Clinical02_EpoDrug;
+using Hemo.Pdf.Layouts.Clinical.Clinical05_ProgressNote;
 using Hemo.Pdf.Layouts.Clinical.Clinical08_Consent;
 using Hemo.Pdf.Layouts.Template04_Hemosheet;
 
@@ -16,6 +17,7 @@ public static class TemplateReportRendererFactory
         {
             [ClinicalReportCatalog.HctEpo] = typeof(Clinical01HctEpoReportRenderer),
             [ClinicalReportCatalog.EpoDrug] = typeof(Clinical02EpoDrugReportRenderer),
+            [ClinicalReportCatalog.ProgressNote] = typeof(Clinical05ProgressNoteReportRenderer),
             [ClinicalReportCatalog.ConsentTh] = typeof(ConsentReportRenderer),
             [ClinicalReportCatalog.ConsentEn] = typeof(ConsentReportRenderer),
             [ClinicalReportCatalog.HemodialysisRecord] = typeof(HemosheetReportRenderer),
