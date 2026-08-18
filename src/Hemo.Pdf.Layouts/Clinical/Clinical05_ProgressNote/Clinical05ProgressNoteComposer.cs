@@ -9,7 +9,7 @@ using QuestPDF.Infrastructure;
 namespace Hemo.Pdf.Layouts.Clinical.Clinical05_ProgressNote;
 
 /// <summary>
-/// Dense QuestPDF layout for clinical-05: ThaiUr header + SOAP table (~2 blocks / page).
+/// Dense QuestPDF layout for clinical-05: repeating ThaiUr header + SOAP table (~2 blocks / page).
 /// </summary>
 public sealed class Clinical05ProgressNoteComposer : ILayoutComposer
 {
@@ -35,23 +35,17 @@ public sealed class Clinical05ProgressNoteComposer : ILayoutComposer
             MarginBottom = margin,
             MarginLeft = margin,
             MarginRight = margin,
-            Header = null,
-            Content = c => ComposeContent(c, vm, rowHeightMm),
+            Header = c => ComposeRepeatingHeader(c, vm),
+            Content = c => _table.Compose(c, vm, rowHeightMm),
             Footer = null,
         };
     }
 
-    private void ComposeContent(
-        IContainer container,
-        Clinical05ProgressNoteReportViewModel vm,
-        float rowHeightMm)
+    private static void ComposeRepeatingHeader(IContainer container, Clinical05ProgressNoteReportViewModel vm)
     {
-        container.Column(col =>
-        {
-            col.Spacing(SectionSpacingMm);
-            col.Item().Element(c => ThaiUrReportHeader.Compose(c, vm.Header, vm.Title));
-            col.Item().Element(c => _table.Compose(c, vm, rowHeightMm));
-        });
+        container
+            .PaddingBottom(SectionSpacingMm, Mm)
+            .Element(c => ThaiUrReportHeader.Compose(c, vm.Header, vm.Title));
     }
 
     internal static float BudgetRowHeightMm(Clinical05ProgressNoteReportViewModel vm)

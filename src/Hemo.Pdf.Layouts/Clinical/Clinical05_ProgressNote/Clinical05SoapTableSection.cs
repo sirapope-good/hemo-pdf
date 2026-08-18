@@ -15,6 +15,14 @@ public sealed class Clinical05SoapTableSection
     private const float Bw = HemosheetThaiUrStyle.BorderWidth;
     internal const int MinEmptyRows = 2;
 
+    private const float SoapLetterMm = 8f;
+    private const float ExamLabelMm = 24f;
+    private const float ExamNColMm = 16f;
+    private const float ExamAbnColMm = 20f;
+    private const float LineMinMm = 4.6f;
+    private const float CheckSizePt = 6.5f;
+    private const float CheckGapPt = 2f;
+
     public const string GoodConscious = "goodConscious";
     public const string Drowsiness = "drowsiness";
     public const string Other = "other";
@@ -33,10 +41,13 @@ public sealed class Clinical05SoapTableSection
                 cols.RelativeColumn(1.1f);
             });
 
-            HeaderCell(t, "DATE");
-            HeaderCell(t, "PROGRESS NOTE");
-            HeaderCell(t, "ORDER FOR ONE DAY");
-            HeaderCell(t, "ORDER FOR CONTINUATION");
+            t.Header(header =>
+            {
+                HeaderCell(header, "DATE");
+                HeaderCell(header, "PROGRESS NOTE");
+                HeaderCell(header, "ORDER FOR ONE DAY");
+                HeaderCell(header, "ORDER FOR CONTINUATION");
+            });
 
             var rows = vm.Sessions ?? [];
             var drawCount = Math.Max(rows.Count, MinEmptyRows);
@@ -51,7 +62,7 @@ public sealed class Clinical05SoapTableSection
         });
     }
 
-    private static void HeaderCell(TableDescriptor t, string text)
+    private static void HeaderCell(TableCellDescriptor t, string text)
     {
         t.Cell()
             .Border(Bw)
@@ -88,25 +99,24 @@ public sealed class Clinical05SoapTableSection
     {
         c.Border(Bw)
             .MinHeight(heightMm, Mm)
-            .Padding(1.4f, Mm)
+            .Padding(1.6f, Mm)
             .AlignTop()
             .Column(col =>
             {
-                col.Spacing(0.6f);
-                Line(col, "S", row?.Subjective);
-                col.Item().Text("O").Style(ThaiUrText.Bold);
+                col.Spacing(1.1f);
+                SoapLine(col, "S", row?.Subjective);
                 col.Item().Element(inner => ComposeObjective(inner, row));
-                Line(col, "A", row?.Assessment);
-                Line(col, "P", row?.Plan);
+                SoapLine(col, "A", row?.Assessment);
+                SoapLine(col, "P", row?.Plan);
             });
     }
 
-    private static void Line(ColumnDescriptor col, string label, string? value)
+    private static void SoapLine(ColumnDescriptor col, string letter, string? value)
     {
-        col.Item().Text(t =>
+        col.Item().MinHeight(LineMinMm, Mm).Row(r =>
         {
-            t.Span(label + "  ").Style(ThaiUrText.Bold);
-            t.Span(value ?? string.Empty).Style(ThaiUrText.Base);
+            r.ConstantItem(SoapLetterMm, Mm).AlignTop().Text(letter + " :").Style(ThaiUrText.Bold);
+            r.RelativeItem().AlignTop().Text(value ?? string.Empty).Style(ThaiUrText.Base);
         });
     }
 
@@ -114,37 +124,78 @@ public sealed class Clinical05SoapTableSection
     {
         c.Column(col =>
         {
-            col.Spacing(0.4f);
-            col.Item().Text(t =>
+            col.Spacing(0.7f);
+
+            col.Item().MinHeight(LineMinMm, Mm).Row(r =>
             {
-                t.Span("General Appearance  ").Style(ThaiUrText.Base);
-                t.Span(Mark(row?.GeneralAppearance, GoodConscious) + " Good conscious  ").Style(ThaiUrText.Base);
-                t.Span(Mark(row?.GeneralAppearance, Drowsiness) + " Drowsiness  ").Style(ThaiUrText.Base);
-                t.Span(Mark(row?.GeneralAppearance, Other) + " Other ").Style(ThaiUrText.Base);
-                t.Span(row?.GeneralAppearanceOther ?? string.Empty).Style(ThaiUrText.Base);
+                r.ConstantItem(SoapLetterMm, Mm).AlignMiddle().Text("O :").Style(ThaiUrText.Bold);
+                r.RelativeItem().AlignMiddle().Text("General Appearance :").Style(ThaiUrText.Base);
             });
-            ExamLine(col, "HEENT", row?.Heent, row?.HeentNote);
-            ExamLine(col, "Lung", row?.Lung, row?.LungNote);
-            ExamLine(col, "Extremities", row?.Extremities, row?.ExtremitiesNote);
-            col.Item().Text(t =>
+
+            col.Item().PaddingLeft(SoapLetterMm, Mm).Table(t =>
             {
-                t.Span("Other  ").Style(ThaiUrText.Base);
-                t.Span(row?.ObjectiveOther ?? string.Empty).Style(ThaiUrText.Base);
+                t.ColumnsDefinition(cols =>
+                {
+                    cols.RelativeColumn(1.35f);
+                    cols.RelativeColumn(1.1f);
+                    cols.RelativeColumn(1.55f);
+                });
+                t.Cell().Element(cell => CheckOption(cell, Is(row?.GeneralAppearance, GoodConscious), "Good conscious"));
+                t.Cell().Element(cell => CheckOption(cell, Is(row?.GeneralAppearance, Drowsiness), "Drowsiness"));
+                t.Cell().Element(cell => CheckOption(
+                    cell,
+                    Is(row?.GeneralAppearance, Other),
+                    "Other",
+                    row?.GeneralAppearanceOther));
+            });
+
+            col.Item().Table(t =>
+            {
+                t.ColumnsDefinition(cols =>
+                {
+                    cols.ConstantColumn(ExamLabelMm, Mm);
+                    cols.ConstantColumn(ExamNColMm, Mm);
+                    cols.ConstantColumn(ExamAbnColMm, Mm);
+                    cols.RelativeColumn();
+                });
+                ExamRow(t, "HEENT", row?.Heent, row?.HeentNote);
+                ExamRow(t, "Lung", row?.Lung, row?.LungNote);
+                ExamRow(t, "Extremities", row?.Extremities, row?.ExtremitiesNote);
+            });
+
+            col.Item().MinHeight(LineMinMm, Mm).Row(r =>
+            {
+                r.ConstantItem(ExamLabelMm, Mm).AlignTop().Text("Other :").Style(ThaiUrText.Base);
+                r.RelativeItem().AlignTop().Text(row?.ObjectiveOther ?? string.Empty).Style(ThaiUrText.Base);
             });
         });
     }
 
-    private static void ExamLine(ColumnDescriptor col, string label, string? finding, string? note)
+    private static void ExamRow(TableDescriptor t, string label, string? finding, string? note)
     {
-        col.Item().Text(t =>
+        t.Cell().MinHeight(LineMinMm, Mm).AlignMiddle().Text(label + " :").Style(ThaiUrText.Base);
+        t.Cell().MinHeight(LineMinMm, Mm).Element(c => CheckOption(c, Is(finding, Normal), "N"));
+        t.Cell().MinHeight(LineMinMm, Mm).Element(c => CheckOption(c, Is(finding, Abnormal), "Abn"));
+        t.Cell().MinHeight(LineMinMm, Mm).AlignMiddle().PaddingLeft(1.2f, Mm)
+            .Text(note ?? string.Empty)
+            .Style(ThaiUrText.Base);
+    }
+
+    private static void CheckOption(IContainer c, bool isChecked, string label, string? extra = null)
+    {
+        c.AlignMiddle().Row(r =>
         {
-            t.Span(label + "  ").Style(ThaiUrText.Base);
-            t.Span(Mark(finding, Normal) + " N  ").Style(ThaiUrText.Base);
-            t.Span(Mark(finding, Abnormal) + " Abn  ").Style(ThaiUrText.Base);
-            t.Span(note ?? string.Empty).Style(ThaiUrText.Base);
+            r.Checkbox(isChecked, CheckSizePt);
+            r.ConstantItem(CheckGapPt);
+            r.RelativeItem().AlignMiddle().Text(t =>
+            {
+                t.Span(label).Style(ThaiUrText.Base);
+                if (!string.IsNullOrWhiteSpace(extra))
+                    t.Span("  " + extra).Style(ThaiUrText.Base);
+            });
         });
     }
 
-    private static string Mark(string? value, string expected) =>
-        string.Equals(value, expected, StringComparison.Ordinal) ? "[x]" : "[ ]";
+    private static bool Is(string? value, string expected) =>
+        string.Equals(value, expected, StringComparison.Ordinal);
 }
