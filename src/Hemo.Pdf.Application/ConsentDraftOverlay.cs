@@ -13,6 +13,11 @@ internal static class ConsentDraftOverlay
     public const string DraftKey = "draft";
     public const string SkeletonKey = "skeleton";
     public const string SignedByNameKey = "signedByName";
+    public const string RelationshipKey = "relationship";
+    public const string ReasonMinorKey = "reasonMinor";
+    public const string ReasonUnconsciousKey = "reasonUnconscious";
+    public const string ReasonOtherKey = "reasonOther";
+    public const string RepresentativeReasonOtherKey = "representativeReasonOther";
     public const string WitnessNameKey = "witnessName";
     public const string SignedDateKey = "signedDate";
     public const string PatientSignatureKey = "patientSignatureBase64";
@@ -55,6 +60,8 @@ internal static class ConsentDraftOverlay
         {
             SetProperty(node, "signedByName", string.Empty);
             SetProperty(node, "isRepresentative", false);
+            SetProperty(node, "relationship", string.Empty);
+            ClearReason(node);
             SetProperty(node, "witnessName", string.Empty);
             SetProperty(node, "doctorName", string.Empty);
             SetProperty(node, "nurseName", string.Empty);
@@ -76,9 +83,24 @@ internal static class ConsentDraftOverlay
             var signedBy = HemosheetFetchSpec.ReadString(parameters, SignedByNameKey)?.Trim() ?? string.Empty;
             SetProperty(node, "signedByName", signedBy);
             var patientName = ReadNodeString(node, "patientName") ?? string.Empty;
-            SetProperty(node, "isRepresentative", !string.IsNullOrWhiteSpace(signedBy)
-                && !string.Equals(signedBy, patientName, StringComparison.Ordinal));
+            var isRepresentative = !string.IsNullOrWhiteSpace(signedBy)
+                && !string.Equals(signedBy, patientName, StringComparison.Ordinal);
+            SetProperty(node, "isRepresentative", isRepresentative);
+            if (!isRepresentative)
+            {
+                SetProperty(node, "relationship", string.Empty);
+                ClearReason(node);
+            }
         }
+
+        if (parameters.ContainsKey(RelationshipKey))
+        {
+            var relationship = HemosheetFetchSpec.ReadString(parameters, RelationshipKey)?.Trim() ?? string.Empty;
+            var isRepresentative = ReadNodeBool(node, "isRepresentative") == true;
+            SetProperty(node, "relationship", isRepresentative ? relationship : string.Empty);
+        }
+
+        OverlayReason(node, parameters);
 
         if (parameters.ContainsKey(WitnessNameKey))
         {
@@ -120,6 +142,44 @@ internal static class ConsentDraftOverlay
         }
 
         return JsonSerializer.SerializeToElement(node);
+    }
+
+    private static void OverlayReason(
+        JsonObject node,
+        IReadOnlyDictionary<string, object?> parameters)
+    {
+        var hasReason =
+            parameters.ContainsKey(ReasonMinorKey)
+            || parameters.ContainsKey(ReasonUnconsciousKey)
+            || parameters.ContainsKey(ReasonOtherKey)
+            || parameters.ContainsKey(RepresentativeReasonOtherKey);
+        if (!hasReason)
+        {
+            return;
+        }
+
+        var isRepresentative = ReadNodeBool(node, "isRepresentative") == true;
+        if (!isRepresentative)
+        {
+            ClearReason(node);
+            return;
+        }
+
+        SetProperty(node, "reasonMinor", HemosheetFetchSpec.ReadBool(parameters, ReasonMinorKey));
+        SetProperty(node, "reasonUnconscious", HemosheetFetchSpec.ReadBool(parameters, ReasonUnconsciousKey));
+        SetProperty(node, "reasonOther", HemosheetFetchSpec.ReadBool(parameters, ReasonOtherKey));
+        SetProperty(
+            node,
+            "representativeReasonOther",
+            HemosheetFetchSpec.ReadString(parameters, RepresentativeReasonOtherKey)?.Trim() ?? string.Empty);
+    }
+
+    private static void ClearReason(JsonObject node)
+    {
+        SetProperty(node, "reasonMinor", false);
+        SetProperty(node, "reasonUnconscious", false);
+        SetProperty(node, "reasonOther", false);
+        SetProperty(node, "representativeReasonOther", string.Empty);
     }
 
     private static bool TryParseSignedDate(
@@ -182,6 +242,17 @@ internal static class ConsentDraftOverlay
         }
 
         return value.GetValue<string>();
+    }
+
+    private static bool? ReadNodeBool(JsonObject node, string propertyName)
+    {
+        var value = FindProperty(node, propertyName);
+        if (value is null || value.GetValueKind() == JsonValueKind.Null)
+        {
+            return null;
+        }
+
+        return value.GetValue<bool>();
     }
 
     private static int? ReadNodeInt(JsonObject node, string propertyName)

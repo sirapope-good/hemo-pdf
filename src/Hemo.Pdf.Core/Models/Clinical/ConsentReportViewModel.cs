@@ -25,6 +25,9 @@ public sealed class ConsentReportViewModel
     public string? PatientGender { get; set; }
     /// <summary>Relationship to patient when signing as representative (paper dotted line).</summary>
     public string? Relationship { get; set; }
+    public bool ReasonMinor { get; set; }
+    public bool ReasonUnconscious { get; set; }
+    public bool ReasonOther { get; set; }
     /// <summary>Free-text "other" reason when acting as representative.</summary>
     public string? RepresentativeReasonOther { get; set; }
     public ConsentDateParts SignedDate { get; set; } = new();

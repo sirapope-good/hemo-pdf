@@ -199,19 +199,19 @@ public sealed class ConsentReportComposer : ILayoutComposer
             // D) reasons for representation
             col.Item().PaddingTop(8).Text(labels.RepresentativeReasonIntro).FontSize(bodyFont).LineHeight(LineHeight);
 
-            var reasonMinor = asRep
-                && vm.PatientAge is int age
-                && age < 18;
+            var reasonMinor = asRep && vm.ReasonMinor;
+            var reasonUnconscious = asRep && vm.ReasonUnconscious;
+            var reasonOther = asRep && vm.ReasonOther;
             col.Item().PaddingTop(4).PaddingLeft(12)
                 .Element(c => ComposeChoice(c, labels.ReasonMinor, reasonMinor, bodyFont));
             col.Item().PaddingTop(4).PaddingLeft(12)
-                .Element(c => ComposeChoice(c, labels.ReasonUnconscious, false, bodyFont));
+                .Element(c => ComposeChoice(c, labels.ReasonUnconscious, reasonUnconscious, bodyFont));
             col.Item().PaddingTop(4).PaddingLeft(12).Row(row =>
             {
-                row.AutoItem().Element(c => ComposeChoice(c, labels.ReasonOther, false, bodyFont));
+                row.AutoItem().Element(c => ComposeChoice(c, labels.ReasonOther, reasonOther, bodyFont));
                 row.ConstantItem(6);
                 row.RelativeItem().AlignMiddle()
-                    .Text(Blank(skeleton ? null : vm.RepresentativeReasonOther, "................................................"))
+                    .Text(Blank(skeleton || !reasonOther ? null : vm.RepresentativeReasonOther, "................................................"))
                     .FontSize(bodyFont);
             });
         });
