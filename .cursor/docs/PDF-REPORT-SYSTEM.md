@@ -365,7 +365,24 @@ flowchart LR
 | **Dual pipeline PDF + ReportDocument** | Hemosheet maintain `ComposePdf` + `MapToPreview`; Hemopro preview ใช้ JSON DOM (ยกเว้น ThaiUr), print ใช้ PDF | ต้นทุนเพิ่ม template/section สูง — ยอมรับเพื่อความรู้สึก Telerik |
 | **ThaiUr preview** | FE บังคับ PDF-as-preview สำหรับ `layoutProfile=ThaiUr` | ปิด drift DOM≠PDF สำหรับ profile นี้ |
 | **Client-trust DTO** | เมื่อ `UseServerFetch=true` Hemo-PDF ดึง report-data จาก Web.Api (JWT forward); ปิด flag = กลับ client-trust | เปิด UseServerFetch ใน Dev; production ควรเปิดคู่ flag FE |
-| **Clinical pack layout profile** | `GlobalSetting.Hemosheet.Report.LayoutProfile` (`Default` / `Rama` / `ThaiUr`) → `layoutContext.layoutProfile` ใน report-data; Hemo-PDF planner / dense form ใช้ค่านี้ | Legacy fallback: ยัง map จาก `HemosheetTemplate` `.trdp` ได้ถ้า `LayoutProfile` ว่าง |
+| **Clinical pack layout profile** | `GlobalSetting.Hemosheet.Report.LayoutProfile` (`Default` / `Rama` / `ThaiUr`) — HemoAdmin dropdown; `.trdp` ถูก sync อัตโนมัติสำหรับ dual-stack | เลิกเลือกชื่อไฟล์ `.trdp` ใน UI |
+
+### 9.4 Telerik wind-down (ค่อย ๆ ถอดความรับผิดชอบ)
+
+เป้าหมาย: Hemo-PDF + `.hprp` เป็น SoT; Telerik / Report.Api / `.trdp` หายจาก critical path
+
+| Phase | สิ่งที่ทำ | ความรับผิดชอบที่ลด |
+|-------|----------|-------------------|
+| **A — ตอนนี้** | FE `useHemoPdfPreview` + catalog; profile จาก `LayoutProfile`; `.trdp` sync เงียบ ๆ | Admin ไม่เลือก `.trdp`; layout ไม่ผูกชื่อไฟล์ |
+| **B — default on** | เปิด `useHemoPdfPreview` default สำหรับ tenant ใหม่ / UAT แล้ว prod | ผู้ใช้ส่วนใหญ่ไม่แตะ `tr-viewer` |
+| **C — feature freeze Telerik** | ไม่แก้ `.trdp` ใหม่; แก้เฉพาะ Hemo-PDF / `.hprp` | ทีม layout โฟกัสที่เดียว |
+| **D — stop Report.Api for clinical** | ปิด export/preview ผ่าน Report.Api สำหรับ clinical pack; เหลือ plugin/legacy ถ้ามี | ลด deploy Report.Api + Telerik license surface |
+| **E — remove dual-stack sync** | เลิกเขียน `HemosheetTemplate` จาก profile; ลบ field จาก Admin/API เมื่อไม่มี consumer | setting เหลือ `LayoutProfile` + fixed lines |
+| **F — delete dead code** | ถอด `tr-viewer`, Telerik NuGet ใน FE/Report, Hemo-Report asset copy ใน CI, `HemosheetResolver` Telerik branches | repo/CI เบาลง |
+
+**อย่าถอดเร็วเกินไป:** plugin send ที่ยังผูก Report.Api, customer ที่ยังปิด `useHemoPdfPreview`, และ dense pixel parity ของ dedicated reports — ใช้ feature flag + tenant rollout เป็น gate ของ Phase B–D
+
+**ตัวชี้ว่าพร้อม Phase D:** clinical 01–16 preview/print บน Hemo-PDF ผ่าน smoke tenant จริง; ไม่มี ticket ใหม่ที่ต้องแก้ `.trdp`
 | **Telerik fallback** | `useHemoPdfPreview` + `tr-viewer` ยัง active; plugin send ยังใช้ Report.Api | dual stack จนกว่าจะ cutover |
 | **Layout resolver ทำซ้ำกับ .trdp** | กติกา visibility อยู่ทั้งใน `.trdp` และ `HemosheetLayoutResolver` | sync 2 ที่จนกว่าจะเลิก Telerik |
 | **ยังเป็น copy (ไม่ใช่ package จริง)** | sync script ลด drift แต่ยังเป็น source copy | รัน sync เมื่อ lib เปลี่ยน |
