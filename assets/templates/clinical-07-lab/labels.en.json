@@ -3,5 +3,6 @@
   "patientName": "Patient name",
   "unit": "Unit",
   "reportDate": "Report date",
-  "title": "Laboratory Record"
+  "title": "Laboratory Record",
+  "labResults": "Lab results"
 }

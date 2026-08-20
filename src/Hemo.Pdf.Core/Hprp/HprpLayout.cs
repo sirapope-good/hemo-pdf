@@ -60,6 +60,9 @@ public sealed class HprpLayoutNode
     [JsonPropertyName("columnHeaders")]
     public IReadOnlyList<string>? ColumnHeaders { get; init; }
 
+    [JsonPropertyName("columnHeadersBind")]
+    public string? ColumnHeadersBind { get; init; }
+
     [JsonPropertyName("fields")]
     public IReadOnlyList<HprpFieldNode>? Fields { get; init; }
 

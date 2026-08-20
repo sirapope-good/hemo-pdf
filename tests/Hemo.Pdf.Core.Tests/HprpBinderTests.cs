@@ -86,6 +86,44 @@ public class HprpBinderTests
     }
 
     [Fact]
+    public void Bind_LabMatrix_UsesColumnHeadersBind()
+    {
+        var package = new HprpPackage
+        {
+            Manifest = new HprpManifest
+            {
+                Id = ClinicalReportCatalog.Lab,
+                DisplayName = "Laboratory Record",
+                DataAdapter = HprpDataAdapterIds.FlattenDto,
+            },
+            Layout = new HprpLayout
+            {
+                Body =
+                [
+                    new HprpLayoutNode
+                    {
+                        Type = "data-grid",
+                        ColumnHeadersBind = "$.columnHeaders",
+                        BindRows = "$.rows",
+                    },
+                ],
+            },
+        };
+
+        var data = JsonSerializer.SerializeToElement(new
+        {
+            columnHeaders = new[] { "Lab item", "01/01/2026" },
+            rows = new[] { new[] { "HCT", "32" } },
+        });
+
+        var blocks = HprpBinder.Bind(package, data, null, "th");
+        var grid = Assert.IsType<DataGridReportBlock>(blocks.Single());
+        Assert.Equal(["Lab item", "01/01/2026"], grid.Columns);
+        Assert.Equal("HCT", grid.Rows[0][0]);
+        Assert.Equal("32", grid.Rows[0][1]);
+    }
+
+    [Fact]
     public void Bind_SkipsEmptyFieldGridRows_AndBindsThaiUrHeaderWidget()
     {
         var package = new HprpPackage

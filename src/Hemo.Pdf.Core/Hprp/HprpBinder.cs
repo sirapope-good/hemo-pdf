@@ -176,6 +176,17 @@ public static class HprpBinder
             return null;
 
         var headers = node.ColumnHeaders?.ToList() ?? [];
+        if (headers.Count == 0 && !string.IsNullOrWhiteSpace(node.ColumnHeadersBind))
+        {
+            var boundHeaders = HprpJsonPath.Select(data, node.ColumnHeadersBind);
+            if (boundHeaders is { ValueKind: JsonValueKind.Array })
+            {
+                headers = boundHeaders.Value.EnumerateArray()
+                    .Select(h => HprpJsonPath.AsString(h) ?? "")
+                    .ToList();
+            }
+        }
+
         var rows = new List<IReadOnlyList<string>>();
         foreach (var item in table.Value.EnumerateArray())
         {

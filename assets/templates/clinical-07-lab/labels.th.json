@@ -3,5 +3,6 @@
   "patientName": "ชื่อ-สกุล",
   "unit": "หน่วย",
   "reportDate": "วันที่รายงาน",
-  "title": "Laboratory Record"
+  "title": "Laboratory Record",
+  "labResults": "ผลแลป"
 }

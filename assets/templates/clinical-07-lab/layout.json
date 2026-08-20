@@ -22,14 +22,6 @@
           "bind": "$.patient.name"
         },
         {
-          "label": { "$label": "hn" },
-          "bind": "$.hn"
-        },
-        {
-          "label": { "$label": "patientName" },
-          "bind": "$.patientName"
-        },
-        {
           "label": { "$label": "unit" },
           "bind": "$.patient.unit"
         },
@@ -40,8 +32,11 @@
       ]
     },
     {
-      "type": "key-value-table",
-      "appendFlatten": true
+      "type": "data-grid",
+      "title": { "$label": "labResults" },
+      "columnHeadersBind": "$.columnHeaders",
+      "bindRows": "$.rows",
+      "when": "$.rows.length > 0"
     }
   ]
 }

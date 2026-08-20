@@ -78,6 +78,8 @@ public sealed class ReportDataResolver
                 await FetchClinical02Async(request, parameters, authorization, tenantCode, cancellationToken),
             ReportDataFetchKind.Clinical05ProgressNotePatientMonth =>
                 await FetchClinical05Async(request, parameters, authorization, tenantCode, cancellationToken),
+            ReportDataFetchKind.Clinical07LabPatient =>
+                await FetchClinical07Async(request, parameters, authorization, tenantCode, cancellationToken),
             ReportDataFetchKind.MedicinePreparationRound =>
                 await FetchMedicinePreparationRoundAsync(request, parameters, authorization, tenantCode, cancellationToken),
             ReportDataFetchKind.ConsentPatientTemplateOrRecord =>
@@ -252,6 +254,49 @@ public sealed class ReportDataResolver
         var data = await _reportDataClient.GetClinical05ProgressNoteReportDataAsync(
             patientId,
             monthKey,
+            authorization,
+            tenantCode,
+            cancellationToken);
+
+        _cache.Set(cacheKey, data, CacheDuration);
+        return data;
+    }
+
+    private async Task<JsonElement> FetchClinical07Async(
+        GeneratePdfRequest request,
+        Dictionary<string, object?> parameters,
+        string? authorization,
+        string tenantCode,
+        CancellationToken cancellationToken)
+    {
+        var patientId = HemosheetFetchSpec.ReadString(parameters, "patientId") ?? request.EntityId;
+        if (string.IsNullOrWhiteSpace(patientId))
+        {
+            throw new PdfGenerationBadRequestException("patientId is required for clinical-07 report-data.");
+        }
+
+        var from = HemosheetFetchSpec.ReadString(parameters, "from");
+        var to = HemosheetFetchSpec.ReadString(parameters, "to");
+
+        var cacheKey = string.Join(
+            '|',
+            "report-data",
+            ClinicalReportCatalog.Lab,
+            tenantCode.Trim().ToLowerInvariant(),
+            patientId.Trim().ToLowerInvariant(),
+            from?.Trim() ?? "",
+            to?.Trim() ?? "",
+            AuthFingerprint(authorization));
+
+        if (_cache.TryGetValue(cacheKey, out JsonElement cached))
+        {
+            return cached;
+        }
+
+        var data = await _reportDataClient.GetClinical07LabReportDataAsync(
+            patientId,
+            from,
+            to,
             authorization,
             tenantCode,
             cancellationToken);

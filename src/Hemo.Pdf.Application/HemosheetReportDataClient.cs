@@ -113,6 +113,26 @@ public sealed class HemosheetReportDataClient : IHemosheetReportDataClient
         return SendAsync(path, authorizationHeader, tenantCode, cancellationToken);
     }
 
+    public Task<JsonElement> GetClinical07LabReportDataAsync(
+        string patientId,
+        string? from,
+        string? to,
+        string? authorizationHeader,
+        string tenantCode,
+        CancellationToken cancellationToken)
+    {
+        var queryParts = new List<string>();
+        if (!string.IsNullOrWhiteSpace(from))
+            queryParts.Add($"from={Uri.EscapeDataString(from.Trim())}");
+        if (!string.IsNullOrWhiteSpace(to))
+            queryParts.Add($"to={Uri.EscapeDataString(to.Trim())}");
+
+        var query = queryParts.Count == 0 ? string.Empty : "?" + string.Join("&", queryParts);
+        var path =
+            $"api/Patients/{Uri.EscapeDataString(patientId)}/reports/{ClinicalReportCatalog.Lab}/report-data{query}";
+        return SendAsync(path, authorizationHeader, tenantCode, cancellationToken);
+    }
+
     public Task<JsonElement> GetMedicinePreparationRoundReportDataAsync(
         int unitId,
         string date,
