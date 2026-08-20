@@ -84,6 +84,10 @@ public sealed class ReportDataResolver
                 await FetchMedicinePreparationRoundAsync(request, parameters, authorization, tenantCode, cancellationToken),
             ReportDataFetchKind.ConsentPatientTemplateOrRecord =>
                 await FetchConsentAsync(request, parameters, templateId, authorization, tenantCode, cancellationToken),
+            ReportDataFetchKind.UnsupportedClinicalForm =>
+                throw new PdfGenerationBadRequestException(
+                    $"Report-data API is not implemented for template '{templateId}'. "
+                    + "Use inline data when HemoPdf:UseServerFetch is disabled, or implement the Web.Api endpoint first."),
             _ => await FetchHemosheetAsync(request, authorization, tenantCode, cancellationToken),
         };
 

@@ -10,6 +10,7 @@ public class ReportDataFetchRegistryTests
     [InlineData(ClinicalReportCatalog.EpoDrug, ReportDataFetchKind.Clinical02EpoDrugPatientMonthMed)]
     [InlineData(ClinicalReportCatalog.ProgressNote, ReportDataFetchKind.Clinical05ProgressNotePatientMonth)]
     [InlineData(ClinicalReportCatalog.Lab, ReportDataFetchKind.Clinical07LabPatient)]
+    [InlineData(ClinicalReportCatalog.Prescription, ReportDataFetchKind.UnsupportedClinicalForm)]
     [InlineData(ClinicalReportCatalog.ConsentTh, ReportDataFetchKind.ConsentPatientTemplateOrRecord)]
     [InlineData("unknown-template", ReportDataFetchKind.HemosheetRecordOrTemplate)]
     public void Resolve_MapsClinicalTemplates(string templateId, ReportDataFetchKind expected)

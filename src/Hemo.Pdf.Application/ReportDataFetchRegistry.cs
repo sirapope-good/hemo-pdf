@@ -12,6 +12,7 @@ public enum ReportDataFetchKind
     Clinical07LabPatient,
     MedicinePreparationRound,
     ConsentPatientTemplateOrRecord,
+    UnsupportedClinicalForm,
 }
 
 /// <summary>
@@ -43,6 +44,9 @@ public static class ReportDataFetchRegistry
 
         if (ClinicalReportCatalog.IsConsentReport(engineId))
             return ReportDataFetchKind.ConsentPatientTemplateOrRecord;
+
+        if (ClinicalReportCatalog.IsDefaultScaffoldWithoutReportData(engineId))
+            return ReportDataFetchKind.UnsupportedClinicalForm;
 
         return ReportDataFetchKind.HemosheetRecordOrTemplate;
     }

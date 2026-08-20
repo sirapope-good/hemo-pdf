@@ -39,6 +39,7 @@
         "style": { "type": "string" },
         "columns": { "type": "integer" },
         "columnHeaders": { "type": "array", "items": { "type": "string" } },
+        "columnHeadersBind": { "type": "string" },
         "fields": { "type": "array" },
         "rows": { "type": "array" },
         "appendFlatten": { "type": "boolean" },

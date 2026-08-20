@@ -112,4 +112,15 @@ public static class ClinicalReportCatalog
             && !string.Equals(id, EpoDrug, StringComparison.OrdinalIgnoreCase)
             && !string.Equals(id, ProgressNote, StringComparison.OrdinalIgnoreCase)
             && !IsConsentReport(id));
+
+    /// <summary>
+    /// Default-scaffold forms whose trusted report-data API is not implemented yet
+    /// (excludes <see cref="Lab"/> which has a dedicated endpoint).
+    /// </summary>
+    public static bool IsDefaultScaffoldWithoutReportData(string? templateId)
+    {
+        var engineId = ResolveEngineTemplateId(templateId ?? string.Empty);
+        return DefaultScaffoldIds.Any(id => string.Equals(id, engineId, StringComparison.OrdinalIgnoreCase))
+            && !string.Equals(engineId, Lab, StringComparison.OrdinalIgnoreCase);
+    }
 }
