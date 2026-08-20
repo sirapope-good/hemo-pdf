@@ -10,38 +10,37 @@
       "bind": "$title"
     },
     {
-      "type": "text",
-      "style": "subtitle",
-      "content": {
-        "$label": "subtitle"
-      }
+      "type": "field-grid",
+      "columns": 2,
+      "fields": [
+        {
+          "label": { "$label": "hn" },
+          "bind": "$.patient.hn"
+        },
+        {
+          "label": { "$label": "patientName" },
+          "bind": "$.patient.name"
+        },
+        {
+          "label": { "$label": "hn" },
+          "bind": "$.hn"
+        },
+        {
+          "label": { "$label": "patientName" },
+          "bind": "$.patientName"
+        },
+        {
+          "label": { "$label": "unit" },
+          "bind": "$.patient.unit"
+        },
+        {
+          "label": { "$label": "reportDate" },
+          "bind": "$.reportDate"
+        }
+      ]
     },
     {
       "type": "key-value-table",
-      "rows": [
-        {
-          "label": {
-            "$label": "report"
-          },
-          "bind": "$title"
-        },
-        {
-          "label": {
-            "$label": "layout"
-          },
-          "content": {
-            "$label": "layoutValue"
-          }
-        },
-        {
-          "label": {
-            "$label": "note"
-          },
-          "content": {
-            "$label": "noteValue"
-          }
-        }
-      ],
       "appendFlatten": true
     }
   ]

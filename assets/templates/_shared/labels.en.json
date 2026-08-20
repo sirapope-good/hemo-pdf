@@ -2,6 +2,5 @@
   "hn": "HN",
   "patientName": "Patient name",
   "unit": "Unit",
-  "reportDate": "Report date",
-  "title": "Laboratory Record"
+  "reportDate": "Report date"
 }

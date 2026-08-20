@@ -2,6 +2,5 @@
   "hn": "HN",
   "patientName": "ชื่อ-สกุล",
   "unit": "หน่วย",
-  "reportDate": "วันที่รายงาน",
-  "title": "Laboratory Record"
+  "reportDate": "วันที่รายงาน"
 }

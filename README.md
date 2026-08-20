@@ -91,7 +91,8 @@ Hemo.Pdf.Api (Standalone :5090)
             ├── ReportPreviewService / PdfGenerationService
             ├── Branding (JSON per tenant)
             ├── Sections (Header/Footer/Content + Preview mappers)
-            └── Layouts (12 templates → QuestPDF + ReportDocument)
+            └── Layouts (16 clinical templates → QuestPDF + ReportDocument)
+            └── HPRP (`assets/templates/` — composition without rebuild)
 ```
 
 ## Solution Structure
@@ -103,18 +104,34 @@ src/
 ├── Hemo.Pdf.Core/          # Contracts & models
 ├── Hemo.Pdf.Branding/      # Tenant branding store
 ├── Hemo.Pdf.Sections/      # Reusable PDF components
-├── Hemo.Pdf.Layouts/       # 12 report templates
+├── Hemo.Pdf.Layouts/       # 16 clinical report templates + Hemosheet engine
 └── Hemo.Pdf.Rendering/     # QuestPDF
 
 client/projects/hemo-pdf-client/      # @hemo/pdf-client (print/download)
 client/projects/hemo-report-viewer/   # @hemo/report-viewer (HTML preview)
 client/demo/report-preview-demo/      # Static browser demo
 assets/branding/                   # tenant-demo-a.json, tenant-demo-b.json
+assets/templates/                  # Default .hprp folders (clinical-01…16) + schema
 assets/mock-data/                  # Sample DTOs
+docs/HPRP.md                       # .hprp package spec + widget catalog
 tests/                             # Unit + integration tests
 ```
 
-## Report Templates (12)
+## Report Templates (clinical pack)
+
+Canonical ids: `clinical-01-hct-epo` … `clinical-16-adequacy-summary` (see `ClinicalReportCatalog.cs`).
+
+Composition (order, labels, bindings) lives in **`assets/templates/{id}/`** as `.hprp` folders — upload tenant overrides via `POST /api/templates/{id}`. See [docs/HPRP.md](docs/HPRP.md).
+
+| ID | Requires Sign |
+|----|---------------|
+| `clinical-03-hemodialysis-record` | Yes |
+| `clinical-04-prescription`, `clinical-05-progress-note` | Yes |
+| Others | See manifest `requiresSignature` |
+
+Legacy alias: `template-04-hemosheet` → `clinical-03-hemodialysis-record`.
+
+## Legacy template ids (template-01…12)
 
 | ID | Requires Sign |
 |----|---------------|

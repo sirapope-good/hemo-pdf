@@ -240,6 +240,37 @@ Data → ReportBlock ──┤
 - โหลดผ่าน `JsonFileBrandingStore` (alias `localhost`/`127.0.0.1` → `local`)
 - Template เดียวกัน + tenant ต่างกัน = เนื้อหาเหมือนกัน หัว/ท้ายต่างกัน
 
+### ระดับ 1.5 — แก้ `.hprp` composition (ไม่ rebuild engine) ✅
+
+ชั้น **Hemopro Report Package** — เอกสาร JSON/ZIP ที่บอก engine ว่าใช้ widget/block ไหน เรียงอย่างไร ป้ายอะไร bind ข้อมูลอย่างไร
+
+| อยู่ใน engine (C#, rebuild เมื่อเพิ่มชนิดใหม่) | อยู่ใน `.hprp` (อัปโหลดได้) |
+|---|---|
+| `ReportBlock` types, Hemosheet section renderers, QuestPDF | ลำดับ section/block, labels, JSONPath bind, `when` visibility |
+| Data adapters / Web.Api DTO | ชื่อ adapter + parameter mapping |
+| `HprpWidgetIds` catalog | อ้าง widget id ที่ engine รองรับแล้ว |
+
+**ที่เก็บ**
+- Default: `assets/templates/{id}/` (manifest + layout + labels)
+- Tenant override: `assets/templates/tenants/{tenant}/{id}.hprp` หรืออัปโหลด `POST /api/templates/{id}`
+
+**Flow สั้น ๆ**
+```
+FileHprpTemplateStore → HprpCatalog (metadata) / HprpBinder (form body) / HprpHemosheetPlanInterpreter (sections)
+  → ReportBlock[] หรือ HemosheetSectionPlan[] → pipeline เดิม
+```
+
+**รายงานตามสาย**
+| กลุ่ม | ids | ไฟล์ควบคุม |
+|------|-----|------------|
+| ฟอร์มทั่วไป | 04, 06, 07, 10–16 | `layout.body` → `HprpBinder` |
+| Hemosheet | 03 | `layout.sections` → `HemosheetLayoutPlanner` |
+| Dedicated | 01, 02, 05, 08, 09 | C# composer + `HprpLabelResolver` (labels จาก `.hprp`) |
+
+Spec เต็ม: [docs/HPRP.md](../../docs/HPRP.md)
+
+**อัปโหลดจาก HemoAdmin:** `POST /api/tenants/{id}/hprp-templates/{templateId}` (proxy ไป Hemo-PDF เมื่อ tenant ตั้ง `pdfApiUrl`)
+
 ### ระดับ 2 — ปรับ Section / Block (แก้ mapper)
 - แก้ layout ของ section ที่มีอยู่ → แก้ preview mapper ที่เดียว (เช่น `HemosheetPreviewMappers.MapDehydration`) แล้ว PDF/preview อัปเดตพร้อมกัน (เพราะ PDF วิ่งผ่าน `ReportBlockPdfComposer` ตัวเดียวกัน)
 - เพิ่ม block type ใหม่ → ดูหัวข้อ 5.1
@@ -374,6 +405,7 @@ npm run sync:report-viewer -- --check # CI: fail ถ้า out of sync
 | Data resolver (SoT) | `Report/DocumentLogics/HemosheetResolver.cs` |
 | Telerik registry | `Report/CoreReportResolver.cs` |
 | Per-tenant setting | `HemoAdmin.Api/Setup/TenantHemosheetReportConfigStore.cs` |
+| HPRP upload proxy | `HemoAdmin.Api/Setup/TenantHprpTemplateProxyService.cs`, `TenantsController` (`/hprp-templates`) |
 
 ### Hemo-PDF (render)
 | บทบาท | Path |
@@ -393,6 +425,9 @@ npm run sync:report-viewer -- --check # CI: fail ถ้า out of sync
 | Preview mappers | `src/Hemo.Pdf.Sections/Preview/Hemosheet/HemosheetPreviewMappers.cs` |
 | QuestPDF | `src/Hemo.Pdf.Rendering/{QuestPdfRenderer,FontRegistration}.cs` |
 | Branding | `src/Hemo.Pdf.Branding/JsonFileBrandingStore.cs` + `assets/branding/` |
+| **`.hprp` templates** | `assets/templates/{id}/`, `docs/HPRP.md` |
+| HPRP store / API | `src/Hemo.Pdf.Application/Hprp/FileHprpTemplateStore.cs`, `HprpTemplateController.cs` |
+| HPRP binder / planner | `src/Hemo.Pdf.Core/Hprp/HprpBinder.cs`, `Layouts/Hprp/HprpHemosheetPlanInterpreter.cs` |
 | Mock data | `assets/mock-data/template-04-hemosheet-*.json` |
 
 ### Hemo-frontend (UI)

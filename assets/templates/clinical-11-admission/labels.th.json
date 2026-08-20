@@ -1,9 +1,7 @@
 {
-  "title": "Admission Note and History Review",
-  "subtitle": "Clinical report pack — Default structure",
-  "report": "รายงาน",
-  "layout": "เลย์เอาต์",
-  "layoutValue": "Default (scaffold)",
-  "note": "หมายเหตุ",
-  "noteValue": "Foundation placeholder — body pixel-parity not implemented yet."
+  "hn": "HN",
+  "patientName": "ชื่อ-สกุล",
+  "unit": "หน่วย",
+  "reportDate": "วันที่รายงาน",
+  "title": "Admission Note and History Review"
 }

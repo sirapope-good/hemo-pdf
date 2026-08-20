@@ -117,7 +117,8 @@ public sealed class FileHprpTemplateStore : IHprpTemplateStore
         {
             var name = Path.GetFileName(dir);
             if (string.Equals(name, "tenants", StringComparison.OrdinalIgnoreCase)
-                || string.Equals(name, "schema", StringComparison.OrdinalIgnoreCase))
+                || string.Equals(name, "schema", StringComparison.OrdinalIgnoreCase)
+                || string.Equals(name, "_shared", StringComparison.OrdinalIgnoreCase))
             {
                 continue;
             }

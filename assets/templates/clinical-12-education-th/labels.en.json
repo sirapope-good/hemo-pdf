@@ -1,9 +1,7 @@
 {
-  "title": "Hemodialysis Patient Education (TH)",
-  "subtitle": "Clinical report pack — Default structure",
-  "report": "Report",
-  "layout": "Layout",
-  "layoutValue": "Default (scaffold)",
-  "note": "Note",
-  "noteValue": "Foundation placeholder — body pixel-parity not implemented yet."
+  "hn": "HN",
+  "patientName": "Patient name",
+  "unit": "Unit",
+  "reportDate": "Report date",
+  "title": "Hemodialysis Patient Education (TH)"
 }
