@@ -11,7 +11,8 @@ using QuestPDF.Infrastructure;
 namespace Hemo.Pdf.Layouts.Clinical.Clinical05_ProgressNote;
 
 /// <summary>
-/// Dense QuestPDF layout for clinical-05: repeating ThaiUr header + SOAP table (~2 blocks / page).
+/// Dense QuestPDF layout for clinical-05: repeating header from <c>layout.header</c>,
+/// body widgets from <c>layout.body</c> (SOAP table).
 /// </summary>
 public sealed class Clinical05ProgressNoteComposer : ILayoutComposer
 {
@@ -36,6 +37,15 @@ public sealed class Clinical05ProgressNoteComposer : ILayoutComposer
         var margin = HemosheetThaiUrStyle.PageMarginMm;
         var rowHeightMm = BudgetRowHeightMm(vm);
         var labels = HprpLabelResolver.Resolve(_templates, context);
+        var package = HprpLayoutPlan.TryGetPackage(_templates, context);
+        var headerWidget = HprpLayoutPlan.ResolveHeaderWidget(
+            package,
+            HprpWidgetIds.ThaiUrHeader,
+            HprpClinicalWidgetSets.Clinical05HeaderAllowed);
+        var bodyWidgets = HprpLayoutPlan.ResolveBodyWidgets(
+            package,
+            HprpClinicalWidgetSets.Clinical05BodyDefault,
+            HprpClinicalWidgetSets.Clinical05BodyAllowed);
 
         return new QuestLayout
         {
@@ -44,10 +54,31 @@ public sealed class Clinical05ProgressNoteComposer : ILayoutComposer
             MarginBottom = margin,
             MarginLeft = margin,
             MarginRight = margin,
-            Header = c => ComposeRepeatingHeader(c, vm),
-            Content = c => _table.Compose(c, vm, rowHeightMm, labels),
+            Header = string.Equals(headerWidget, HprpWidgetIds.ThaiUrHeader, StringComparison.OrdinalIgnoreCase)
+                ? c => ComposeRepeatingHeader(c, vm)
+                : null,
+            Content = c => ComposeBody(c, vm, rowHeightMm, labels, bodyWidgets),
             Footer = null,
         };
+    }
+
+    private void ComposeBody(
+        IContainer container,
+        Clinical05ProgressNoteReportViewModel vm,
+        float rowHeightMm,
+        IReadOnlyDictionary<string, string> labels,
+        IReadOnlyList<string> bodyWidgets)
+    {
+        var handlers = new Dictionary<string, Action<IContainer>>(StringComparer.OrdinalIgnoreCase)
+        {
+            [HprpWidgetIds.ClinicalSoapTable] = c => _table.Compose(c, vm, rowHeightMm, labels),
+        };
+
+        container.Column(col =>
+        {
+            col.Spacing(SectionSpacingMm);
+            HprpWidgetDispatch.ComposeColumn(col, bodyWidgets, handlers);
+        });
     }
 
     private static void ComposeRepeatingHeader(IContainer container, Clinical05ProgressNoteReportViewModel vm)

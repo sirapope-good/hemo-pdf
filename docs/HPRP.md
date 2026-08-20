@@ -23,6 +23,18 @@ A `.hprp` file is a ZIP. Repo defaults are stored unpacked under `assets/templat
 | `dataAdapter` | Named C# fetch adapter (see below) |
 | `requiresSignature` | Guard for generate |
 | `language` | Default label language |
+| `ui` | Optional FE menu / picker / parameter metadata (see below) |
+
+### `ui` (FE catalog)
+
+| Field | Meaning |
+|-------|---------|
+| `entryMode` | `hemosheetList` \| `patient` \| `patientMonth` \| `patientYear` \| `unitDateRound` |
+| `menuGroup` | e.g. `clinical`, `standalone` |
+| `sortOrder` | Menu sort key |
+| `visibleInMenu` | When false, hidden from Reports accordion |
+| `reportDataPath` | Optional Web.Api path template for convention fetch |
+| `parameters[]` | How FE builds preview `parameters` (`source`: `route` / `query` / `constant` / `default`) |
 
 JSON schema: `assets/templates/schema/hprp-manifest.schema.json`
 
@@ -77,7 +89,42 @@ JSON schema: `assets/templates/schema/hprp-layout.schema.json`
 
 ### Dedicated reports (01, 02, 05, 08, 09)
 
-`layout.json` declares widget ids (`clinical.hct-epo-annual-table`, …) for documentation and future composition. **Today** the C# composer still renders pixel layout; `.hprp` supplies **labels** via `HprpLabelResolver`.
+`layout.json` declares widget ids. Dedicated composers resolve order via shared **`HprpLayoutPlan`** + **`HprpWidgetDispatch`** (handler map per report).
+
+| Report | `.hprp` / data drives today |
+|--------|------------------------------|
+| **clinical-01** | Section order (`header`+`body`) + labels — pixels in C# sections |
+| **clinical-02** | Same; `clinical.epo-drug-table` includes meta band (not separate widget yet) |
+| **clinical-05** | `layout.header` → repeating page header; `layout.body` → SOAP |
+| **clinical-08/09** | `layout.header` + `clinical.consent-narrative` body; narrative internals stay C# |
+| **clinical-04 / 06 / 10–16** | Trusted `report-data` via `ClinicalFormReportDataService` + HPRP `$.fields` / `$.rows` |
+| **clinical-07** | Dedicated lab matrix endpoint (unchanged) |
+
+Tenant override can reorder widgets that the allow-list understands (e.g. clinical-01 co-pay above annual table) without rebuilding the engine.
+
+### Widget reuse (efficiency model)
+
+Three layers — do **not** invent a new plan class per report:
+
+| Layer | What | Reuse |
+|-------|------|--------|
+| **1. Section drawers** | `ThaiUrReportHeader`, `HctEpoCoPayCriteriaSection`, … | Shared C#; one implementation |
+| **2. Widget handlers** | `Dictionary<widgetId, Action<IContainer>>` in each composer | Thin VM→section glue; share drawers across reports (01+02 co-pay) |
+| **3. Plan + dispatch** | `HprpLayoutPlan` + `HprpWidgetDispatch` | One loop; allow-list per report |
+
+**Do**
+
+- Add a widget id only when it is a reusable visual primitive (or a clear composition seam).
+- Register the same section drawer under different reports’ handlers when the pixels match.
+- Keep allow-lists tight so foreign widgets never draw on the wrong form.
+
+**Avoid**
+
+- One mega registry of all reports’ DTO types (erases type safety, hard to DI).
+- Per-report `HprpClinical0xLayoutPlan` clones.
+- Splitting every internal band into widgets before order actually needs to change (e.g. epo meta stays inside `clinical.epo-drug-table` until a tenant must reorder it).
+
+**Later (max reuse):** map dense widgets → real `ReportBlock`s + `ReportBlockPdfComposer` so Default path can drop dedicated composers entirely — only after block primitives cover pixel parity.
 
 ## Widget catalog
 
@@ -114,13 +161,21 @@ Resolve order: `FileHprpTemplateStore.TryGetCached` → `HprpCatalog.TryGetDefin
 
 | Method | Path | Description |
 |--------|------|-------------|
+| `GET` | `/api/report-catalog?menuOnly=` | FE menu catalog (manifest `ui` + fetch/renderer capability) |
 | `GET` | `/api/templates` | List default manifests + `hasTenantOverride` |
 | `GET` | `/api/templates/{id}` | Manifest + override flag |
 | `POST` | `/api/templates/{id}` | Upload tenant `.hprp` (zip or multipart) |
+| `DELETE` | `/api/templates/{id}` | Remove tenant override |
 
 Requires `Authorization: Bearer` + `X-Tenant-Code` (mock dev: any bearer + header).
 
 Config: `HemoPdf:TemplatesRootPath` (default `assets/templates`).
+
+### Adding a new report (after dynamic catalog)
+
+1. **Web.Api:** dedicated `GET api/Patients/{id}/reports/{new-id}/report-data` (if real data is needed)
+2. **Hemo-PDF:** `assets/templates/{new-id}/` (manifest with `ui`, layout, labels) **or** upload `.hprp` via HemoAdmin; register dedicated fetch only when not using `reportDataPath` convention
+3. **Frontend:** no code change — menu appears from `GET /api/report-catalog`
 
 ## Runtime flow (short)
 

@@ -5,5 +5,13 @@
   "engineVersion": 1,
   "dataAdapter": "flatten-dto",
   "requiresSignature": false,
-  "language": "th"
+  "language": "th",
+  "ui": {
+    "entryMode": "patient",
+    "menuGroup": "clinical",
+    "sortOrder": 60,
+    "visibleInMenu": true,
+    "parameters": [],
+    "reportDataPath": "api/Patients/{patientId}/reports/{templateId}/report-data"
+  }
 }

@@ -27,11 +27,11 @@ public sealed class ClinicalDefaultDataProvider : IReportDataProvider
     {
         cancellationToken.ThrowIfCancellationRequested();
 
-        var title = ResolveTitle(context);
         var package = _templates?.TryGetCached(
             context.TenantCode,
             ClinicalReportCatalog.ResolveEngineTemplateId(context.ReportTemplateId));
 
+        var title = ResolveTitle(context, package);
         if (package is not null && package.Layout.Body.Count > 0)
         {
             return Task.FromResult<object>(new HprpBoundViewModel
@@ -46,7 +46,7 @@ public sealed class ClinicalDefaultDataProvider : IReportDataProvider
         return Task.FromResult<object>(BuildFallback(context, title));
     }
 
-    private static string ResolveTitle(PdfReportContext context)
+    private static string ResolveTitle(PdfReportContext context, HprpPackage? package)
     {
         var title = context.Metadata.Title;
         if (string.IsNullOrWhiteSpace(title)
@@ -54,6 +54,9 @@ public sealed class ClinicalDefaultDataProvider : IReportDataProvider
         {
             title = definition!.DisplayName;
         }
+
+        if (string.IsNullOrWhiteSpace(title) && package is not null)
+            title = package.Manifest.DisplayName;
 
         return string.IsNullOrWhiteSpace(title) ? context.ReportTemplateId : title;
     }

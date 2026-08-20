@@ -102,8 +102,10 @@ public static class ClinicalReportCatalog
         || string.Equals(templateId, ConsentEn, StringComparison.OrdinalIgnoreCase);
 
     /// <summary>
-    /// Clinical pack ids that still use the Default scaffold body
-    /// (excludes dedicated engines: #01/#02/#05, #03 Hemodialysis Record, #08/#09 Consent).
+    /// Clinical pack forms that still lack a dedicated dense engine and use
+    /// HPRP flatten-dto + convention report-data
+    /// (<c>api/Patients/{patientId}/reports/{templateId}/report-data</c>).
+    /// Includes Lab (#07) for catalog grouping; Lab still has a dedicated fetch kind.
     /// </summary>
     public static IEnumerable<string> DefaultScaffoldIds =>
         Definitions.Keys.Where(id =>
@@ -114,13 +116,15 @@ public static class ClinicalReportCatalog
             && !IsConsentReport(id));
 
     /// <summary>
-    /// Default-scaffold forms whose trusted report-data API is not implemented yet
-    /// (excludes <see cref="Lab"/> which has a dedicated endpoint).
+    /// True for pack forms that should use <see cref="ReportDataFetchKind.FormPatientByAdapter"/>
+    /// (or Lab's dedicated kind). Formerly blocked as Unsupported; BE endpoints exist for 04/06/07/10–16.
     /// </summary>
-    public static bool IsDefaultScaffoldWithoutReportData(string? templateId)
+    public static bool IsFormPatientReportData(string? templateId)
     {
         var engineId = ResolveEngineTemplateId(templateId ?? string.Empty);
-        return DefaultScaffoldIds.Any(id => string.Equals(id, engineId, StringComparison.OrdinalIgnoreCase))
-            && !string.Equals(engineId, Lab, StringComparison.OrdinalIgnoreCase);
+        return DefaultScaffoldIds.Any(id => string.Equals(id, engineId, StringComparison.OrdinalIgnoreCase));
     }
+
+    /// <summary>Obsolete name — always false; report-data endpoints exist for former scaffolds.</summary>
+    public static bool IsDefaultScaffoldWithoutReportData(string? templateId) => false;
 }

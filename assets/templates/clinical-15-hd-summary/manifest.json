@@ -5,5 +5,21 @@
   "engineVersion": 1,
   "dataAdapter": "flatten-dto",
   "requiresSignature": false,
-  "language": "th"
+  "language": "th",
+  "ui": {
+    "entryMode": "patientMonth",
+    "menuGroup": "clinical",
+    "sortOrder": 150,
+    "visibleInMenu": true,
+    "parameters": [
+      {
+        "name": "month",
+        "source": "route",
+        "routeKey": "period",
+        "format": "yyyy-MM",
+        "required": true
+      }
+    ],
+    "reportDataPath": "api/Patients/{patientId}/reports/{templateId}/report-data"
+  }
 }

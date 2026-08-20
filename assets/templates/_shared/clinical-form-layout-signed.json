@@ -33,7 +33,14 @@
     },
     {
       "type": "key-value-table",
-      "appendFlatten": true
+      "bindRows": "$.fields",
+      "when": "$.fields.length > 0"
+    },
+    {
+      "type": "data-grid",
+      "columnHeadersBind": "$.columnHeaders",
+      "bindRows": "$.rows",
+      "when": "$.rows.length > 0"
     },
     {
       "type": "signature"

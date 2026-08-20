@@ -1,5 +1,6 @@
 using System.Text.Json;
 using Hemo.Pdf.Application;
+using Hemo.Pdf.Core.Hprp;
 using Hemo.Pdf.Core.Models;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Caching.Memory;
@@ -23,7 +24,7 @@ public class ReportDataResolverCacheTests
             WebApi = new WebApiOptions { BaseUrl = "http://localhost:8200" },
         });
 
-        var resolver = new ReportDataResolver(options, client, accessor, cache);
+        var resolver = new ReportDataResolver(options, client, accessor, cache, new EmptyHprpTemplateStore());
         var request = new GeneratePdfRequest
         {
             ReportTemplateId = "clinical-03-hemodialysis-record",
@@ -37,6 +38,19 @@ public class ReportDataResolverCacheTests
         await resolver.ResolveAsync(request, CancellationToken.None);
 
         Assert.Equal(1, client.RecordCalls);
+    }
+
+    private sealed class EmptyHprpTemplateStore : IHprpTemplateStore
+    {
+        public HprpPackage? TryGetCached(string tenantCode, string templateId) => null;
+        public Task<HprpPackage?> GetAsync(string tenantCode, string templateId, CancellationToken cancellationToken = default) =>
+            Task.FromResult<HprpPackage?>(null);
+        public Task SaveTenantOverrideAsync(string tenantCode, string templateId, Stream zipStream, CancellationToken cancellationToken = default) =>
+            Task.CompletedTask;
+        public Task DeleteTenantOverrideAsync(string tenantCode, string templateId, CancellationToken cancellationToken = default) =>
+            Task.CompletedTask;
+        public IReadOnlyList<HprpManifest> ListDefaultManifests() => Array.Empty<HprpManifest>();
+        public bool HasTenantOverride(string tenantCode, string templateId) => false;
     }
 
     private sealed class CountingReportDataClient : IHemosheetReportDataClient
@@ -119,6 +133,13 @@ public class ReportDataResolverCacheTests
             int unitId,
             string date,
             int sectionId,
+            string? authorizationHeader,
+            string tenantCode,
+            CancellationToken cancellationToken) =>
+            throw new NotImplementedException();
+
+        public Task<JsonElement> GetRelativePathAsync(
+            string relativePath,
             string? authorizationHeader,
             string tenantCode,
             CancellationToken cancellationToken) =>

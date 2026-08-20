@@ -1,3 +1,4 @@
+using Hemo.Pdf.Application.Catalog;
 using Hemo.Pdf.Application.Guards;
 using Hemo.Pdf.Application.Mock;
 using Hemo.Pdf.Branding;
@@ -50,6 +51,7 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<IBrandingStore, JsonFileBrandingStore>();
         services.AddScoped<IBrandingResolver, BrandingResolver>();
         services.AddSingleton<IHprpTemplateStore, Hprp.FileHprpTemplateStore>();
+        services.AddScoped<IReportCatalogService, ReportCatalogService>();
 
         services.AddHttpClient<IHemosheetReportDataClient, HemosheetReportDataClient>(client =>
         {
@@ -96,13 +98,13 @@ public static class ServiceCollectionExtensions
             new ReportRendererFactory(
                 TemplateRegistration.GetRendererRegistrations(),
                 sp,
-                TemplateRegistration.FallbackRendererType));
+                typeof(Layouts.Clinical.ClinicalDefaultReportRenderer)));
 
         services.AddScoped<IReportPreviewRendererFactory>(sp =>
             new ReportPreviewRendererFactory(
                 TemplateReportPreviewRendererFactory.CreateRegistrations(),
                 sp,
-                typeof(Layouts.Preview.Generic.GenericReportPreviewRenderer)));
+                typeof(Layouts.Preview.Generic.HprpReportPreviewRenderer)));
 
         return services;
     }

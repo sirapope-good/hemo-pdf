@@ -149,6 +149,18 @@ public sealed class HemosheetReportDataClient : IHemosheetReportDataClient
         return SendAsync(path, authorizationHeader, tenantCode, cancellationToken);
     }
 
+    public Task<JsonElement> GetRelativePathAsync(
+        string relativePath,
+        string? authorizationHeader,
+        string tenantCode,
+        CancellationToken cancellationToken)
+    {
+        if (string.IsNullOrWhiteSpace(relativePath))
+            throw new ArgumentException("relativePath is required.", nameof(relativePath));
+
+        return SendAsync(relativePath.TrimStart('/'), authorizationHeader, tenantCode, cancellationToken);
+    }
+
     private async Task<JsonElement> SendAsync(
         string relativePath,
         string? authorizationHeader,

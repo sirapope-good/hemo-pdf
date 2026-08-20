@@ -5,5 +5,19 @@
   "engineVersion": 1,
   "dataAdapter": "clinical-01-hct-epo",
   "requiresSignature": false,
-  "language": "th"
+  "language": "th",
+  "ui": {
+    "entryMode": "patientYear",
+    "menuGroup": "clinical",
+    "sortOrder": 10,
+    "visibleInMenu": true,
+    "parameters": [
+      {
+        "name": "year",
+        "source": "route",
+        "routeKey": "period",
+        "required": true
+      }
+    ]
+  }
 }

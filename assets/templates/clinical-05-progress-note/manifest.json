@@ -5,5 +5,20 @@
   "engineVersion": 1,
   "dataAdapter": "clinical-05-progress-note",
   "requiresSignature": true,
-  "language": "th"
+  "language": "th",
+  "ui": {
+    "entryMode": "patientMonth",
+    "menuGroup": "clinical",
+    "sortOrder": 50,
+    "visibleInMenu": true,
+    "parameters": [
+      {
+        "name": "month",
+        "source": "route",
+        "routeKey": "period",
+        "format": "yyyy-MM",
+        "required": true
+      }
+    ]
+  }
 }

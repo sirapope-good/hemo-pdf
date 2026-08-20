@@ -41,6 +41,39 @@ public static class HprpValidator
 
         if (!HprpDataAdapterIds.All.Contains(manifest.DataAdapter))
             errors.Add($"Unknown dataAdapter '{manifest.DataAdapter}'.");
+
+        if (manifest.Ui is not null)
+            ValidateUi(manifest.Ui, errors);
+    }
+
+    private static void ValidateUi(HprpManifestUi ui, List<string> errors)
+    {
+        if (!HprpManifestUi.EntryModes.Contains(ui.EntryMode))
+            errors.Add($"manifest.ui.entryMode '{ui.EntryMode}' is not supported.");
+
+        for (var i = 0; i < ui.Parameters.Count; i++)
+        {
+            var param = ui.Parameters[i];
+            var path = $"manifest.ui.parameters[{i}]";
+            if (string.IsNullOrWhiteSpace(param.Name))
+                errors.Add($"{path}.name is required.");
+
+            if (!HprpManifestUi.ParameterSources.Contains(param.Source))
+                errors.Add($"{path}.source '{param.Source}' is not supported.");
+
+            if (string.Equals(param.Source, "default", StringComparison.OrdinalIgnoreCase)
+                && !string.IsNullOrWhiteSpace(param.Generator)
+                && !HprpManifestUi.Generators.Contains(param.Generator))
+            {
+                errors.Add($"{path}.generator '{param.Generator}' is not supported.");
+            }
+
+            if (string.Equals(param.Source, "constant", StringComparison.OrdinalIgnoreCase)
+                && param.Value.ValueKind is JsonValueKind.Undefined or JsonValueKind.Null)
+            {
+                errors.Add($"{path}.value is required when source is constant.");
+            }
+        }
     }
 
     private static void ValidateLayout(HprpLayout layout, List<string> errors)

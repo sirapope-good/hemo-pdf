@@ -132,6 +132,36 @@ public class Clinical01HctEpoSmokeTests
     }
 
     [Fact]
+    public async Task Render_WithHprpPackage_ProducesPdfBytes()
+    {
+        var templatesRoot = FindTemplatesRoot();
+        var store = new Hemo.Pdf.Application.Hprp.FileHprpTemplateStore(
+            Microsoft.Extensions.Options.Options.Create(
+                new Hemo.Pdf.Application.Hprp.HprpTemplateOptions { RootPath = templatesRoot }));
+
+        var renderer = new Clinical01HctEpoReportRenderer(
+            new Clinical01HctEpoDataProvider(),
+            new Clinical01HctEpoComposer(store),
+            new QuestPdfRenderer());
+
+        var context = new PdfReportContext
+        {
+            ReportTemplateId = ClinicalReportCatalog.HctEpo,
+            TenantCode = "local",
+            Metadata = new ReportMetadata { Title = Clinical01HctEpoDataProvider.ReportTitle },
+            Data = JsonDocument.Parse(SampleJson).RootElement.Clone(),
+        };
+
+        var bytes = await renderer.RenderReportAsync(context, CancellationToken.None);
+
+        Assert.True(bytes.Length > 100);
+        Assert.Equal((byte)'%', bytes[0]);
+        Assert.Equal((byte)'P', bytes[1]);
+        Assert.Equal((byte)'D', bytes[2]);
+        Assert.Equal((byte)'F', bytes[3]);
+    }
+
+    [Fact]
     public void BudgetMonthRowHeight_IsTallEnoughForThreeEntries()
     {
         var rowH = Clinical01HctEpoComposer.BudgetMonthRowHeightMm(
@@ -139,5 +169,24 @@ public class Clinical01HctEpoSmokeTests
 
         Assert.True(rowH >= 12f, $"expected month row ≥ 12mm, got {rowH}");
         Assert.True(rowH < 30f, $"expected month row < 30mm, got {rowH}");
+    }
+
+    private static string FindTemplatesRoot()
+    {
+        // Prefer content copied next to test assembly (csproj Content link).
+        var outputCandidate = Path.Combine(AppContext.BaseDirectory, "assets", "templates");
+        if (Directory.Exists(Path.Combine(outputCandidate, "clinical-01-hct-epo")))
+            return outputCandidate;
+
+        var dir = new DirectoryInfo(AppContext.BaseDirectory);
+        while (dir is not null)
+        {
+            var candidate = Path.Combine(dir.FullName, "assets", "templates");
+            if (Directory.Exists(Path.Combine(candidate, "clinical-01-hct-epo")))
+                return candidate;
+            dir = dir.Parent;
+        }
+
+        throw new DirectoryNotFoundException("assets/templates/clinical-01-hct-epo not found.");
     }
 }

@@ -82,8 +82,27 @@ public static class HprpBinder
             };
         }
 
+        // Dense clinical widgets: recognized so .hprp body is not silently dropped.
+        // Pixel layout is composed by dedicated QuestPDF section renderers.
+        if (IsDenseClinicalStubWidget(widget))
+        {
+            return new TextReportBlock
+            {
+                Title = ResolveText(node.Title, data, labels, context),
+                Content = widget,
+                Style = "widget",
+            };
+        }
+
         return null;
     }
+
+    private static bool IsDenseClinicalStubWidget(string widget) =>
+        string.Equals(widget, HprpWidgetIds.ClinicalHctEpoAnnualTable, StringComparison.OrdinalIgnoreCase)
+        || string.Equals(widget, HprpWidgetIds.ClinicalHctEpoCopay, StringComparison.OrdinalIgnoreCase)
+        || string.Equals(widget, HprpWidgetIds.ClinicalEpoDrugTable, StringComparison.OrdinalIgnoreCase)
+        || string.Equals(widget, HprpWidgetIds.ClinicalSoapTable, StringComparison.OrdinalIgnoreCase)
+        || string.Equals(widget, HprpWidgetIds.ClinicalConsentNarrative, StringComparison.OrdinalIgnoreCase);
 
     private static TextReportBlock BindText(
         HprpLayoutNode node,
@@ -122,6 +141,12 @@ public static class HprpBinder
             }
         }
 
+        if (!string.IsNullOrWhiteSpace(node.BindRows)
+            && !string.Equals(node.BindRows, "$flatten", StringComparison.OrdinalIgnoreCase))
+        {
+            rows.AddRange(BindLabelValueRows(node.BindRows, data));
+        }
+
         if (node.AppendFlatten || string.Equals(node.BindRows, "$flatten", StringComparison.OrdinalIgnoreCase))
             rows.AddRange(FlattenScalars(data));
 
@@ -130,6 +155,36 @@ public static class HprpBinder
             Title = ResolveText(node.Title, data, labels, context),
             Rows = rows,
         };
+    }
+
+    private static IReadOnlyList<LabelValue> BindLabelValueRows(string bindRows, JsonElement? data)
+    {
+        var table = HprpJsonPath.Select(data, bindRows);
+        if (table is null || table.Value.ValueKind != JsonValueKind.Array)
+            return [];
+
+        var rows = new List<LabelValue>();
+        foreach (var item in table.Value.EnumerateArray())
+        {
+            if (item.ValueKind != JsonValueKind.Object)
+                continue;
+
+            var label = ReadObjectString(item, "label") ?? ReadObjectString(item, "Label") ?? "";
+            var value = ReadObjectString(item, "value") ?? ReadObjectString(item, "Value") ?? "";
+            if (string.IsNullOrWhiteSpace(label) && string.IsNullOrWhiteSpace(value))
+                continue;
+
+            rows.Add(new LabelValue { Label = label, Value = value });
+        }
+
+        return rows;
+    }
+
+    private static string? ReadObjectString(JsonElement obj, string name)
+    {
+        if (!obj.TryGetProperty(name, out var prop))
+            return null;
+        return HprpJsonPath.AsString(prop);
     }
 
     private static FieldGridReportBlock BindFieldGrid(

@@ -23,6 +23,50 @@
       ]
     },
     "requiresSignature": { "type": "boolean" },
-    "language": { "type": "string" }
+    "language": { "type": "string" },
+    "ui": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "entryMode": {
+          "type": "string",
+          "enum": [
+            "hemosheetList",
+            "patient",
+            "patientMonth",
+            "patientYear",
+            "unitDateRound"
+          ]
+        },
+        "menuGroup": { "type": "string" },
+        "sortOrder": { "type": "integer" },
+        "visibleInMenu": { "type": "boolean" },
+        "reportDataPath": { "type": "string" },
+        "parameters": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["name", "source"],
+            "properties": {
+              "name": { "type": "string", "minLength": 1 },
+              "source": {
+                "type": "string",
+                "enum": ["route", "query", "constant", "default"]
+              },
+              "routeKey": { "type": "string" },
+              "format": { "type": "string" },
+              "generator": {
+                "type": "string",
+                "enum": ["today", "lastMonths"]
+              },
+              "months": { "type": "integer", "minimum": 1 },
+              "required": { "type": "boolean" },
+              "value": {}
+            }
+          }
+        }
+      }
+    }
   }
 }

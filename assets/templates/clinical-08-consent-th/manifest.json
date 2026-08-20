@@ -5,5 +5,28 @@
   "engineVersion": 1,
   "dataAdapter": "consent",
   "requiresSignature": false,
-  "language": "th"
+  "language": "th",
+  "ui": {
+    "entryMode": "patient",
+    "menuGroup": "clinical",
+    "sortOrder": 80,
+    "visibleInMenu": true,
+    "parameters": [
+      {
+        "name": "template",
+        "source": "constant",
+        "value": true
+      },
+      {
+        "name": "type",
+        "source": "constant",
+        "value": "Treatment"
+      },
+      {
+        "name": "lang",
+        "source": "constant",
+        "value": "th"
+      }
+    ]
+  }
 }

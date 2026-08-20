@@ -12,7 +12,8 @@ using QuestPDF.Infrastructure;
 namespace Hemo.Pdf.Layouts.Clinical.Clinical02_EpoDrug;
 
 /// <summary>
-/// Dense QuestPDF layout for clinical-02: ThaiUr header + meta band + injection table + co-pay.
+/// Dense QuestPDF layout for clinical-02. Widget <b>order</b> from <c>.hprp</c>;
+/// meta band stays glued to <c>clinical.epo-drug-table</c> (not a separate reorderable widget yet).
 /// </summary>
 public sealed class Clinical02EpoDrugComposer : ILayoutComposer
 {
@@ -40,6 +41,11 @@ public sealed class Clinical02EpoDrugComposer : ILayoutComposer
         var margin = HemosheetThaiUrStyle.PageMarginMm;
         var rowHeightMm = BudgetRowHeightMm(vm);
         var labels = HprpLabelResolver.Resolve(_templates, context);
+        var package = HprpLayoutPlan.TryGetPackage(_templates, context);
+        var widgets = HprpLayoutPlan.ResolveWidgetOrder(
+            package,
+            HprpClinicalWidgetSets.Clinical02DefaultOrder,
+            HprpClinicalWidgetSets.Clinical02Allowed);
 
         return new QuestLayout
         {
@@ -49,7 +55,7 @@ public sealed class Clinical02EpoDrugComposer : ILayoutComposer
             MarginLeft = margin,
             MarginRight = margin,
             Header = null,
-            Content = c => ComposeContent(c, vm, rowHeightMm, labels),
+            Content = c => ComposeContent(c, vm, rowHeightMm, labels, widgets),
             Footer = null,
         };
     }
@@ -58,15 +64,34 @@ public sealed class Clinical02EpoDrugComposer : ILayoutComposer
         IContainer container,
         EpoDrugReportViewModel vm,
         float rowHeightMm,
+        IReadOnlyDictionary<string, string> labels,
+        IReadOnlyList<string> widgets)
+    {
+        var handlers = new Dictionary<string, Action<IContainer>>(StringComparer.OrdinalIgnoreCase)
+        {
+            [HprpWidgetIds.ThaiUrHeader] = c => ThaiUrReportHeader.Compose(c, vm.Header, vm.Title),
+            [HprpWidgetIds.ClinicalEpoDrugTable] = c => ComposeTableWithMeta(c, vm, rowHeightMm, labels),
+            [HprpWidgetIds.ClinicalHctEpoCopay] = c => _coPayCriteria.Compose(c, vm.CoPayCriteria, labels),
+        };
+
+        container.Column(col =>
+        {
+            col.Spacing(SectionSpacingMm);
+            HprpWidgetDispatch.ComposeColumn(col, widgets, handlers);
+        });
+    }
+
+    private void ComposeTableWithMeta(
+        IContainer container,
+        EpoDrugReportViewModel vm,
+        float rowHeightMm,
         IReadOnlyDictionary<string, string> labels)
     {
         container.Column(col =>
         {
             col.Spacing(SectionSpacingMm);
-            col.Item().Element(c => ThaiUrReportHeader.Compose(c, vm.Header, vm.Title));
             col.Item().Element(c => ComposeMetaBand(c, vm.Meta, labels));
             col.Item().Element(c => _table.Compose(c, vm, rowHeightMm, labels));
-            col.Item().Element(c => _coPayCriteria.Compose(c, vm.CoPayCriteria, labels));
         });
     }
 

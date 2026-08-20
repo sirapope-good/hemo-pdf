@@ -36,13 +36,8 @@ public static class TemplateReportRendererFactory
             return dedicated;
         }
 
-        if (ClinicalReportCatalog.IsKnown(reportTemplateId)
-            && !ClinicalReportCatalog.IsHemodialysisRecord(reportTemplateId))
-        {
-            return typeof(Clinical.ClinicalDefaultReportRenderer);
-        }
-
-        return TemplateRegistration.FallbackRendererType;
+        // Form reports (known pack or future .hprp packages) use HprpBinder pipeline.
+        return typeof(Clinical.ClinicalDefaultReportRenderer);
     }
 
     public static IReadOnlyList<(string ReportTemplateId, Type RendererType)> CreateRegistrations()

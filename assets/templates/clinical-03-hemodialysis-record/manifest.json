@@ -5,5 +5,12 @@
   "engineVersion": 1,
   "dataAdapter": "hemosheet-record",
   "requiresSignature": true,
-  "language": "th"
+  "language": "th",
+  "ui": {
+    "entryMode": "hemosheetList",
+    "menuGroup": "clinical",
+    "sortOrder": 30,
+    "visibleInMenu": true,
+    "parameters": []
+  }
 }

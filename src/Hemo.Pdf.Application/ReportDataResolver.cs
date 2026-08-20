@@ -4,6 +4,7 @@ using System.Text;
 using System.Text.Json;
 using Hemo.Pdf.Core.Constants;
 using Hemo.Pdf.Core.Exceptions;
+using Hemo.Pdf.Core.Hprp;
 using Hemo.Pdf.Core.Models;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Caching.Memory;
@@ -23,17 +24,20 @@ public sealed class ReportDataResolver
     private readonly IHemosheetReportDataClient _reportDataClient;
     private readonly IHttpContextAccessor _httpContextAccessor;
     private readonly IMemoryCache _cache;
+    private readonly IHprpTemplateStore _templates;
 
     public ReportDataResolver(
         IOptions<HemoPdfOptions> options,
         IHemosheetReportDataClient reportDataClient,
         IHttpContextAccessor httpContextAccessor,
-        IMemoryCache cache)
+        IMemoryCache cache,
+        IHprpTemplateStore templates)
     {
         _options = options.Value;
         _reportDataClient = reportDataClient;
         _httpContextAccessor = httpContextAccessor;
         _cache = cache;
+        _templates = templates;
     }
 
     public async Task<GeneratePdfRequest> ResolveAsync(
@@ -68,7 +72,8 @@ public sealed class ReportDataResolver
         var tenantCode = request.TenantCode;
         var parameters = request.Parameters ?? new Dictionary<string, object?>();
         var templateId = HemosheetTemplateIdReader.NormalizeReportTemplateId(request.ReportTemplateId);
-        var fetchKind = ReportDataFetchRegistry.Resolve(templateId);
+        var package = _templates.TryGetCached(tenantCode, templateId);
+        var fetchKind = ReportDataFetchRegistry.Resolve(templateId, package?.Manifest);
 
         JsonElement data = fetchKind switch
         {
@@ -84,6 +89,9 @@ public sealed class ReportDataResolver
                 await FetchMedicinePreparationRoundAsync(request, parameters, authorization, tenantCode, cancellationToken),
             ReportDataFetchKind.ConsentPatientTemplateOrRecord =>
                 await FetchConsentAsync(request, parameters, templateId, authorization, tenantCode, cancellationToken),
+            ReportDataFetchKind.FormPatientByAdapter =>
+                await FetchFormPatientByAdapterAsync(
+                    request, parameters, templateId, package?.Manifest, authorization, tenantCode, cancellationToken),
             ReportDataFetchKind.UnsupportedClinicalForm =>
                 throw new PdfGenerationBadRequestException(
                     $"Report-data API is not implemented for template '{templateId}'. "
@@ -307,6 +315,84 @@ public sealed class ReportDataResolver
 
         _cache.Set(cacheKey, data, CacheDuration);
         return data;
+    }
+
+    private async Task<JsonElement> FetchFormPatientByAdapterAsync(
+        GeneratePdfRequest request,
+        Dictionary<string, object?> parameters,
+        string templateId,
+        HprpManifest? manifest,
+        string? authorization,
+        string tenantCode,
+        CancellationToken cancellationToken)
+    {
+        var patientId = HemosheetFetchSpec.ReadString(parameters, "patientId") ?? request.EntityId;
+        if (string.IsNullOrWhiteSpace(patientId))
+        {
+            throw new PdfGenerationBadRequestException(
+                $"patientId is required for template '{templateId}' report-data.");
+        }
+
+        var pathTemplate = ReportDataFetchRegistry.ResolveFormReportDataPath(manifest, templateId);
+        var path = pathTemplate
+            .Replace("{patientId}", Uri.EscapeDataString(patientId), StringComparison.OrdinalIgnoreCase);
+
+        var query = BuildFormReportQuery(parameters);
+        if (!string.IsNullOrEmpty(query))
+            path = path.Contains('?', StringComparison.Ordinal) ? path + "&" + query : path + "?" + query;
+
+        var cacheKey = string.Join(
+            '|',
+            "report-data",
+            "form-adapter",
+            tenantCode.Trim().ToLowerInvariant(),
+            templateId.Trim().ToLowerInvariant(),
+            patientId.Trim().ToLowerInvariant(),
+            path,
+            AuthFingerprint(authorization));
+
+        if (_cache.TryGetValue(cacheKey, out JsonElement cached))
+            return cached;
+
+        var data = await _reportDataClient.GetRelativePathAsync(
+            path,
+            authorization,
+            tenantCode,
+            cancellationToken);
+
+        _cache.Set(cacheKey, data, CacheDuration);
+        return data;
+    }
+
+    private static string BuildFormReportQuery(Dictionary<string, object?> parameters)
+    {
+        var parts = new List<string>();
+        foreach (var (key, value) in parameters)
+        {
+            if (string.Equals(key, "patientId", StringComparison.OrdinalIgnoreCase)
+                || string.Equals(key, "tcvUsePercent", StringComparison.OrdinalIgnoreCase))
+            {
+                continue;
+            }
+
+            if (value is null)
+                continue;
+
+            var text = value switch
+            {
+                string s => s,
+                bool b => b ? "true" : "false",
+                IFormattable f => f.ToString(null, CultureInfo.InvariantCulture),
+                _ => value.ToString(),
+            };
+
+            if (string.IsNullOrWhiteSpace(text))
+                continue;
+
+            parts.Add($"{Uri.EscapeDataString(key)}={Uri.EscapeDataString(text)}");
+        }
+
+        return string.Join("&", parts);
     }
 
     private async Task<JsonElement> FetchMedicinePreparationRoundAsync(

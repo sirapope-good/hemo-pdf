@@ -71,4 +71,11 @@ public interface IHemosheetReportDataClient
         string? authorizationHeader,
         string tenantCode,
         CancellationToken cancellationToken);
+
+    /// <summary>GET an arbitrary relative Web.Api path (convention form reports).</summary>
+    Task<JsonElement> GetRelativePathAsync(
+        string relativePath,
+        string? authorizationHeader,
+        string tenantCode,
+        CancellationToken cancellationToken);
 }

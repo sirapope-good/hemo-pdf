@@ -23,13 +23,8 @@ public static class TemplateReportPreviewRendererFactory
             return dedicated;
         }
 
-        if (ClinicalReportCatalog.DefaultScaffoldIds.Contains(engineId, StringComparer.OrdinalIgnoreCase)
-            || ClinicalReportCatalog.DefaultScaffoldIds.Contains(reportTemplateId, StringComparer.OrdinalIgnoreCase))
-        {
-            return typeof(HprpReportPreviewRenderer);
-        }
-
-        return typeof(GenericReportPreviewRenderer);
+        // Form reports (known pack or future .hprp packages) use HprpBinder preview.
+        return typeof(HprpReportPreviewRenderer);
     }
 
     public static IReadOnlyList<(string ReportTemplateId, Type RendererType)> CreateRegistrations()

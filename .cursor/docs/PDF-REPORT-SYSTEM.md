@@ -253,6 +253,8 @@ Data → ReportBlock ──┤
 **ที่เก็บ**
 - Default: `assets/templates/{id}/` (manifest + layout + labels)
 - Tenant override: `assets/templates/tenants/{tenant}/{id}.hprp` หรืออัปโหลด `POST /api/templates/{id}`
+- FE menu/entryMode/parameters: `GET /api/report-catalog` (อ่าน `manifest.ui`)
+- Tenant override: `assets/templates/tenants/{tenant}/{id}.hprp` หรืออัปโหลด `POST /api/templates/{id}`
 
 **Flow สั้น ๆ**
 ```
@@ -265,7 +267,8 @@ FileHprpTemplateStore → HprpCatalog (metadata) / HprpBinder (form body) / Hprp
 |------|-----|------------|
 | ฟอร์มทั่วไป | 04, 06, 07, 10–16 | `layout.body` → `HprpBinder` |
 | Hemosheet | 03 | `layout.sections` → `HemosheetLayoutPlanner` |
-| Dedicated | 01, 02, 05, 08, 09 | C# composer + `HprpLabelResolver` (labels จาก `.hprp`) |
+| Dedicated | 01, 02, 05, 08, 09 | C# pixel sections; **order + labels from `.hprp`** (`HprpLayoutPlan` + `HprpWidgetDispatch`) |
+| Form (HPRP) | 04, 06, 07, 10–16 | `layout.body` + trusted `report-data` (`FormPatientByAdapter` / Lab dedicated) |
 
 Spec เต็ม: [docs/HPRP.md](../../docs/HPRP.md)
 
@@ -384,12 +387,13 @@ npm run sync:report-viewer -- --check # CI: fail ถ้า out of sync
 - แก้ viewer ให้แก้ที่ **lib เท่านั้น** แล้วรัน sync — อย่าแก้ตรงที่ copy ฝั่ง frontend
 - frontend transport อยู่ที่ `HEMOSHEET_PREVIEW_PORT` + `HemoPdfPreviewController` (`src/app/share/hemo-pdf/`)
 
-### 9.4 เพิ่ม report/template ใหม่ (frontend)
+### 9.4 เพิ่ม report/template ใหม่ (ไม่แตะ FE)
 
-1. เพิ่ม mapping ใน `hemo-pdf-report-catalog.ts` (`HEMO_PDF_REPORT_TEMPLATES`) + backend `HemosheetTemplateCatalog` (ถ้าเป็น hemosheet variant)
-2. เพิ่ม data fetch ใน backend — DTO ส่ง `layoutContext.hemoPdfTemplateId` อัตโนมัติจาก catalog
-3. ใช้ `HemoPdfPreviewController.load({ reportKey, hemoId, tenantCode, data })` — template id อ่านจาก DTO ก่อน catalog fallback
-4. ขยาย `isHemoPdfReport()` ใน `reports.page` เมื่อมี report ใหม่
+1. **Hemo-PDF:** โฟลเดอร์ `assets/templates/{new-id}/` พร้อม `manifest.json` ที่มี `ui` (entryMode, parameters, reportDataPath) หรืออัปโหลด `.hprp` ผ่าน HemoAdmin
+2. **Web.Api:** `GET api/Patients/{id}/reports/{new-id}/report-data` ตาม convention (ถ้าต้องการข้อมูลจริง)
+3. **FE:** ไม่ต้องแก้โค้ด — เมนูมาจาก `GET /api/report-catalog`
+
+Dedicated engines (01/02/03/05/08/09) ยังต้องมี C# composer เมื่อ layout ไม่ใช่ HprpBinder form
 
 ---
 
@@ -411,7 +415,7 @@ npm run sync:report-viewer -- --check # CI: fail ถ้า out of sync
 | บทบาท | Path |
 |-------|------|
 | DI entry | `src/Hemo.Pdf.Application/ServiceCollectionExtensions.cs` (`AddHemoPdf`) |
-| Controllers | `src/Hemo.Pdf.Api/Controllers/{PdfController,ReportPreviewController}.cs` |
+| Controllers | `src/Hemo.Pdf.Api/Controllers/{PdfController,ReportPreviewController,ReportCatalogController,HprpTemplateController}.cs` |
 | Orchestrators | `src/Hemo.Pdf.Application/{PdfGenerationService,ReportPreviewService}.cs` |
 | Guard | `src/Hemo.Pdf.Application/Guards/SignatureRequiredGuard.cs` |
 | Template registration | `src/Hemo.Pdf.Layouts/.../TemplateRegistration.cs` + `TemplateReport*RendererFactory` |

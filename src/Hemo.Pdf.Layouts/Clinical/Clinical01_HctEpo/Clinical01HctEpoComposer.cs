@@ -11,9 +11,9 @@ using QuestPDF.Infrastructure;
 namespace Hemo.Pdf.Layouts.Clinical.Clinical01_HctEpo;
 
 /// <summary>
-/// Dense QuestPDF layout for clinical-01: shared ThaiUr header (no Date/HD NO.),
-/// annual Hct/EPO table with budgeted month-row height so the co-pay block
-/// snaps to the bottom of the page (paper-form look even when empty).
+/// Dense QuestPDF layout for clinical-01. Section <b>order</b> comes from the
+/// <c>.hprp</c> package (<c>layout.header</c> + <c>layout.body</c> widgets);
+/// pixel drawing stays in dedicated section composers (ThaiUr header, annual table, co-pay).
 /// </summary>
 public sealed class Clinical01HctEpoComposer : ILayoutComposer
 {
@@ -42,6 +42,11 @@ public sealed class Clinical01HctEpoComposer : ILayoutComposer
         var margin = HemosheetThaiUrStyle.PageMarginMm;
         var monthRowHeightMm = BudgetMonthRowHeightMm(vm.CoPayCriteria);
         var labels = HprpLabelResolver.Resolve(_templates, context);
+        var package = HprpLayoutPlan.TryGetPackage(_templates, context);
+        var widgets = HprpLayoutPlan.ResolveWidgetOrder(
+            package,
+            HprpClinicalWidgetSets.Clinical01DefaultOrder,
+            HprpClinicalWidgetSets.Clinical01Allowed);
 
         return new QuestLayout
         {
@@ -51,7 +56,7 @@ public sealed class Clinical01HctEpoComposer : ILayoutComposer
             MarginLeft = margin,
             MarginRight = margin,
             Header = null,
-            Content = c => ComposeContent(c, vm, monthRowHeightMm, labels),
+            Content = c => ComposeContent(c, vm, monthRowHeightMm, labels, widgets),
             Footer = null,
         };
     }
@@ -60,18 +65,20 @@ public sealed class Clinical01HctEpoComposer : ILayoutComposer
         IContainer container,
         HctEpoReportViewModel vm,
         float monthRowHeightMm,
-        IReadOnlyDictionary<string, string> labels)
+        IReadOnlyDictionary<string, string> labels,
+        IReadOnlyList<string> widgets)
     {
+        var handlers = new Dictionary<string, Action<IContainer>>(StringComparer.OrdinalIgnoreCase)
+        {
+            [HprpWidgetIds.ThaiUrHeader] = c => ThaiUrReportHeader.Compose(c, vm.Header, vm.Title),
+            [HprpWidgetIds.ClinicalHctEpoAnnualTable] = c => _annualTable.Compose(c, vm, monthRowHeightMm, labels),
+            [HprpWidgetIds.ClinicalHctEpoCopay] = c => _coPayCriteria.Compose(c, vm.CoPayCriteria, labels),
+        };
+
         container.Column(col =>
         {
             col.Spacing(SectionSpacingMm);
-
-            col.Item().Element(c =>
-                ThaiUrReportHeader.Compose(c, vm.Header, vm.Title));
-
-            col.Item().Element(c => _annualTable.Compose(c, vm, monthRowHeightMm, labels));
-
-            col.Item().Element(c => _coPayCriteria.Compose(c, vm.CoPayCriteria, labels));
+            HprpWidgetDispatch.ComposeColumn(col, widgets, handlers);
         });
     }
 

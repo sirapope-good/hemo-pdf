@@ -24,4 +24,8 @@ public sealed class HprpManifest
 
     [JsonPropertyName("language")]
     public string? Language { get; init; }
+
+    /// <summary>Optional FE menu / picker / parameter metadata.</summary>
+    [JsonPropertyName("ui")]
+    public HprpManifestUi? Ui { get; init; }
 }

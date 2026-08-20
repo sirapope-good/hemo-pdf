@@ -15,8 +15,8 @@ namespace Hemo.Pdf.Layouts.Clinical.Clinical08_Consent;
 
 /// <summary>
 /// Consent under the shared ThaiUr header + narrative content frame
-/// (<see cref="NarrativeLayout"/>). Treatment intro/roles match thaiur-report #08 paper.
-/// New-consent <see cref="ConsentReportViewModel.SkeletonExample"/> shows "..." in fill/sign zones.
+/// (<see cref="NarrativeLayout"/>). Header/body widgets come from <c>.hprp</c>;
+/// narrative internals stay C# (intro / paragraphs / signatures).
 /// </summary>
 public sealed class ConsentReportComposer : ILayoutComposer
 {
@@ -35,6 +35,16 @@ public sealed class ConsentReportComposer : ILayoutComposer
         var margin = HemosheetThaiUrStyle.PageMarginMm;
         var overlay = HprpLabelResolver.Resolve(_templates, context, vm.Language);
         var labels = ConsentReportLabels.For(vm.Language, overlay);
+        var package = HprpLayoutPlan.TryGetPackage(_templates, context);
+        var headerWidget = HprpLayoutPlan.ResolveHeaderWidget(
+            package,
+            HprpWidgetIds.ThaiUrHeader,
+            HprpClinicalWidgetSets.ConsentHeaderAllowed);
+        var bodyWidgets = HprpLayoutPlan.ResolveBodyWidgets(
+            package,
+            HprpClinicalWidgetSets.ConsentBodyDefault,
+            HprpClinicalWidgetSets.ConsentBodyAllowed);
+
         return new QuestLayout
         {
             MarginMillimeters = margin,
@@ -43,7 +53,7 @@ public sealed class ConsentReportComposer : ILayoutComposer
             MarginLeft = margin,
             MarginRight = margin,
             Header = null,
-            Content = c => ComposeContent(c, vm, labels),
+            Content = c => ComposeContent(c, vm, labels, headerWidget, bodyWidgets),
             Footer = null,
         };
     }
@@ -51,16 +61,38 @@ public sealed class ConsentReportComposer : ILayoutComposer
     private static void ComposeContent(
         IContainer container,
         ConsentReportViewModel vm,
-        ConsentReportLabels labels)
+        ConsentReportLabels labels,
+        string headerWidget,
+        IReadOnlyList<string> bodyWidgets)
     {
         var isEn = string.Equals(vm.Language, "en", StringComparison.OrdinalIgnoreCase);
         var isTreatment = !string.Equals(vm.Type, "PDPA", StringComparison.OrdinalIgnoreCase);
         var bodyFont = isEn ? 10.5f : 11f;
 
+        Action<IContainer> header = string.Equals(
+            headerWidget,
+            HprpWidgetIds.ThaiUrHeader,
+            StringComparison.OrdinalIgnoreCase)
+            ? c => ThaiUrReportHeader.Compose(c, vm.Header, labels.HeaderTitle(isTreatment))
+            : _ => { };
+
+        var bodyHandlers = new Dictionary<string, Action<IContainer>>(StringComparer.OrdinalIgnoreCase)
+        {
+            [HprpWidgetIds.ClinicalConsentNarrative] = c =>
+                ComposeFramedBody(c, vm, labels, isTreatment, bodyFont),
+        };
+
         NarrativeLayout.Compose(
             container,
-            header => ThaiUrReportHeader.Compose(header, vm.Header, labels.HeaderTitle(isTreatment)),
-            body => ComposeFramedBody(body, vm, labels, isTreatment, bodyFont));
+            header,
+            body =>
+            {
+                body.Column(col =>
+                {
+                    col.Spacing(0);
+                    HprpWidgetDispatch.ComposeColumn(col, bodyWidgets, bodyHandlers);
+                });
+            });
     }
 
     private static void ComposeFramedBody(

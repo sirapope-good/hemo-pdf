@@ -5,5 +5,25 @@
   "engineVersion": 1,
   "dataAdapter": "clinical-02-epo-drug",
   "requiresSignature": false,
-  "language": "th"
+  "language": "th",
+  "ui": {
+    "entryMode": "patientMonth",
+    "menuGroup": "clinical",
+    "sortOrder": 20,
+    "visibleInMenu": true,
+    "parameters": [
+      {
+        "name": "month",
+        "source": "route",
+        "routeKey": "period",
+        "format": "yyyy-MM",
+        "required": true
+      },
+      {
+        "name": "medicineId",
+        "source": "query",
+        "required": true
+      }
+    ]
+  }
 }
