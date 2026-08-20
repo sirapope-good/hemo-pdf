@@ -37,7 +37,17 @@ public static class HprpBinder
         IReadOnlyDictionary<string, string> labels,
         PdfReportContext? context)
     {
+        if (!string.IsNullOrWhiteSpace(node.Widget))
+        {
+            var fromWidget = BindWidget(node, data, labels, context);
+            if (fromWidget is not null)
+                return fromWidget;
+        }
+
         var type = node.Type?.Trim().ToLowerInvariant();
+        if (string.IsNullOrWhiteSpace(type))
+            return null;
+
         return type switch
         {
             "text" => BindText(node, data, labels, context),
@@ -48,6 +58,31 @@ public static class HprpBinder
             "signature" => BindSignature(context),
             _ => null,
         };
+    }
+
+    private static ReportBlock? BindWidget(
+        HprpLayoutNode node,
+        JsonElement? data,
+        IReadOnlyDictionary<string, string> labels,
+        PdfReportContext? context)
+    {
+        var widget = node.Widget!.Trim().ToLowerInvariant();
+        if (string.Equals(widget, HprpWidgetIds.ThaiUrHeader, StringComparison.OrdinalIgnoreCase))
+        {
+            var title = ResolveText(node.Title, data, labels, context)
+                ?? context?.Metadata.Title
+                ?? "";
+            if (string.IsNullOrWhiteSpace(title))
+                return null;
+
+            return new TextReportBlock
+            {
+                Content = title,
+                Style = "title",
+            };
+        }
+
+        return null;
     }
 
     private static TextReportBlock BindText(
@@ -106,14 +141,22 @@ public static class HprpBinder
         var fields = new List<FieldGridField>();
         foreach (var field in node.Fields ?? [])
         {
+            var label = ResolveText(field.Label, data, labels, context) ?? "";
+            var value = ResolveText(field.Content, data, labels, context)
+                ?? ResolveBind(field.Bind, data, context);
+            if (string.IsNullOrWhiteSpace(label) && string.IsNullOrWhiteSpace(value))
+                continue;
+
             fields.Add(new FieldGridField
             {
-                Label = ResolveText(field.Label, data, labels, context) ?? "",
-                Value = ResolveText(field.Content, data, labels, context)
-                    ?? ResolveBind(field.Bind, data, context),
+                Label = label,
+                Value = value,
                 ColumnSpan = field.ColumnSpan <= 0 ? 1 : field.ColumnSpan,
             });
         }
+
+        if (fields.Count == 0)
+            return null;
 
         return new FieldGridReportBlock
         {

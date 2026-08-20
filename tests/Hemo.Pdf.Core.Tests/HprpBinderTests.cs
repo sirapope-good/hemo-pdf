@@ -86,6 +86,63 @@ public class HprpBinderTests
     }
 
     [Fact]
+    public void Bind_SkipsEmptyFieldGridRows_AndBindsThaiUrHeaderWidget()
+    {
+        var package = new HprpPackage
+        {
+            Manifest = new HprpManifest
+            {
+                Id = "clinical-01-hct-epo",
+                DisplayName = "HCT/EPO",
+                DataAdapter = HprpDataAdapterIds.FlattenDto,
+            },
+            Layout = new HprpLayout
+            {
+                Body =
+                [
+                    new HprpLayoutNode
+                    {
+                        Widget = HprpWidgetIds.ThaiUrHeader,
+                        Title = JsonSerializer.SerializeToElement(new Dictionary<string, string> { ["$bind"] = "$title" }),
+                    },
+                    new HprpLayoutNode
+                    {
+                        Type = "field-grid",
+                        Fields =
+                        [
+                            new HprpFieldNode { Label = JsonSerializer.SerializeToElement(""), Bind = "$.missing" },
+                            new HprpFieldNode
+                            {
+                                Label = JsonSerializer.SerializeToElement(new Dictionary<string, string> { ["$label"] = "hn" }),
+                                Bind = "$.hn",
+                            },
+                        ],
+                    },
+                ],
+            },
+            LabelsByLanguage = new Dictionary<string, IReadOnlyDictionary<string, string>>
+            {
+                ["th"] = new Dictionary<string, string> { ["hn"] = "HN" },
+            },
+        };
+
+        var data = JsonSerializer.SerializeToElement(new { hn = "HN-9" });
+        var context = new PdfReportContext
+        {
+            ReportTemplateId = "clinical-01-hct-epo",
+            TenantCode = "local",
+            Metadata = new() { Title = "HCT/EPO Report" },
+        };
+
+        var blocks = HprpBinder.Bind(package, data, context, "th");
+
+        Assert.Contains(blocks, b => b is TextReportBlock text && text.Content == "HCT/EPO Report" && text.Style == "title");
+        var grid = Assert.IsType<FieldGridReportBlock>(blocks.OfType<FieldGridReportBlock>().Single());
+        Assert.Single(grid.Fields);
+        Assert.Equal("HN-9", grid.Fields[0].Value);
+    }
+
+    [Fact]
     public void Validator_RejectsUnknownWidgetAndNewEngine()
     {
         var package = new HprpPackage

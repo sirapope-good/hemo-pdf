@@ -73,4 +73,12 @@ public sealed class HprpTemplateController : ControllerBase
 
         return NoContent();
     }
+
+    [HttpDelete("{templateId}")]
+    [EnableRateLimiting("PdfGeneration")]
+    public async Task<IActionResult> Delete(string templateId, CancellationToken cancellationToken)
+    {
+        await _store.DeleteTenantOverrideAsync(_tenant.TenantCode, templateId, cancellationToken);
+        return NoContent();
+    }
 }

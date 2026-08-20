@@ -14,6 +14,11 @@ public interface IHprpTemplateStore
         Stream zipStream,
         CancellationToken cancellationToken = default);
 
+    Task DeleteTenantOverrideAsync(
+        string tenantCode,
+        string templateId,
+        CancellationToken cancellationToken = default);
+
     IReadOnlyList<HprpManifest> ListDefaultManifests();
 
     bool HasTenantOverride(string tenantCode, string templateId);

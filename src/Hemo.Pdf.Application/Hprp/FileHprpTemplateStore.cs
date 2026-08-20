@@ -95,6 +95,29 @@ public sealed class FileHprpTemplateStore : IHprpTemplateStore
         _logger?.LogInformation("Saved tenant .hprp override {Path}", path);
     }
 
+    public Task DeleteTenantOverrideAsync(
+        string tenantCode,
+        string templateId,
+        CancellationToken cancellationToken = default)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+
+        var tenant = NormalizeTenant(tenantCode);
+        if (string.IsNullOrWhiteSpace(tenant))
+            throw new ArgumentException("Tenant code is required.", nameof(tenantCode));
+
+        var id = ClinicalReportCatalog.ResolveEngineTemplateId(templateId);
+        var path = TenantPackagePath(tenant, id);
+        if (File.Exists(path))
+        {
+            File.Delete(path);
+            _logger?.LogInformation("Deleted tenant .hprp override {Path}", path);
+        }
+
+        _tenantCache.TryRemove(TenantKey(tenant, id), out _);
+        return Task.CompletedTask;
+    }
+
     public IReadOnlyList<HprpManifest> ListDefaultManifests() =>
         _defaults.Values.Select(p => p.Manifest).OrderBy(m => m.Id, StringComparer.OrdinalIgnoreCase).ToList();
 
