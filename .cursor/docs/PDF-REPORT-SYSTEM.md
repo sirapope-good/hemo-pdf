@@ -374,7 +374,7 @@ flowchart LR
 | Phase | สิ่งที่ทำ | ความรับผิดชอบที่ลด |
 |-------|----------|-------------------|
 | **A — ตอนนี้** | FE `useHemoPdfPreview` + catalog; profile จาก `LayoutProfile`; `.trdp` sync เงียบ ๆ | Admin ไม่เลือก `.trdp`; layout ไม่ผูกชื่อไฟล์ |
-| **B — default on** | เปิด `useHemoPdfPreview` default สำหรับ tenant ใหม่ / UAT แล้ว prod | ผู้ใช้ส่วนใหญ่ไม่แตะ `tr-viewer` |
+| **B — default on** | เปิด `useHemoPdfPreview` default สำหรับ tenant ใหม่ / local offline bootstrap; `pdfApiUrl` เติมจาก `HemoPdf:DefaultBaseUrl` | ผู้ใช้ส่วนใหญ่ไม่แตะ `tr-viewer` |
 | **C — feature freeze Telerik** | ไม่แก้ `.trdp` ใหม่; แก้เฉพาะ Hemo-PDF / `.hprp` | ทีม layout โฟกัสที่เดียว |
 | **D — stop Report.Api for clinical** | ปิด export/preview ผ่าน Report.Api สำหรับ clinical pack; เหลือ plugin/legacy ถ้ามี | ลด deploy Report.Api + Telerik license surface |
 | **E — remove dual-stack sync** | เลิกเขียน `HemosheetTemplate` จาก profile; ลบ field จาก Admin/API เมื่อไม่มี consumer | setting เหลือ `LayoutProfile` + fixed lines |
