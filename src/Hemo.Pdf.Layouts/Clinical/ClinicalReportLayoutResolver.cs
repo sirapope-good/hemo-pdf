@@ -18,12 +18,9 @@ public enum ClinicalLayoutKind
 }
 
 /// <summary>
-/// Chooses layout path for clinical-03 Hemodialysis Record.
+/// Chooses layout path for clinical-03 Hemodialysis Record from
+/// <see cref="HemosheetLayoutProfile"/> (tenant setting / report-data layoutContext).
 /// </summary>
-/// <remarks>
-/// DEV: profile from HemosheetTemplate .trdp via HemosheetTemplateCatalog.
-/// TODO(prod): resolve from tenantCode / dedicated setting.
-/// </remarks>
 public static class ClinicalReportLayoutResolver
 {
     public static ClinicalLayoutKind Resolve(string reportTemplateId, HemosheetLayoutProfile profile)

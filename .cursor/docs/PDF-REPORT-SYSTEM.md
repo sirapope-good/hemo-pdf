@@ -105,10 +105,10 @@ GET /api/Hemodialysis/report-data/template?unitId=&templateMode=hd|hdf   // ฟ�
 - `HemosheetLayoutResolver` = **การ port กติกา `Visible` จาก Telerik `.trdp` มาเป็น C# ที่ test ได้** คำนวณ:
   - `DialysisMode` (HD/HDF จาก `Mode`)
   - `VascularAccess` (AvFistula / PermCath จาก `CatheterType` หรือ `BloodAccessRoute`)
-  - `LayoutProfile` (Default / Rama / ThaiUr — resolve จาก **ชื่อไฟล์ template** ใน per-tenant setting)
+  - `LayoutProfile` (Default / Rama / ThaiUr — จาก **`LayoutProfile` setting** เป็นหลัก; fallback ชื่อไฟล์ `.trdp` ใน `HemosheetTemplate` สำหรับ dual-stack Telerik)
   - `Features` dict (`showHdfColumns`, `showAvPanel`, `showCathPanel`, `showAcFields`, `showConsentBlock`, `showNurseInShiftNonPn`, ...)
 
-> **จุดสำคัญ:** "tenant profile" ไม่ได้ hardcode ตาม tenant code — มาจากค่า `GlobalSetting.Hemosheet.Report.HemosheetTemplate` (เก็บใน tenant DB) ที่ตั้งชื่อไฟล์ `.trdp` เช่น `Hemosheet-RAMA.trdp` → profile = Rama
+> **จุดสำคัญ:** tenant profile สำหรับ Hemo-PDF มาจาก `GlobalSetting.Hemosheet.Report.LayoutProfile` (Default/Rama/ThaiUr). ค่า `HemosheetTemplate` (ชื่อ `.trdp`) ยังใช้กับ Telerik และเป็น fallback เมื่อ `LayoutProfile` ว่าง — HemoAdmin normalize จะเติม `LayoutProfile` จาก `.trdp` ตอน save
 
 ### ขั้นที่ 2 — Frontend เรียก preview/generate (Hemo-frontend)
 
@@ -266,7 +266,7 @@ FileHprpTemplateStore → HprpCatalog (metadata) / HprpBinder (form body) / Hprp
 | กลุ่ม | ids | ไฟล์ควบคุม |
 |------|-----|------------|
 | ฟอร์มทั่วไป | 04, 06, 07, 10–16 | `layout.body` → `HprpBinder` |
-| Hemosheet | 03 | `layout.sections` → `HemosheetLayoutPlanner` |
+| Hemosheet | 03 | `layout.sections` → `HprpHemosheetPlanInterpreter` (fallback `PlanBuiltin`); profile จาก BE `LayoutProfile` |
 | Dedicated | 01, 02, 05, 08, 09 | C# pixel sections; **order + labels from `.hprp`** (`HprpLayoutPlan` + `HprpWidgetDispatch`) |
 | Form (HPRP) | 04, 06, 07, 10–16 | `layout.body` + trusted `report-data` (`FormPatientByAdapter` / Lab dedicated) |
 
@@ -365,7 +365,7 @@ flowchart LR
 | **Dual pipeline PDF + ReportDocument** | Hemosheet maintain `ComposePdf` + `MapToPreview`; Hemopro preview ใช้ JSON DOM (ยกเว้น ThaiUr), print ใช้ PDF | ต้นทุนเพิ่ม template/section สูง — ยอมรับเพื่อความรู้สึก Telerik |
 | **ThaiUr preview** | FE บังคับ PDF-as-preview สำหรับ `layoutProfile=ThaiUr` | ปิด drift DOM≠PDF สำหรับ profile นี้ |
 | **Client-trust DTO** | เมื่อ `UseServerFetch=true` Hemo-PDF ดึง report-data จาก Web.Api (JWT forward); ปิด flag = กลับ client-trust | เปิด UseServerFetch ใน Dev; production ควรเปิดคู่ flag FE |
-| **Clinical pack profile จาก `.trdp` (DEV)** | แพ็คกลาง 16 รายงานใช้ `HemosheetTemplate` → `HemosheetTemplateCatalog` → `LayoutProfile` เป็นตัวชี้ชั่วคราว (ThaiUR override เฉพาะ #03). Canonical engine id = `clinical-03-hemodialysis-record` (alias เก่า: `hemosheet`, `template-04-hemosheet`) | **TODO(prod):** resolve จาก `tenantCode` / setting แยก — อย่าพึ่งชื่อไฟล์ `.trdp` ก่อน production |
+| **Clinical pack layout profile** | `GlobalSetting.Hemosheet.Report.LayoutProfile` (`Default` / `Rama` / `ThaiUr`) → `layoutContext.layoutProfile` ใน report-data; Hemo-PDF planner / dense form ใช้ค่านี้ | Legacy fallback: ยัง map จาก `HemosheetTemplate` `.trdp` ได้ถ้า `LayoutProfile` ว่าง |
 | **Telerik fallback** | `useHemoPdfPreview` + `tr-viewer` ยัง active; plugin send ยังใช้ Report.Api | dual stack จนกว่าจะ cutover |
 | **Layout resolver ทำซ้ำกับ .trdp** | กติกา visibility อยู่ทั้งใน `.trdp` และ `HemosheetLayoutResolver` | sync 2 ที่จนกว่าจะเลิก Telerik |
 | **ยังเป็น copy (ไม่ใช่ package จริง)** | sync script ลด drift แต่ยังเป็น source copy | รัน sync เมื่อ lib เปลี่ยน |

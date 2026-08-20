@@ -43,12 +43,14 @@ internal static class HemosheetLayoutContextFallback
         var catheterType = vm.AvShunt.CatheterType;
         var route = vm.DialysisPrescription.BloodAccessRoute ?? "";
         var isAv = catheterType is < 2 || route.Contains("AV", StringComparison.OrdinalIgnoreCase);
+        var profile = ResolveProfile(vm);
 
         return new HemosheetLayoutContextViewModel
         {
-            LayoutProfile = HemosheetLayoutProfile.Default,
+            LayoutProfile = profile,
             DialysisMode = isHdf ? "HDF" : "HD",
             VascularAccess = isAv ? VascularAccessKind.AvFistula : VascularAccessKind.PermCath,
+            ReportSettings = vm.LayoutContext.ReportSettings,
             Features = new Dictionary<string, bool>(StringComparer.OrdinalIgnoreCase)
             {
                 ["showHdfColumns"] = isHdf,
@@ -57,8 +59,30 @@ internal static class HemosheetLayoutContextFallback
                 ["showAcFields"] = !vm.IsAcNotUsed,
                 ["showProgressNote"] = vm.ProgressNotes.Count > 0,
                 ["showNurseInShift"] = !string.IsNullOrWhiteSpace(vm.NursesInShift),
-                ["showConsentBlock"] = vm.IsConsent,
+                ["showNurseInShiftNonPn"] = profile == HemosheetLayoutProfile.ThaiUr,
+                ["showConsentBlock"] = profile == HemosheetLayoutProfile.Rama && vm.IsConsent,
             },
         };
+    }
+
+    private static HemosheetLayoutProfile ResolveProfile(HemosheetReportViewModel vm)
+    {
+        if (vm.LayoutContext.LayoutProfile != HemosheetLayoutProfile.Default)
+            return vm.LayoutContext.LayoutProfile;
+
+        var settings = vm.LayoutContext.ReportSettings;
+        if (!string.IsNullOrWhiteSpace(settings.LayoutProfile)
+            && Enum.TryParse(settings.LayoutProfile, ignoreCase: true, out HemosheetLayoutProfile fromSetting))
+        {
+            return fromSetting;
+        }
+
+        var template = settings.HemosheetTemplate ?? "";
+        if (template.Contains("ThaiUR", StringComparison.OrdinalIgnoreCase))
+            return HemosheetLayoutProfile.ThaiUr;
+        if (template.Contains("RAMA", StringComparison.OrdinalIgnoreCase))
+            return HemosheetLayoutProfile.Rama;
+
+        return HemosheetLayoutProfile.Default;
     }
 }

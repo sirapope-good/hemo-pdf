@@ -246,6 +246,8 @@ public sealed class HemosheetLayoutContextViewModel
 public sealed class HemosheetReportSettingsViewModel
 {
     public string? HemosheetTemplate { get; init; }
+    /// <summary>Preferred profile name (Default / Rama / ThaiUr). See BE LayoutProfile setting.</summary>
+    public string? LayoutProfile { get; init; }
     public bool NurseInShiftEnabled { get; init; }
     /// <summary>
     /// When true, ThaiUR header shows Date + HD NO. in their own cell beside Diagnosis/Drug Allergy.

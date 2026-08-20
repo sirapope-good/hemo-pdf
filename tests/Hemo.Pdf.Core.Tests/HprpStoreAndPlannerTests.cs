@@ -60,16 +60,33 @@ public class HprpStoreAndPlannerTests
         var builtin = new HemosheetLayoutPlanner(new HemosheetLayoutProfileRegistry());
         var fromFile = new HemosheetLayoutPlanner(new HemosheetLayoutProfileRegistry(), store, null);
 
+        var vm = CreateVm(HemosheetLayoutProfile.Default, showAv: true);
+
+        var expected = builtin.Plan(vm).Select(p => (p.SectionId, p.Variant)).ToList();
+        var actual = fromFile.Plan(vm).Select(p => (p.SectionId, p.Variant)).ToList();
+        Assert.Equal(expected, actual);
+    }
+
+    [Fact]
+    public void Planner_FromHprp_ThaiUrUsesAssessmentReNotPreRe()
+    {
+        var store = CreateStore();
+        var package = store.TryGetCached("local", ClinicalReportCatalog.HemodialysisRecord);
+        Assert.NotNull(package);
+        Assert.NotEmpty(package!.Layout.Sections);
+
+        var planner = new HemosheetLayoutPlanner(new HemosheetLayoutProfileRegistry(), store, null);
         var vm = new HemosheetReportViewModel
         {
             Patient = new HemosheetPatientViewModel { Diagnosis = "CKD stage 5" },
             Assessments = new HemosheetAssessmentsViewModel
             {
                 Pre = [new HemosheetAssessmentItemViewModel { Name = "pain", Checked = true }],
+                Re = [new HemosheetAssessmentItemViewModel { Name = "re-check", Checked = true }],
             },
             LayoutContext = new HemosheetLayoutContextViewModel
             {
-                LayoutProfile = HemosheetLayoutProfile.Default,
+                LayoutProfile = HemosheetLayoutProfile.ThaiUr,
                 Features = new Dictionary<string, bool>
                 {
                     ["showAvPanel"] = true,
@@ -83,10 +100,49 @@ public class HprpStoreAndPlannerTests
             },
         };
 
-        var expected = builtin.Plan(vm).Select(p => (p.SectionId, p.Variant)).ToList();
-        var actual = fromFile.Plan(vm).Select(p => (p.SectionId, p.Variant)).ToList();
-        Assert.Equal(expected, actual);
+        var ids = planner.Plan(vm).Select(p => p.SectionId).ToList();
+        Assert.Contains(HemosheetSectionId.AssessmentRe, ids);
+        Assert.DoesNotContain(HemosheetSectionId.AssessmentPreRe, ids);
     }
+
+    [Fact]
+    public void Planner_FromHprp_RamaIncludesConsentWhenFeatureOn()
+    {
+        var store = CreateStore();
+        var planner = new HemosheetLayoutPlanner(new HemosheetLayoutProfileRegistry(), store, null);
+        var vm = CreateVm(HemosheetLayoutProfile.Rama, showAv: true, consent: true);
+
+        var ids = planner.Plan(vm).Select(p => p.SectionId).ToList();
+        Assert.Contains(HemosheetSectionId.Consent, ids);
+    }
+
+    private static HemosheetReportViewModel CreateVm(
+        HemosheetLayoutProfile profile,
+        bool showAv,
+        bool consent = false) =>
+        new()
+        {
+            Patient = new HemosheetPatientViewModel { Diagnosis = "CKD stage 5" },
+            Assessments = new HemosheetAssessmentsViewModel
+            {
+                Pre = [new HemosheetAssessmentItemViewModel { Name = "pain", Checked = true }],
+            },
+            LayoutContext = new HemosheetLayoutContextViewModel
+            {
+                LayoutProfile = profile,
+                Features = new Dictionary<string, bool>
+                {
+                    ["showAvPanel"] = showAv,
+                    ["showCathPanel"] = !showAv,
+                    ["showHdfColumns"] = false,
+                    ["showConsentBlock"] = consent,
+                },
+                ReportSettings = new HemosheetReportSettingsViewModel
+                {
+                    FixedLines = new HemosheetFixedLinesViewModel(),
+                },
+            },
+        };
 
     [Fact]
     public void PreviewFactory_ScaffoldUsesHprpRenderer()

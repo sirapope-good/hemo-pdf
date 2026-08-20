@@ -1,4 +1,6 @@
+using Hemo.Pdf.Core.Abstractions;
 using Hemo.Pdf.Core.Constants;
+using Hemo.Pdf.Core.Hprp;
 using Hemo.Pdf.Layouts.Clinical;
 using Hemo.Pdf.Layouts.Clinical.Clinical01_HctEpo;
 using Hemo.Pdf.Layouts.Clinical.Clinical02_EpoDrug;
@@ -62,7 +64,11 @@ public static class TemplateRegistration
         services.AddScoped<HprpReportDocumentComposer>();
         services.AddScoped<HprpReportPreviewRenderer>();
 
-        services.AddScoped<Hemosheet.HemosheetLayoutPlanner>();
+        services.AddScoped<Hemosheet.HemosheetLayoutPlanner>(sp =>
+            new Hemosheet.HemosheetLayoutPlanner(
+                sp.GetRequiredService<Hemosheet.HemosheetLayoutProfileRegistry>(),
+                sp.GetRequiredService<IHprpTemplateStore>(),
+                sp.GetRequiredService<ITenantContextAccessor>()));
         services.AddScoped<Hemosheet.IHemosheetLayoutPlanner>(sp => sp.GetRequiredService<Hemosheet.HemosheetLayoutPlanner>());
         services.AddHemosheetSectionRenderers();
         services.AddScoped<HemosheetDataProvider>();

@@ -93,6 +93,7 @@ JSON schema: `assets/templates/schema/hprp-layout.schema.json`
 
 | Report | `.hprp` / data drives today |
 |--------|------------------------------|
+| **clinical-03** | `layout.sections` → planner (`HprpHemosheetPlanInterpreter`); profile จาก BE `LayoutProfile` (ไม่พึ่งชื่อ `.trdp`) |
 | **clinical-01** | Section order (`header`+`body`) + labels — pixels in C# sections |
 | **clinical-02** | Same; `clinical.epo-drug-table` includes meta band (not separate widget yet) |
 | **clinical-05** | `layout.header` → repeating page header; `layout.body` → SOAP |
