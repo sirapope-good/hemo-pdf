@@ -1,4 +1,5 @@
 using System.Text.Json;
+using Hemo.Pdf.Application.Hprp;
 using Hemo.Pdf.Core.Constants;
 using Hemo.Pdf.Core.Context;
 using Hemo.Pdf.Core.Hprp;
@@ -124,6 +125,75 @@ public class HprpBinderTests
     }
 
     [Fact]
+    public void Bind_DataGridChrome_ParsesColumnWidthsAndHeaderFill()
+    {
+        var package = new HprpPackage
+        {
+            Manifest = new HprpManifest
+            {
+                Id = ClinicalReportCatalog.Lab,
+                DisplayName = "Laboratory Record",
+                DataAdapter = HprpDataAdapterIds.FlattenDto,
+            },
+            Layout = new HprpLayout
+            {
+                Body =
+                [
+                    new HprpLayoutNode
+                    {
+                        Type = "data-grid",
+                        BindRows = "$.rows",
+                        ColumnHeaders = ["A", "B"],
+                        Chrome = new HprpChrome
+                        {
+                            HeaderFill = "#C0C0FF",
+                            Border = "medium",
+                            FontSize = 8,
+                            ColumnWidths = ["2", "*"],
+                        },
+                    },
+                ],
+            },
+        };
+
+        var data = JsonSerializer.SerializeToElement(new
+        {
+            rows = new[] { new[] { "1", "2" } },
+        });
+
+        var grid = Assert.IsType<DataGridReportBlock>(HprpBinder.Bind(package, data).Single());
+        Assert.Equal("#C0C0FF", grid.Chrome?.HeaderFill);
+        Assert.Equal("medium", grid.Chrome?.Border);
+        Assert.Equal([2f, 1f], grid.ColumnWeights);
+        Assert.Equal("#C0C0FF", HprpChrome.ResolveHeaderFill(grid.Chrome, null, "#DCE6F2"));
+        Assert.Equal(1f, HprpChrome.ResolveBorderWidth(grid.Chrome));
+    }
+
+    [Fact]
+    public void FirstFileHeaderFillFromLayout_SkipsBrandingToken_AndUsesLaterHex()
+    {
+        var layout = new HprpLayout
+        {
+            Body =
+            [
+                new HprpLayoutNode
+                {
+                    Type = "field-grid",
+                    Chrome = new HprpChrome { HeaderFill = HprpChrome.BrandingHeaderFill },
+                },
+                new HprpLayoutNode
+                {
+                    Type = "data-grid",
+                    When = JsonSerializer.SerializeToElement("$.rows.length > 0"),
+                    Chrome = new HprpChrome { HeaderFill = "#FFCC00" },
+                },
+            ],
+        };
+
+        Assert.Equal("#FFCC00", HprpChrome.FirstFileHeaderFillFromLayout(layout));
+    }
+
+    [Fact]
     public void Bind_SkipsEmptyFieldGridRows_AndBindsThaiUrHeaderWidget()
     {
         var package = new HprpPackage
@@ -204,6 +274,36 @@ public class HprpBinderTests
         Assert.Contains(result.Errors, e => e.Contains("dataAdapter"));
         Assert.Contains(result.Errors, e => e.Contains("unknown widget"));
     }
+
+    [Fact]
+    public void Validator_RejectsInvalidChromeHeaderFill()
+    {
+        var package = new HprpPackage
+        {
+            Manifest = new HprpManifest
+            {
+                Id = "x",
+                DisplayName = "X",
+                DataAdapter = HprpDataAdapterIds.FlattenDto,
+            },
+            Layout = new HprpLayout
+            {
+                Body =
+                [
+                    new HprpLayoutNode
+                    {
+                        Type = "text",
+                        Bind = "$title",
+                        Chrome = new HprpChrome { HeaderFill = "purple" },
+                    },
+                ],
+            },
+        };
+
+        var result = HprpValidator.Validate(package);
+        Assert.False(result.IsValid);
+        Assert.Contains(result.Errors, e => e.Contains("headerFill"));
+    }
 }
 
 public class HprpPackageAndStoreTests
@@ -217,6 +317,21 @@ public class HprpPackageAndStoreTests
         Assert.Equal(ClinicalReportCatalog.Lab, package.Manifest.Id);
         Assert.True(HprpValidator.Validate(package).IsValid);
         Assert.NotEmpty(package.Layout.Body);
+    }
+
+    [Fact]
+    public void Serialize_LabPackage_DefaultStjThrows_HprpJsonSucceeds()
+    {
+        var package = HprpPackageReader.ReadDirectory(HprpTestAssets.PackageDir(ClinicalReportCatalog.Lab));
+        var dto = HprpStudioPackageDto.FromPackage(package);
+
+        Assert.Throws<InvalidOperationException>(() => JsonSerializer.Serialize(dto));
+
+        var options = new JsonSerializerOptions { PropertyNamingPolicy = JsonNamingPolicy.CamelCase };
+        HprpJson.ApplyTo(options);
+        var json = JsonSerializer.Serialize(dto, options);
+        Assert.Contains("data-grid", json, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("labResults", json, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]

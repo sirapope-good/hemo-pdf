@@ -63,5 +63,13 @@ public static class HprpStudioCatalog
         layoutKinds = HprpLayoutKinds.All.OrderBy(x => x, StringComparer.OrdinalIgnoreCase),
         entryModes = HprpManifestUi.EntryModes.OrderBy(x => x, StringComparer.OrdinalIgnoreCase),
         parameterSources = HprpManifestUi.ParameterSources.OrderBy(x => x, StringComparer.OrdinalIgnoreCase),
+        chrome = new
+        {
+            headerFill = "#RRGGBB or $branding.sectionHeaderBackground",
+            border = new[] { "none", "thin", "medium" },
+            fontSize = "number",
+            rowHeightMm = "number",
+            columnWidths = "array of number or *",
+        },
     };
 }

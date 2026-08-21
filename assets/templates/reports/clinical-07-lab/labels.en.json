@@ -1,5 +1,6 @@
 {
   "hn": "HN",
+  "patientInfo": "Patient",
   "patientName": "Patient name",
   "unit": "Unit",
   "reportDate": "Report date",

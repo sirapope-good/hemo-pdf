@@ -1,5 +1,6 @@
 using Hemo.Pdf.Core.Hprp;
 using Hemo.Pdf.Core.Models.Hemosheet;
+using Hemo.Pdf.Sections.Hemosheet;
 using Hemo.Pdf.Sections.Preview.Hemosheet;
 
 namespace Hemo.Pdf.Layouts.Hprp;
@@ -32,6 +33,46 @@ public static class HprpHemosheetPlanInterpreter
         }
 
         return plans;
+    }
+
+    public static HprpSectionNode? TryDialysisSection(HprpPackage? package)
+    {
+        if (package?.Layout.Sections is not { Count: > 0 })
+            return null;
+
+        return package.Layout.Sections.FirstOrDefault(s =>
+            string.Equals(s.Widget, HprpWidgetIds.HemosheetDialysisRecords, StringComparison.OrdinalIgnoreCase));
+    }
+
+    /// <summary>
+    /// Dense Default/ThaiUR dialysis headers from the package when the column count matches the C# grid.
+    /// </summary>
+    public static IReadOnlyList<string>? TryDialysisHeaders(HprpPackage? package, HemosheetReportViewModel viewModel)
+    {
+        var section = TryDialysisSection(package);
+        if (section is null)
+            return null;
+
+        var columns = ResolveColumns(section, viewModel);
+        var expected = HemosheetDialysisColumns.HeaderColumnCount(HemosheetDialysisColumns.ShowHdf(viewModel));
+        return columns.Count == expected ? columns : null;
+    }
+
+    public static HprpChrome? TryDialysisChrome(HprpPackage? package) =>
+        TryDialysisSection(package)?.Chrome;
+
+    public static IReadOnlyList<string> ResolveColumns(HprpSectionNode section, HemosheetReportViewModel viewModel)
+    {
+        if (section.ColumnsWhen is not null)
+        {
+            foreach (var (when, columns) in section.ColumnsWhen)
+            {
+                if (Evaluate(when, viewModel))
+                    return columns;
+            }
+        }
+
+        return section.Columns ?? [];
     }
 
     public static bool Evaluate(string token, HemosheetReportViewModel viewModel)
@@ -87,20 +128,6 @@ public static class HprpHemosheetPlanInterpreter
         }
 
         return false;
-    }
-
-    private static IReadOnlyList<string> ResolveColumns(HprpSectionNode section, HemosheetReportViewModel viewModel)
-    {
-        if (section.ColumnsWhen is not null)
-        {
-            foreach (var (when, columns) in section.ColumnsWhen)
-            {
-                if (Evaluate(when, viewModel))
-                    return columns;
-            }
-        }
-
-        return section.Columns ?? [];
     }
 
     private static int ResolveFixedLines(string? key, HemosheetReportViewModel viewModel)

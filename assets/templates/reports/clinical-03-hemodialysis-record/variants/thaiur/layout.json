@@ -54,34 +54,37 @@
       "columns": [
         "เวลา",
         "BP",
-        "HR",
-        "RR",
-        "BFR",
+        "MAP",
+        "Pulse",
+        "EBFR",
+        "AP",
         "VP",
         "TMP",
-        "DC",
-        "NSS",
-        "UF Rate",
-        "Total",
+        "Cond.",
+        "UFR",
+        "Total UF",
         "หมายเหตุ"
       ],
       "columnsWhen": {
         "feature:showHdfColumns": [
           "เวลา",
           "BP",
-          "HR",
-          "RR",
-          "BFR",
+          "MAP",
+          "Pulse",
+          "EBFR",
+          "AP",
           "VP",
           "Substitute total",
           "Substitute rate",
           "TMP",
-          "DC",
-          "NSS",
-          "UF Rate",
-          "Total",
+          "Cond.",
+          "UFR",
+          "Total UF",
           "หมายเหตุ"
         ]
+      },
+      "chrome": {
+        "headerFill": "$branding.sectionHeaderBackground"
       },
       "fixedLinesFrom": "dialysis"
     },

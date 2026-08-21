@@ -11,6 +11,8 @@ internal static class HemosheetSectionAdapters
     {
         public string? SectionTitle => title;
 
+        public Hemo.Pdf.Core.Hprp.HprpChrome? Chrome => null;
+
         public IReadOnlyList<KeyValuePair<string, string?>> Rows =>
             rows.Select(r => new KeyValuePair<string, string?>(r.Label, r.Value)).ToList();
     }
@@ -37,6 +39,7 @@ internal static class HemosheetSectionAdapters
             ColumnHeaders = block.Columns.ToList(),
             ColumnWeights = block.ColumnWeights.ToList(),
             Rows = block.Rows.Select(row => row.Select(v => (string?)v).ToList()).ToList(),
+            Chrome = block.Chrome,
         };
     }
 
@@ -52,6 +55,7 @@ internal static class HemosheetSectionAdapters
                 Value = f.Value,
                 ColumnSpan = f.ColumnSpan,
             }).ToList(),
+            Chrome = block.Chrome,
         };
     }
 }

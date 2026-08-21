@@ -1,6 +1,8 @@
 using Hemo.Pdf.Core.Constants;
 using Hemo.Pdf.Core.Context;
+using Hemo.Pdf.Core.Hprp;
 using Hemo.Pdf.Core.Models.Hemosheet;
+using Hemo.Pdf.Layouts.Hprp;
 using Hemo.Pdf.Sections.Hemosheet;
 using Hemo.Pdf.Sections.ThaiUr;
 using QuestPDF.Fluent;
@@ -20,7 +22,7 @@ internal sealed class ThaiUrHemosheetForm
     private const float Rh = HemosheetThaiUrStyle.RowHeightMm;
     private const float Bw = HemosheetThaiUrStyle.BorderWidth;
 
-    public void Compose(IContainer container, HemosheetReportViewModel vm, PdfReportContext context)
+    public void Compose(IContainer container, HemosheetReportViewModel vm, PdfReportContext context, HprpPackage? package = null)
     {
         // Dialysis rows absorb leftover page space so the footer band (checks + Nephrologist |
         // notes + Post Vital…NA) sits flush at the bottom of page 1 as one unit.
@@ -28,6 +30,8 @@ internal sealed class ThaiUrHemosheetForm
         var aboveDialysisMm = EstimateAboveDialysisMm(vm);
         var bottomFloorMm = ThaiUrHemosheetFooter.BottomBlockHeightMm(vm, notesFloorMm);
         var dialysisRows = BudgetDialysisRows(vm, aboveDialysisMm, bottomFloorMm);
+        var dialysisHeaders = HprpHemosheetPlanInterpreter.TryDialysisHeaders(package, vm);
+        var dialysisFill = HprpChrome.FileHeaderFillOrNull(HprpHemosheetPlanInterpreter.TryDialysisChrome(package));
 
         container
             .DefaultTextStyle(ThaiUrText.Base)
@@ -38,7 +42,17 @@ internal sealed class ThaiUrHemosheetForm
                     main.Item().Element(c => ThaiUrReportHeader.Compose(c, vm));
                     main.Item().Element(c => TopBand(c, vm));
                     main.Item().Element(c => NursingPlan(c, vm));
-                    main.Item().Element(c => DialysisTable(c, vm, dialysisRows));
+                    main.Item().Element(c =>
+                    {
+                        if (dialysisFill is null)
+                        {
+                            DialysisTable(c, vm, dialysisRows, dialysisHeaders);
+                            return;
+                        }
+
+                        using (ReportSectionHeaderChrome.Begin(dialysisFill))
+                            DialysisTable(c, vm, dialysisRows, dialysisHeaders);
+                    });
                 });
                 page.Item().Border(Bw).Column(mid =>
                 {
@@ -506,12 +520,17 @@ internal sealed class ThaiUrHemosheetForm
         });
     }
 
-    private static void DialysisTable(IContainer c, HemosheetReportViewModel vm, int fixedLines)
+    private static void DialysisTable(
+        IContainer c,
+        HemosheetReportViewModel vm,
+        int fixedLines,
+        IReadOnlyList<string>? fileHeaders)
     {
         if (fixedLines <= 0) fixedLines = 8;
         var showHdf = HemosheetDialysisColumns.ShowHdf(vm);
         var colMm = HemosheetDialysisColumns.DataColumnWidthMm(showHdf);
-        var headerMm = HemosheetDialysisColumns.HeaderHeightMm(showHdf, Rh);
+        var useFileHeaders = fileHeaders is { Count: > 0 };
+        var headerMm = HemosheetDialysisColumns.HeaderHeightMm(showHdf && !useFileHeaders, Rh);
         var baseDefs = HemosheetDialysisColumns.BaseColumnDefs;
         var insertAfter = HemosheetDialysisColumns.SubstituteInsertAfterIndex;
 
@@ -524,7 +543,16 @@ internal sealed class ThaiUrHemosheetForm
                 cols.RelativeColumn();
             });
 
-            if (showHdf)
+            if (useFileHeaders)
+            {
+                for (var i = 0; i < fileHeaders!.Count - 1; i++)
+                    DialysisHeaderCell(t, fileHeaders[i], "", headerMm, rowSpan: 1);
+
+                t.Cell().Border(Bw).Background(ReportSectionHeaderChrome.Resolve(HemosheetThaiUrStyle.HeaderBackground))
+                    .Height(headerMm, Mm).AlignCenter().AlignMiddle()
+                    .Text(fileHeaders[^1]).Style(ThaiUrText.DialysisBold);
+            }
+            else if (showHdf)
             {
                 for (var i = 0; i <= insertAfter; i++)
                     DialysisHeaderCell(t, baseDefs[i].Head, baseDefs[i].Unit, headerMm, rowSpan: 2);

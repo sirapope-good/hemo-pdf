@@ -92,6 +92,32 @@ public class PreviewMapperTests
         Assert.NotNull(footer.PageNumber);
     }
 
+    [Fact]
+    public void BrandingPreviewMapper_PrefersFileHeaderFillOverride()
+    {
+        var context = new PdfReportContext
+        {
+            ReportTemplateId = ClinicalReportCatalog.Lab,
+            TenantCode = "tenant-demo-a",
+            Branding = new CustomerBrandingProfile
+            {
+                CustomerId = "tenant-demo-a",
+                DisplayName = "Demo Hospital",
+                Header = new HeaderBranding
+                {
+                    CompanyLines = ["Hospital A"],
+                    TitleAlignment = HeaderAlignment.Center,
+                },
+                Style = new BrandingStyle { SectionHeaderBackground = "#DCE6F2" },
+            },
+            Metadata = new ReportMetadata { Title = "Lab Result" },
+        };
+
+        var mapped = BrandingPreviewMapper.Map(context, "#FFCC00");
+
+        Assert.Equal("#FFCC00", mapped.SectionHeaderBackground);
+    }
+
     private sealed class TestPatientSource : IPatientInfoSource
     {
         public required PatientInfoModel PatientInfo { get; init; }

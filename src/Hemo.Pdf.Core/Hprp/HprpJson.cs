@@ -19,7 +19,19 @@ public static class HprpJson
         },
     };
 
-    private sealed class JsonElementUndefinedConverter : JsonConverter<JsonElement>
+    public static void ApplyTo(JsonSerializerOptions options)
+    {
+        ArgumentNullException.ThrowIfNull(options);
+        if (options.Converters.Any(c => c is JsonElementUndefinedConverter))
+            return;
+
+        options.Converters.Insert(0, new JsonElementUndefinedConverter());
+    }
+
+    /// <summary>
+    /// Default STJ cannot write <see cref="JsonValueKind.Undefined"/> (omitted layout title/when/content).
+    /// </summary>
+    public sealed class JsonElementUndefinedConverter : JsonConverter<JsonElement>
     {
         public override JsonElement Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options) =>
             JsonElement.ParseValue(ref reader);

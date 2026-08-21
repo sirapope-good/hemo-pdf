@@ -43,7 +43,8 @@
         "fields": { "type": "array" },
         "rows": { "type": "array" },
         "appendFlatten": { "type": "boolean" },
-        "variant": { "type": "string" }
+        "variant": { "type": "string" },
+        "chrome": { "$ref": "#/$defs/chrome" }
       }
     },
     "section": {
@@ -55,7 +56,26 @@
         "variant": { "type": "string" },
         "columns": { "type": "array", "items": { "type": "string" } },
         "columnsWhen": { "type": "object" },
-        "fixedLinesFrom": { "type": "string" }
+        "fixedLinesFrom": { "type": "string" },
+        "chrome": { "$ref": "#/$defs/chrome" }
+      }
+    },
+    "chrome": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "headerFill": {
+          "type": "string",
+          "description": "#RRGGBB or $branding.sectionHeaderBackground"
+        },
+        "border": { "type": "string", "enum": ["none", "thin", "medium"] },
+        "fontSize": { "type": "number" },
+        "rowHeightMm": { "type": "number" },
+        "columnWidths": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Relative weights; * = 1. Applied when count matches columns."
+        }
       }
     }
   }

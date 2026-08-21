@@ -17,7 +17,13 @@ services:
       # Content is published under /app/assets; "../../assets/templates" resolves outside the image.
       HemoPdf__TemplatesRootPath: "/app/assets/templates"
       HemoPdf__PackagesRootPath: "/app/packages"
+      HemoPdf__PackagesWritePath: "/app/packages"
       HemoPdf__EnableHprpStudioWrite: "true"
+      HemoPdf__CorsOrigins__0: "http://localhost:4200"
+      HemoPdf__CorsOrigins__1: "http://localhost:4500"
+      HemoPdf__CorsOrigins__2: "http://127.0.0.1:4200"
+      HemoPdf__CorsOrigins__3: "http://127.0.0.1:4500"
+      HemoPdf__CorsOrigins__4: "http://localhost:5000"
     volumes:
       - ./assets/branding:/app/assets/branding
       - ./assets/templates:/app/assets/templates:ro

@@ -120,6 +120,17 @@ async function validate() {
   setStatus("Valid package.", "ok");
 }
 
+function firstFileHeaderFill(layout) {
+  const nodes = [...(layout && layout.body) || [], ...(layout && layout.sections) || []];
+  for (const node of nodes) {
+    const fill = node && node.chrome && node.chrome.headerFill;
+    if (typeof fill === "string" && fill.trim() && !fill.trim().startsWith("$")) {
+      return fill.trim();
+    }
+  }
+  return null;
+}
+
 async function save() {
   const body = currentBody();
   const item = state.selected;
@@ -128,7 +139,18 @@ async function save() {
     method: "PUT",
     body: JSON.stringify(body),
   });
-  setStatus("Packed " + result.outputPath, "ok");
+  const packed = await api(`/api/hprp/packages/${encodeURIComponent(item.id)}${query}`);
+  state.draft = {
+    manifest: packed.manifest || {},
+    layout: packed.layout || {},
+    labels: packed.labels || {},
+  };
+  showTab();
+  const fill = firstFileHeaderFill(state.draft.layout);
+  setStatus(
+    "Packed " + result.outputPath + (fill ? " · headerFill " + fill : " · headerFill uses tenant branding"),
+    "ok"
+  );
   await loadList();
 }
 

@@ -74,6 +74,9 @@ public sealed class HprpLayoutNode
 
     [JsonPropertyName("variant")]
     public string? Variant { get; init; }
+
+    [JsonPropertyName("chrome")]
+    public HprpChrome? Chrome { get; init; }
 }
 
 public sealed class HprpFieldNode
@@ -122,4 +125,7 @@ public sealed class HprpSectionNode
 
     [JsonPropertyName("fixedLinesFrom")]
     public string? FixedLinesFrom { get; init; }
+
+    [JsonPropertyName("chrome")]
+    public HprpChrome? Chrome { get; init; }
 }

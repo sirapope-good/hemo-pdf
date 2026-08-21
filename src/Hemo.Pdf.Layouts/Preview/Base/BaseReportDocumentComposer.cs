@@ -21,12 +21,15 @@ public abstract class BaseReportDocumentComposer<TViewModel> : IReportDocumentCo
                 PageSize = "A4",
                 GeneratedAt = DateTime.UtcNow.ToString("o"),
             },
-            Branding = BrandingPreviewMapper.Map(context),
+            Branding = MapBranding(viewModel, context),
             Header = HeaderPreviewMapper.Map(context),
             Pages = [new ReportPage { Blocks = blocks }],
             Footer = FooterPreviewMapper.Map(context),
         };
     }
+
+    protected virtual ReportBranding MapBranding(TViewModel viewModel, PdfReportContext context) =>
+        BrandingPreviewMapper.Map(context);
 
     protected abstract IReadOnlyList<ReportBlock> ComposeContentBlocks(
         TViewModel viewModel,

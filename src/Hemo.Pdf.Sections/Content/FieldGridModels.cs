@@ -12,6 +12,7 @@ public sealed class FieldGridModel
     public string? Title { get; init; }
     public int Columns { get; init; } = 2;
     public IReadOnlyList<FieldGridItem> Fields { get; init; } = [];
+    public Hemo.Pdf.Core.Hprp.HprpChrome? Chrome { get; init; }
 }
 
 public interface IFieldGridSource

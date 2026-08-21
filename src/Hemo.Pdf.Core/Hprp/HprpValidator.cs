@@ -113,6 +113,8 @@ public static class HprpValidator
 
         if (hasWidget && !HprpWidgetIds.All.Contains(node.Widget!))
             errors.Add($"{path} unknown widget '{node.Widget}'.");
+
+        HprpChrome.Validate(node.Chrome, path + ".chrome", errors);
     }
 
     private static void ValidateSection(HprpSectionNode section, string path, List<string> errors)
@@ -130,6 +132,8 @@ public static class HprpValidator
         {
             errors.Add($"{path} unknown widget '{section.Widget}'.");
         }
+
+        HprpChrome.Validate(section.Chrome, path + ".chrome", errors);
     }
 
     private static void RejectForbidden(JsonElement element, string path, List<string> errors)

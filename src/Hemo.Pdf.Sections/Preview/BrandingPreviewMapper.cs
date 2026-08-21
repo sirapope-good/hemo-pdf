@@ -6,12 +6,15 @@ namespace Hemo.Pdf.Sections.Preview;
 
 public static class BrandingPreviewMapper
 {
-    public static ReportBranding Map(PdfReportContext context)
+    public static ReportBranding Map(PdfReportContext context, string? sectionHeaderOverride = null)
     {
         var branding = context.Branding;
         if (branding is null)
         {
-            return new ReportBranding();
+            return new ReportBranding
+            {
+                SectionHeaderBackground = sectionHeaderOverride,
+            };
         }
 
         return new ReportBranding
@@ -19,7 +22,7 @@ public static class BrandingPreviewMapper
             LogoUrl = branding.Header.LogoUrl,
             CompanyLines = branding.Header.CompanyLines,
             Alignment = MapAlignment(branding.Header.TitleAlignment),
-            SectionHeaderBackground = branding.Style.SectionHeaderBackground,
+            SectionHeaderBackground = sectionHeaderOverride ?? branding.Style.SectionHeaderBackground,
         };
     }
 

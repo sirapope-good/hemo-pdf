@@ -24,7 +24,7 @@ public static class ReportBlockPdfComposer
         new FieldGridSection().Compose(container, new ReportBlockAdapters.FieldGridAdapter(fieldGrid), context);
         break;
       case KeyValueTableReportBlock keyValue:
-        new KeyValueTableSection().Compose(container, new ReportBlockAdapters.KeyValueRowsAdapter(keyValue.Title, keyValue.Rows), context);
+        new KeyValueTableSection().Compose(container, new ReportBlockAdapters.KeyValueRowsAdapter(keyValue.Title, keyValue.Rows, keyValue.Chrome), context);
         break;
       case DataGridReportBlock dataGrid:
         new DataGridSection().Compose(container, new ReportBlockAdapters.DataGridAdapter(dataGrid), context);

@@ -3,6 +3,7 @@ using Hemo.Pdf.Api.Auth;
 using Hemo.Pdf.Api.Swagger;
 using Hemo.Pdf.Api.Middleware;
 using Hemo.Pdf.Core.Exceptions;
+using Hemo.Pdf.Core.Hprp;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Diagnostics;
 using Microsoft.AspNetCore.Http.Features;
@@ -25,7 +26,7 @@ public sealed class Program
 
         builder.Services.AddHemoPdf(builder.Configuration);
         builder.Services.AddHttpContextAccessor();
-        builder.Services.AddControllers();
+        builder.Services.AddControllers().AddJsonOptions(json => HprpJson.ApplyTo(json.JsonSerializerOptions));
         builder.Services.Configure<FormOptions>(options =>
         {
             options.MultipartBodyLengthLimit = MaxRequestBodyBytes;

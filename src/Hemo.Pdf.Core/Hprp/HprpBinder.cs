@@ -154,6 +154,7 @@ public static class HprpBinder
         {
             Title = ResolveText(node.Title, data, labels, context),
             Rows = rows,
+            Chrome = node.Chrome,
         };
     }
 
@@ -187,7 +188,7 @@ public static class HprpBinder
         return HprpJsonPath.AsString(prop);
     }
 
-    private static FieldGridReportBlock BindFieldGrid(
+    private static FieldGridReportBlock? BindFieldGrid(
         HprpLayoutNode node,
         JsonElement? data,
         IReadOnlyDictionary<string, string> labels,
@@ -218,6 +219,7 @@ public static class HprpBinder
             Title = ResolveText(node.Title, data, labels, context),
             Columns = node.Columns <= 0 ? 2 : node.Columns,
             Fields = fields,
+            Chrome = node.Chrome,
         };
     }
 
@@ -261,11 +263,14 @@ public static class HprpBinder
                 item.TryGetProperty(h, out var cell) ? HprpJsonPath.AsString(cell) ?? "" : "").ToList());
         }
 
+        var weights = HprpChrome.ParseColumnWeights(node.Chrome?.ColumnWidths, headers.Count);
         return new DataGridReportBlock
         {
             Title = ResolveText(node.Title, data, labels, null),
             Columns = headers,
+            ColumnWeights = weights,
             Rows = rows,
+            Chrome = node.Chrome,
         };
     }
 

@@ -1,5 +1,6 @@
 {
   "hn": "HN",
+  "patientInfo": "ข้อมูลผู้ป่วย",
   "patientName": "ชื่อ-สกุล",
   "unit": "หน่วย",
   "reportDate": "วันที่รายงาน",

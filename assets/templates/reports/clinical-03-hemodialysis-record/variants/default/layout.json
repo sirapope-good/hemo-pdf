@@ -52,36 +52,39 @@
     {
       "widget": "hemosheet.dialysis-records",
       "columns": [
-        "เวลา",
+        "Time",
         "BP",
-        "HR",
-        "RR",
-        "BFR",
+        "MAP",
+        "Pulse",
+        "EBFR",
+        "AP",
         "VP",
         "TMP",
-        "DC",
-        "NSS",
-        "UF Rate",
-        "Total",
-        "หมายเหตุ"
+        "Cond.",
+        "UFR",
+        "Total UF",
+        "Note"
       ],
       "columnsWhen": {
         "feature:showHdfColumns": [
-          "เวลา",
+          "Time",
           "BP",
-          "HR",
-          "RR",
-          "BFR",
+          "MAP",
+          "Pulse",
+          "EBFR",
+          "AP",
           "VP",
           "Substitute total",
           "Substitute rate",
           "TMP",
-          "DC",
-          "NSS",
-          "UF Rate",
-          "Total",
-          "หมายเหตุ"
+          "Cond.",
+          "UFR",
+          "Total UF",
+          "Note"
         ]
+      },
+      "chrome": {
+        "headerFill": "$branding.sectionHeaderBackground"
       },
       "fixedLinesFrom": "dialysis"
     },

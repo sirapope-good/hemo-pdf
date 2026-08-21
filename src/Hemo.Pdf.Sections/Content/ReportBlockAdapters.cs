@@ -1,3 +1,4 @@
+using Hemo.Pdf.Core.Hprp;
 using Hemo.Pdf.Core.Models;
 using Hemo.Pdf.Core.Models.Preview;
 using Hemo.Pdf.Sections.Content;
@@ -6,9 +7,11 @@ namespace Hemo.Pdf.Sections.Content;
 
 internal static class ReportBlockAdapters
 {
-    internal sealed class KeyValueRowsAdapter(string? title, IReadOnlyList<LabelValue> rows) : IKeyValueRowsSource
+    internal sealed class KeyValueRowsAdapter(string? title, IReadOnlyList<LabelValue> rows, HprpChrome? chrome = null) : IKeyValueRowsSource
     {
         public string? SectionTitle => title;
+
+        public HprpChrome? Chrome { get; } = chrome;
 
         public IReadOnlyList<KeyValuePair<string, string?>> Rows =>
             rows.Select(r => new KeyValuePair<string, string?>(r.Label, r.Value)).ToList();
@@ -22,6 +25,7 @@ internal static class ReportBlockAdapters
             ColumnHeaders = block.Columns.ToList(),
             ColumnWeights = block.ColumnWeights.ToList(),
             Rows = block.Rows.Select(row => row.Select(v => (string?)v).ToList()).ToList(),
+            Chrome = block.Chrome,
         };
     }
 
@@ -37,6 +41,7 @@ internal static class ReportBlockAdapters
                 Value = f.Value,
                 ColumnSpan = f.ColumnSpan,
             }).ToList(),
+            Chrome = block.Chrome,
         };
     }
 }

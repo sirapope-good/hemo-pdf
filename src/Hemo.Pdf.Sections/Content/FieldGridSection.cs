@@ -1,5 +1,6 @@
 using Hemo.Pdf.Core.Constants;
 using Hemo.Pdf.Core.Context;
+using Hemo.Pdf.Core.Hprp;
 using Hemo.Pdf.Sections.Abstractions;
 using Hemo.Pdf.Sections.Helpers;
 using QuestPDF.Fluent;
@@ -22,22 +23,26 @@ public sealed class FieldGridSection : IContentSection
         }
 
         var columns = Math.Max(1, grid.Columns);
+        var chrome = grid.Chrome;
+        var border = HprpChrome.ResolveBorderWidth(chrome);
+        var headerFill = HprpChrome.ResolveHeaderFill(chrome, context, PdfSectionMetrics.SectionHeaderBackground);
+        var weights = HprpChrome.ParseColumnWeights(chrome?.ColumnWidths, columns);
 
-        container.Border(0.5f).Table(table =>
+        container.Border(border).Table(table =>
         {
             table.ColumnsDefinition(def =>
             {
                 for (var i = 0; i < columns; i++)
                 {
-                    def.RelativeColumn();
+                    def.RelativeColumn(weights.Count == columns ? weights[i] : 1f);
                 }
             });
 
             if (!string.IsNullOrWhiteSpace(grid.Title))
             {
                 table.Cell().ColumnSpan((uint)columns)
-                    .Background(ReportSectionHeaderChrome.Resolve(context, PdfSectionMetrics.SectionHeaderBackground))
-                    .Border(0.5f)
+                    .Background(headerFill)
+                    .Border(border)
                     .Padding(PdfSectionMetrics.SectionTitlePadding)
                     .Text(grid.Title)
                     .FontFamily(PdfStyleDefaults.Body.SectionTitleFontFamily)
@@ -53,14 +58,14 @@ public sealed class FieldGridSection : IContentSection
                 {
                     var field = grid.Fields[index];
                     var span = Math.Clamp(field.ColumnSpan, 1, columns - colUsed);
-                    ComposeFieldCell(table, field, span);
+                    ComposeFieldCell(table, field, span, border);
                     colUsed += span;
                     index++;
                 }
 
                 while (colUsed < columns)
                 {
-                    table.Cell().Border(0.5f).Padding(PdfSectionMetrics.CellPadding).Text("—")
+                    table.Cell().Border(border).Padding(PdfSectionMetrics.CellPadding).Text("—")
                         .FontSize(PdfStyleDefaults.Body.DataFontSize);
                     colUsed++;
                 }
@@ -68,9 +73,9 @@ public sealed class FieldGridSection : IContentSection
         });
     }
 
-    private static void ComposeFieldCell(TableDescriptor table, FieldGridItem field, int span)
+    private static void ComposeFieldCell(TableDescriptor table, FieldGridItem field, int span, float border)
     {
-        table.Cell().ColumnSpan((uint)span).Border(0.5f).Padding(PdfSectionMetrics.CellPadding)
+        table.Cell().ColumnSpan((uint)span).Border(border).Padding(PdfSectionMetrics.CellPadding)
             .Text(text => PdfTextHelpers.ComposeInlineLabelValue(text, field.Label, field.Value));
     }
 }

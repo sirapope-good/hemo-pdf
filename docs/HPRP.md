@@ -104,6 +104,20 @@ Bind with JSONPath (`$.patient.hn`) or special binds: `$title`, `$subtitle`, `$f
 
 `when` on a node: JSONPath expression (e.g. `"$.rows.length > 0"`) or omitted (= always show).
 
+### `chrome` (table appearance)
+
+Optional on form `body` nodes (`data-grid`, `field-grid`, `key-value-table`) and hemosheet `sections[]`. Omitted fields keep engine / tenant branding defaults.
+
+| Field | Meaning |
+|-------|---------|
+| `headerFill` | `#RRGGBB` or `$branding.sectionHeaderBackground` |
+| `border` | `none` / `thin` (default) / `medium` |
+| `fontSize` | Data and column-header font size |
+| `rowHeightMm` | Min row height (`data-grid`) |
+| `columnWidths` | Relative weights (`*` = 1). Applied only when count matches columns |
+
+Example: `clinical-07-lab` `data-grid`. Pack after editing — runtime reads `packages/*.hprp` first.
+
 ### Hemosheet (`sections`)
 
 Uses `sections[]` with C# widget ids. `when` tokens:
@@ -116,7 +130,9 @@ Uses `sections[]` with C# widget ids. `when` tokens:
 | `not-` | `not-profile:ThaiUr` | Negation |
 | `or:` | `or:a,b` | Any match |
 
-Optional per section: `variant`, `columns`, `columnsWhen`, `fixedLinesFrom`.
+Optional per section: `variant`, `columns`, `columnsWhen`, `fixedLinesFrom`, `chrome`.
+
+Dense Default / Thai UR dialysis tables **read `columns` / `columnsWhen` from this file** when the count matches the C# grid (data columns + Note). Rama still uses `columns` as named mapper keys (`เวลา`, `HR`, …).
 
 JSON schema: `assets/templates/schema/hprp-layout.schema.json`
 
@@ -126,7 +142,7 @@ JSON schema: `assets/templates/schema/hprp-layout.schema.json`
 
 | Report | `.hprp` / data drives today |
 |--------|------------------------------|
-| **clinical-03** | `layout.sections` → planner (`HprpHemosheetPlanInterpreter`); profile จาก BE `LayoutProfile` (ไม่พึ่งชื่อ `.trdp`) |
+| **clinical-03** | `layout.sections` → planner (Rama) or dense form (Default/Thai UR). Dense dialysis **headers** come from `columns` / `columnsWhen` + optional `chrome` |
 | **clinical-01** | Section order (`header`+`body`) + labels — pixels in C# sections |
 | **clinical-02** | Same; `clinical.epo-drug-table` includes meta band (not separate widget yet) |
 | **clinical-05** | `layout.header` → repeating page header; `layout.body` → SOAP |

@@ -1,5 +1,6 @@
 using Hemo.Pdf.Core.Constants;
 using Hemo.Pdf.Core.Context;
+using Hemo.Pdf.Core.Hprp;
 using Hemo.Pdf.Core.Models;
 using Hemo.Pdf.Sections.Abstractions;
 using QuestPDF.Fluent;
@@ -11,6 +12,7 @@ public interface IKeyValueRowsSource
 {
     IReadOnlyList<KeyValuePair<string, string?>> Rows { get; }
     string? SectionTitle { get; }
+    HprpChrome? Chrome { get; }
 }
 
 public sealed class KeyValueTableSection : IContentSection
@@ -19,12 +21,14 @@ public sealed class KeyValueTableSection : IContentSection
     {
         IReadOnlyList<KeyValuePair<string, string?>> rows;
         string? title;
+        HprpChrome? chrome = null;
 
         switch (viewModel)
         {
             case IKeyValueRowsSource source:
                 rows = source.Rows;
                 title = source.SectionTitle;
+                chrome = source.Chrome;
                 break;
             case SimpleReportViewModel simple:
                 rows = simple.Rows;
@@ -39,19 +43,24 @@ public sealed class KeyValueTableSection : IContentSection
             return;
         }
 
-        container.Border(0.5f).Table(table =>
+        var border = HprpChrome.ResolveBorderWidth(chrome);
+        var headerFill = HprpChrome.ResolveHeaderFill(chrome, context, PdfSectionMetrics.SectionHeaderBackground);
+        var fontSize = HprpChrome.ResolveFontSize(chrome, PdfStyleDefaults.Body.DataFontSize);
+        var weights = HprpChrome.ParseColumnWeights(chrome?.ColumnWidths, 2);
+
+        container.Border(border).Table(table =>
         {
             table.ColumnsDefinition(columns =>
             {
-                columns.RelativeColumn(2);
-                columns.RelativeColumn(3);
+                columns.RelativeColumn(weights.Count == 2 ? weights[0] : 2);
+                columns.RelativeColumn(weights.Count == 2 ? weights[1] : 3);
             });
 
             if (!string.IsNullOrWhiteSpace(title))
             {
                 table.Cell().ColumnSpan(2)
-                    .Background(ReportSectionHeaderChrome.Resolve(context, PdfSectionMetrics.SectionHeaderBackground))
-                    .Border(0.5f)
+                    .Background(headerFill)
+                    .Border(border)
                     .Padding(PdfSectionMetrics.SectionTitlePadding)
                     .Text(title)
                     .FontFamily(PdfStyleDefaults.Body.SectionTitleFontFamily)
@@ -61,16 +70,16 @@ public sealed class KeyValueTableSection : IContentSection
 
             foreach (var (key, value) in rows)
             {
-                table.Cell().Border(0.5f).Padding(PdfSectionMetrics.CellPadding)
+                table.Cell().Border(border).Padding(PdfSectionMetrics.CellPadding)
                     .Text(key)
                     .FontFamily(PdfStyleDefaults.Body.DataFontFamily)
-                    .FontSize(PdfStyleDefaults.Body.DataFontSize)
+                    .FontSize(fontSize)
                     .SemiBold();
 
-                table.Cell().Border(0.5f).Padding(PdfSectionMetrics.CellPadding)
+                table.Cell().Border(border).Padding(PdfSectionMetrics.CellPadding)
                     .Text(string.IsNullOrWhiteSpace(value) ? "—" : value)
                     .FontFamily(PdfStyleDefaults.Body.DataFontFamily)
-                    .FontSize(PdfStyleDefaults.Body.DataFontSize);
+                    .FontSize(fontSize);
             }
         });
     }

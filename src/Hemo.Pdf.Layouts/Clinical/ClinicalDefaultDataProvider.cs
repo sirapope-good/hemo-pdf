@@ -40,6 +40,7 @@ public sealed class ClinicalDefaultDataProvider : IReportDataProvider
                 Subtitle = context.Metadata.Subtitle
                     ?? HprpLabels.Get(package.GetLabels(package.Manifest.Language), "subtitle", ""),
                 Blocks = HprpBinder.Bind(package, context.Data, context, package.Manifest.Language),
+                SectionHeaderFill = HprpChrome.FirstFileHeaderFillFromLayout(package.Layout),
             });
         }
 

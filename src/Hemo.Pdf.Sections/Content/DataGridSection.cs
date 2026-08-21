@@ -1,5 +1,6 @@
 using Hemo.Pdf.Core.Constants;
 using Hemo.Pdf.Core.Context;
+using Hemo.Pdf.Core.Hprp;
 using Hemo.Pdf.Sections.Abstractions;
 using QuestPDF.Fluent;
 using QuestPDF.Infrastructure;
@@ -22,8 +23,13 @@ public sealed class DataGridSection : IContentSection
 
         var columnCount = grid.ColumnHeaders.Count;
         var weights = ResolveColumnWeights(grid, columnCount);
+        var chrome = grid.Chrome;
+        var border = HprpChrome.ResolveBorderWidth(chrome);
+        var headerFill = HprpChrome.ResolveHeaderFill(chrome, context, PdfSectionMetrics.SectionHeaderBackground);
+        var fontSize = HprpChrome.ResolveFontSize(chrome, PdfStyleDefaults.Body.DataFontSize);
+        var rowHeightMm = chrome?.RowHeightMm;
 
-        container.Border(0.5f).Table(table =>
+        container.Border(border).Table(table =>
         {
             table.ColumnsDefinition(columns =>
             {
@@ -35,11 +41,11 @@ public sealed class DataGridSection : IContentSection
 
             if (!string.IsNullOrWhiteSpace(grid.Title))
             {
-                table.Cell().ColumnSpan((uint)columnCount)
-                    .Background(ReportSectionHeaderChrome.Resolve(context, PdfSectionMetrics.SectionHeaderBackground))
-                    .Border(0.5f)
-                    .Padding(PdfSectionMetrics.SectionTitlePadding)
-                    .Text(grid.Title)
+                var title = table.Cell().ColumnSpan((uint)columnCount)
+                    .Background(headerFill)
+                    .Border(border)
+                    .Padding(PdfSectionMetrics.SectionTitlePadding);
+                title.Text(grid.Title)
                     .FontFamily(PdfStyleDefaults.Body.SectionTitleFontFamily)
                     .FontSize(PdfStyleDefaults.Body.SectionTitleFontSize)
                     .SemiBold();
@@ -47,10 +53,10 @@ public sealed class DataGridSection : IContentSection
 
             foreach (var header in grid.ColumnHeaders)
             {
-                table.Cell().Border(0.5f).Background(ReportSectionHeaderChrome.Resolve(context, PdfSectionMetrics.SectionHeaderBackground)).Padding(PdfSectionMetrics.CellPadding)
+                table.Cell().Border(border).Background(headerFill).Padding(PdfSectionMetrics.CellPadding)
                     .Text(header)
                     .FontFamily(PdfStyleDefaults.Body.SectionTitleFontFamily)
-                    .FontSize(PdfStyleDefaults.Body.DataFontSize)
+                    .FontSize(fontSize)
                     .SemiBold();
             }
 
@@ -59,10 +65,13 @@ public sealed class DataGridSection : IContentSection
                 for (var i = 0; i < columnCount; i++)
                 {
                     var value = i < row.Count ? row[i] : null;
-                    table.Cell().Border(0.5f).Padding(PdfSectionMetrics.CellPadding)
-                        .Text(value ?? "—")
+                    var cell = table.Cell().Border(border).Padding(PdfSectionMetrics.CellPadding);
+                    if (rowHeightMm is > 0)
+                        cell = cell.MinHeight(rowHeightMm.Value, Unit.Millimetre);
+
+                    cell.Text(value ?? "—")
                         .FontFamily(PdfStyleDefaults.Body.DataFontFamily)
-                        .FontSize(PdfStyleDefaults.Body.DataFontSize);
+                        .FontSize(fontSize);
                 }
             }
         });

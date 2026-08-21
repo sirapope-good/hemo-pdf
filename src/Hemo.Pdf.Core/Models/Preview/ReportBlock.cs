@@ -1,4 +1,5 @@
 using System.Text.Json.Serialization;
+using Hemo.Pdf.Core.Hprp;
 
 namespace Hemo.Pdf.Core.Models.Preview;
 
@@ -28,6 +29,7 @@ public sealed class KeyValueTableReportBlock : ReportBlock
 {
     public string? Title { get; init; }
     public IReadOnlyList<LabelValue> Rows { get; init; } = [];
+    public HprpChrome? Chrome { get; init; }
 }
 
 public sealed class DataGridReportBlock : ReportBlock
@@ -36,6 +38,7 @@ public sealed class DataGridReportBlock : ReportBlock
     public IReadOnlyList<string> Columns { get; init; } = [];
     public IReadOnlyList<float> ColumnWeights { get; init; } = [];
     public IReadOnlyList<IReadOnlyList<string>> Rows { get; init; } = [];
+    public HprpChrome? Chrome { get; init; }
 }
 
 public sealed class ChecklistTableReportBlock : ReportBlock
@@ -79,6 +82,7 @@ public sealed class FieldGridReportBlock : ReportBlock
     public string? Title { get; init; }
     public int Columns { get; init; } = 2;
     public IReadOnlyList<FieldGridField> Fields { get; init; } = [];
+    public HprpChrome? Chrome { get; init; }
 }
 
 public sealed class FieldGridField

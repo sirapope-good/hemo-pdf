@@ -6,6 +6,7 @@ public sealed class DataGridModel
     public IReadOnlyList<string> ColumnHeaders { get; init; } = [];
     public IReadOnlyList<float> ColumnWeights { get; init; } = [];
     public IReadOnlyList<IReadOnlyList<string?>> Rows { get; init; } = [];
+    public Hemo.Pdf.Core.Hprp.HprpChrome? Chrome { get; init; }
 }
 
 public interface IDataGridSource

@@ -11,7 +11,13 @@
     },
     {
       "type": "field-grid",
+      "title": { "$label": "patientInfo" },
       "columns": 2,
+      "chrome": {
+        "headerFill": "$branding.sectionHeaderBackground",
+        "border": "thin",
+        "fontSize": 8
+      },
       "fields": [
         {
           "label": { "$label": "hn" },
@@ -36,7 +42,13 @@
       "title": { "$label": "labResults" },
       "columnHeadersBind": "$.columnHeaders",
       "bindRows": "$.rows",
-      "when": "$.rows.length > 0"
+      "when": "$.rows.length > 0",
+      "chrome": {
+        "headerFill": "$branding.sectionHeaderBackground",
+        "border": "thin",
+        "fontSize": 8,
+        "columnWidths": ["2", "*", "*"]
+      }
     }
   ]
 }

@@ -35,6 +35,10 @@ public static class HemosheetDialysisColumns
     public static int DataColumnCount(bool showHdf) =>
         BaseColumnDefs.Length + (showHdf ? 2 : 0);
 
+    /// <summary>Data columns plus the trailing Note column.</summary>
+    public static int HeaderColumnCount(bool showHdf) =>
+        DataColumnCount(showHdf) + 1;
+
     public static float DataColumnWidthMm(bool showHdf) =>
         showHdf ? 9.5f : 11.2f;
 

@@ -1,6 +1,8 @@
 using Hemo.Pdf.Core.Constants;
 using Hemo.Pdf.Core.Context;
+using Hemo.Pdf.Core.Hprp;
 using Hemo.Pdf.Core.Models.Hemosheet;
+using Hemo.Pdf.Layouts.Hprp;
 using Hemo.Pdf.Sections.Default;
 using Hemo.Pdf.Sections.Hemosheet;
 using ThaiUrDataHelper = Hemo.Pdf.Sections.ThaiUr.ThaiUrData;
@@ -20,7 +22,7 @@ internal sealed class DefaultHemosheetForm
     private const float Rh = HemosheetDefaultStyle.RowHeightMm;
     private const float Bw = HemosheetDefaultStyle.BorderWidth;
 
-    public void Compose(IContainer container, HemosheetReportViewModel vm, PdfReportContext context)
+    public void Compose(IContainer container, HemosheetReportViewModel vm, PdfReportContext context, HprpPackage? package = null)
     {
         // Dialysis rows absorb leftover page space so the footer band sits flush on page 1.
         // Do NOT wrap header+body in one Border().Column — QuestPDF then orphans the header
@@ -30,6 +32,8 @@ internal sealed class DefaultHemosheetForm
         var bottomFloorMm = PrePostVitalsHeightMm
             + DefaultHemosheetFooter.BottomBlockHeightMm(vm, notesFloorMm);
         var dialysisRows = BudgetDialysisRows(vm, aboveDialysisMm, bottomFloorMm);
+        var dialysisHeaders = HprpHemosheetPlanInterpreter.TryDialysisHeaders(package, vm);
+        var dialysisFill = HprpChrome.FileHeaderFillOrNull(HprpHemosheetPlanInterpreter.TryDialysisChrome(package));
 
         container
             .DefaultTextStyle(DefaultText.Base)
@@ -37,7 +41,17 @@ internal sealed class DefaultHemosheetForm
             {
                 page.Item().Element(c => DefaultReportHeader.Compose(c, vm));
                 page.Item().Border(Bw).Element(c => TopBand(c, vm));
-                page.Item().Element(c => DialysisTable(c, vm, dialysisRows));
+                page.Item().Element(c =>
+                {
+                    if (dialysisFill is null)
+                    {
+                        DialysisTable(c, vm, dialysisRows, dialysisHeaders);
+                        return;
+                    }
+
+                    using (ReportSectionHeaderChrome.Begin(dialysisFill))
+                        DialysisTable(c, vm, dialysisRows, dialysisHeaders);
+                });
                 page.Item().Element(c => PrePostVitalsRow(c, vm));
                 page.Item().Element(c => FluidSummaryRow(c, vm));
                 page.Item().Element(c => DefaultHemosheetFooter.ComposeBand(c, vm));
@@ -492,12 +506,17 @@ internal sealed class DefaultHemosheetForm
     private static string DashNum(float? v) =>
         v is null ? "-" : ThaiUrDataHelper.Num(v);
 
-    private static void DialysisTable(IContainer c, HemosheetReportViewModel vm, int fixedLines)
+    private static void DialysisTable(
+        IContainer c,
+        HemosheetReportViewModel vm,
+        int fixedLines,
+        IReadOnlyList<string>? fileHeaders)
     {
         if (fixedLines <= 0) fixedLines = 8;
         var showHdf = HemosheetDialysisColumns.ShowHdf(vm);
         var colMm = HemosheetDialysisColumns.DataColumnWidthMm(showHdf);
-        var headerMm = HemosheetDialysisColumns.HeaderHeightMm(showHdf, Rh);
+        var useFileHeaders = fileHeaders is { Count: > 0 };
+        var headerMm = HemosheetDialysisColumns.HeaderHeightMm(showHdf && !useFileHeaders, Rh);
         var baseDefs = HemosheetDialysisColumns.BaseColumnDefs;
         var insertAfter = HemosheetDialysisColumns.SubstituteInsertAfterIndex;
 
@@ -510,7 +529,16 @@ internal sealed class DefaultHemosheetForm
                 cols.RelativeColumn();
             });
 
-            if (showHdf)
+            if (useFileHeaders)
+            {
+                for (var i = 0; i < fileHeaders!.Count - 1; i++)
+                    DialysisHeaderCell(t, fileHeaders[i], "", headerMm, rowSpan: 1);
+
+                t.Cell().Border(Bw).Background(ReportSectionHeaderChrome.Resolve(HemosheetDefaultStyle.HeaderBackground))
+                    .Height(headerMm, Mm).AlignCenter().AlignMiddle()
+                    .Text(fileHeaders[^1]).Style(DefaultText.DialysisBold);
+            }
+            else if (showHdf)
             {
                 // Dual header: other columns RowSpan(2); Substitute parent ColumnSpan(2) + total/rate.
                 for (var i = 0; i <= insertAfter; i++)

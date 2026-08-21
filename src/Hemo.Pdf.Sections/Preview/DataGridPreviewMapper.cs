@@ -27,6 +27,7 @@ public static class DataGridPreviewMapper
                     .Select(value => value ?? "—")
                     .ToList() as IReadOnlyList<string>)
                 .ToList(),
+            Chrome = grid.Chrome,
         };
     }
 }

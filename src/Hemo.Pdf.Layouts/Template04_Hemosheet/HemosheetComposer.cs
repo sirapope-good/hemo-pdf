@@ -72,9 +72,9 @@ public sealed class HemosheetComposer : BaseReportComposer<HemosheetReportViewMo
                 Content = c =>
                 {
                     if (kind == ClinicalLayoutKind.ThaiUrForm)
-                        _thaiUrForm.Compose(c, viewModel, context);
+                        _thaiUrForm.Compose(c, viewModel, context, package);
                     else
-                        _defaultForm.Compose(c, viewModel, context);
+                        _defaultForm.Compose(c, viewModel, context, package);
                 },
                 Footer = null,
             };
