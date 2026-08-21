@@ -69,7 +69,7 @@ public class ClinicalReportCatalogTests
     [InlineData("medicine-preparation-round", true)]
     [InlineData(ClinicalReportCatalog.ConsentTh, true)]
     [InlineData(ClinicalReportCatalog.ConsentEn, true)]
-    [InlineData(ClinicalReportCatalog.Lab, false)]
+    [InlineData(ClinicalReportCatalog.Lab, true)]
     public void UsesDensePdfPreview_DedicatedEngines(string id, bool expected)
     {
         Assert.Equal(expected, ClinicalReportCatalog.UsesDensePdfPreview(id));

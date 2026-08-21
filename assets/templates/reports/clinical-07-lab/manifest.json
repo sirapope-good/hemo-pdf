@@ -16,7 +16,7 @@
         "name": "from",
         "source": "default",
         "generator": "lastMonths",
-        "months": 12
+        "months": 6
       },
       {
         "name": "to",

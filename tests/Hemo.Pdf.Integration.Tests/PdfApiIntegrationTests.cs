@@ -185,7 +185,7 @@ public class PdfApiIntegrationTests : IClassFixture<PdfApiWebApplicationFactory>
         var root = document.RootElement;
 
         Assert.Equal("clinical-07-lab", root.GetProperty("meta").GetProperty("templateId").GetString());
-        Assert.True(root.GetProperty("pages")[0].GetProperty("blocks").GetArrayLength() > 0);
+        Assert.Equal("pdf", root.GetProperty("meta").GetProperty("previewMode").GetString());
     }
 
     [Fact]
@@ -219,8 +219,8 @@ public class PdfApiIntegrationTests : IClassFixture<PdfApiWebApplicationFactory>
     [Fact]
     public async Task Preview_TenantA_And_TenantB_DifferentBranding()
     {
-        var responseA = await PostPreviewAsync("tenant-demo-a", "clinical-07-lab");
-        var responseB = await PostPreviewAsync("tenant-demo-b", "clinical-07-lab");
+        var responseA = await PostPreviewAsync("tenant-demo-a", ClinicalReportCatalog.Prescription);
+        var responseB = await PostPreviewAsync("tenant-demo-b", ClinicalReportCatalog.Prescription);
 
         var jsonA = await responseA.Content.ReadAsStringAsync();
         var jsonB = await responseB.Content.ReadAsStringAsync();

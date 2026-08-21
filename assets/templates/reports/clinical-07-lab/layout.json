@@ -1,53 +1,22 @@
 {
   "page": {
     "size": "A4",
-    "marginMm": 10
+    "marginMm": 8
+  },
+  "header": {
+    "widget": "thaiur.header"
   },
   "body": [
     {
-      "type": "text",
-      "style": "title",
-      "bind": "$title"
-    },
-    {
-      "type": "field-grid",
-      "title": { "$label": "patientInfo" },
-      "columns": 2,
-      "chrome": {
-        "headerFill": "$branding.sectionHeaderBackground",
-        "border": "thin",
-        "fontSize": 8
-      },
-      "fields": [
-        {
-          "label": { "$label": "hn" },
-          "bind": "$.patient.hn"
-        },
-        {
-          "label": { "$label": "patientName" },
-          "bind": "$.patient.name"
-        },
-        {
-          "label": { "$label": "unit" },
-          "bind": "$.patient.unit"
-        },
-        {
-          "label": { "$label": "reportDate" },
-          "bind": "$.reportDate"
-        }
-      ]
-    },
-    {
       "type": "data-grid",
-      "title": { "$label": "labResults" },
       "columnHeadersBind": "$.columnHeaders",
       "bindRows": "$.rows",
-      "when": "$.rows.length > 0",
       "chrome": {
         "headerFill": "$branding.sectionHeaderBackground",
         "border": "thin",
-        "fontSize": 8,
-        "columnWidths": ["2", "*", "*"]
+        "fontSize": 7,
+        "rowHeightMm": 5,
+        "columnWidths": ["3", "*", "*", "*", "*", "*", "*"]
       }
     }
   ]

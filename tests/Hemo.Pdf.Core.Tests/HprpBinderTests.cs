@@ -125,6 +125,47 @@ public class HprpBinderTests
     }
 
     [Fact]
+    public void Bind_EmptyLabRows_StillRendersGrid()
+    {
+        var package = new HprpPackage
+        {
+            Manifest = new HprpManifest
+            {
+                Id = ClinicalReportCatalog.Lab,
+                DisplayName = "Laboratory Record",
+                DataAdapter = HprpDataAdapterIds.FlattenDto,
+            },
+            Layout = new HprpLayout
+            {
+                Body =
+                [
+                    new HprpLayoutNode
+                    {
+                        Type = "data-grid",
+                        ColumnHeadersBind = "$.columnHeaders",
+                        BindRows = "$.rows",
+                    },
+                ],
+            },
+        };
+
+        var data = JsonSerializer.SerializeToElement(new
+        {
+            columnHeaders = new[] { "", "DATE", "DATE" },
+            rows = new[]
+            {
+                new[] { "1 Month", "", "" },
+                new[] { "Hb", "", "" },
+            },
+        });
+
+        var grid = Assert.IsType<DataGridReportBlock>(HprpBinder.Bind(package, data).Single());
+        Assert.Equal(2, grid.Rows.Count);
+        Assert.Equal("1 Month", grid.Rows[0][0]);
+        Assert.Equal("", grid.Rows[1][1]);
+    }
+
+    [Fact]
     public void Bind_DataGridChrome_ParsesColumnWidthsAndHeaderFill()
     {
         var package = new HprpPackage

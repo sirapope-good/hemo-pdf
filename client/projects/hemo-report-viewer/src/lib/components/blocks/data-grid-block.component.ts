@@ -21,7 +21,7 @@ import { DataGridReportBlock } from '../../models/report-document.model';
           </tr>
         </thead>
         <tbody>
-          <tr *ngFor="let row of block.rows">
+          <tr *ngFor="let row of block.rows" [class.hemo-data-grid__section-row]="isSectionRow(row)">
             <td *ngFor="let cell of row; let i = index" [class.hemo-data-grid__note-cell]="isNoteColumn(i)">
               {{ formatCell(cell) }}
             </td>
@@ -49,6 +49,19 @@ export class DataGridBlockComponent {
 
   isNoteColumn(index: number): boolean {
     return this.block.columns[index]?.includes('หมายเหตุ') ?? false;
+  }
+
+  isSectionRow(row: (string | boolean)[]): boolean {
+    if (row.length < 2) {
+      return false;
+    }
+
+    const first = this.formatCell(row[0]).trim();
+    if (!first) {
+      return false;
+    }
+
+    return row.slice(1).every(cell => !this.formatCell(cell).trim());
   }
 
   formatCell(cell: string | boolean): string {

@@ -39,39 +39,53 @@ public sealed class DataGridSection : IContentSection
                 }
             });
 
-            if (!string.IsNullOrWhiteSpace(grid.Title))
+            table.Header(header =>
             {
-                var title = table.Cell().ColumnSpan((uint)columnCount)
-                    .Background(headerFill)
-                    .Border(border)
-                    .Padding(PdfSectionMetrics.SectionTitlePadding);
-                title.Text(grid.Title)
-                    .FontFamily(PdfStyleDefaults.Body.SectionTitleFontFamily)
-                    .FontSize(PdfStyleDefaults.Body.SectionTitleFontSize)
-                    .SemiBold();
-            }
+                if (!string.IsNullOrWhiteSpace(grid.Title))
+                {
+                    var title = header.Cell().ColumnSpan((uint)columnCount)
+                        .Background(headerFill)
+                        .Border(border)
+                        .Padding(PdfSectionMetrics.SectionTitlePadding);
+                    title.Text(grid.Title)
+                        .FontFamily(PdfStyleDefaults.Body.SectionTitleFontFamily)
+                        .FontSize(PdfStyleDefaults.Body.SectionTitleFontSize)
+                        .SemiBold();
+                }
 
-            foreach (var header in grid.ColumnHeaders)
-            {
-                table.Cell().Border(border).Background(headerFill).Padding(PdfSectionMetrics.CellPadding)
-                    .Text(header)
-                    .FontFamily(PdfStyleDefaults.Body.SectionTitleFontFamily)
-                    .FontSize(fontSize)
-                    .SemiBold();
-            }
+                foreach (var columnHeader in grid.ColumnHeaders)
+                {
+                    var headerCell = header.Cell().Border(border).Background(headerFill);
+                    if (rowHeightMm is > 0)
+                        headerCell = headerCell.Height(rowHeightMm.Value, Unit.Millimetre);
+                    headerCell.Padding(PdfSectionMetrics.CellPadding)
+                        .Text(columnHeader)
+                        .FontFamily(PdfStyleDefaults.Body.SectionTitleFontFamily)
+                        .FontSize(fontSize)
+                        .SemiBold();
+                }
+            });
 
             foreach (var row in grid.Rows)
             {
+                var sectionBand = DataGridRows.IsSectionBand(row);
                 for (var i = 0; i < columnCount; i++)
                 {
                     var value = i < row.Count ? row[i] : null;
-                    var cell = table.Cell().Border(border).Padding(PdfSectionMetrics.CellPadding);
+                    var cell = table.Cell().Border(border);
+                    if (sectionBand)
+                        cell = cell.Background(headerFill);
                     if (rowHeightMm is > 0)
-                        cell = cell.MinHeight(rowHeightMm.Value, Unit.Millimetre);
+                        cell = cell.Height(rowHeightMm.Value, Unit.Millimetre);
+                    cell = cell.Padding(PdfSectionMetrics.CellPadding);
 
-                    cell.Text(value ?? "—")
-                        .FontFamily(PdfStyleDefaults.Body.DataFontFamily)
+                    var text = cell.Text(sectionBand || value is not null ? value ?? "" : DataGridRows.DisplayCell(value));
+                    text.FontFamily(sectionBand
+                            ? PdfStyleDefaults.Body.SectionTitleFontFamily
+                            : PdfStyleDefaults.Body.DataFontFamily)
                         .FontSize(fontSize);
+                    if (sectionBand)
+                        text.SemiBold();
                 }
             }
         });
@@ -84,6 +98,13 @@ public sealed class DataGridSection : IContentSection
             return grid.ColumnWeights;
         }
 
-        return Enumerable.Repeat(1f, columnCount).ToList();
+        if (columnCount <= 0)
+        {
+            return [];
+        }
+
+        var weights = Enumerable.Repeat(1f, columnCount).ToArray();
+        weights[0] = 3f;
+        return weights;
     }
 }
