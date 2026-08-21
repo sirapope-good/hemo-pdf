@@ -50,7 +50,7 @@ public sealed class KeyValueTableSection : IContentSection
             if (!string.IsNullOrWhiteSpace(title))
             {
                 table.Cell().ColumnSpan(2)
-                    .Background(PdfSectionMetrics.SectionHeaderBackground)
+                    .Background(ReportSectionHeaderChrome.Resolve(context, PdfSectionMetrics.SectionHeaderBackground))
                     .Border(0.5f)
                     .Padding(PdfSectionMetrics.SectionTitlePadding)
                     .Text(title)

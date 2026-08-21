@@ -18,7 +18,7 @@ public static class ReportBlockPdfComposer
     switch (block)
     {
       case PatientInfoReportBlock patientInfo:
-        PatientInfoSection.ComposeBlock(container, patientInfo);
+        PatientInfoSection.ComposeBlock(container, patientInfo, context);
         break;
       case FieldGridReportBlock fieldGrid:
         new FieldGridSection().Compose(container, new ReportBlockAdapters.FieldGridAdapter(fieldGrid), context);

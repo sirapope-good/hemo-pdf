@@ -1,3 +1,4 @@
+using Hemo.Pdf.Core.Constants;
 using Hemo.Pdf.Core.Context;
 using Hemo.Pdf.Core.Models.Hemosheet;
 using Hemo.Pdf.Sections.Hemosheet;
@@ -528,7 +529,7 @@ internal sealed class ThaiUrHemosheetForm
                 for (var i = 0; i <= insertAfter; i++)
                     DialysisHeaderCell(t, baseDefs[i].Head, baseDefs[i].Unit, headerMm, rowSpan: 2);
 
-                t.Cell().ColumnSpan(2).Border(Bw).Background(HemosheetThaiUrStyle.HeaderBackground)
+                t.Cell().ColumnSpan(2).Border(Bw).Background(ReportSectionHeaderChrome.Resolve(HemosheetThaiUrStyle.HeaderBackground))
                     .Height(headerMm * 0.55f, Mm).AlignCenter().AlignMiddle()
                     .Column(cc =>
                     {
@@ -539,13 +540,13 @@ internal sealed class ThaiUrHemosheetForm
                 for (var i = insertAfter + 1; i < baseDefs.Length; i++)
                     DialysisHeaderCell(t, baseDefs[i].Head, baseDefs[i].Unit, headerMm, rowSpan: 2);
 
-                t.Cell().RowSpan(2).Border(Bw).Background(HemosheetThaiUrStyle.HeaderBackground)
+                t.Cell().RowSpan(2).Border(Bw).Background(ReportSectionHeaderChrome.Resolve(HemosheetThaiUrStyle.HeaderBackground))
                     .Height(headerMm, Mm).AlignCenter().AlignMiddle()
                     .Text("Note").Style(ThaiUrText.DialysisBold);
 
                 foreach (var sub in new[] { "total", "rate" })
                 {
-                    t.Cell().Border(Bw).Background(HemosheetThaiUrStyle.HeaderBackground)
+                    t.Cell().Border(Bw).Background(ReportSectionHeaderChrome.Resolve(HemosheetThaiUrStyle.HeaderBackground))
                         .Height(headerMm * 0.45f, Mm).AlignCenter().AlignMiddle()
                         .Text(sub).Style(ThaiUrText.DialysisUnit);
                 }
@@ -555,7 +556,7 @@ internal sealed class ThaiUrHemosheetForm
                 foreach (var (head, unit) in baseDefs)
                     DialysisHeaderCell(t, head, unit, headerMm, rowSpan: 1);
 
-                t.Cell().Border(Bw).Background(HemosheetThaiUrStyle.HeaderBackground)
+                t.Cell().Border(Bw).Background(ReportSectionHeaderChrome.Resolve(HemosheetThaiUrStyle.HeaderBackground))
                     .Height(headerMm, Mm).AlignCenter().AlignMiddle()
                     .Text("Note").Style(ThaiUrText.DialysisBold);
             }
@@ -590,7 +591,7 @@ internal sealed class ThaiUrHemosheetForm
         if (rowSpan > 1)
             cell = cell.RowSpan(rowSpan);
 
-        cell.Border(Bw).Background(HemosheetThaiUrStyle.HeaderBackground)
+        cell.Border(Bw).Background(ReportSectionHeaderChrome.Resolve(HemosheetThaiUrStyle.HeaderBackground))
             .Height(headerMm, Mm).AlignCenter().AlignMiddle()
             .Column(cc =>
             {

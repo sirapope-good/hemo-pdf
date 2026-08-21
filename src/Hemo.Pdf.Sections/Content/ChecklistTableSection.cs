@@ -15,7 +15,7 @@ public sealed class ChecklistTableSection : IContentSection
     {
         if (viewModel is ChecklistTableReportBlock reportBlock)
         {
-            ComposeBlock(container, reportBlock);
+            ComposeBlock(container, reportBlock, context);
             return;
         }
 
@@ -30,10 +30,13 @@ public sealed class ChecklistTableSection : IContentSection
             return;
         }
 
-        ComposeBlock(container, block);
+        ComposeBlock(container, block, context);
     }
 
-    private static void ComposeBlock(IContainer container, ChecklistTableReportBlock block)
+    private static void ComposeBlock(
+        IContainer container,
+        ChecklistTableReportBlock block,
+        PdfReportContext? context = null)
     {
         if (block.Rows.Count == 0)
         {
@@ -44,6 +47,7 @@ public sealed class ChecklistTableSection : IContentSection
         var ynLayout = string.Equals(layout, ChecklistTablePreviewMapper.LayoutYnColumns, StringComparison.Ordinal);
         var preReLayout = string.Equals(layout, ChecklistTablePreviewMapper.LayoutPreReMatrix, StringComparison.Ordinal);
         var columnCount = (uint)Math.Max(1, block.Columns.Count);
+        var headerBg = ReportSectionHeaderChrome.Resolve(context, PdfSectionMetrics.SectionHeaderBackground);
 
         container.Border(0.5f).Table(table =>
         {
@@ -76,7 +80,7 @@ public sealed class ChecklistTableSection : IContentSection
             if (!string.IsNullOrWhiteSpace(block.Title))
             {
                 table.Cell().ColumnSpan(columnCount)
-                    .Background(PdfSectionMetrics.SectionHeaderBackground)
+                    .Background(headerBg)
                     .Border(0.5f)
                     .Padding(PdfSectionMetrics.SectionTitlePadding)
                     .Text(block.Title)
@@ -87,7 +91,7 @@ public sealed class ChecklistTableSection : IContentSection
 
             foreach (var header in block.Columns)
             {
-                table.Cell().Border(0.5f).Background(PdfSectionMetrics.SectionHeaderBackground)
+                table.Cell().Border(0.5f).Background(headerBg)
                     .Padding(PdfSectionMetrics.CellPadding)
                     .Text(header)
                     .FontFamily(PdfStyleDefaults.Body.SectionTitleFontFamily)

@@ -36,7 +36,7 @@ public sealed class DataGridSection : IContentSection
             if (!string.IsNullOrWhiteSpace(grid.Title))
             {
                 table.Cell().ColumnSpan((uint)columnCount)
-                    .Background(PdfSectionMetrics.SectionHeaderBackground)
+                    .Background(ReportSectionHeaderChrome.Resolve(context, PdfSectionMetrics.SectionHeaderBackground))
                     .Border(0.5f)
                     .Padding(PdfSectionMetrics.SectionTitlePadding)
                     .Text(grid.Title)
@@ -47,7 +47,7 @@ public sealed class DataGridSection : IContentSection
 
             foreach (var header in grid.ColumnHeaders)
             {
-                table.Cell().Border(0.5f).Background(PdfSectionMetrics.SectionHeaderBackground).Padding(PdfSectionMetrics.CellPadding)
+                table.Cell().Border(0.5f).Background(ReportSectionHeaderChrome.Resolve(context, PdfSectionMetrics.SectionHeaderBackground)).Padding(PdfSectionMetrics.CellPadding)
                     .Text(header)
                     .FontFamily(PdfStyleDefaults.Body.SectionTitleFontFamily)
                     .FontSize(PdfStyleDefaults.Body.DataFontSize)

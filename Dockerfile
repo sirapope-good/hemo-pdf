@@ -15,6 +15,7 @@ RUN dotnet restore src/Hemo.Pdf.Api/Hemo.Pdf.Api.csproj
 
 COPY src/ src/
 COPY assets/ assets/
+COPY packages/ packages/
 
 WORKDIR /src/src/Hemo.Pdf.Api
 RUN dotnet publish -c Release -o /app/publish --no-restore

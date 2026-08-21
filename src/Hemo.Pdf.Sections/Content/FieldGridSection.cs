@@ -36,7 +36,7 @@ public sealed class FieldGridSection : IContentSection
             if (!string.IsNullOrWhiteSpace(grid.Title))
             {
                 table.Cell().ColumnSpan((uint)columns)
-                    .Background(PdfSectionMetrics.SectionHeaderBackground)
+                    .Background(ReportSectionHeaderChrome.Resolve(context, PdfSectionMetrics.SectionHeaderBackground))
                     .Border(0.5f)
                     .Padding(PdfSectionMetrics.SectionTitlePadding)
                     .Text(grid.Title)

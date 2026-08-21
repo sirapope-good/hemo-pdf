@@ -1,5 +1,6 @@
 using System.Globalization;
 using Hemo.Pdf.Core.Abstractions;
+using Hemo.Pdf.Core.Constants;
 using Hemo.Pdf.Core.Context;
 using Hemo.Pdf.Core.Models.MedicinePreparation;
 using Hemo.Pdf.Rendering;
@@ -169,7 +170,7 @@ public sealed class MedicinePreparationRoundComposer : ILayoutComposer
     {
         table.Cell()
             .Border(BorderWidth)
-            .Background(HemosheetThaiUrStyle.HeaderBackground)
+            .Background(ReportSectionHeaderChrome.Resolve(HemosheetThaiUrStyle.HeaderBackground))
             .Height(7f, Mm)
             .AlignMiddle()
             .AlignCenter()

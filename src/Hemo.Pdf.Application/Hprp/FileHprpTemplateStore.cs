@@ -9,6 +9,7 @@ namespace Hemo.Pdf.Application.Hprp;
 public sealed class FileHprpTemplateStore : IHprpTemplateStore
 {
     private readonly string _rootPath;
+    private readonly string _packagesRootPath;
     private readonly ILogger<FileHprpTemplateStore>? _logger;
     private readonly object _sync = new();
     private readonly ConcurrentDictionary<string, HprpPackage> _defaults = new(StringComparer.OrdinalIgnoreCase);
@@ -18,7 +19,11 @@ public sealed class FileHprpTemplateStore : IHprpTemplateStore
 
     public FileHprpTemplateStore(IOptions<HprpTemplateOptions> options, ILogger<FileHprpTemplateStore>? logger = null)
     {
-        _rootPath = ResolveRootPath(options.Value.RootPath);
+        var value = options.Value;
+        _rootPath = HprpDiskPaths.ResolveExistingOrConfigured(value.RootPath);
+        _packagesRootPath = string.IsNullOrWhiteSpace(value.PackagesRootPath)
+            ? ""
+            : HprpDiskPaths.ResolveExistingOrConfigured(value.PackagesRootPath);
         _logger = logger;
         EnsureLoaded();
     }
@@ -48,7 +53,7 @@ public sealed class FileHprpTemplateStore : IHprpTemplateStore
     {
         cancellationToken.ThrowIfCancellationRequested();
         throw new InvalidOperationException(
-            "Tenant .hprp uploads are disabled. Add a variant folder under assets/templates/reports/.");
+            "Tenant .hprp uploads are disabled. Pack files under packages/ or edit assets/templates/reports/.");
     }
 
     public Task DeleteTenantOverrideAsync(
@@ -58,7 +63,7 @@ public sealed class FileHprpTemplateStore : IHprpTemplateStore
     {
         cancellationToken.ThrowIfCancellationRequested();
         throw new InvalidOperationException(
-            "Tenant .hprp uploads are disabled. Add a variant folder under assets/templates/reports/.");
+            "Tenant .hprp uploads are disabled. Pack files under packages/ or edit assets/templates/reports/.");
     }
 
     public IReadOnlyList<HprpManifest> ListDefaultManifests()
@@ -85,7 +90,25 @@ public sealed class FileHprpTemplateStore : IHprpTemplateStore
             .ToList();
     }
 
+    public IReadOnlyList<HprpPackage> ListCachedPackages()
+    {
+        EnsureLoaded();
+        return _byVariant.Values
+            .OrderBy(p => p.Manifest.Id, StringComparer.OrdinalIgnoreCase)
+            .ThenBy(p => p.Manifest.Variant ?? "", StringComparer.OrdinalIgnoreCase)
+            .ToList();
+    }
+
     public bool HasTenantOverride(string tenantCode, string templateId) => false;
+
+    public void Invalidate()
+    {
+        lock (_sync)
+        {
+            _loaded = false;
+            _stamp = -1;
+        }
+    }
 
     private void EnsureLoaded()
     {
@@ -103,12 +126,19 @@ public sealed class FileHprpTemplateStore : IHprpTemplateStore
 
     private long ComputeStamp()
     {
-        var scanRoot = ResolveScanRoot();
-        if (!Directory.Exists(scanRoot))
-            return 0;
+        long max = 0;
+        max = MaxWriteTicks(_rootPath, max, "*.json", SearchOption.AllDirectories);
+        max = MaxWriteTicks(_packagesRootPath, max, "*" + HprpEngine.FileExtension, SearchOption.TopDirectoryOnly);
+        return max;
+    }
 
-        long max = Directory.GetLastWriteTimeUtc(scanRoot).Ticks;
-        foreach (var file in Directory.EnumerateFiles(scanRoot, "*.json", SearchOption.AllDirectories))
+    private static long MaxWriteTicks(string? root, long current, string pattern, SearchOption option)
+    {
+        if (string.IsNullOrWhiteSpace(root) || !Directory.Exists(root))
+            return current;
+
+        var max = Math.Max(current, Directory.GetLastWriteTimeUtc(root).Ticks);
+        foreach (var file in Directory.EnumerateFiles(root, pattern, option))
         {
             var ticks = File.GetLastWriteTimeUtc(file).Ticks;
             if (ticks > max)
@@ -123,10 +153,40 @@ public sealed class FileHprpTemplateStore : IHprpTemplateStore
         _defaults.Clear();
         _byVariant.Clear();
 
+        LoadPackedPackages();
+        LoadUnpackedFolders();
+    }
+
+    private void LoadPackedPackages()
+    {
+        if (string.IsNullOrWhiteSpace(_packagesRootPath) || !Directory.Exists(_packagesRootPath))
+            return;
+
+        foreach (var zip in Directory.EnumerateFiles(_packagesRootPath, "*" + HprpEngine.FileExtension))
+        {
+            string? fileVariant = null;
+            if (HprpTemplatePaths.TryParsePackageFileName(zip, out _, out var parsedVariant))
+                fileVariant = parsedVariant;
+
+            TryAddPackage(
+                () =>
+                {
+                    using var stream = File.OpenRead(zip);
+                    return HprpPackageReader.ReadZip(stream, zip);
+                },
+                zip,
+                fileVariant,
+                overwrite: true);
+        }
+    }
+
+    private void LoadUnpackedFolders()
+    {
         var scanRoot = ResolveScanRoot();
         if (!Directory.Exists(scanRoot))
         {
-            _logger?.LogWarning("HPRP templates root not found: {Path}", _rootPath);
+            if (!Directory.Exists(_packagesRootPath))
+                _logger?.LogWarning("HPRP templates root not found: {Path}", _rootPath);
             return;
         }
 
@@ -147,18 +207,7 @@ public sealed class FileHprpTemplateStore : IHprpTemplateStore
             if (!File.Exists(manifestPath))
                 continue;
 
-            TryAddPackage(() => HprpPackageReader.ReadDirectory(dir), dir);
-        }
-
-        foreach (var zip in Directory.EnumerateFiles(scanRoot, "*" + HprpEngine.FileExtension))
-        {
-            TryAddPackage(
-                () =>
-                {
-                    using var stream = File.OpenRead(zip);
-                    return HprpPackageReader.ReadZip(stream, zip);
-                },
-                zip);
+            TryAddPackage(() => HprpPackageReader.ReadDirectory(dir), dir, overwrite: false);
         }
     }
 
@@ -170,7 +219,11 @@ public sealed class FileHprpTemplateStore : IHprpTemplateStore
             if (!File.Exists(manifestPath))
                 continue;
 
-            TryAddPackage(() => HprpPackageReader.ReadDirectory(variantDir), variantDir, Path.GetFileName(variantDir));
+            TryAddPackage(
+                () => HprpPackageReader.ReadDirectory(variantDir),
+                variantDir,
+                Path.GetFileName(variantDir),
+                overwrite: false);
         }
 
         var reportId = Path.GetFileName(reportDir);
@@ -182,7 +235,11 @@ public sealed class FileHprpTemplateStore : IHprpTemplateStore
         }
     }
 
-    private void TryAddPackage(Func<HprpPackage> load, string source, string? folderVariant = null)
+    private void TryAddPackage(
+        Func<HprpPackage> load,
+        string source,
+        string? folderVariant = null,
+        bool overwrite = true)
     {
         try
         {
@@ -199,10 +256,21 @@ public sealed class FileHprpTemplateStore : IHprpTemplateStore
                     ? package.Manifest.Variant
                     : folderVariant);
 
-            _byVariant[HprpTemplatePaths.CacheKey(id, variant)] = package;
+            var key = HprpTemplatePaths.CacheKey(id, variant);
+            if (!overwrite && _byVariant.ContainsKey(key))
+                return;
 
-            if (HprpTemplatePaths.IsDefaultVariant(variant) || !_defaults.ContainsKey(id))
+            _byVariant[key] = package;
+
+            if (HprpTemplatePaths.IsDefaultVariant(variant))
+            {
+                if (overwrite || !_defaults.ContainsKey(id))
+                    _defaults[id] = package;
+            }
+            else if (!_defaults.ContainsKey(id))
+            {
                 _defaults[id] = package;
+            }
         }
         catch (Exception ex)
         {
@@ -214,19 +282,5 @@ public sealed class FileHprpTemplateStore : IHprpTemplateStore
     {
         var reports = HprpTemplatePaths.ReportsRoot(_rootPath);
         return Directory.Exists(reports) ? reports : _rootPath;
-    }
-
-    private static string ResolveRootPath(string configuredPath)
-    {
-        if (Path.IsPathRooted(configuredPath))
-            return configuredPath;
-
-        var candidates = new[]
-        {
-            Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, configuredPath)),
-            Path.GetFullPath(Path.Combine(Directory.GetCurrentDirectory(), configuredPath)),
-        };
-
-        return candidates.FirstOrDefault(Directory.Exists) ?? candidates[0];
     }
 }

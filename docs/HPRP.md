@@ -6,14 +6,20 @@ See also: [PDF-REPORT-SYSTEM.md §6](../.cursor/docs/PDF-REPORT-SYSTEM.md) (main
 
 ## Package layout
 
-Repo defaults live unpacked under `assets/templates/reports/`:
+Runtime composition prefers packed files in `packages/`, then falls back to unpacked JSON.
 
 ```
+packages/                         # SoT for packed .hprp (scanned first)
+  clinical-01-hct-epo.hprp
+  clinical-03-hemodialysis-record.default.hprp
+  clinical-03-hemodialysis-record.rama.hprp
+  clinical-03-hemodialysis-record.thaiur.hprp
+
 assets/templates/
   schema/                 # JSON schema
   _shared/                # copy-paste layout reference (not loaded)
-  reports/
-    clinical-01-hct-epo/  # single-package report
+  reports/                # unpacked source + fallback
+    clinical-01-hct-epo/
       manifest.json
       layout.json
       labels.th.json
@@ -24,11 +30,16 @@ assets/templates/
         thaiur/
 ```
 
-- `reports/{id}/manifest.json` → one package for that report
-- `reports/{id}/variants/{key}/manifest.json` → hospital layouts of the same report (`id` stays `clinical-03-hemodialysis-record`)
-- Scan skips `schema`, `_shared`, `tenants`
+- `packages/{id}.hprp` → single-package report (ZIP of the JSON files)
+- `packages/{id}.{variant}.hprp` → hospital layout of the same report
+- `reports/{id}/` remains the editable source; HPRP Studio / `POST /api/hprp/pack-from-templates` regenerates `packages/`
+- Scan of unpacked folders skips `schema`, `_shared`, `tenants`
 
-A `.hprp` ZIP is still a valid package format for tooling; production composition is the git folders above. Changing `layout.json` / labels does **not** require a C# rebuild. Rebuild only when adding a widget id or a new `layoutKind`.
+Changing `layout.json` / labels in the unpacked folder does **not** require a C# rebuild, but **does not affect runtime** until you pack again (packed files win). Rebuild C# only when adding a widget id or a new `layoutKind`.
+
+Open **HPRP Studio** at `http://localhost:5090/` or `http://localhost:5090/hprp-studio/` (Development). Use Bearer `dev` with mock auth. The UI edits JSON, validates with `HprpValidator`, and writes `packages/*.hprp`. Writes require `HemoPdf:EnableHprpStudioWrite=true`.
+
+Pixels still live in C# (`HctEpoAnnualTableSection`, hemosheet section renderers, `ReportBlock` types). `.hprp` controls **which** widgets run, **order**, **labels**, and catalog `ui` — not QuestPDF drawing code.
 
 ## manifest.json
 
@@ -174,13 +185,15 @@ Source of truth: `src/Hemo.Pdf.Core/Hprp/HprpWidgetIds.cs`
 
 ## Hybrid load
 
-1. `FileHprpTemplateStore` scans `assets/templates/reports/` (mtime reload — no compile)
-2. Lookup key is `{id}#{variant}` (`variant` from tenant `LayoutProfile`: Default→`default`, Rama→`rama`, ThaiUr→`thaiur`)
-3. Invalid / newer engine version → skip that folder (never HTTP 500)
+1. `FileHprpTemplateStore` scans `packages/*.hprp` **first** (mtime reload — no compile)
+2. Then loads unpacked `assets/templates/reports/` only for ids/variants not already packed
+3. Lookup key is `{id}#{variant}` (`variant` from tenant `LayoutProfile`: Default→`default`, Rama→`rama`, ThaiUr→`thaiur`)
+4. Invalid / newer engine version → skip that file/folder (never HTTP 500)
+5. After Studio pack, `Invalidate()` forces the next request to rescan
 
-Tenant ZIP overlays under `assets/templates/tenants/` are **not** the production path. Add a new hospital layout by committing `reports/{id}/variants/{key}/` and deploying/restarting Hemo-PDF.
+Tenant ZIP overlays under `assets/templates/tenants/` are **not** the production path. Add a new hospital layout by committing `reports/{id}/variants/{key}/`, packing to `packages/`, and deploying Hemo-PDF.
 
-Resolve order: `FileHprpTemplateStore.TryGetCached(tenant, id, variant)` → `HprpCatalog.TryGetDefinition` → `ClinicalReportCatalog` fallback.
+Resolve order: packed `.hprp` → unpacked folder → `HprpCatalog.TryGetDefinition` → `ClinicalReportCatalog` fallback.
 
 ## API
 
@@ -190,29 +203,40 @@ Resolve order: `FileHprpTemplateStore.TryGetCached(tenant, id, variant)` → `Hp
 | `GET` | `/api/templates` | Unique report manifests (default variant) |
 | `GET` | `/api/templates?role=hemosheetLayoutProfile` | Hemosheet layout dropdown (`variant`, `layoutKind`, `layoutProfile`, `profileLabel`) |
 | `GET` | `/api/templates/{id}?variant=` | Manifest for that variant |
-| `POST` / `DELETE` | `/api/templates/{id}` | **410 Gone** — uploads disabled |
+| `POST` / `DELETE` | `/api/templates/{id}` | **410 Gone** — tenant uploads disabled |
+| `GET` | `/api/hprp/catalog` | Widget / adapter / entryMode lists for Studio |
+| `GET` | `/api/hprp/packages` | Cached packages (packed + folder fallback) |
+| `GET` | `/api/hprp/packages/{id}?variant=` | Full manifest + layout + labels |
+| `PUT` | `/api/hprp/packages/{id}` | Validate and write `packages/{id}[.variant].hprp` (Studio write flag) |
+| `POST` | `/api/hprp/validate` | Dry-run `HprpValidator` |
+| `POST` | `/api/hprp/pack-from-templates` | Pack every unpacked report into `packages/` |
+| `POST` | `/api/hprp/pack-from-templates/{id}` | Pack one report (all variants) |
 
-Requires `Authorization: Bearer` + `X-Tenant-Code` (mock dev: any bearer + header).
+Requires `Authorization: Bearer` + `X-Tenant-Code` (mock dev: any bearer + header). Studio UI: `GET /` or `GET /hprp-studio/`.
 
-Config: `HemoPdf:TemplatesRootPath` (default `assets/templates`).
+Config:
+
+- `HemoPdf:TemplatesRootPath` (default `assets/templates`)
+- `HemoPdf:PackagesRootPath` (default `packages`)
+- `HemoPdf:EnableHprpStudioWrite` (Development `true`; production `false`)
 
 ### Adding a new report (after dynamic catalog)
 
 1. **Web.Api:** dedicated `GET api/Patients/{id}/reports/{new-id}/report-data` (if real data is needed)
-2. **Hemo-PDF:** `assets/templates/reports/{new-id}/` (manifest with `ui`, layout, labels). New hemosheet hospital: `reports/clinical-03-hemodialysis-record/variants/{key}/` with an existing `layoutKind`
+2. **Hemo-PDF:** `assets/templates/reports/{new-id}/` (manifest with `ui`, layout, labels), then pack via Studio or `POST /api/hprp/pack-from-templates/{id}` into `packages/`. New hemosheet hospital: `reports/clinical-03-hemodialysis-record/variants/{key}/` with an existing `layoutKind`
 3. **Frontend:** no code change — menu appears from `GET /api/report-catalog`; HemoAdmin dropdown reads `GET /api/templates?role=hemosheetLayoutProfile`
 
 ## Runtime flow (short)
 
 ```
 GeneratePdfRequest
-  → FileHprpTemplateStore (reports/{id} or reports/{id}/variants/{profile})
+  → FileHprpTemplateStore (packages/*.hprp first, then reports/{id})
   → ReportPipeline (metadata, signature guard from manifest)
   → Renderer factory
       Form (04,06,07,10-16): ClinicalDefaultDataProvider → HprpBinder → ReportBlock[]
       Hemosheet (03):         layoutKind from manifest → DefaultForm / ThaiUrForm / UniquePlanner
                               UniquePlanner: HemosheetLayoutPlanner → HprpHemosheetPlanInterpreter
-      Dedicated (01,02,05,08): C# composer + HprpLabelResolver
+      Dedicated (01,02,05,08): C# composer + HprpLayoutPlan / HprpLabelResolver from packed file
   → QuestPDF / ReportDocument JSON
 ```
 

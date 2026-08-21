@@ -67,7 +67,7 @@ public class HprpStoreAndPlannerTests
         var source = HprpTestAssets.TemplatesRoot();
         var root = Path.Combine(Path.GetTempPath(), "hprp-" + Guid.NewGuid().ToString("N"));
         CopyDirectory(source, root);
-        var store = new FileHprpTemplateStore(Options.Create(new HprpTemplateOptions { RootPath = root }));
+        var store = new FileHprpTemplateStore(Options.Create(new HprpTemplateOptions { RootPath = root, PackagesRootPath = Path.Combine(root, "_no-packages") }));
 
         var original = store.TryGetCached("local", ClinicalReportCatalog.Lab);
         Assert.Equal("Laboratory Record", original!.Manifest.DisplayName);
@@ -197,7 +197,11 @@ public class HprpStoreAndPlannerTests
     }
 
     private static FileHprpTemplateStore CreateStore() =>
-        new(Options.Create(new HprpTemplateOptions { RootPath = HprpTestAssets.TemplatesRoot() }));
+        new(Options.Create(new HprpTemplateOptions
+        {
+            RootPath = HprpTestAssets.TemplatesRoot(),
+            PackagesRootPath = Path.Combine(Path.GetTempPath(), "hprp-none-" + Guid.NewGuid().ToString("N")),
+        }));
 
     private static void CopyDirectory(string source, string target)
     {

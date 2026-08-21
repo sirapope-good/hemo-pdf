@@ -122,6 +122,18 @@ public sealed class Program
         });
 
         app.UseCors();
+        // MapGet("/hprp-studio") → /hprp-studio/ loops (same path matches both). Rewrite instead.
+        app.Use(async (context, next) =>
+        {
+            var path = context.Request.Path.Value ?? "";
+            if (path is "/" or "/hprp-studio" or "/hprp-studio/")
+            {
+                context.Request.Path = "/hprp-studio/index.html";
+            }
+
+            await next();
+        });
+        app.UseStaticFiles();
         app.UseAuthentication();
         app.UseAuthorization();
         app.UseMiddleware<TenantMiddleware>();

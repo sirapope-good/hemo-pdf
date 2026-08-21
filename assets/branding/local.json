@@ -17,6 +17,7 @@
   },
   "style": {
     "primaryFontFamily": "Sarabun",
-    "accentColor": "#1a5276"
+    "accentColor": "#1a5276",
+    "sectionHeaderBackground": "#C0C0FF"
   }
 }

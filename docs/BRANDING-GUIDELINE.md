@@ -10,7 +10,18 @@
 
 ## โครงสร้าง JSON (อ้างอิง)
 
-ดู `assets/branding/tenant-demo-a.json`
+ดู `assets/branding/tenant-demo-a.json` / `local.json`
+
+```json
+"style": {
+  "primaryFontFamily": "Sarabun",
+  "accentColor": "#1a5276",
+  "sectionHeaderBackground": "#C0C0FF"
+}
+```
+
+- `sectionHeaderBackground` — สี fill ของ column / section header ทุก widget report ของ tenant (ว่าง = ใช้ค่า default ของแต่ละ layout เช่น ThaiUr `#C0C0FF`)
+- แก้ผ่าน HemoAdmin (Tenant → Tenant config → Report section header color) หรือ `PUT /api/branding/style` ของ Hemo-PDF
 
 ## Level 3 Header Override
 

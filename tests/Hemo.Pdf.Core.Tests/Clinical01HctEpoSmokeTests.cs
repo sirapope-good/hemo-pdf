@@ -137,7 +137,11 @@ public class Clinical01HctEpoSmokeTests
         var templatesRoot = FindTemplatesRoot();
         var store = new Hemo.Pdf.Application.Hprp.FileHprpTemplateStore(
             Microsoft.Extensions.Options.Options.Create(
-                new Hemo.Pdf.Application.Hprp.HprpTemplateOptions { RootPath = templatesRoot }));
+                new Hemo.Pdf.Application.Hprp.HprpTemplateOptions
+                {
+                    RootPath = templatesRoot,
+                    PackagesRootPath = Path.Combine(templatesRoot, "_no-packages"),
+                }));
 
         var renderer = new Clinical01HctEpoReportRenderer(
             new Clinical01HctEpoDataProvider(),
@@ -159,6 +163,42 @@ public class Clinical01HctEpoSmokeTests
         Assert.Equal((byte)'P', bytes[1]);
         Assert.Equal((byte)'D', bytes[2]);
         Assert.Equal((byte)'F', bytes[3]);
+    }
+
+    [Fact]
+    public async Task Render_WithPackedHprp_ProducesPdfBytes()
+    {
+        var packages = Path.Combine(Path.GetTempPath(), "hprp-smoke-" + Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(packages);
+        var options = Microsoft.Extensions.Options.Options.Create(
+            new Hemo.Pdf.Application.Hprp.HprpTemplateOptions
+            {
+                RootPath = FindTemplatesRoot(),
+                PackagesRootPath = packages,
+                PackagesWritePath = packages,
+            });
+        var store = new Hemo.Pdf.Application.Hprp.FileHprpTemplateStore(options);
+        var pack = new Hemo.Pdf.Application.Hprp.HprpPackService(options, store);
+        await pack.PackTemplateIdAsync(ClinicalReportCatalog.HctEpo);
+        store.Invalidate();
+
+        var renderer = new Clinical01HctEpoReportRenderer(
+            new Clinical01HctEpoDataProvider(),
+            new Clinical01HctEpoComposer(store),
+            new QuestPdfRenderer());
+
+        var context = new PdfReportContext
+        {
+            ReportTemplateId = ClinicalReportCatalog.HctEpo,
+            TenantCode = "local",
+            Metadata = new ReportMetadata { Title = Clinical01HctEpoDataProvider.ReportTitle },
+            Data = JsonDocument.Parse(SampleJson).RootElement.Clone(),
+        };
+
+        var bytes = await renderer.RenderReportAsync(context, CancellationToken.None);
+        Assert.True(bytes.Length > 100);
+        Assert.Equal((byte)'%', bytes[0]);
+        Assert.NotNull(store.TryGetCached("local", ClinicalReportCatalog.HctEpo));
     }
 
     [Fact]

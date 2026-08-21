@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>HPRP Studio</title>
+  <link rel="stylesheet" href="./studio.css" />
+</head>
+<body>
+  <header class="top">
+    <div>
+      <h1>HPRP Studio</h1>
+      <p class="muted">Edit manifest / layout / labels, validate, then pack to <code>packages/*.hprp</code>.</p>
+    </div>
+    <div class="auth">
+      <label>Bearer <input id="token" type="text" value="dev" autocomplete="off" /></label>
+      <label>Tenant <input id="tenant" type="text" value="local" autocomplete="off" /></label>
+    </div>
+  </header>
+
+  <main class="layout">
+    <aside class="pane">
+      <div class="pane-head">
+        <strong>Packages</strong>
+        <button id="btnReload" type="button">Reload</button>
+      </div>
+      <div class="actions">
+        <button id="btnPackAll" type="button">Pack from templates</button>
+      </div>
+      <ul id="packageList" class="list"></ul>
+      <div class="pane-head"><strong>Engine catalog</strong></div>
+      <pre id="catalogBox" class="catalog"></pre>
+    </aside>
+
+    <section class="pane editor">
+      <div class="pane-head">
+        <strong id="editorTitle">No package selected</strong>
+        <div class="actions">
+          <button id="btnValidate" type="button" disabled>Validate</button>
+          <button id="btnSave" type="button" disabled>Save and pack</button>
+        </div>
+      </div>
+      <div class="tabs">
+        <button type="button" class="tab active" data-tab="manifest">manifest</button>
+        <button type="button" class="tab" data-tab="layout">layout</button>
+        <button type="button" class="tab" data-tab="labels">labels</button>
+      </div>
+      <textarea id="jsonEditor" spellcheck="false" disabled placeholder="Select a package"></textarea>
+      <pre id="status" class="status" role="status"></pre>
+    </section>
+  </main>
+
+  <script src="./studio.js"></script>
+</body>
+</html>

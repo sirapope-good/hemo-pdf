@@ -31,4 +31,6 @@ public sealed class BrandingStyle
 {
     public string PrimaryFontFamily { get; init; } = "Sarabun";
     public string? AccentColor { get; init; }
+    /// <summary>Column / section header fill for all report widgets (e.g. #C0C0FF).</summary>
+    public string? SectionHeaderBackground { get; init; }
 }

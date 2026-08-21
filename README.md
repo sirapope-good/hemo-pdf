@@ -92,7 +92,7 @@ Hemo.Pdf.Api (Standalone :5090)
             ├── Branding (JSON per tenant)
             ├── Sections (Header/Footer/Content + Preview mappers)
             └── Layouts (16 clinical templates → QuestPDF + ReportDocument)
-            └── HPRP (`assets/templates/` — composition without rebuild)
+            └── HPRP (`packages/*.hprp` first, then `assets/templates/`)
 ```
 
 ## Solution Structure
@@ -111,8 +111,9 @@ client/projects/hemo-pdf-client/      # @hemo/pdf-client (print/download)
 client/projects/hemo-report-viewer/   # @hemo/report-viewer (HTML preview)
 client/demo/report-preview-demo/      # Static browser demo
 assets/branding/                   # tenant-demo-a.json, tenant-demo-b.json
-assets/templates/                  # reports/{id}/ + clinical-03 variants + schema
+assets/templates/                  # unpacked reports/{id}/ + clinical-03 variants + schema
 assets/mock-data/                  # Sample DTOs
+packages/                          # packed .hprp (runtime SoT)
 docs/HPRP.md                       # .hprp package spec + widget catalog
 tests/                             # Unit + integration tests
 ```
@@ -121,7 +122,7 @@ tests/                             # Unit + integration tests
 
 Canonical ids: `clinical-01-hct-epo` … `clinical-16-adequacy-summary` (see `ClinicalReportCatalog.cs`).
 
-Composition (order, labels, bindings) lives in **`assets/templates/reports/{id}/`**. Hemosheet hospital layouts are **`reports/clinical-03-hemodialysis-record/variants/{default,rama,thaiur}/`**. Tenants pick a variant in HemoAdmin — they do not upload `.hprp`. See [docs/HPRP.md](docs/HPRP.md).
+Composition (order, labels, bindings) is packed as **`packages/{id}.hprp`**. Unpacked JSON under **`assets/templates/reports/{id}/`** is the source for HPRP Studio (`http://localhost:5090/`) and fallback if a packed file is missing. Hemosheet hospital layouts are **`reports/clinical-03-hemodialysis-record/variants/{default,rama,thaiur}/`** → `packages/clinical-03-hemodialysis-record.{variant}.hprp`. Tenants pick a variant in HemoAdmin — they do not upload `.hprp`. See [docs/HPRP.md](docs/HPRP.md).
 
 | ID | Requires Sign |
 |----|---------------|

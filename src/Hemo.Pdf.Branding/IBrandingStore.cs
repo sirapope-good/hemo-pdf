@@ -5,4 +5,6 @@ namespace Hemo.Pdf.Branding;
 public interface IBrandingStore
 {
     Task<CustomerBrandingProfile> GetByTenantCodeAsync(string tenantCode, CancellationToken ct);
+
+    Task SaveAsync(CustomerBrandingProfile profile, CancellationToken ct);
 }

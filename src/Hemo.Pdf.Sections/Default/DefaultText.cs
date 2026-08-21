@@ -1,3 +1,4 @@
+using Hemo.Pdf.Core.Constants;
 using Hemo.Pdf.Sections.Helpers;
 using QuestPDF.Fluent;
 using QuestPDF.Helpers;
@@ -27,7 +28,7 @@ public static class DefaultText
     public static void HeaderBar(this IContainer c, string text)
     {
         c.Border(HemosheetDefaultStyle.BorderWidth)
-            .Background(HemosheetDefaultStyle.HeaderBackground)
+            .Background(ReportSectionHeaderChrome.Resolve(HemosheetDefaultStyle.HeaderBackground))
             .Height(HemosheetDefaultStyle.HeaderBarHeightMm, Unit.Millimetre)
             .AlignMiddle()
             .AlignCenter()

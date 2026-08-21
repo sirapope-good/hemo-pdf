@@ -19,6 +19,7 @@ public static class BrandingPreviewMapper
             LogoUrl = branding.Header.LogoUrl,
             CompanyLines = branding.Header.CompanyLines,
             Alignment = MapAlignment(branding.Header.TitleAlignment),
+            SectionHeaderBackground = branding.Style.SectionHeaderBackground,
         };
     }
 

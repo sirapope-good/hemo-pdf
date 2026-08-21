@@ -35,6 +35,14 @@ public interface IHprpTemplateStore
     }
 
     bool HasTenantOverride(string tenantCode, string templateId);
+
+    /// <summary>Force the next lookup to rescan disk (after Studio pack).</summary>
+    void Invalidate()
+    {
+    }
+
+    /// <summary>Every cached variant package (not just default manifests).</summary>
+    IReadOnlyList<HprpPackage> ListCachedPackages() => [];
 }
 
 public static class HprpCatalog

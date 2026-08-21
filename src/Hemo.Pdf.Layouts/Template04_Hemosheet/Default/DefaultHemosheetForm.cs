@@ -1,3 +1,4 @@
+using Hemo.Pdf.Core.Constants;
 using Hemo.Pdf.Core.Context;
 using Hemo.Pdf.Core.Models.Hemosheet;
 using Hemo.Pdf.Sections.Default;
@@ -515,7 +516,7 @@ internal sealed class DefaultHemosheetForm
                 for (var i = 0; i <= insertAfter; i++)
                     DialysisHeaderCell(t, baseDefs[i].Head, baseDefs[i].Unit, headerMm, rowSpan: 2);
 
-                t.Cell().ColumnSpan(2).Border(Bw).Background(HemosheetDefaultStyle.HeaderBackground)
+                t.Cell().ColumnSpan(2).Border(Bw).Background(ReportSectionHeaderChrome.Resolve(HemosheetDefaultStyle.HeaderBackground))
                     .Height(headerMm * 0.55f, Mm).AlignCenter().AlignMiddle()
                     .Column(cc =>
                     {
@@ -526,13 +527,13 @@ internal sealed class DefaultHemosheetForm
                 for (var i = insertAfter + 1; i < baseDefs.Length; i++)
                     DialysisHeaderCell(t, baseDefs[i].Head, baseDefs[i].Unit, headerMm, rowSpan: 2);
 
-                t.Cell().RowSpan(2).Border(Bw).Background(HemosheetDefaultStyle.HeaderBackground)
+                t.Cell().RowSpan(2).Border(Bw).Background(ReportSectionHeaderChrome.Resolve(HemosheetDefaultStyle.HeaderBackground))
                     .Height(headerMm, Mm).AlignCenter().AlignMiddle()
                     .Text("Note").Style(DefaultText.DialysisBold);
 
                 foreach (var sub in new[] { "total", "rate" })
                 {
-                    t.Cell().Border(Bw).Background(HemosheetDefaultStyle.HeaderBackground)
+                    t.Cell().Border(Bw).Background(ReportSectionHeaderChrome.Resolve(HemosheetDefaultStyle.HeaderBackground))
                         .Height(headerMm * 0.45f, Mm).AlignCenter().AlignMiddle()
                         .Text(sub).Style(DefaultText.DialysisUnit);
                 }
@@ -542,7 +543,7 @@ internal sealed class DefaultHemosheetForm
                 foreach (var (head, unit) in baseDefs)
                     DialysisHeaderCell(t, head, unit, headerMm, rowSpan: 1);
 
-                t.Cell().Border(Bw).Background(HemosheetDefaultStyle.HeaderBackground)
+                t.Cell().Border(Bw).Background(ReportSectionHeaderChrome.Resolve(HemosheetDefaultStyle.HeaderBackground))
                     .Height(headerMm, Mm).AlignCenter().AlignMiddle()
                     .Text("Note").Style(DefaultText.DialysisBold);
             }
@@ -577,7 +578,7 @@ internal sealed class DefaultHemosheetForm
         if (rowSpan > 1)
             cell = cell.RowSpan(rowSpan);
 
-        cell.Border(Bw).Background(HemosheetDefaultStyle.HeaderBackground)
+        cell.Border(Bw).Background(ReportSectionHeaderChrome.Resolve(HemosheetDefaultStyle.HeaderBackground))
             .Height(headerMm, Mm).AlignCenter().AlignMiddle()
             .Column(cc =>
             {

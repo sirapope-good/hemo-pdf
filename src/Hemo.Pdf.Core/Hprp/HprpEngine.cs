@@ -10,4 +10,7 @@ public static class HprpEngine
     public const int CurrentVersion = 1;
     public const int MinSupportedVersion = 1;
     public const string FileExtension = ".hprp";
+
+    /// <summary>Packed ZIP packages at repo root (<c>packages/*.hprp</c>).</summary>
+    public const long MaxPackageBytes = 2 * 1024 * 1024;
 }

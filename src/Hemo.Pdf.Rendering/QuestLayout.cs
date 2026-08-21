@@ -15,4 +15,10 @@ public sealed class QuestLayout
     public float? MarginBottom { get; init; } = 3f;
     public float? MarginLeft { get; init; }
     public float? MarginRight { get; init; }
+
+    /// <summary>
+    /// Tenant section/column header fill applied for the QuestPDF render thread.
+    /// Null keeps each layout's built-in fallback color.
+    /// </summary>
+    public string? SectionHeaderBackground { get; set; }
 }

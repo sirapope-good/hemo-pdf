@@ -68,25 +68,29 @@ public sealed class QuestPdfRenderer : IPdfRenderer
             });
 
             cancellationToken.ThrowIfCancellationRequested();
-            return GeneratePdfAsync(document, cancellationToken);
+            return GeneratePdfAsync(document, questLayout.SectionHeaderBackground, cancellationToken);
         }
 
         if (layoutSchema is Action<IDocumentContainer> build)
         {
             cancellationToken.ThrowIfCancellationRequested();
             var document = Document.Create(build);
-            return GeneratePdfAsync(document, cancellationToken);
+            return GeneratePdfAsync(document, sectionHeaderBackground: null, cancellationToken);
         }
 
         throw new NotSupportedException(
             "layoutSchema must be QuestLayout or Action<IDocumentContainer> for QuestPdfRenderer");
     }
 
-    private Task<byte[]> GeneratePdfAsync(Document document, CancellationToken cancellationToken)
+    private Task<byte[]> GeneratePdfAsync(
+        Document document,
+        string? sectionHeaderBackground,
+        CancellationToken cancellationToken)
     {
         return Task.Run(() =>
         {
             cancellationToken.ThrowIfCancellationRequested();
+            using var chrome = ReportSectionHeaderChrome.Begin(sectionHeaderBackground);
             using var stream = new MemoryStream();
             document.GeneratePdf(stream);
             cancellationToken.ThrowIfCancellationRequested();

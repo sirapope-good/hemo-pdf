@@ -1,5 +1,7 @@
 using Hemo.Pdf.Core.Abstractions;
+using Hemo.Pdf.Core.Constants;
 using Hemo.Pdf.Core.Context;
+using Hemo.Pdf.Rendering;
 
 namespace Hemo.Pdf.Layouts.Base;
 
@@ -23,6 +25,11 @@ public abstract class BaseReportRenderer : IReportRenderer
     {
         var model = await _dataProvider.GetDataAsync(context, cancellationToken);
         var layout = _composer.Compose(model, context);
+        if (layout is QuestLayout questLayout)
+        {
+            questLayout.SectionHeaderBackground = ReportSectionHeaderChrome.FromBranding(context.Branding);
+        }
+
         return await _pdfRenderer.RenderAsync(layout, cancellationToken);
     }
 }

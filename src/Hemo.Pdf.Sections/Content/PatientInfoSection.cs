@@ -14,7 +14,7 @@ public sealed class PatientInfoSection : IContentSection
     {
         if (viewModel is PatientInfoReportBlock block)
         {
-            ComposeBlock(container, block);
+            ComposeBlock(container, block, context);
             return;
         }
 
@@ -40,12 +40,16 @@ public sealed class PatientInfoSection : IContentSection
                     new LabelValue { Label = "หน่วย", Value = source.PatientInfo.Unit ?? "—" },
                 ],
             ],
-        });
+        }, context);
     }
 
-    public static void ComposeBlock(IContainer container, PatientInfoReportBlock block)
+    public static void ComposeBlock(
+        IContainer container,
+        PatientInfoReportBlock block,
+        PdfReportContext? context = null)
     {
         var columns = block.Columns.Count == 0 ? 2 : block.Columns.Count;
+        var headerBg = ReportSectionHeaderChrome.Resolve(context, PdfSectionMetrics.SectionHeaderBackground);
 
         container.Border(0.5f).Table(table =>
         {
@@ -60,7 +64,7 @@ public sealed class PatientInfoSection : IContentSection
             if (!string.IsNullOrWhiteSpace(block.Title))
             {
                 table.Cell().ColumnSpan((uint)columns)
-                    .Background(PdfSectionMetrics.SectionHeaderBackground)
+                    .Background(headerBg)
                     .Border(0.5f)
                     .Padding(PdfSectionMetrics.SectionTitlePadding)
                     .Text(block.Title)

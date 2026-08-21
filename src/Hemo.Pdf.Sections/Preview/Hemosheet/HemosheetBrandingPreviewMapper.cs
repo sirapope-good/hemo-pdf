@@ -19,6 +19,7 @@ public static class HemosheetBrandingPreviewMapper
             LogoUrl = vm.LogoBase64,
             CompanyLines = branding.CompanyLines,
             Alignment = branding.Alignment,
+            SectionHeaderBackground = branding.SectionHeaderBackground,
         };
     }
 }

@@ -1,3 +1,4 @@
+using Hemo.Pdf.Core.Constants;
 using Hemo.Pdf.Sections.Helpers;
 using QuestPDF.Fluent;
 using QuestPDF.Helpers;
@@ -36,7 +37,7 @@ public static class ThaiUrText
     public static void HeaderBar(this IContainer c, string text)
     {
         c.Border(HemosheetThaiUrStyle.BorderWidth)
-            .Background(HemosheetThaiUrStyle.HeaderBackground)
+            .Background(ReportSectionHeaderChrome.Resolve(HemosheetThaiUrStyle.HeaderBackground))
             .Height(HemosheetThaiUrStyle.HeaderBarHeightMm, Unit.Millimetre)
             .AlignMiddle()
             .AlignCenter()
@@ -50,7 +51,7 @@ public static class ThaiUrText
     public static void BlockHeader(this IContainer c, string text)
     {
         c.BorderBottom(HemosheetThaiUrStyle.BorderWidth)
-            .Background(HemosheetThaiUrStyle.HeaderBackground)
+            .Background(ReportSectionHeaderChrome.Resolve(HemosheetThaiUrStyle.HeaderBackground))
             .Height(HemosheetThaiUrStyle.HeaderBarHeightMm, Unit.Millimetre)
             .AlignMiddle()
             .AlignCenter()

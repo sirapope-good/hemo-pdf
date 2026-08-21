@@ -16,6 +16,12 @@ public sealed class HemoPdfOptions
     /// <summary>Root of unpacked HPRP templates (<c>reports/{id}/</c> and <c>reports/{id}/variants/</c>).</summary>
     public string TemplatesRootPath { get; set; } = "assets/templates";
 
+    /// <summary>Packed <c>.hprp</c> files (<c>{id}.hprp</c> / <c>{id}.{variant}.hprp</c>). Scanned before unpacked JSON.</summary>
+    public string PackagesRootPath { get; set; } = "packages";
+
+    /// <summary>When true, HPRP Studio may write packed files. Defaults on in Development.</summary>
+    public bool EnableHprpStudioWrite { get; set; }
+
     public JwtOptions Jwt { get; set; } = new();
 
     public WebApiOptions WebApi { get; set; } = new();

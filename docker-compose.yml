@@ -16,6 +16,9 @@ services:
       HemoPdf__BrandingRootPath: "/app/assets/branding"
       # Content is published under /app/assets; "../../assets/templates" resolves outside the image.
       HemoPdf__TemplatesRootPath: "/app/assets/templates"
+      HemoPdf__PackagesRootPath: "/app/packages"
+      HemoPdf__EnableHprpStudioWrite: "true"
     volumes:
-      - ./assets/branding:/app/assets/branding:ro
+      - ./assets/branding:/app/assets/branding
       - ./assets/templates:/app/assets/templates:ro
+      - ./packages:/app/packages

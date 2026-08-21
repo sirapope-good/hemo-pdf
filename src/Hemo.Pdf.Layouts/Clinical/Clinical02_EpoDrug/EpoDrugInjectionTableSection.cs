@@ -1,3 +1,4 @@
+using Hemo.Pdf.Core.Constants;
 using Hemo.Pdf.Core.Hprp;
 using Hemo.Pdf.Core.Models.Clinical;
 using Hemo.Pdf.Sections.ThaiUr;
@@ -56,7 +57,7 @@ public sealed class EpoDrugInjectionTableSection
     {
         t.Cell()
             .Border(Bw)
-            .Background(HemosheetThaiUrStyle.HeaderBackground)
+            .Background(ReportSectionHeaderChrome.Resolve(HemosheetThaiUrStyle.HeaderBackground))
             .Height(HemosheetThaiUrStyle.HeaderBarHeightMm, Mm)
             .AlignMiddle()
             .AlignCenter()

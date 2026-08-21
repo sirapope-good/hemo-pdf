@@ -34,6 +34,8 @@ public static class ServiceCollectionExtensions
         services.Configure<Hprp.HprpTemplateOptions>(templates =>
         {
             templates.RootPath = options.TemplatesRootPath;
+            templates.PackagesRootPath = options.PackagesRootPath;
+            templates.EnableHprpStudioWrite = options.EnableHprpStudioWrite;
         });
 
         services.AddSingleton<IPdfRenderer, QuestPdfRenderer>();
@@ -51,6 +53,7 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<IBrandingStore, JsonFileBrandingStore>();
         services.AddScoped<IBrandingResolver, BrandingResolver>();
         services.AddSingleton<IHprpTemplateStore, Hprp.FileHprpTemplateStore>();
+        services.AddSingleton<Hprp.HprpPackService>();
         services.AddScoped<IReportCatalogService, ReportCatalogService>();
 
         services.AddHttpClient<IHemosheetReportDataClient, HemosheetReportDataClient>(client =>

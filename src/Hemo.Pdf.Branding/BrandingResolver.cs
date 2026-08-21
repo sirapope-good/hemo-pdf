@@ -45,6 +45,7 @@ public sealed class BrandingResolver : IBrandingResolver
             {
                 PrimaryFontFamily = source.Style?.PrimaryFontFamily ?? "Sarabun",
                 AccentColor = source.Style?.AccentColor,
+                SectionHeaderBackground = source.Style?.SectionHeaderBackground,
             },
             HeaderSectionOverride = source.HeaderSectionOverride,
         };

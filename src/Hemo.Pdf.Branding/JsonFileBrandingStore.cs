@@ -20,6 +20,8 @@ public sealed class JsonFileBrandingStore : IBrandingStore
     private static readonly JsonSerializerOptions JsonOptions = new()
     {
         PropertyNameCaseInsensitive = true,
+        PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
+        WriteIndented = true,
         ReadCommentHandling = JsonCommentHandling.Skip,
         AllowTrailingCommas = true,
         Converters = { new JsonStringEnumConverter() }
@@ -68,6 +70,38 @@ public sealed class JsonFileBrandingStore : IBrandingStore
 
         _logger?.LogDebug("Loaded branding profile for tenant {TenantCode} from {FilePath}", tenantCode, filePath);
         return profile;
+    }
+
+    public async Task SaveAsync(CustomerBrandingProfile profile, CancellationToken ct)
+    {
+        ArgumentNullException.ThrowIfNull(profile);
+        ArgumentException.ThrowIfNullOrWhiteSpace(profile.TenantCode);
+
+        var tenantCode = profile.TenantCode.Trim();
+        if (TenantAliases.TryGetValue(tenantCode, out var alias))
+            tenantCode = alias;
+
+        Directory.CreateDirectory(_rootPath);
+        var filePath = Path.Combine(_rootPath, $"{tenantCode}.json");
+        var tempPath = filePath + ".tmp";
+        var toSave = new CustomerBrandingProfile
+        {
+            TenantCode = tenantCode,
+            CustomerId = profile.CustomerId,
+            DisplayName = profile.DisplayName,
+            Header = profile.Header,
+            Footer = profile.Footer,
+            Style = profile.Style,
+            HeaderSectionOverride = profile.HeaderSectionOverride,
+        };
+
+        await using (var stream = File.Create(tempPath))
+        {
+            await JsonSerializer.SerializeAsync(stream, toSave, JsonOptions, ct);
+        }
+
+        File.Move(tempPath, filePath, overwrite: true);
+        _logger?.LogInformation("Saved branding profile for tenant {TenantCode} to {FilePath}", tenantCode, filePath);
     }
 
     private static string ResolveRootPath(string configuredPath)
