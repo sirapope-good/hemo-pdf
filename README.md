@@ -111,7 +111,7 @@ client/projects/hemo-pdf-client/      # @hemo/pdf-client (print/download)
 client/projects/hemo-report-viewer/   # @hemo/report-viewer (HTML preview)
 client/demo/report-preview-demo/      # Static browser demo
 assets/branding/                   # tenant-demo-a.json, tenant-demo-b.json
-assets/templates/                  # Default .hprp folders (clinical-01…16) + schema
+assets/templates/                  # reports/{id}/ + clinical-03 variants + schema
 assets/mock-data/                  # Sample DTOs
 docs/HPRP.md                       # .hprp package spec + widget catalog
 tests/                             # Unit + integration tests
@@ -121,7 +121,7 @@ tests/                             # Unit + integration tests
 
 Canonical ids: `clinical-01-hct-epo` … `clinical-16-adequacy-summary` (see `ClinicalReportCatalog.cs`).
 
-Composition (order, labels, bindings) lives in **`assets/templates/{id}/`** as `.hprp` folders — upload tenant overrides via `POST /api/templates/{id}`. See [docs/HPRP.md](docs/HPRP.md).
+Composition (order, labels, bindings) lives in **`assets/templates/reports/{id}/`**. Hemosheet hospital layouts are **`reports/clinical-03-hemodialysis-record/variants/{default,rama,thaiur}/`**. Tenants pick a variant in HemoAdmin — they do not upload `.hprp`. See [docs/HPRP.md](docs/HPRP.md).
 
 | ID | Requires Sign |
 |----|---------------|

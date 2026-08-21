@@ -29,7 +29,11 @@ public sealed class HemosheetLayoutPlanner : IHemosheetLayoutPlanner
     public IReadOnlyList<HemosheetSectionPlan> Plan(HemosheetReportViewModel viewModel)
     {
         var tenantCode = _tenant?.TenantCode ?? "";
-        var package = _templates?.TryGetCached(tenantCode, ClinicalReportCatalog.HemodialysisRecord);
+        var variant = HprpTemplatePaths.FromLayoutProfile(viewModel.LayoutContext.LayoutProfile);
+        var package = _templates?.TryGetCached(
+            tenantCode,
+            ClinicalReportCatalog.HemodialysisRecord,
+            variant);
         if (package is not null && package.Layout.Sections.Count > 0)
         {
             var interpreted = Hprp.HprpHemosheetPlanInterpreter.Interpret(package.Layout, viewModel);
@@ -58,6 +62,7 @@ public sealed class HemosheetLayoutPlanner : IHemosheetLayoutPlanner
         if (Hprp.HprpHemosheetPlanInterpreter.Evaluate("data:hasSubHeader", viewModel))
             plans.Add(new() { SectionId = HemosheetSectionId.SubHeaderBar });
 
+        plans.Add(new() { SectionId = HemosheetSectionId.Patient });
         plans.Add(new() { SectionId = HemosheetSectionId.SessionMeta });
         plans.Add(new() { SectionId = HemosheetSectionId.Predialysis });
 

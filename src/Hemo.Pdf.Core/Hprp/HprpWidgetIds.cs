@@ -16,6 +16,7 @@ public static class HprpWidgetIds
     public const string ClinicalConsentNarrative = "clinical.consent-narrative";
 
     public const string HemosheetSubHeaderBar = "hemosheet.sub-header-bar";
+    public const string HemosheetPatient = "hemosheet.patient";
     public const string HemosheetSessionMeta = "hemosheet.session-meta";
     public const string HemosheetPredialysis = "hemosheet.predialysis";
     public const string HemosheetVascularAccess = "hemosheet.vascular-access";
@@ -56,6 +57,7 @@ public static class HprpWidgetIds
         ClinicalSoapTable,
         ClinicalConsentNarrative,
         HemosheetSubHeaderBar,
+        HemosheetPatient,
         HemosheetSessionMeta,
         HemosheetPredialysis,
         HemosheetVascularAccess,
@@ -83,6 +85,7 @@ public static class HprpWidgetIds
         sectionId = widgetId.ToLowerInvariant() switch
         {
             HemosheetSubHeaderBar => HemosheetSectionId.SubHeaderBar,
+            HemosheetPatient => HemosheetSectionId.Patient,
             HemosheetSessionMeta => HemosheetSectionId.SessionMeta,
             HemosheetPredialysis => HemosheetSectionId.Predialysis,
             HemosheetVascularAccess => HemosheetSectionId.VascularAccess,

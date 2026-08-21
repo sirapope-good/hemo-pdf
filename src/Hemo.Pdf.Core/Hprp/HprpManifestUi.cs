@@ -32,6 +32,21 @@ public sealed class HprpManifestUi
         "lastMonths",
     };
 
+    public const string RoleHemosheetLayoutProfile = "hemosheetLayoutProfile";
+
+    public static readonly IReadOnlySet<string> Roles = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
+    {
+        RoleHemosheetLayoutProfile,
+    };
+
+    /// <summary>When set, this package is a selectable layout (e.g. HemoAdmin hemosheet dropdown).</summary>
+    [JsonPropertyName("role")]
+    public string? Role { get; init; }
+
+    /// <summary>Dropdown label. Catalog still uses <see cref="HprpManifest.DisplayName"/>.</summary>
+    [JsonPropertyName("profileLabel")]
+    public string? ProfileLabel { get; init; }
+
     [JsonPropertyName("entryMode")]
     public string EntryMode { get; init; } = "patient";
 

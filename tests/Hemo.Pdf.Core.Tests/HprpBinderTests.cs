@@ -211,7 +211,7 @@ public class HprpPackageAndStoreTests
     [Fact]
     public void ReadDirectory_DefaultLabTemplate_IsValid()
     {
-        var dir = Path.Combine(AppContext.BaseDirectory, "assets", "templates", ClinicalReportCatalog.Lab);
+        var dir = HprpTestAssets.PackageDir(ClinicalReportCatalog.Lab);
         Assert.True(Directory.Exists(dir), dir);
         var package = HprpPackageReader.ReadDirectory(dir);
         Assert.Equal(ClinicalReportCatalog.Lab, package.Manifest.Id);
@@ -222,16 +222,17 @@ public class HprpPackageAndStoreTests
     [Fact]
     public void ReadDirectory_Hemosheet_HasSectionPlan()
     {
-        var dir = Path.Combine(AppContext.BaseDirectory, "assets", "templates", ClinicalReportCatalog.HemodialysisRecord);
+        var dir = HprpTestAssets.PackageDir(ClinicalReportCatalog.HemodialysisRecord);
         var package = HprpPackageReader.ReadDirectory(dir);
         Assert.NotEmpty(package.Layout.Sections);
+        Assert.Contains(package.Layout.Sections, s => s.Widget == HprpWidgetIds.HemosheetPatient);
         Assert.Contains(package.Layout.Sections, s => s.Widget == HprpWidgetIds.HemosheetDialysisRecords);
     }
 
     [Fact]
     public async Task ZipRoundTrip_PreservesManifest()
     {
-        var dir = Path.Combine(AppContext.BaseDirectory, "assets", "templates", ClinicalReportCatalog.Prescription);
+        var dir = HprpTestAssets.PackageDir(ClinicalReportCatalog.Prescription);
         var original = HprpPackageReader.ReadDirectory(dir);
         using var stream = new MemoryStream();
         await HprpPackageReader.WriteZipAsync(original, stream, CancellationToken.None);

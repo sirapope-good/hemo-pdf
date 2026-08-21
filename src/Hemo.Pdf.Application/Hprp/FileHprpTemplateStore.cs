@@ -8,49 +8,28 @@ namespace Hemo.Pdf.Application.Hprp;
 
 public sealed class FileHprpTemplateStore : IHprpTemplateStore
 {
-    private static readonly Dictionary<string, string> TenantAliases = new(StringComparer.OrdinalIgnoreCase)
-    {
-        ["localhost"] = "local",
-        ["127.0.0.1"] = "local",
-    };
-
     private readonly string _rootPath;
     private readonly ILogger<FileHprpTemplateStore>? _logger;
+    private readonly object _sync = new();
     private readonly ConcurrentDictionary<string, HprpPackage> _defaults = new(StringComparer.OrdinalIgnoreCase);
-    private readonly ConcurrentDictionary<string, HprpPackage> _tenantCache = new(StringComparer.OrdinalIgnoreCase);
+    private readonly ConcurrentDictionary<string, HprpPackage> _byVariant = new(StringComparer.OrdinalIgnoreCase);
+    private long _stamp = -1;
+    private bool _loaded;
 
     public FileHprpTemplateStore(IOptions<HprpTemplateOptions> options, ILogger<FileHprpTemplateStore>? logger = null)
     {
         _rootPath = ResolveRootPath(options.Value.RootPath);
         _logger = logger;
-        LoadDefaults();
+        EnsureLoaded();
     }
 
-    public HprpPackage? TryGetCached(string tenantCode, string templateId)
+    public HprpPackage? TryGetCached(string tenantCode, string templateId, string? variant = null)
     {
+        EnsureLoaded();
         var id = ClinicalReportCatalog.ResolveEngineTemplateId(templateId);
-        var tenant = NormalizeTenant(tenantCode);
-        if (!string.IsNullOrWhiteSpace(tenant)
-            && _tenantCache.TryGetValue(TenantKey(tenant, id), out var overlay))
-        {
-            return overlay;
-        }
-
-        var overlayPath = TenantPackagePath(tenant, id);
-        if (!string.IsNullOrWhiteSpace(tenant) && File.Exists(overlayPath))
-        {
-            try
-            {
-                using var stream = File.OpenRead(overlayPath);
-                var package = HprpPackageReader.ReadZip(stream, overlayPath);
-                _tenantCache[TenantKey(tenant, id)] = package;
-                return package;
-            }
-            catch (Exception ex)
-            {
-                _logger?.LogWarning(ex, "Invalid tenant .hprp override for {Tenant} {Template}; using default.", tenant, id);
-            }
-        }
+        var key = HprpTemplatePaths.CacheKey(id, variant);
+        if (_byVariant.TryGetValue(key, out var package))
+            return package;
 
         return _defaults.TryGetValue(id, out var fallback) ? fallback : null;
     }
@@ -61,38 +40,15 @@ public sealed class FileHprpTemplateStore : IHprpTemplateStore
         return Task.FromResult(TryGetCached(tenantCode, templateId));
     }
 
-    public async Task SaveTenantOverrideAsync(
+    public Task SaveTenantOverrideAsync(
         string tenantCode,
         string templateId,
         Stream zipStream,
         CancellationToken cancellationToken = default)
     {
-        var tenant = NormalizeTenant(tenantCode);
-        if (string.IsNullOrWhiteSpace(tenant))
-            throw new ArgumentException("Tenant code is required.", nameof(tenantCode));
-
-        var id = ClinicalReportCatalog.ResolveEngineTemplateId(templateId);
-        await using var buffer = new MemoryStream();
-        await zipStream.CopyToAsync(buffer, cancellationToken);
-        buffer.Position = 0;
-
-        var package = HprpPackageReader.ReadZip(buffer, $"{tenant}/{id}{HprpEngine.FileExtension}");
-        if (!string.Equals(package.Manifest.Id, id, StringComparison.OrdinalIgnoreCase))
-        {
-            throw new InvalidOperationException(
-                $"Package id '{package.Manifest.Id}' does not match template '{id}'.");
-        }
-
-        var path = TenantPackagePath(tenant, id);
-        Directory.CreateDirectory(Path.GetDirectoryName(path)!);
-        buffer.Position = 0;
-        await using (var file = File.Create(path))
-        {
-            await buffer.CopyToAsync(file, cancellationToken);
-        }
-
-        _tenantCache[TenantKey(tenant, id)] = package;
-        _logger?.LogInformation("Saved tenant .hprp override {Path}", path);
+        cancellationToken.ThrowIfCancellationRequested();
+        throw new InvalidOperationException(
+            "Tenant .hprp uploads are disabled. Add a variant folder under assets/templates/reports/.");
     }
 
     public Task DeleteTenantOverrideAsync(
@@ -101,48 +57,89 @@ public sealed class FileHprpTemplateStore : IHprpTemplateStore
         CancellationToken cancellationToken = default)
     {
         cancellationToken.ThrowIfCancellationRequested();
+        throw new InvalidOperationException(
+            "Tenant .hprp uploads are disabled. Add a variant folder under assets/templates/reports/.");
+    }
 
-        var tenant = NormalizeTenant(tenantCode);
-        if (string.IsNullOrWhiteSpace(tenant))
-            throw new ArgumentException("Tenant code is required.", nameof(tenantCode));
+    public IReadOnlyList<HprpManifest> ListDefaultManifests()
+    {
+        EnsureLoaded();
+        return _defaults.Values
+            .Select(p => p.Manifest)
+            .OrderBy(m => m.Id, StringComparer.OrdinalIgnoreCase)
+            .ToList();
+    }
 
-        var id = ClinicalReportCatalog.ResolveEngineTemplateId(templateId);
-        var path = TenantPackagePath(tenant, id);
-        if (File.Exists(path))
+    public IReadOnlyList<HprpManifest> ListLayoutProfiles(string? role = null)
+    {
+        EnsureLoaded();
+        var target = string.IsNullOrWhiteSpace(role)
+            ? HprpManifestUi.RoleHemosheetLayoutProfile
+            : role.Trim();
+
+        return _byVariant.Values
+            .Select(p => p.Manifest)
+            .Where(m => string.Equals(m.Ui?.Role, target, StringComparison.OrdinalIgnoreCase))
+            .OrderBy(m => m.Ui?.SortOrder ?? 0)
+            .ThenBy(m => m.Variant ?? "", StringComparer.OrdinalIgnoreCase)
+            .ToList();
+    }
+
+    public bool HasTenantOverride(string tenantCode, string templateId) => false;
+
+    private void EnsureLoaded()
+    {
+        var stamp = ComputeStamp();
+        lock (_sync)
         {
-            File.Delete(path);
-            _logger?.LogInformation("Deleted tenant .hprp override {Path}", path);
+            if (_loaded && stamp == _stamp)
+                return;
+
+            ReloadUnlocked();
+            _stamp = stamp;
+            _loaded = true;
+        }
+    }
+
+    private long ComputeStamp()
+    {
+        var scanRoot = ResolveScanRoot();
+        if (!Directory.Exists(scanRoot))
+            return 0;
+
+        long max = Directory.GetLastWriteTimeUtc(scanRoot).Ticks;
+        foreach (var file in Directory.EnumerateFiles(scanRoot, "*.json", SearchOption.AllDirectories))
+        {
+            var ticks = File.GetLastWriteTimeUtc(file).Ticks;
+            if (ticks > max)
+                max = ticks;
         }
 
-        _tenantCache.TryRemove(TenantKey(tenant, id), out _);
-        return Task.CompletedTask;
+        return max;
     }
 
-    public IReadOnlyList<HprpManifest> ListDefaultManifests() =>
-        _defaults.Values.Select(p => p.Manifest).OrderBy(m => m.Id, StringComparer.OrdinalIgnoreCase).ToList();
-
-    public bool HasTenantOverride(string tenantCode, string templateId)
+    private void ReloadUnlocked()
     {
-        var tenant = NormalizeTenant(tenantCode);
-        var id = ClinicalReportCatalog.ResolveEngineTemplateId(templateId);
-        return !string.IsNullOrWhiteSpace(tenant) && File.Exists(TenantPackagePath(tenant, id));
-    }
+        _defaults.Clear();
+        _byVariant.Clear();
 
-    private void LoadDefaults()
-    {
-        if (!Directory.Exists(_rootPath))
+        var scanRoot = ResolveScanRoot();
+        if (!Directory.Exists(scanRoot))
         {
             _logger?.LogWarning("HPRP templates root not found: {Path}", _rootPath);
             return;
         }
 
-        foreach (var dir in Directory.EnumerateDirectories(_rootPath))
+        foreach (var dir in Directory.EnumerateDirectories(scanRoot))
         {
             var name = Path.GetFileName(dir);
-            if (string.Equals(name, "tenants", StringComparison.OrdinalIgnoreCase)
-                || string.Equals(name, "schema", StringComparison.OrdinalIgnoreCase)
-                || string.Equals(name, "_shared", StringComparison.OrdinalIgnoreCase))
+            if (HprpTemplatePaths.IsReservedFolder(name))
+                continue;
+
+            var variantsDir = Path.Combine(dir, HprpTemplatePaths.VariantsFolder);
+            if (Directory.Exists(variantsDir))
             {
+                LoadVariantPackages(dir, variantsDir);
                 continue;
             }
 
@@ -150,43 +147,73 @@ public sealed class FileHprpTemplateStore : IHprpTemplateStore
             if (!File.Exists(manifestPath))
                 continue;
 
-            try
-            {
-                var package = HprpPackageReader.ReadDirectory(dir);
-                _defaults[package.Manifest.Id] = package;
-            }
-            catch (Exception ex)
-            {
-                _logger?.LogWarning(ex, "Skipped invalid default template folder {Dir}", dir);
-            }
+            TryAddPackage(() => HprpPackageReader.ReadDirectory(dir), dir);
         }
 
-        foreach (var zip in Directory.EnumerateFiles(_rootPath, "*" + HprpEngine.FileExtension))
+        foreach (var zip in Directory.EnumerateFiles(scanRoot, "*" + HprpEngine.FileExtension))
         {
-            try
-            {
-                using var stream = File.OpenRead(zip);
-                var package = HprpPackageReader.ReadZip(stream, zip);
-                _defaults.TryAdd(package.Manifest.Id, package);
-            }
-            catch (Exception ex)
-            {
-                _logger?.LogWarning(ex, "Skipped invalid default .hprp {File}", zip);
-            }
+            TryAddPackage(
+                () =>
+                {
+                    using var stream = File.OpenRead(zip);
+                    return HprpPackageReader.ReadZip(stream, zip);
+                },
+                zip);
         }
     }
 
-    private string TenantPackagePath(string tenant, string templateId) =>
-        Path.Combine(_rootPath, "tenants", tenant, templateId + HprpEngine.FileExtension);
-
-    private static string TenantKey(string tenant, string templateId) => $"{tenant}/{templateId}";
-
-    private static string NormalizeTenant(string? tenantCode)
+    private void LoadVariantPackages(string reportDir, string variantsDir)
     {
-        var tenant = tenantCode?.Trim() ?? "";
-        if (TenantAliases.TryGetValue(tenant, out var alias))
-            return alias;
-        return tenant;
+        foreach (var variantDir in Directory.EnumerateDirectories(variantsDir))
+        {
+            var manifestPath = Path.Combine(variantDir, HprpPackageReader.ManifestFileName);
+            if (!File.Exists(manifestPath))
+                continue;
+
+            TryAddPackage(() => HprpPackageReader.ReadDirectory(variantDir), variantDir, Path.GetFileName(variantDir));
+        }
+
+        var reportId = Path.GetFileName(reportDir);
+        if (!_defaults.ContainsKey(reportId)
+            && _byVariant.Values.FirstOrDefault(p =>
+                string.Equals(p.Manifest.Id, reportId, StringComparison.OrdinalIgnoreCase)) is { } first)
+        {
+            _defaults[reportId] = first;
+        }
+    }
+
+    private void TryAddPackage(Func<HprpPackage> load, string source, string? folderVariant = null)
+    {
+        try
+        {
+            var package = load();
+            var id = package.Manifest.Id;
+            if (string.IsNullOrWhiteSpace(id))
+            {
+                _logger?.LogWarning("Skipped HPRP package with empty id at {Source}", source);
+                return;
+            }
+
+            var variant = HprpTemplatePaths.NormalizeVariant(
+                !string.IsNullOrWhiteSpace(package.Manifest.Variant)
+                    ? package.Manifest.Variant
+                    : folderVariant);
+
+            _byVariant[HprpTemplatePaths.CacheKey(id, variant)] = package;
+
+            if (HprpTemplatePaths.IsDefaultVariant(variant) || !_defaults.ContainsKey(id))
+                _defaults[id] = package;
+        }
+        catch (Exception ex)
+        {
+            _logger?.LogWarning(ex, "Skipped invalid HPRP package {Source}", source);
+        }
+    }
+
+    private string ResolveScanRoot()
+    {
+        var reports = HprpTemplatePaths.ReportsRoot(_rootPath);
+        return Directory.Exists(reports) ? reports : _rootPath;
     }
 
     private static string ResolveRootPath(string configuredPath)

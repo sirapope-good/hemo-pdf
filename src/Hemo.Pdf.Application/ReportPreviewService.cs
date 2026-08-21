@@ -56,7 +56,7 @@ public sealed class ReportPreviewService : IReportPreviewService
         return WithPreviewMode(document, "dom", layoutProfile);
     }
 
-    private static bool UsesPdfFormPreview(GeneratePdfRequest request, string layoutProfileName)
+    private bool UsesPdfFormPreview(GeneratePdfRequest request, string layoutProfileName)
     {
         if (ClinicalReportCatalog.UsesDensePdfPreview(request.ReportTemplateId))
             return true;
@@ -64,7 +64,7 @@ public sealed class ReportPreviewService : IReportPreviewService
         return UsesHemosheetFormPdfPreview(request, layoutProfileName);
     }
 
-    private static bool UsesHemosheetFormPdfPreview(GeneratePdfRequest request, string layoutProfileName)
+    private bool UsesHemosheetFormPdfPreview(GeneratePdfRequest request, string layoutProfileName)
     {
         if (!ClinicalReportCatalog.IsHemodialysisRecord(request.ReportTemplateId))
             return false;
@@ -72,7 +72,13 @@ public sealed class ReportPreviewService : IReportPreviewService
         if (!Enum.TryParse(layoutProfileName, ignoreCase: true, out HemosheetLayoutProfile profile))
             profile = HemosheetLayoutProfile.Default;
 
-        return ClinicalReportLayoutResolver.UsesHemosheetForm(request.ReportTemplateId, profile);
+        return ClinicalReportLayoutResolver.UsesDenseForm(
+            request.ReportTemplateId,
+            profile,
+            _templates.TryGetCached(
+                request.TenantCode,
+                request.ReportTemplateId,
+                HprpTemplatePaths.FromLayoutProfile(profile))?.Manifest);
     }
 
     private static ReportDocument BuildHemosheetFormPdfModeDocument(GeneratePdfRequest request, string layoutProfile)

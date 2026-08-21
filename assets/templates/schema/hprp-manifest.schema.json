@@ -7,6 +7,12 @@
   "required": ["id", "displayName", "engineVersion", "dataAdapter"],
   "properties": {
     "id": { "type": "string", "minLength": 1 },
+    "variant": { "type": "string" },
+    "layoutKind": {
+      "type": "string",
+      "enum": ["DefaultForm", "ThaiUrForm", "UniquePlanner"]
+    },
+    "layoutProfile": { "type": "string" },
     "version": { "type": "string" },
     "displayName": { "type": "string", "minLength": 1 },
     "engineVersion": { "type": "integer", "minimum": 1, "maximum": 1 },
@@ -41,6 +47,8 @@
         "menuGroup": { "type": "string" },
         "sortOrder": { "type": "integer" },
         "visibleInMenu": { "type": "boolean" },
+        "role": { "type": "string", "enum": ["hemosheetLayoutProfile"] },
+        "profileLabel": { "type": "string" },
         "reportDataPath": { "type": "string" },
         "parameters": {
           "type": "array",

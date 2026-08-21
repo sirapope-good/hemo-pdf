@@ -111,7 +111,7 @@ public class ReportDataResolverTemplateIdTests
 
     private sealed class EmptyHprpTemplateStore : IHprpTemplateStore
     {
-        public HprpPackage? TryGetCached(string tenantCode, string templateId) => null;
+        public HprpPackage? TryGetCached(string tenantCode, string templateId, string? variant = null) => null;
         public Task<HprpPackage?> GetAsync(string tenantCode, string templateId, CancellationToken cancellationToken = default) =>
             Task.FromResult<HprpPackage?>(null);
         public Task SaveTenantOverrideAsync(string tenantCode, string templateId, Stream zipStream, CancellationToken cancellationToken = default) =>

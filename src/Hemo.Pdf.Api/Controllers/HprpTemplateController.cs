@@ -21,64 +21,58 @@ public sealed class HprpTemplateController : ControllerBase
     }
 
     [HttpGet]
-    public IActionResult List()
+    public IActionResult List([FromQuery] string? role)
     {
-        var tenant = _tenant.TenantCode;
-        var items = _store.ListDefaultManifests().Select(m => new
-        {
-            m.Id,
-            m.DisplayName,
-            m.RequiresSignature,
-            m.DataAdapter,
-            m.EngineVersion,
-            hasTenantOverride = _store.HasTenantOverride(tenant, m.Id),
-        });
-        return Ok(items);
+        var manifests = string.IsNullOrWhiteSpace(role)
+            ? _store.ListDefaultManifests()
+            : _store.ListLayoutProfiles(role);
+
+        return Ok(manifests.Select(MapItem));
     }
 
     [HttpGet("{templateId}")]
-    public IActionResult Get(string templateId)
+    public IActionResult Get(string templateId, [FromQuery] string? variant)
     {
-        var package = _store.TryGetCached(_tenant.TenantCode, templateId);
+        var package = _store.TryGetCached(_tenant.TenantCode, templateId, variant);
         if (package is null)
             return NotFound();
 
         return Ok(new
         {
             package.Manifest,
-            hasTenantOverride = _store.HasTenantOverride(_tenant.TenantCode, templateId),
+            hasTenantOverride = false,
             sourcePath = package.SourcePath,
         });
     }
 
     [HttpPost("{templateId}")]
     [EnableRateLimiting("PdfGeneration")]
-    [Consumes("application/octet-stream", "application/zip", "multipart/form-data")]
-    public async Task<IActionResult> Upload(string templateId, CancellationToken cancellationToken)
-    {
-        Stream stream;
-        if (Request.HasFormContentType && Request.Form.Files.Count > 0)
+    public IActionResult Upload(string templateId) =>
+        StatusCode(StatusCodes.Status410Gone, new
         {
-            stream = Request.Form.Files[0].OpenReadStream();
-        }
-        else
-        {
-            stream = Request.Body;
-        }
-
-        await using (stream)
-        {
-            await _store.SaveTenantOverrideAsync(_tenant.TenantCode, templateId, stream, cancellationToken);
-        }
-
-        return NoContent();
-    }
+            message = "Tenant .hprp uploads are disabled. Add a variant folder under assets/templates/reports/.",
+        });
 
     [HttpDelete("{templateId}")]
     [EnableRateLimiting("PdfGeneration")]
-    public async Task<IActionResult> Delete(string templateId, CancellationToken cancellationToken)
+    public IActionResult Delete(string templateId) =>
+        StatusCode(StatusCodes.Status410Gone, new
+        {
+            message = "Tenant .hprp uploads are disabled. Add a variant folder under assets/templates/reports/.",
+        });
+
+    private static object MapItem(HprpManifest m) => new
     {
-        await _store.DeleteTenantOverrideAsync(_tenant.TenantCode, templateId, cancellationToken);
-        return NoContent();
-    }
+        m.Id,
+        m.DisplayName,
+        m.Variant,
+        m.LayoutKind,
+        m.LayoutProfile,
+        profileLabel = m.Ui?.ProfileLabel,
+        role = m.Ui?.Role,
+        m.RequiresSignature,
+        m.DataAdapter,
+        m.EngineVersion,
+        hasTenantOverride = false,
+    };
 }

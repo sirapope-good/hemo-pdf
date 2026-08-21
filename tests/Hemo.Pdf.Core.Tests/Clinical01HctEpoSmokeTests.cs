@@ -175,18 +175,18 @@ public class Clinical01HctEpoSmokeTests
     {
         // Prefer content copied next to test assembly (csproj Content link).
         var outputCandidate = Path.Combine(AppContext.BaseDirectory, "assets", "templates");
-        if (Directory.Exists(Path.Combine(outputCandidate, "clinical-01-hct-epo")))
+        if (Directory.Exists(Path.Combine(outputCandidate, "reports", "clinical-01-hct-epo")))
             return outputCandidate;
 
         var dir = new DirectoryInfo(AppContext.BaseDirectory);
         while (dir is not null)
         {
             var candidate = Path.Combine(dir.FullName, "assets", "templates");
-            if (Directory.Exists(Path.Combine(candidate, "clinical-01-hct-epo")))
+            if (Directory.Exists(Path.Combine(candidate, "reports", "clinical-01-hct-epo")))
                 return candidate;
             dir = dir.Parent;
         }
 
-        throw new DirectoryNotFoundException("assets/templates/clinical-01-hct-epo not found.");
+        throw new DirectoryNotFoundException("assets/templates/reports/clinical-01-hct-epo not found.");
     }
 }

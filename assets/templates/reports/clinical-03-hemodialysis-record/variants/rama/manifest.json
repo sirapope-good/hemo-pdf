@@ -1,0 +1,21 @@
+{
+  "id": "clinical-03-hemodialysis-record",
+  "variant": "rama",
+  "layoutKind": "UniquePlanner",
+  "layoutProfile": "Rama",
+  "version": "1.0.0",
+  "displayName": "Hemodialysis Record",
+  "engineVersion": 1,
+  "dataAdapter": "hemosheet-record",
+  "requiresSignature": true,
+  "language": "th",
+  "ui": {
+    "role": "hemosheetLayoutProfile",
+    "profileLabel": "RAMA",
+    "entryMode": "hemosheetList",
+    "menuGroup": "clinical",
+    "sortOrder": 31,
+    "visibleInMenu": false,
+    "parameters": []
+  }
+}

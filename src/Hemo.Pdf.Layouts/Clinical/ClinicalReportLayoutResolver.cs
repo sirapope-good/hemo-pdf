@@ -1,4 +1,5 @@
 using Hemo.Pdf.Core.Constants;
+using Hemo.Pdf.Core.Hprp;
 using Hemo.Pdf.Core.Models.Hemosheet;
 
 namespace Hemo.Pdf.Layouts.Clinical;
@@ -23,8 +24,14 @@ public enum ClinicalLayoutKind
 /// </summary>
 public static class ClinicalReportLayoutResolver
 {
-    public static ClinicalLayoutKind Resolve(string reportTemplateId, HemosheetLayoutProfile profile)
+    public static ClinicalLayoutKind Resolve(
+        string reportTemplateId,
+        HemosheetLayoutProfile profile,
+        HprpManifest? manifest = null)
     {
+        if (TryParseLayoutKind(manifest?.LayoutKind, out var fromFile))
+            return fromFile;
+
         if (!ClinicalReportCatalog.IsHemodialysisRecord(reportTemplateId))
             return ClinicalLayoutKind.UniquePlanner;
 
@@ -36,11 +43,17 @@ public static class ClinicalReportLayoutResolver
         };
     }
 
-    public static bool UsesDenseForm(string reportTemplateId, HemosheetLayoutProfile profile)
+    public static bool UsesDenseForm(
+        string reportTemplateId,
+        HemosheetLayoutProfile profile,
+        HprpManifest? manifest = null)
     {
-        var kind = Resolve(reportTemplateId, profile);
+        var kind = Resolve(reportTemplateId, profile, manifest);
         return kind is ClinicalLayoutKind.ThaiUrForm or ClinicalLayoutKind.DefaultForm;
     }
+
+    public static bool TryParseLayoutKind(string? layoutKind, out ClinicalLayoutKind kind) =>
+        Enum.TryParse(layoutKind, ignoreCase: true, out kind);
 
     /// <summary>Obsolete name — use <see cref="UsesDenseForm"/>.</summary>
     public static bool UsesHemosheetForm(string reportTemplateId, HemosheetLayoutProfile profile) =>

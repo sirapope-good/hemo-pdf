@@ -6,19 +6,39 @@ See also: [PDF-REPORT-SYSTEM.md §6](../.cursor/docs/PDF-REPORT-SYSTEM.md) (main
 
 ## Package layout
 
-A `.hprp` file is a ZIP. Repo defaults are stored unpacked under `assets/templates/{id}/`:
+Repo defaults live unpacked under `assets/templates/reports/`:
 
-- `manifest.json`
-- `layout.json`
-- `labels.th.json` / `labels.en.json` (optional)
-- `assets/` (optional static images)
+```
+assets/templates/
+  schema/                 # JSON schema
+  _shared/                # copy-paste layout reference (not loaded)
+  reports/
+    clinical-01-hct-epo/  # single-package report
+      manifest.json
+      layout.json
+      labels.th.json
+    clinical-03-hemodialysis-record/
+      variants/
+        default/
+        rama/
+        thaiur/
+```
+
+- `reports/{id}/manifest.json` → one package for that report
+- `reports/{id}/variants/{key}/manifest.json` → hospital layouts of the same report (`id` stays `clinical-03-hemodialysis-record`)
+- Scan skips `schema`, `_shared`, `tenants`
+
+A `.hprp` ZIP is still a valid package format for tooling; production composition is the git folders above. Changing `layout.json` / labels does **not** require a C# rebuild. Rebuild only when adding a widget id or a new `layoutKind`.
 
 ## manifest.json
 
 | Field | Meaning |
 |-------|---------|
 | `id` | Canonical template id (`clinical-07-lab`, …) |
-| `displayName` | Title used in metadata |
+| `variant` | Folder key (`default` / `rama` / `thaiur`). Empty for single-package reports |
+| `layoutKind` | Existing C# composer: `DefaultForm` \| `ThaiUrForm` \| `UniquePlanner` |
+| `layoutProfile` | Tenant setting value (`Default` / `Rama` / `ThaiUr`) for hemosheet dropdown |
+| `displayName` | Title used in metadata / report catalog |
 | `engineVersion` | Must be `<=` engine current (1) |
 | `dataAdapter` | Named C# fetch adapter (see below) |
 | `requiresSignature` | Guard for generate |
@@ -33,6 +53,8 @@ A `.hprp` file is a ZIP. Repo defaults are stored unpacked under `assets/templat
 | `menuGroup` | e.g. `clinical`, `standalone` |
 | `sortOrder` | Menu sort key |
 | `visibleInMenu` | When false, hidden from Reports accordion |
+| `role` | `hemosheetLayoutProfile` — HemoAdmin layout dropdown |
+| `profileLabel` | Dropdown label (catalog still uses `displayName`) |
 | `reportDataPath` | Optional Web.Api path template for convention fetch |
 | `parameters[]` | How FE builds preview `parameters` (`source`: `route` / `query` / `constant` / `default`) |
 
@@ -148,25 +170,27 @@ Source of truth: `src/Hemo.Pdf.Core/Hprp/HprpWidgetIds.cs`
 
 ### Hemosheet section widgets (clinical-03)
 
-`hemosheet.sub-header-bar`, `hemosheet.session-meta`, `hemosheet.predialysis`, `hemosheet.vascular-access`, `hemosheet.assessment-pre-re`, `hemosheet.assessment-re`, `hemosheet.assessment-post`, `hemosheet.nursing-care-plan`, `hemosheet.assessment-other`, `hemosheet.labs`, `hemosheet.dialysis-records`, `hemosheet.uf-summary`, `hemosheet.nurse-records`, `hemosheet.doctor-records`, `hemosheet.medicine-records`, `hemosheet.progress-notes`, `hemosheet.footer-checklists`, `hemosheet.pre-post-hd-notes`, `hemosheet.post-vitals`, `hemosheet.avf-assessment`, `hemosheet.consent`
+`hemosheet.sub-header-bar`, `hemosheet.patient`, `hemosheet.session-meta`, `hemosheet.predialysis`, `hemosheet.vascular-access`, `hemosheet.assessment-pre-re`, `hemosheet.assessment-re`, `hemosheet.assessment-post`, `hemosheet.nursing-care-plan`, `hemosheet.assessment-other`, `hemosheet.labs`, `hemosheet.dialysis-records`, `hemosheet.uf-summary`, `hemosheet.nurse-records`, `hemosheet.doctor-records`, `hemosheet.medicine-records`, `hemosheet.progress-notes`, `hemosheet.footer-checklists`, `hemosheet.pre-post-hd-notes`, `hemosheet.post-vitals`, `hemosheet.avf-assessment`, `hemosheet.consent`
 
 ## Hybrid load
 
-1. Default from `assets/templates/{id}/` (folder or `.hprp` zip at root)
-2. Tenant override ZIP at `assets/templates/tenants/{tenant}/{id}.hprp` (upload `POST /api/templates/{id}`)
-3. Invalid / newer engine version → fall back to default (never HTTP 500)
+1. `FileHprpTemplateStore` scans `assets/templates/reports/` (mtime reload — no compile)
+2. Lookup key is `{id}#{variant}` (`variant` from tenant `LayoutProfile`: Default→`default`, Rama→`rama`, ThaiUr→`thaiur`)
+3. Invalid / newer engine version → skip that folder (never HTTP 500)
 
-Resolve order: `FileHprpTemplateStore.TryGetCached` → `HprpCatalog.TryGetDefinition` → `ClinicalReportCatalog` fallback.
+Tenant ZIP overlays under `assets/templates/tenants/` are **not** the production path. Add a new hospital layout by committing `reports/{id}/variants/{key}/` and deploying/restarting Hemo-PDF.
+
+Resolve order: `FileHprpTemplateStore.TryGetCached(tenant, id, variant)` → `HprpCatalog.TryGetDefinition` → `ClinicalReportCatalog` fallback.
 
 ## API
 
 | Method | Path | Description |
 |--------|------|-------------|
 | `GET` | `/api/report-catalog?menuOnly=` | FE menu catalog (manifest `ui` + fetch/renderer capability) |
-| `GET` | `/api/templates` | List default manifests + `hasTenantOverride` |
-| `GET` | `/api/templates/{id}` | Manifest + override flag |
-| `POST` | `/api/templates/{id}` | Upload tenant `.hprp` (zip or multipart) |
-| `DELETE` | `/api/templates/{id}` | Remove tenant override |
+| `GET` | `/api/templates` | Unique report manifests (default variant) |
+| `GET` | `/api/templates?role=hemosheetLayoutProfile` | Hemosheet layout dropdown (`variant`, `layoutKind`, `layoutProfile`, `profileLabel`) |
+| `GET` | `/api/templates/{id}?variant=` | Manifest for that variant |
+| `POST` / `DELETE` | `/api/templates/{id}` | **410 Gone** — uploads disabled |
 
 Requires `Authorization: Bearer` + `X-Tenant-Code` (mock dev: any bearer + header).
 
@@ -175,26 +199,27 @@ Config: `HemoPdf:TemplatesRootPath` (default `assets/templates`).
 ### Adding a new report (after dynamic catalog)
 
 1. **Web.Api:** dedicated `GET api/Patients/{id}/reports/{new-id}/report-data` (if real data is needed)
-2. **Hemo-PDF:** `assets/templates/{new-id}/` (manifest with `ui`, layout, labels) **or** upload `.hprp` via HemoAdmin; register dedicated fetch only when not using `reportDataPath` convention
-3. **Frontend:** no code change — menu appears from `GET /api/report-catalog`
+2. **Hemo-PDF:** `assets/templates/reports/{new-id}/` (manifest with `ui`, layout, labels). New hemosheet hospital: `reports/clinical-03-hemodialysis-record/variants/{key}/` with an existing `layoutKind`
+3. **Frontend:** no code change — menu appears from `GET /api/report-catalog`; HemoAdmin dropdown reads `GET /api/templates?role=hemosheetLayoutProfile`
 
 ## Runtime flow (short)
 
 ```
 GeneratePdfRequest
-  → FileHprpTemplateStore (tenant override → default folder)
+  → FileHprpTemplateStore (reports/{id} or reports/{id}/variants/{profile})
   → ReportPipeline (metadata, signature guard from manifest)
   → Renderer factory
       Form (04,06,07,10-16): ClinicalDefaultDataProvider → HprpBinder → ReportBlock[]
-      Hemosheet (03):         HemosheetLayoutPlanner → HprpHemosheetPlanInterpreter → section renderers
+      Hemosheet (03):         layoutKind from manifest → DefaultForm / ThaiUrForm / UniquePlanner
+                              UniquePlanner: HemosheetLayoutPlanner → HprpHemosheetPlanInterpreter
       Dedicated (01,02,05,08): C# composer + HprpLabelResolver
   → QuestPDF / ReportDocument JSON
 ```
 
 ## What still needs a rebuild
 
-New block/widget type, new Web.Api DTO/adapter, engine bugs, new Angular preview primitive.
+New block/widget type, new `layoutKind` composer, new Web.Api DTO/adapter, engine bugs, new Angular preview primitive.
 
-## Upload from HemoAdmin
+## HemoAdmin layout profile
 
-When `pdfApiUrl` is set on the tenant, HemoAdmin proxies upload via `POST /api/tenants/{id}/hprp-templates/{templateId}` → Hemo-PDF `POST /api/templates/{templateId}`.
+HemoAdmin loads dropdown options from `GET /api/tenants/{id}/hprp-templates?role=hemosheetLayoutProfile` (proxy to Hemo-PDF). Tenant save still writes `LayoutProfile` and syncs the dual-stack `.trdp` name. There is no upload UI.

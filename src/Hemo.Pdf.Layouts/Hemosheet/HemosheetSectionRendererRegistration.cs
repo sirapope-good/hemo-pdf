@@ -12,6 +12,7 @@ public static class HemosheetSectionRendererRegistration
         services.AddSingleton<HemosheetLayoutProfileRegistry>();
 
         services.AddSingleton<IHemosheetSectionRenderer, SubHeaderBarSectionRenderer>();
+        services.AddSingleton<IHemosheetSectionRenderer, PatientSectionRenderer>();
         services.AddSingleton<IHemosheetSectionRenderer, SessionMetaSectionRenderer>();
         services.AddSingleton<IHemosheetSectionRenderer, PredialysisSectionRenderer>();
         services.AddSingleton<IHemosheetSectionRenderer, VascularAccessSectionRenderer>();

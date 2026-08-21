@@ -1,0 +1,122 @@
+{
+  "page": {
+    "size": "A4"
+  },
+  "sections": [
+    {
+      "widget": "hemosheet.sub-header-bar",
+      "when": "data:hasSubHeader"
+    },
+    {
+      "widget": "hemosheet.patient"
+    },
+    {
+      "widget": "hemosheet.session-meta"
+    },
+    {
+      "widget": "hemosheet.predialysis"
+    },
+    {
+      "widget": "hemosheet.vascular-access",
+      "when": "feature:showAvPanel",
+      "variant": "av-fistula"
+    },
+    {
+      "widget": "hemosheet.vascular-access",
+      "when": [
+        "feature:showCathPanel",
+        "not-feature:showAvPanel"
+      ],
+      "variant": "perm-cath"
+    },
+    {
+      "widget": "hemosheet.assessment-pre-re",
+      "when": "data:hasAssessmentPreOrRe"
+    },
+    {
+      "widget": "hemosheet.assessment-post",
+      "when": "data:hasPostAssessmentBody"
+    },
+    {
+      "widget": "hemosheet.nursing-care-plan",
+      "when": "data:hasNursingCarePlan"
+    },
+    {
+      "widget": "hemosheet.assessment-other",
+      "when": "data:hasOtherAssessmentBody"
+    },
+    {
+      "widget": "hemosheet.labs",
+      "when": "data:hasLabData"
+    },
+    {
+      "widget": "hemosheet.dialysis-records",
+      "columns": [
+        "เวลา",
+        "BP",
+        "HR",
+        "RR",
+        "BFR",
+        "VP",
+        "TMP",
+        "DC",
+        "NSS",
+        "UF Rate",
+        "Total",
+        "หมายเหตุ"
+      ],
+      "columnsWhen": {
+        "feature:showHdfColumns": [
+          "เวลา",
+          "BP",
+          "HR",
+          "RR",
+          "BFR",
+          "VP",
+          "Substitute total",
+          "Substitute rate",
+          "TMP",
+          "DC",
+          "NSS",
+          "UF Rate",
+          "Total",
+          "หมายเหตุ"
+        ]
+      },
+      "fixedLinesFrom": "dialysis"
+    },
+    {
+      "widget": "hemosheet.uf-summary"
+    },
+    {
+      "widget": "hemosheet.nurse-records",
+      "fixedLinesFrom": "nurse"
+    },
+    {
+      "widget": "hemosheet.doctor-records",
+      "fixedLinesFrom": "doctor"
+    },
+    {
+      "widget": "hemosheet.medicine-records",
+      "fixedLinesFrom": "medicine"
+    },
+    {
+      "widget": "hemosheet.progress-notes",
+      "when": "or:feature:showProgressNote,data:hasProgressNotes",
+      "fixedLinesFrom": "progressNote"
+    },
+    {
+      "widget": "hemosheet.footer-checklists",
+      "when": "data:hasFooterChecklists"
+    },
+    {
+      "widget": "hemosheet.pre-post-hd-notes"
+    },
+    {
+      "widget": "hemosheet.post-vitals"
+    },
+    {
+      "widget": "hemosheet.avf-assessment"
+    }
+  ]
+}

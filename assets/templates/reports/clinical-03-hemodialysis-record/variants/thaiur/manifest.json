@@ -1,5 +1,8 @@
 {
   "id": "clinical-03-hemodialysis-record",
+  "variant": "thaiur",
+  "layoutKind": "ThaiUrForm",
+  "layoutProfile": "ThaiUr",
   "version": "1.0.0",
   "displayName": "Hemodialysis Record",
   "engineVersion": 1,
@@ -7,10 +10,12 @@
   "requiresSignature": true,
   "language": "th",
   "ui": {
+    "role": "hemosheetLayoutProfile",
+    "profileLabel": "Thai UR",
     "entryMode": "hemosheetList",
     "menuGroup": "clinical",
-    "sortOrder": 30,
-    "visibleInMenu": true,
+    "sortOrder": 32,
+    "visibleInMenu": false,
     "parameters": []
   }
 }

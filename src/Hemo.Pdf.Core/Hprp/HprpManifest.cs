@@ -7,6 +7,18 @@ public sealed class HprpManifest
     [JsonPropertyName("id")]
     public string Id { get; init; } = "";
 
+    /// <summary>Folder key under <c>reports/{id}/variants/{variant}</c>. Empty for single-package reports.</summary>
+    [JsonPropertyName("variant")]
+    public string? Variant { get; init; }
+
+    /// <summary>Composer path already in C#: <c>DefaultForm</c>, <c>ThaiUrForm</c>, or <c>UniquePlanner</c>.</summary>
+    [JsonPropertyName("layoutKind")]
+    public string? LayoutKind { get; init; }
+
+    /// <summary>Tenant setting value (<c>Default</c> / <c>Rama</c> / <c>ThaiUr</c>) when this package is a hemosheet layout profile.</summary>
+    [JsonPropertyName("layoutProfile")]
+    public string? LayoutProfile { get; init; }
+
     [JsonPropertyName("version")]
     public string Version { get; init; } = "1.0.0";
 

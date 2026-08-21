@@ -62,7 +62,7 @@ internal sealed class SessionMetaSectionRenderer : HemosheetSectionRendererBase
         PdfReportContext context)
     {
         var block = HemosheetPreviewMappers.MapSessionMeta(viewModel);
-        ComposeFieldOrKeyValue(container, block);
+        ReportBlockPdfComposer.Compose(container, block, context);
     }
 }
 

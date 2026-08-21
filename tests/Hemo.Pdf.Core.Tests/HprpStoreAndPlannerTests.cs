@@ -3,6 +3,7 @@ using Hemo.Pdf.Core.Constants;
 using Hemo.Pdf.Core.Hprp;
 using Hemo.Pdf.Core.Models.Hemosheet;
 using Hemo.Pdf.Layouts;
+using Hemo.Pdf.Layouts.Clinical;
 using Hemo.Pdf.Layouts.Hemosheet;
 using Hemo.Pdf.Layouts.Preview.Generic;
 using Microsoft.Extensions.Options;
@@ -22,35 +23,65 @@ public class HprpStoreAndPlannerTests
     }
 
     [Fact]
-    public async Task FileStore_TenantOverride_WinsOverDefault()
+    public void FileStore_LooksUpHemosheetByVariant()
     {
-        var source = TemplatesRoot();
+        var store = CreateStore();
+        var def = store.TryGetCached("local", ClinicalReportCatalog.HemodialysisRecord, "default");
+        var rama = store.TryGetCached("local", ClinicalReportCatalog.HemodialysisRecord, "rama");
+        var thaiur = store.TryGetCached("local", ClinicalReportCatalog.HemodialysisRecord, "thaiur");
+
+        Assert.Equal("default", def!.Manifest.Variant);
+        Assert.Equal(HprpLayoutKinds.DefaultForm, def.Manifest.LayoutKind);
+        Assert.Equal("rama", rama!.Manifest.Variant);
+        Assert.Equal(HprpLayoutKinds.UniquePlanner, rama.Manifest.LayoutKind);
+        Assert.Equal("thaiur", thaiur!.Manifest.Variant);
+        Assert.Equal(HprpLayoutKinds.ThaiUrForm, thaiur.Manifest.LayoutKind);
+        Assert.Contains(rama.Layout.Sections, s => s.Widget == HprpWidgetIds.HemosheetConsent);
+        Assert.DoesNotContain(thaiur.Layout.Sections, s => s.Widget == HprpWidgetIds.HemosheetConsent);
+    }
+
+    [Fact]
+    public void FileStore_ListLayoutProfiles_ReturnsHemosheetVariants()
+    {
+        var store = CreateStore();
+        var profiles = store.ListLayoutProfiles(HprpManifestUi.RoleHemosheetLayoutProfile);
+        Assert.Equal(3, profiles.Count);
+        Assert.Contains(profiles, m => m.Variant == "default" && m.LayoutProfile == "Default");
+        Assert.Contains(profiles, m => m.Variant == "rama" && m.Ui?.ProfileLabel == "RAMA");
+        Assert.Contains(profiles, m => m.Variant == "thaiur" && m.Ui?.ProfileLabel == "Thai UR");
+    }
+
+    [Fact]
+    public async Task FileStore_TenantOverride_IsDisabled()
+    {
+        var store = CreateStore();
+        await Assert.ThrowsAsync<InvalidOperationException>(
+            () => store.SaveTenantOverrideAsync("local", ClinicalReportCatalog.Lab, new MemoryStream()));
+        await Assert.ThrowsAsync<InvalidOperationException>(
+            () => store.DeleteTenantOverrideAsync("local", ClinicalReportCatalog.Lab));
+    }
+
+    [Fact]
+    public void FileStore_ReloadsWhenLayoutChanges()
+    {
+        var source = HprpTestAssets.TemplatesRoot();
         var root = Path.Combine(Path.GetTempPath(), "hprp-" + Guid.NewGuid().ToString("N"));
         CopyDirectory(source, root);
         var store = new FileHprpTemplateStore(Options.Create(new HprpTemplateOptions { RootPath = root }));
 
-        var original = store.TryGetCached("tenant-demo-a", ClinicalReportCatalog.Lab)!;
-        var overlay = new HprpPackage
-        {
-            Manifest = new HprpManifest
-            {
-                Id = ClinicalReportCatalog.Lab,
-                DisplayName = "Lab (tenant)",
-                DataAdapter = HprpDataAdapterIds.FlattenDto,
-            },
-            Layout = original.Layout,
-            LabelsByLanguage = original.LabelsByLanguage,
-        };
+        var original = store.TryGetCached("local", ClinicalReportCatalog.Lab);
+        Assert.Equal("Laboratory Record", original!.Manifest.DisplayName);
 
-        using var zip = new MemoryStream();
-        await HprpPackageReader.WriteZipAsync(overlay, zip, CancellationToken.None);
-        zip.Position = 0;
-        await store.SaveTenantOverrideAsync("tenant-demo-a", ClinicalReportCatalog.Lab, zip);
+        var manifestPath = Path.Combine(
+            HprpTemplatePaths.ReportsRoot(root),
+            ClinicalReportCatalog.Lab,
+            HprpPackageReader.ManifestFileName);
+        var json = File.ReadAllText(manifestPath).Replace("Laboratory Record", "Lab (reloaded)");
+        File.WriteAllText(manifestPath, json);
+        File.SetLastWriteTimeUtc(manifestPath, DateTime.UtcNow.AddSeconds(2));
 
-        var loaded = store.TryGetCached("tenant-demo-a", ClinicalReportCatalog.Lab);
-        Assert.Equal("Lab (tenant)", loaded!.Manifest.DisplayName);
-        Assert.True(store.HasTenantOverride("tenant-demo-a", ClinicalReportCatalog.Lab));
-        Assert.Equal("Laboratory Record", store.TryGetCached("other", ClinicalReportCatalog.Lab)!.Manifest.DisplayName);
+        var reloaded = store.TryGetCached("local", ClinicalReportCatalog.Lab);
+        Assert.Equal("Lab (reloaded)", reloaded!.Manifest.DisplayName);
     }
 
     [Fact]
@@ -71,7 +102,7 @@ public class HprpStoreAndPlannerTests
     public void Planner_FromHprp_ThaiUrUsesAssessmentReNotPreRe()
     {
         var store = CreateStore();
-        var package = store.TryGetCached("local", ClinicalReportCatalog.HemodialysisRecord);
+        var package = store.TryGetCached("local", ClinicalReportCatalog.HemodialysisRecord, "thaiur");
         Assert.NotNull(package);
         Assert.NotEmpty(package!.Layout.Sections);
 
@@ -116,6 +147,16 @@ public class HprpStoreAndPlannerTests
         Assert.Contains(HemosheetSectionId.Consent, ids);
     }
 
+    [Fact]
+    public void LayoutResolver_UsesManifestLayoutKind()
+    {
+        var kind = ClinicalReportLayoutResolver.Resolve(
+            ClinicalReportCatalog.HemodialysisRecord,
+            HemosheetLayoutProfile.Default,
+            new HprpManifest { LayoutKind = HprpLayoutKinds.ThaiUrForm });
+        Assert.Equal(ClinicalLayoutKind.ThaiUrForm, kind);
+    }
+
     private static HemosheetReportViewModel CreateVm(
         HemosheetLayoutProfile profile,
         bool showAv,
@@ -156,16 +197,7 @@ public class HprpStoreAndPlannerTests
     }
 
     private static FileHprpTemplateStore CreateStore() =>
-        new(Options.Create(new HprpTemplateOptions { RootPath = TemplatesRoot() }));
-
-    private static string TemplatesRoot()
-    {
-        var rooted = Path.Combine(AppContext.BaseDirectory, "assets", "templates");
-        if (Directory.Exists(rooted))
-            return rooted;
-
-        return Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..", "..", "assets", "templates"));
-    }
+        new(Options.Create(new HprpTemplateOptions { RootPath = HprpTestAssets.TemplatesRoot() }));
 
     private static void CopyDirectory(string source, string target)
     {

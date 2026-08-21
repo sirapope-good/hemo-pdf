@@ -1,6 +1,7 @@
 using Hemo.Pdf.Core.Abstractions;
 using Hemo.Pdf.Core.Constants;
 using Hemo.Pdf.Core.Context;
+using Hemo.Pdf.Core.Hprp;
 using Hemo.Pdf.Core.Models.Hemosheet;
 using Hemo.Pdf.Layouts.Base;
 using Hemo.Pdf.Layouts.Clinical;
@@ -20,6 +21,8 @@ public sealed class HemosheetComposer : BaseReportComposer<HemosheetReportViewMo
 {
     private readonly IHemosheetLayoutPlanner _planner;
     private readonly HemosheetSectionRendererRegistry _renderers;
+    private readonly IHprpTemplateStore? _templates;
+    private readonly ITenantContextAccessor? _tenant;
     private readonly ThaiUrHemosheetForm _thaiUrForm = new();
     private readonly DefaultHemosheetForm _defaultForm = new();
 
@@ -27,19 +30,29 @@ public sealed class HemosheetComposer : BaseReportComposer<HemosheetReportViewMo
         IHemosheetLayoutPlanner planner,
         HemosheetSectionRendererRegistry renderers,
         ISectionResolver<IReportHeaderSection> headerResolver,
-        ISectionResolver<IReportFooterSection> footerResolver)
+        ISectionResolver<IReportFooterSection> footerResolver,
+        IHprpTemplateStore? templates = null,
+        ITenantContextAccessor? tenant = null)
         : base(headerResolver, footerResolver)
     {
         _planner = planner;
         _renderers = renderers;
+        _templates = templates;
+        _tenant = tenant;
     }
 
     public override object Compose(object dataModel, PdfReportContext context)
     {
         var viewModel = (HemosheetReportViewModel)dataModel;
+        var variant = HprpTemplatePaths.FromLayoutProfile(viewModel.LayoutContext.LayoutProfile);
+        var package = _templates?.TryGetCached(
+            _tenant?.TenantCode ?? context.TenantCode,
+            ClinicalReportCatalog.HemodialysisRecord,
+            variant);
         var kind = ClinicalReportLayoutResolver.Resolve(
             ClinicalReportCatalog.HemodialysisRecord,
-            viewModel.LayoutContext.LayoutProfile);
+            viewModel.LayoutContext.LayoutProfile,
+            package?.Manifest);
 
         // ThaiUr → purple dense form; Default → CICM dense form; Rama → block planner.
         if (kind is ClinicalLayoutKind.ThaiUrForm or ClinicalLayoutKind.DefaultForm)

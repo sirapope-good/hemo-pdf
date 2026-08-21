@@ -14,5 +14,8 @@ services:
       HemoPdf__UseServerFetch: "true"
       HemoPdf__WebApi__BaseUrl: "http://host.docker.internal:8200"
       HemoPdf__BrandingRootPath: "/app/assets/branding"
+      # Content is published under /app/assets; "../../assets/templates" resolves outside the image.
+      HemoPdf__TemplatesRootPath: "/app/assets/templates"
     volumes:
       - ./assets/branding:/app/assets/branding:ro
+      - ./assets/templates:/app/assets/templates:ro

@@ -4,7 +4,7 @@ namespace Hemo.Pdf.Core.Hprp;
 
 public interface IHprpTemplateStore
 {
-    HprpPackage? TryGetCached(string tenantCode, string templateId);
+    HprpPackage? TryGetCached(string tenantCode, string templateId, string? variant = null);
 
     Task<HprpPackage?> GetAsync(string tenantCode, string templateId, CancellationToken cancellationToken = default);
 
@@ -19,7 +19,20 @@ public interface IHprpTemplateStore
         string templateId,
         CancellationToken cancellationToken = default);
 
+    /// <summary>One manifest per engine template id (default variant).</summary>
     IReadOnlyList<HprpManifest> ListDefaultManifests();
+
+    /// <summary>Layout-profile packages (clinical-03 variants). Filter with <paramref name="role"/>.</summary>
+    IReadOnlyList<HprpManifest> ListLayoutProfiles(string? role = null)
+    {
+        var target = string.IsNullOrWhiteSpace(role)
+            ? HprpManifestUi.RoleHemosheetLayoutProfile
+            : role.Trim();
+
+        return ListDefaultManifests()
+            .Where(m => string.Equals(m.Ui?.Role, target, StringComparison.OrdinalIgnoreCase))
+            .ToList();
+    }
 
     bool HasTenantOverride(string tenantCode, string templateId);
 }

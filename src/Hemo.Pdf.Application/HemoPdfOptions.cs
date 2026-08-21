@@ -11,10 +11,10 @@ public sealed class HemoPdfOptions
     /// </summary>
     public bool UseServerFetch { get; set; }
 
-    public string BrandingRootPath { get; set; } = "../../assets/branding";
+    public string BrandingRootPath { get; set; } = "assets/branding";
 
-    /// <summary>Default unpacked <c>.hprp</c> templates (<c>{id}/manifest.json</c>) plus tenant ZIP overrides under <c>tenants/{tenant}/</c>.</summary>
-    public string TemplatesRootPath { get; set; } = "../../assets/templates";
+    /// <summary>Root of unpacked HPRP templates (<c>reports/{id}/</c> and <c>reports/{id}/variants/</c>).</summary>
+    public string TemplatesRootPath { get; set; } = "assets/templates";
 
     public JwtOptions Jwt { get; set; } = new();
 

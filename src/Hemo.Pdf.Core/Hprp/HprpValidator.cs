@@ -42,12 +42,21 @@ public static class HprpValidator
         if (!HprpDataAdapterIds.All.Contains(manifest.DataAdapter))
             errors.Add($"Unknown dataAdapter '{manifest.DataAdapter}'.");
 
+        if (!string.IsNullOrWhiteSpace(manifest.LayoutKind)
+            && !HprpLayoutKinds.All.Contains(manifest.LayoutKind))
+        {
+            errors.Add($"Unknown layoutKind '{manifest.LayoutKind}'.");
+        }
+
         if (manifest.Ui is not null)
             ValidateUi(manifest.Ui, errors);
     }
 
     private static void ValidateUi(HprpManifestUi ui, List<string> errors)
     {
+        if (!string.IsNullOrWhiteSpace(ui.Role) && !HprpManifestUi.Roles.Contains(ui.Role))
+            errors.Add($"manifest.ui.role '{ui.Role}' is not supported.");
+
         if (!HprpManifestUi.EntryModes.Contains(ui.EntryMode))
             errors.Add($"manifest.ui.entryMode '{ui.EntryMode}' is not supported.");
 

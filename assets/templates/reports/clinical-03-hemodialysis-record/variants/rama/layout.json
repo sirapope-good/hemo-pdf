@@ -8,6 +8,9 @@
       "when": "data:hasSubHeader"
     },
     {
+      "widget": "hemosheet.patient"
+    },
+    {
       "widget": "hemosheet.session-meta"
     },
     {
@@ -28,17 +31,7 @@
     },
     {
       "widget": "hemosheet.assessment-pre-re",
-      "when": [
-        "not-profile:ThaiUr",
-        "data:hasAssessmentPreOrRe"
-      ]
-    },
-    {
-      "widget": "hemosheet.assessment-re",
-      "when": [
-        "profile:ThaiUr",
-        "data:hasAssessmentRe"
-      ]
+      "when": "data:hasAssessmentPreOrRe"
     },
     {
       "widget": "hemosheet.assessment-post",
@@ -127,10 +120,7 @@
     },
     {
       "widget": "hemosheet.consent",
-      "when": [
-        "profile:Rama",
-        "feature:showConsentBlock"
-      ]
+      "when": "feature:showConsentBlock"
     }
   ]
 }

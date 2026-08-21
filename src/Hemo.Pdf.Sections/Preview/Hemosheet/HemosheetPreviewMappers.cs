@@ -42,6 +42,7 @@ public static class HemosheetPreviewMappers
                     Lv("Diagnosis", vm.Patient.Diagnosis),
                     Lv("Underlying", vm.Patient.Underlying),
                     Lv("หน่วย", vm.Unit.FullName),
+                    Lv("HD/สัปดาห์", vm.Patient.HdPerWeek),
                 ],
             ],
         };

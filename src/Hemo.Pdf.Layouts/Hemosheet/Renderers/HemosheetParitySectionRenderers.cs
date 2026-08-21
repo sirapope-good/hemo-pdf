@@ -8,6 +8,27 @@ using QuestPDF.Infrastructure;
 
 namespace Hemo.Pdf.Layouts.Hemosheet.Renderers;
 
+internal sealed class PatientSectionRenderer : HemosheetSectionRendererBase
+{
+  public override HemosheetSectionId SectionId => HemosheetSectionId.Patient;
+
+  public override IReadOnlyList<ReportBlock> MapToPreview(
+      HemosheetSectionPlan plan,
+      HemosheetReportViewModel viewModel,
+      PdfReportContext context) =>
+      Single(HemosheetPreviewMappers.MapPatient(viewModel));
+
+  public override void ComposePdf(
+      IContainer container,
+      HemosheetSectionPlan plan,
+      HemosheetReportViewModel viewModel,
+      PdfReportContext context)
+  {
+    var block = HemosheetPreviewMappers.MapPatient(viewModel);
+    ReportBlockPdfComposer.Compose(container, block, context);
+  }
+}
+
 internal sealed class SubHeaderBarSectionRenderer : HemosheetSectionRendererBase
 {
   public override HemosheetSectionId SectionId => HemosheetSectionId.SubHeaderBar;

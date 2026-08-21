@@ -45,6 +45,8 @@ public class HemosheetLayoutPlannerTests
         var plans = _planner.Plan(vm);
 
         Assert.Contains(plans, p => p.SectionId == HemosheetSectionId.SubHeaderBar);
+        Assert.Contains(plans, p => p.SectionId == HemosheetSectionId.Patient);
+        Assert.Contains(plans, p => p.SectionId == HemosheetSectionId.SessionMeta);
         Assert.Contains(plans, p => p.SectionId == HemosheetSectionId.Predialysis);
         Assert.Contains(plans, p => p.SectionId == HemosheetSectionId.UfSummary);
         Assert.Contains(plans, p => p.SectionId == HemosheetSectionId.PrePostHdNotes);

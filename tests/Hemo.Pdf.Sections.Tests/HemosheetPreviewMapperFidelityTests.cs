@@ -24,6 +24,7 @@ public class HemosheetPreviewMapperFidelityTests
                 Coverage = "UC",
                 Diagnosis = "CKD 5",
                 Underlying = "DM",
+                HdPerWeek = "2-3",
             },
             Unit = new HemosheetUnitViewModel { Id = 1, FullName = "Unit A" },
         };
@@ -38,6 +39,7 @@ public class HemosheetPreviewMapperFidelityTests
         Assert.Equal("UC", flat["สิทธิ์"]);
         Assert.Equal("58", flat["อายุ"]);
         Assert.Equal("CKD 5", flat["Diagnosis"]);
+        Assert.Equal("2-3", flat["HD/สัปดาห์"]);
     }
 
     [Fact]

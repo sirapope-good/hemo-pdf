@@ -1,0 +1,21 @@
+{
+  "id": "clinical-03-hemodialysis-record",
+  "variant": "default",
+  "layoutKind": "DefaultForm",
+  "layoutProfile": "Default",
+  "version": "1.0.0",
+  "displayName": "Hemodialysis Record",
+  "engineVersion": 1,
+  "dataAdapter": "hemosheet-record",
+  "requiresSignature": true,
+  "language": "th",
+  "ui": {
+    "role": "hemosheetLayoutProfile",
+    "profileLabel": "Default",
+    "entryMode": "hemosheetList",
+    "menuGroup": "clinical",
+    "sortOrder": 30,
+    "visibleInMenu": true,
+    "parameters": []
+  }
+}
