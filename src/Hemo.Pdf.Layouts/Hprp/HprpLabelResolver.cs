@@ -13,7 +13,7 @@ public static class HprpLabelResolver
         string? language = null)
     {
         var templateId = ClinicalReportCatalog.ResolveEngineTemplateId(context.ReportTemplateId);
-        var package = store?.TryGetCached(context.TenantCode, templateId);
+        var package = context.LayoutPackage ?? store?.TryGetCached(context.TenantCode, templateId);
         var lang = language
             ?? package?.Manifest.Language
             ?? (ClinicalReportCatalog.IsConsentReport(context.ReportTemplateId)

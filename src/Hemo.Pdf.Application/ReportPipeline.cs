@@ -13,7 +13,8 @@ internal static class ReportPipeline
         IBrandingResolver brandingResolver,
         IReportSignatureResolver signatureResolver,
         CancellationToken cancellationToken,
-        IHprpTemplateStore? templates = null)
+        IHprpTemplateStore? templates = null,
+        HprpPackage? layoutPackage = null)
     {
         var branding = await brandingResolver.ResolveAsync(request.TenantCode, cancellationToken);
         var signatures = await signatureResolver.ResolveAsync(request, cancellationToken);
@@ -29,6 +30,7 @@ internal static class ReportPipeline
             Signatures = signatures,
             Parameters = request.Parameters ?? new Dictionary<string, object?>(),
             Metadata = BuildMetadata(request, branding, templateDefinition),
+            LayoutPackage = layoutPackage,
         };
     }
 

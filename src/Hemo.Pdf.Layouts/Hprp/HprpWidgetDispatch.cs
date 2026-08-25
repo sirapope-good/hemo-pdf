@@ -41,6 +41,19 @@ public static class HprpWidgetDispatch
         IReadOnlyDictionary<string, Action<IContainer>> handlers,
         Func<HprpLayoutNode, Action<IContainer>?>? tryGeneric)
     {
+        ArgumentNullException.ThrowIfNull(handlers);
+        ComposeColumn(column, nodes, Wrap(handlers), tryGeneric);
+    }
+
+    /// <summary>
+    /// Mixed plan with the current layout node (chrome / columnPlan) passed to each dense widget.
+    /// </summary>
+    public static void ComposeColumn(
+        ColumnDescriptor column,
+        IReadOnlyList<HprpLayoutNode> nodes,
+        IReadOnlyDictionary<string, Action<IContainer, HprpLayoutNode>> handlers,
+        Func<HprpLayoutNode, Action<IContainer>?>? tryGeneric)
+    {
         ArgumentNullException.ThrowIfNull(column);
         ArgumentNullException.ThrowIfNull(nodes);
         ArgumentNullException.ThrowIfNull(handlers);
@@ -50,7 +63,7 @@ public static class HprpWidgetDispatch
             if (!string.IsNullOrWhiteSpace(node.Widget)
                 && TryGetHandler(handlers, node.Widget.Trim(), out var draw))
             {
-                column.Item().Element(draw);
+                column.Item().Element(c => draw(c, node));
                 continue;
             }
 
@@ -58,6 +71,15 @@ public static class HprpWidgetDispatch
             if (generic is not null)
                 column.Item().Element(generic);
         }
+    }
+
+    private static IReadOnlyDictionary<string, Action<IContainer, HprpLayoutNode>> Wrap(
+        IReadOnlyDictionary<string, Action<IContainer>> handlers)
+    {
+        var wrapped = new Dictionary<string, Action<IContainer, HprpLayoutNode>>(StringComparer.OrdinalIgnoreCase);
+        foreach (var pair in handlers)
+            wrapped[pair.Key] = (container, _) => pair.Value(container);
+        return wrapped;
     }
 
     /// <summary>Invoke handlers in order without wrapping in a QuestPDF column.</summary>
@@ -79,10 +101,11 @@ public static class HprpWidgetDispatch
         }
     }
 
-    private static bool TryGetHandler(
-        IReadOnlyDictionary<string, Action<IContainer>> handlers,
+    private static bool TryGetHandler<T>(
+        IReadOnlyDictionary<string, T> handlers,
         string widget,
-        out Action<IContainer> draw)
+        out T draw)
+        where T : class
     {
         if (handlers.TryGetValue(widget, out draw!))
             return true;

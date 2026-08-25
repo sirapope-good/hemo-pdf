@@ -77,6 +77,32 @@ public sealed class HprpLayoutNode
 
     [JsonPropertyName("chrome")]
     public HprpChrome? Chrome { get; init; }
+
+    /// <summary>
+    /// Ordered entry columns for dense table recipes (e.g. clinical-01 annual table).
+    /// Empty / omitted = widget default. Not the same as <see cref="Columns"/> (field-grid count)
+    /// or hemosheet <see cref="HprpSectionNode.Columns"/> (string[] field ids).
+    /// </summary>
+    [JsonPropertyName("columnPlan")]
+    public IReadOnlyList<HprpColumnPlanItem>? ColumnPlan { get; init; }
+}
+
+public sealed class HprpColumnPlanItem
+{
+    [JsonPropertyName("bind")]
+    public string? Bind { get; init; }
+
+    [JsonPropertyName("labelKey")]
+    public string? LabelKey { get; init; }
+
+    [JsonPropertyName("weight")]
+    public float? Weight { get; init; }
+
+    [JsonPropertyName("center")]
+    public bool? Center { get; init; }
+
+    [JsonPropertyName("isLab")]
+    public bool? IsLab { get; init; }
 }
 
 public sealed class HprpFieldNode

@@ -68,11 +68,12 @@ public sealed class Clinical02EpoDrugComposer : ILayoutComposer
         IReadOnlyList<HprpLayoutNode> nodes,
         PdfReportContext context)
     {
-        var handlers = new Dictionary<string, Action<IContainer>>(StringComparer.OrdinalIgnoreCase)
+        var handlers = new Dictionary<string, Action<IContainer, HprpLayoutNode>>(StringComparer.OrdinalIgnoreCase)
         {
-            [HprpWidgetIds.ThaiUrHeader] = c => ThaiUrReportHeader.Compose(c, vm.Header, vm.Title),
-            [HprpWidgetIds.ClinicalEpoDrugTable] = c => ComposeTableWithMeta(c, vm, rowHeightMm, labels),
-            [HprpWidgetIds.ClinicalHctEpoCopay] = c => _coPayCriteria.Compose(c, vm.CoPayCriteria, labels),
+            [HprpWidgetIds.ThaiUrHeader] = (c, _) => ThaiUrReportHeader.Compose(c, vm.Header, vm.Title),
+            [HprpWidgetIds.ClinicalEpoDrugTable] = (c, _) => ComposeTableWithMeta(c, vm, rowHeightMm, labels),
+            [HprpWidgetIds.ClinicalHctEpoCopay] = (c, node) =>
+                _coPayCriteria.Compose(c, vm.CoPayCriteria, labels, node),
         };
 
         container.Column(col =>

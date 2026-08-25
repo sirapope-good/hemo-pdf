@@ -12,11 +12,11 @@ namespace Hemo.Pdf.Layouts.Clinical.Clinical01_HctEpo;
 /// Month name is a narrow merged cell; day + labs + ESA share ruled sub-rows
 /// (same thin border style as the co-pay criteria tables).
 /// Historical labs/dates render gray.
+/// Column order/visibility comes from <see cref="HprpLayoutNode.ColumnPlan"/> when present.
 /// </summary>
 public sealed class HctEpoAnnualTableSection
 {
     private const Unit Mm = Unit.Millimetre;
-    private const float Bw = HemosheetThaiUrStyle.BorderWidth;
 
     private const float MonthColWeight = 0.45f;
     private const float DayColWeight = 1.35f;
@@ -24,60 +24,59 @@ public sealed class HctEpoAnnualTableSection
     private const float EntryColsWeight = 8.2f;
     private const float RightBlockWeight = DayColWeight + EntryColsWeight;
 
-    private static readonly ColumnSpec[] Columns =
-    [
-        new(1.0f, "colHb", "Hb(g/dL)", Center: true, IsLab: true),
-        new(1.0f, "colHct", "Hct(%)", Center: true, IsLab: true),
-        new(1.8f, "colEpo", "EPO", Center: false, IsLab: false),
-        new(1.8f, "colFrequency", "ความถี่", Center: false, IsLab: false),
-        new(1.2f, "colInjectDay", "วันฉีด", Center: true, IsLab: false),
-        new(1.4f, "colRemarks", "หมายเหตุ", Center: false, IsLab: false),
-    ];
-
-    private readonly record struct ColumnSpec(float Weight, string LabelKey, string Title, bool Center, bool IsLab);
-
     public void Compose(
         IContainer container,
         HctEpoReportViewModel vm,
         float monthRowHeightMm,
-        IReadOnlyDictionary<string, string>? labels = null)
+        IReadOnlyDictionary<string, string>? labels = null,
+        HprpLayoutNode? node = null)
     {
+        var columns = HctEpoAnnualColumnPlan.Resolve(node);
+        var chrome = node?.Chrome;
         var slotHeightMm = monthRowHeightMm / HctEpoMonthLabels.SlotsPerMonth;
 
         container.Column(col =>
         {
-            col.Item().Element(c => ComposeHeaderRow(c, labels));
+            col.Item().Element(c => ComposeHeaderRow(c, labels, columns, chrome));
 
             foreach (var row in HctEpoMonthLabels.EnsureTwelve(vm.Months))
             {
-                col.Item().Element(c => ComposeMonthBlock(c, row, slotHeightMm));
+                col.Item().Element(c => ComposeMonthBlock(c, row, slotHeightMm, columns, chrome));
             }
         });
     }
 
-    private static void ComposeHeaderRow(IContainer container, IReadOnlyDictionary<string, string>? labels)
+    private static void ComposeHeaderRow(
+        IContainer container,
+        IReadOnlyDictionary<string, string>? labels,
+        IReadOnlyList<HctEpoAnnualColumnPlan.ColumnSpec> columns,
+        HprpChrome? chrome)
     {
+        var bw = BorderWidth(chrome);
+        var fill = HeaderFill(chrome);
+        var headerStyle = HeaderTextStyle(chrome);
+
         container.Row(row =>
         {
             row.RelativeItem(DateGroupWeight)
-                .Border(Bw)
-                .Background(ReportSectionHeaderChrome.Resolve(HemosheetThaiUrStyle.HeaderBackground))
+                .Border(bw)
+                .Background(fill)
                 .Height(HemosheetThaiUrStyle.HeaderBarHeightMm, Mm)
                 .AlignMiddle()
                 .AlignCenter()
                 .Text(HprpLabels.Get(labels, "colDate", "วัน/เดือน/ปี"))
-                .Style(ThaiUrText.Bold);
+                .Style(headerStyle);
 
-            foreach (var col in Columns)
+            foreach (var col in columns)
             {
                 row.RelativeItem(col.Weight)
-                    .Border(Bw)
-                    .Background(ReportSectionHeaderChrome.Resolve(HemosheetThaiUrStyle.HeaderBackground))
+                    .Border(bw)
+                    .Background(fill)
                     .Height(HemosheetThaiUrStyle.HeaderBarHeightMm, Mm)
                     .AlignMiddle()
                     .AlignCenter()
                     .Text(HprpLabels.Get(labels, col.LabelKey, col.Title))
-                    .Style(ThaiUrText.Bold);
+                    .Style(headerStyle);
             }
         });
     }
@@ -85,21 +84,24 @@ public sealed class HctEpoAnnualTableSection
     private static void ComposeMonthBlock(
         IContainer container,
         HctEpoMonthRow month,
-        float slotHeightMm)
+        float slotHeightMm,
+        IReadOnlyList<HctEpoAnnualColumnPlan.ColumnSpec> columns,
+        HprpChrome? chrome)
     {
         var slots = PadEntries(month.Entries, HctEpoMonthLabels.SlotsPerMonth);
         var blockHeightMm = slotHeightMm * HctEpoMonthLabels.SlotsPerMonth;
+        var bw = BorderWidth(chrome);
 
         container.Height(blockHeightMm, Mm).Row(row =>
         {
             row.RelativeItem(MonthColWeight)
                 .ExtendVertical()
-                .Border(Bw)
+                .Border(bw)
                 .AlignMiddle()
                 .AlignCenter()
                 .PaddingHorizontal(0.5f)
                 .Text(month.MonthLabel)
-                .Style(ThaiUrText.Base);
+                .Style(BodyTextStyle(chrome, historical: false));
 
             row.RelativeItem(RightBlockWeight)
                 .ExtendVertical()
@@ -109,41 +111,38 @@ public sealed class HctEpoAnnualTableSection
                     {
                         entryCol.Item()
                             .Height(slotHeightMm, Mm)
-                            .Element(c => ComposeEntrySubRow(c, entry));
+                            .Element(c => ComposeEntrySubRow(c, entry, columns, chrome));
                     }
                 });
         });
     }
 
-    private static void ComposeEntrySubRow(IContainer container, HctEpoMonthEntry entry)
+    private static void ComposeEntrySubRow(
+        IContainer container,
+        HctEpoMonthEntry entry,
+        IReadOnlyList<HctEpoAnnualColumnPlan.ColumnSpec> columns,
+        HprpChrome? chrome)
     {
-        var labStyle = entry.LabIsHistorical ? ThaiUrText.Historical : ThaiUrText.Base;
-        var values = new[]
-        {
-            entry.Hb,
-            entry.Hct,
-            entry.EpoName,
-            entry.FrequencyText,
-            entry.InjectionDate,
-            entry.Remarks,
-        };
+        var bw = BorderWidth(chrome);
+        var labStyle = BodyTextStyle(chrome, entry.LabIsHistorical);
+        var bodyStyle = BodyTextStyle(chrome, historical: false);
 
         container.Row(row =>
         {
             row.RelativeItem(DayColWeight)
-                .Border(Bw)
+                .Border(bw)
                 .ExtendVertical()
                 .PaddingHorizontal(1.2f)
                 .AlignMiddle()
                 .AlignCenter()
                 .Text(string.IsNullOrWhiteSpace(entry.DayLabel) ? " " : entry.DayLabel!)
-                .Style(entry.LabIsHistorical ? ThaiUrText.Historical : ThaiUrText.Base);
+                .Style(entry.LabIsHistorical ? labStyle : bodyStyle);
 
-            for (var i = 0; i < Columns.Length; i++)
+            foreach (var col in columns)
             {
-                var col = Columns[i];
+                var value = HctEpoAnnualColumnPlan.ReadCell(entry, col.Bind);
                 var cell = row.RelativeItem(col.Weight)
-                    .Border(Bw)
+                    .Border(bw)
                     .ExtendVertical()
                     .PaddingHorizontal(1.2f)
                     .AlignMiddle();
@@ -151,8 +150,8 @@ public sealed class HctEpoAnnualTableSection
                 if (col.Center)
                     cell = cell.AlignCenter();
 
-                cell.Text(string.IsNullOrWhiteSpace(values[i]) ? " " : values[i]!)
-                    .Style(col.IsLab ? labStyle : ThaiUrText.Base);
+                cell.Text(string.IsNullOrWhiteSpace(value) ? " " : value!)
+                    .Style(col.IsLab ? labStyle : bodyStyle);
             }
         });
     }
@@ -165,5 +164,30 @@ public sealed class HctEpoAnnualTableSection
         while (list.Count < slotCount)
             list.Add(new HctEpoMonthEntry());
         return list.Count > slotCount ? list.Take(slotCount).ToList() : list;
+    }
+
+    private static float BorderWidth(HprpChrome? chrome) =>
+        string.IsNullOrWhiteSpace(chrome?.Border)
+            ? HemosheetThaiUrStyle.BorderWidth
+            : HprpChrome.ResolveBorderWidth(chrome);
+
+    private static string HeaderFill(HprpChrome? chrome) =>
+        HprpChrome.FileHeaderFillOrNull(chrome)
+        ?? ReportSectionHeaderChrome.Resolve(HemosheetThaiUrStyle.HeaderBackground);
+
+    private static TextStyle HeaderTextStyle(HprpChrome? chrome)
+    {
+        var style = ThaiUrText.Bold;
+        return chrome?.FontSize is > 0 and < 48
+            ? style.FontSize(chrome.FontSize.Value)
+            : style;
+    }
+
+    private static TextStyle BodyTextStyle(HprpChrome? chrome, bool historical)
+    {
+        var style = historical ? ThaiUrText.Historical : ThaiUrText.Base;
+        return chrome?.FontSize is > 0 and < 48
+            ? style.FontSize(chrome.FontSize.Value)
+            : style;
     }
 }

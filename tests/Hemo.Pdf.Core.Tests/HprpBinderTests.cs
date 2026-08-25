@@ -347,6 +347,64 @@ public class HprpBinderTests
     }
 
     [Fact]
+    public void Validator_RejectsUnknownColumnPlanBind()
+    {
+        var package = new HprpPackage
+        {
+            Manifest = new HprpManifest
+            {
+                Id = ClinicalReportCatalog.HctEpo,
+                DisplayName = "X",
+                DataAdapter = HprpDataAdapterIds.Clinical01HctEpo,
+            },
+            Layout = new HprpLayout
+            {
+                Body =
+                [
+                    new HprpLayoutNode
+                    {
+                        Widget = HprpWidgetIds.ClinicalHctEpoAnnualTable,
+                        ColumnPlan = [new HprpColumnPlanItem { Bind = "notAField" }],
+                    },
+                ],
+            },
+        };
+
+        var result = HprpValidator.Validate(package);
+        Assert.False(result.IsValid);
+        Assert.Contains(result.Errors, e => e.Contains("notAField"));
+    }
+
+    [Fact]
+    public void Validator_RejectsColumnPlanOnCopay()
+    {
+        var package = new HprpPackage
+        {
+            Manifest = new HprpManifest
+            {
+                Id = ClinicalReportCatalog.HctEpo,
+                DisplayName = "X",
+                DataAdapter = HprpDataAdapterIds.Clinical01HctEpo,
+            },
+            Layout = new HprpLayout
+            {
+                Body =
+                [
+                    new HprpLayoutNode
+                    {
+                        Widget = HprpWidgetIds.ClinicalHctEpoCopay,
+                        ColumnPlan = [new HprpColumnPlanItem { Bind = "hb" }],
+                    },
+                ],
+            },
+        };
+
+        var result = HprpValidator.Validate(package);
+        Assert.False(result.IsValid);
+        Assert.Contains(result.Errors, e => e.Contains("columnPlan"));
+    }
+
+    [Fact]
     public void BindGeneric_KeyValueResolvesLabelKeyAndLiteralContent()
     {
         var node = new HprpLayoutNode

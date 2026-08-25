@@ -14,6 +14,9 @@ public static class HprpLayoutPlan
 {
     public static HprpPackage? TryGetPackage(IHprpTemplateStore? store, PdfReportContext context)
     {
+        if (context.LayoutPackage is not null)
+            return context.LayoutPackage;
+
         var templateId = ClinicalReportCatalog.ResolveEngineTemplateId(context.ReportTemplateId);
         return store?.TryGetCached(context.TenantCode, templateId);
     }

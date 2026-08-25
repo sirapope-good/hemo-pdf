@@ -1,4 +1,5 @@
 using System.Text.Json;
+using Hemo.Pdf.Core.Hprp;
 using Hemo.Pdf.Core.Models;
 
 namespace Hemo.Pdf.Core.Context;
@@ -14,4 +15,10 @@ public sealed class PdfReportContext
     public ReportSignatureContext? Signatures { get; init; }
     public JsonElement? Data { get; init; }
     public IDictionary<string, object?> Parameters { get; init; } = new Dictionary<string, object?>();
+
+    /// <summary>
+    /// Studio preview overlay: unsaved draft package. When set, layout/labels
+    /// resolve from this instead of the disk store.
+    /// </summary>
+    public HprpPackage? LayoutPackage { get; init; }
 }

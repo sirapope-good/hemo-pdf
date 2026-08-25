@@ -24,6 +24,8 @@ services:
       HemoPdf__CorsOrigins__2: "http://127.0.0.1:4200"
       HemoPdf__CorsOrigins__3: "http://127.0.0.1:4500"
       HemoPdf__CorsOrigins__4: "http://localhost:5000"
+      HemoPdf__CorsOrigins__5: "http://localhost:5090"
+      HemoPdf__CorsOrigins__6: "http://127.0.0.1:5090"
     volumes:
       - ./assets/branding:/app/assets/branding
       - ./assets/templates:/app/assets/templates:ro

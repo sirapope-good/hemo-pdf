@@ -115,6 +115,35 @@ public static class HprpValidator
             errors.Add($"{path} unknown widget '{node.Widget}'.");
 
         HprpChrome.Validate(node.Chrome, path + ".chrome", errors);
+        ValidateColumnPlan(node, path, errors);
+    }
+
+    private static void ValidateColumnPlan(HprpLayoutNode node, string path, List<string> errors)
+    {
+        if (node.ColumnPlan is not { Count: > 0 })
+            return;
+
+        var recipe = HprpWidgetRecipes.TryGet(node.Widget);
+        if (recipe is null || recipe.BindFields.Count == 0)
+        {
+            errors.Add($"{path}.columnPlan is only valid on widgets that declare bindFields.");
+            return;
+        }
+
+        for (var i = 0; i < node.ColumnPlan.Count; i++)
+        {
+            var col = node.ColumnPlan[i];
+            var itemPath = $"{path}.columnPlan[{i}]";
+            if (col.Weight is <= 0)
+                errors.Add($"{itemPath}.weight must be greater than 0.");
+
+            var bind = col.Bind?.Trim();
+            if (string.IsNullOrEmpty(bind))
+                continue;
+
+            if (!recipe.AllowsBind(bind))
+                errors.Add($"{itemPath}.bind '{bind}' is not in the widget recipe.");
+        }
     }
 
     private static void ValidateSection(HprpSectionNode section, string path, List<string> errors)

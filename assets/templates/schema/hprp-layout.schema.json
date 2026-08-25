@@ -44,7 +44,26 @@
         "rows": { "type": "array" },
         "appendFlatten": { "type": "boolean" },
         "variant": { "type": "string" },
-        "chrome": { "$ref": "#/$defs/chrome" }
+        "chrome": { "$ref": "#/$defs/chrome" },
+        "columnPlan": {
+          "type": "array",
+          "description": "Ordered entry columns for dense table recipes. Empty/omitted = widget default. Not field-grid columns (integer) or hemosheet section columns (string[]).",
+          "items": { "$ref": "#/$defs/columnPlanItem" }
+        }
+      }
+    },
+    "columnPlanItem": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "bind": {
+          "type": "string",
+          "description": "Recipe field id (e.g. hb, hct). Empty = handwriting blank column."
+        },
+        "labelKey": { "type": "string" },
+        "weight": { "type": "number", "exclusiveMinimum": 0 },
+        "center": { "type": "boolean" },
+        "isLab": { "type": "boolean" }
       }
     },
     "section": {

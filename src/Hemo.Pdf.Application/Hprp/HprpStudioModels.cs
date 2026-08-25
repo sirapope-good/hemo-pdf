@@ -57,12 +57,14 @@ public static class HprpStudioCatalog
     {
         engineVersion = HprpEngine.CurrentVersion,
         fileExtension = HprpEngine.FileExtension,
-        widgets = HprpWidgetIds.All.OrderBy(x => x, StringComparer.OrdinalIgnoreCase),
-        blockTypes = HprpWidgetIds.BlockTypes.OrderBy(x => x, StringComparer.OrdinalIgnoreCase),
+        widgets = HprpWidgetRecipes.Dense,
+        blockTypes = HprpWidgetRecipes.Blocks,
+        widgetIds = HprpWidgetIds.All.OrderBy(x => x, StringComparer.OrdinalIgnoreCase),
         dataAdapters = HprpDataAdapterIds.All.OrderBy(x => x, StringComparer.OrdinalIgnoreCase),
         layoutKinds = HprpLayoutKinds.All.OrderBy(x => x, StringComparer.OrdinalIgnoreCase),
         entryModes = HprpManifestUi.EntryModes.OrderBy(x => x, StringComparer.OrdinalIgnoreCase),
         parameterSources = HprpManifestUi.ParameterSources.OrderBy(x => x, StringComparer.OrdinalIgnoreCase),
+        sampleTemplateIds = HprpStudioSamplePayloads.KnownTemplateIds,
         chrome = new
         {
             headerFill = "#RRGGBB or $branding.sectionHeaderBackground",

@@ -18,17 +18,20 @@ public sealed class HprpStudioController : ControllerBase
     private readonly IHprpTemplateStore _store;
     private readonly ITenantContextAccessor _tenant;
     private readonly HprpTemplateOptions _options;
+    private readonly HprpStudioPreviewService _preview;
 
     public HprpStudioController(
         HprpPackService pack,
         IHprpTemplateStore store,
         ITenantContextAccessor tenant,
-        IOptions<HprpTemplateOptions> options)
+        IOptions<HprpTemplateOptions> options,
+        HprpStudioPreviewService preview)
     {
         _pack = pack;
         _store = store;
         _tenant = tenant;
         _options = options.Value;
+        _preview = preview;
     }
 
     [HttpGet("catalog")]
@@ -96,6 +99,18 @@ public sealed class HprpStudioController : ControllerBase
 
         var withVariant = _pack.PackageOutputPath(templateId, variant, includeVariantSegment: true);
         return System.IO.File.Exists(withVariant);
+    }
+
+    [HttpPost("preview")]
+    [EnableRateLimiting("PdfGeneration")]
+    [Produces("application/pdf")]
+    public async Task<IActionResult> Preview(
+        [FromBody] HprpStudioPreviewRequest body,
+        CancellationToken cancellationToken)
+    {
+        var pdfBytes = await _preview.PreviewAsync(body, cancellationToken);
+        Response.Headers.CacheControl = "no-store";
+        return File(pdfBytes, "application/pdf");
     }
 
     [HttpPost("validate")]

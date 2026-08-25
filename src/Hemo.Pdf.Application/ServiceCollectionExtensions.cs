@@ -54,6 +54,7 @@ public static class ServiceCollectionExtensions
         services.AddScoped<IBrandingResolver, BrandingResolver>();
         services.AddSingleton<IHprpTemplateStore, Hprp.FileHprpTemplateStore>();
         services.AddSingleton<Hprp.HprpPackService>();
+        services.AddScoped<Hprp.HprpStudioPreviewService>();
         services.AddScoped<IReportCatalogService, ReportCatalogService>();
 
         services.AddHttpClient<IHemosheetReportDataClient, HemosheetReportDataClient>(client =>

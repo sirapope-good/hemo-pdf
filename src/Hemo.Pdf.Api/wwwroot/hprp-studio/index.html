@@ -1,25 +1,31 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="th">
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>HPRP Studio</title>
   <link rel="stylesheet" href="/hprp-studio/studio.css" />
 </head>
-<body>
+<body class="mode-designer">
   <header class="top">
     <div>
       <h1>HPRP Studio</h1>
-      <p class="muted">แก้ JSON ใน editor แล้ว <strong>Save and pack</strong> หรือดึงจากโฟลเดอร์ <code>assets/templates/reports</code> ด้วย <strong>Pack this from disk</strong> / <strong>Pack all from disk</strong> แล้วเขียน <code>packages/*.hprp</code></p>
+      <p class="muted">เรียงบล็อกใน <code>layout.body</code> แล้วแก้ chrome / คอลัมน์ใน inspector — ไม่ใช่ลากพิกัดบนกระดาษ</p>
     </div>
-    <div class="auth">
-      <label>Bearer <input id="token" type="text" value="dev" autocomplete="off" /></label>
-      <label>Tenant <input id="tenant" type="text" value="local" autocomplete="off" /></label>
+    <div class="top-right">
+      <div class="mode-toggle" role="group" aria-label="Editor mode">
+        <button type="button" id="btnModeDesigner" class="active">Designer</button>
+        <button type="button" id="btnModeJson">JSON</button>
+      </div>
+      <div class="auth">
+        <label>Bearer <input id="token" type="text" value="dev" autocomplete="off" /></label>
+        <label>Tenant <input id="tenant" type="text" value="local" autocomplete="off" /></label>
+      </div>
     </div>
   </header>
 
   <main class="layout">
-    <aside class="pane">
+    <aside class="pane packages">
       <div class="pane-head">
         <strong>Packages</strong>
         <button id="btnReload" type="button">Reload</button>
@@ -28,17 +34,51 @@
         <button id="btnPackAll" type="button" title="Read every report folder and write packages/*.hprp">Pack all from disk</button>
       </div>
       <ul id="packageList" class="list"></ul>
-      <div class="pane-head"><strong>Engine catalog</strong></div>
-      <pre id="catalogBox" class="catalog"></pre>
     </aside>
 
-    <section class="pane editor">
+    <section class="pane designer-col" id="designerPane">
       <div class="pane-head">
         <strong id="editorTitle">No package selected</strong>
         <div class="actions">
           <button id="btnValidate" type="button" disabled>Validate</button>
-          <button id="btnPackThis" class="primary" type="button" disabled title="Overwrite this .hprp from assets/templates/reports/{id} (ignores unsaved editor)">Pack this from disk</button>
+          <button id="btnPackThis" class="primary" type="button" disabled title="Overwrite this .hprp from assets/templates/reports/{id}">Pack this from disk</button>
           <button id="btnSave" type="button" disabled title="Write the editor JSON to packages/*.hprp">Save and pack</button>
+        </div>
+      </div>
+      <div class="designer-split">
+        <div class="subpane">
+          <div class="subhead">Palette</div>
+          <div id="palette" class="palette"></div>
+        </div>
+        <div class="subpane">
+          <div class="subhead">Body order</div>
+          <ul id="bodyList" class="node-list"></ul>
+        </div>
+      </div>
+    </section>
+
+    <section class="pane inspector-col" id="inspectorPane">
+      <div class="pane-head"><strong>Inspector</strong></div>
+      <div id="inspector" class="inspector"><p class="muted">เลือกบล็อกในรายการ</p></div>
+    </section>
+
+    <section class="pane preview-col" id="previewPane">
+      <div class="pane-head">
+        <strong>Preview</strong>
+        <div class="actions">
+          <button id="btnPreview" type="button" disabled>Refresh sample PDF</button>
+        </div>
+      </div>
+      <iframe id="previewFrame" src="about:blank" title="PDF preview"></iframe>
+    </section>
+
+    <section class="pane editor json-col" id="jsonPane">
+      <div class="pane-head">
+        <strong>Advanced JSON</strong>
+        <div class="actions">
+          <button id="btnValidateJson" type="button" disabled>Validate</button>
+          <button id="btnPackThisJson" class="primary" type="button" disabled>Pack this from disk</button>
+          <button id="btnSaveJson" type="button" disabled>Save and pack</button>
         </div>
       </div>
       <div class="tabs">
@@ -47,9 +87,10 @@
         <button type="button" class="tab" data-tab="labels">labels</button>
       </div>
       <textarea id="jsonEditor" spellcheck="false" disabled placeholder="Select a package"></textarea>
-      <pre id="status" class="status" role="status"></pre>
     </section>
   </main>
+
+  <pre id="status" class="status" role="status"></pre>
 
   <script src="/hprp-studio/studio.js"></script>
 </body>

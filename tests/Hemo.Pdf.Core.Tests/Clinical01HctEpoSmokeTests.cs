@@ -1,6 +1,7 @@
 using System.Text.Json;
 using Hemo.Pdf.Core.Constants;
 using Hemo.Pdf.Core.Context;
+using Hemo.Pdf.Core.Hprp;
 using Hemo.Pdf.Core.Models;
 using Hemo.Pdf.Layouts.Clinical.Clinical01_HctEpo;
 using Hemo.Pdf.Rendering;
@@ -62,10 +63,13 @@ public class Clinical01HctEpoSmokeTests
           "coPayCriteria": {
             "title": "ปริมาณยาที่มีสิทธิได้รับโดยไม่ต้องร่วมจ่าย",
             "nhsoRules": [
-              { "condition": "Hb < 10", "injectionsPerWeek": "2" }
+              { "condition": "Hb < 10", "injectionsPerWeek": "2" },
+              { "condition": "Hb 10-11.9", "injectionsPerWeek": "1" },
+              { "condition": "Hb ≥ 12", "injectionsPerWeek": "0" }
             ],
             "ssoRules": [
-              { "medicine": "Espogen 4000 U", "hctLe36": "3", "hctGt36": "2", "hctGe39": "0" }
+              { "medicine": "Espogen 4000 U", "hctLe36": "3", "hctGt36": "2", "hctGe39": "0" },
+              { "medicine": "Hemax 4000 U", "hctLe36": "2", "hctGt36": "1", "hctGe39": "0" }
             ]
           }
         }
@@ -129,6 +133,59 @@ public class Clinical01HctEpoSmokeTests
         Assert.Equal((byte)'P', bytes[1]);
         Assert.Equal((byte)'D', bytes[2]);
         Assert.Equal((byte)'F', bytes[3]);
+    }
+
+    [Fact]
+    public async Task Render_SwappedHbHctColumnPlan_ProducesPdfBytes()
+    {
+        var defaults = HprpWidgetRecipes.ClinicalHctEpoAnnualTable.DefaultColumnPlan;
+        var swapped = new List<HprpColumnPlanItem>
+        {
+            new() { Bind = "hct", LabelKey = "colHct" },
+            new() { Bind = "hb", LabelKey = "colHb" },
+        };
+        swapped.AddRange(defaults.Skip(2));
+
+        var package = new HprpPackage
+        {
+            Manifest = new HprpManifest
+            {
+                Id = ClinicalReportCatalog.HctEpo,
+                DisplayName = Clinical01HctEpoDataProvider.ReportTitle,
+                DataAdapter = HprpDataAdapterIds.Clinical01HctEpo,
+            },
+            Layout = new HprpLayout
+            {
+                Header = new HprpLayoutNode { Widget = HprpWidgetIds.ThaiUrHeader },
+                Body =
+                [
+                    new HprpLayoutNode
+                    {
+                        Widget = HprpWidgetIds.ClinicalHctEpoAnnualTable,
+                        ColumnPlan = swapped,
+                    },
+                    new HprpLayoutNode { Widget = HprpWidgetIds.ClinicalHctEpoCopay },
+                ],
+            },
+        };
+
+        var renderer = new Clinical01HctEpoReportRenderer(
+            new Clinical01HctEpoDataProvider(),
+            new Clinical01HctEpoComposer(),
+            new QuestPdfRenderer());
+
+        var context = new PdfReportContext
+        {
+            ReportTemplateId = ClinicalReportCatalog.HctEpo,
+            TenantCode = "local",
+            Metadata = new ReportMetadata { Title = Clinical01HctEpoDataProvider.ReportTitle },
+            Data = JsonDocument.Parse(SampleJson).RootElement.Clone(),
+            LayoutPackage = package,
+        };
+
+        var bytes = await renderer.RenderReportAsync(context, CancellationToken.None);
+        Assert.True(bytes.Length > 100);
+        Assert.Equal((byte)'%', bytes[0]);
     }
 
     [Fact]
