@@ -42,7 +42,7 @@ public sealed class Clinical02EpoDrugComposer : ILayoutComposer
         var rowHeightMm = BudgetRowHeightMm(vm);
         var labels = HprpLabelResolver.Resolve(_templates, context);
         var package = HprpLayoutPlan.TryGetPackage(_templates, context);
-        var widgets = HprpLayoutPlan.ResolveWidgetOrder(
+        var nodes = HprpLayoutPlan.ResolveNodes(
             package,
             HprpClinicalWidgetSets.Clinical02DefaultOrder,
             HprpClinicalWidgetSets.Clinical02Allowed);
@@ -55,7 +55,7 @@ public sealed class Clinical02EpoDrugComposer : ILayoutComposer
             MarginLeft = margin,
             MarginRight = margin,
             Header = null,
-            Content = c => ComposeContent(c, vm, rowHeightMm, labels, widgets),
+            Content = c => ComposeContent(c, vm, rowHeightMm, labels, nodes, context),
             Footer = null,
         };
     }
@@ -65,7 +65,8 @@ public sealed class Clinical02EpoDrugComposer : ILayoutComposer
         EpoDrugReportViewModel vm,
         float rowHeightMm,
         IReadOnlyDictionary<string, string> labels,
-        IReadOnlyList<string> widgets)
+        IReadOnlyList<HprpLayoutNode> nodes,
+        PdfReportContext context)
     {
         var handlers = new Dictionary<string, Action<IContainer>>(StringComparer.OrdinalIgnoreCase)
         {
@@ -77,7 +78,11 @@ public sealed class Clinical02EpoDrugComposer : ILayoutComposer
         container.Column(col =>
         {
             col.Spacing(SectionSpacingMm);
-            HprpWidgetDispatch.ComposeColumn(col, widgets, handlers);
+            HprpWidgetDispatch.ComposeColumn(
+                col,
+                nodes,
+                handlers,
+                node => HprpGenericBlockComposer.TryCreateDrawer(node, context.Data, labels, context));
         });
     }
 

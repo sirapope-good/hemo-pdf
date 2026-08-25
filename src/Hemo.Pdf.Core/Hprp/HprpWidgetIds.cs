@@ -48,6 +48,9 @@ public static class HprpWidgetIds
         "patient-info",
     };
 
+    public static bool IsBlockType(string? type) =>
+        !string.IsNullOrWhiteSpace(type) && BlockTypes.Contains(type.Trim());
+
     public static readonly IReadOnlySet<string> All = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
     {
         ThaiUrHeader,

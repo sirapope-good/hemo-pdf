@@ -10,7 +10,7 @@
   <header class="top">
     <div>
       <h1>HPRP Studio</h1>
-      <p class="muted">Edit manifest / layout / labels, validate, then pack to <code>packages/*.hprp</code>.</p>
+      <p class="muted">แก้ JSON ใน editor แล้ว <strong>Save and pack</strong> หรือดึงจากโฟลเดอร์ <code>assets/templates/reports</code> ด้วย <strong>Pack this from disk</strong> / <strong>Pack all from disk</strong> แล้วเขียน <code>packages/*.hprp</code></p>
     </div>
     <div class="auth">
       <label>Bearer <input id="token" type="text" value="dev" autocomplete="off" /></label>
@@ -25,7 +25,7 @@
         <button id="btnReload" type="button">Reload</button>
       </div>
       <div class="actions">
-        <button id="btnPackAll" type="button">Pack from templates</button>
+        <button id="btnPackAll" type="button" title="Read every report folder and write packages/*.hprp">Pack all from disk</button>
       </div>
       <ul id="packageList" class="list"></ul>
       <div class="pane-head"><strong>Engine catalog</strong></div>
@@ -37,7 +37,8 @@
         <strong id="editorTitle">No package selected</strong>
         <div class="actions">
           <button id="btnValidate" type="button" disabled>Validate</button>
-          <button id="btnSave" type="button" disabled>Save and pack</button>
+          <button id="btnPackThis" class="primary" type="button" disabled title="Overwrite this .hprp from assets/templates/reports/{id} (ignores unsaved editor)">Pack this from disk</button>
+          <button id="btnSave" type="button" disabled title="Write the editor JSON to packages/*.hprp">Save and pack</button>
         </div>
       </div>
       <div class="tabs">

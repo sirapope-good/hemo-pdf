@@ -345,6 +345,42 @@ public class HprpBinderTests
         Assert.False(result.IsValid);
         Assert.Contains(result.Errors, e => e.Contains("headerFill"));
     }
+
+    [Fact]
+    public void BindGeneric_KeyValueResolvesLabelKeyAndLiteralContent()
+    {
+        var node = new HprpLayoutNode
+        {
+            Type = "key-value-table",
+            Rows =
+            [
+                new HprpRowNode
+                {
+                    Label = JsonSerializer.SerializeToElement(new Dictionary<string, string> { ["$label"] = "extraNote" }),
+                    Content = JsonSerializer.SerializeToElement("sample"),
+                },
+            ],
+        };
+        var labels = new Dictionary<string, string> { ["extraNote"] = "หมายเหตุเพิ่ม" };
+
+        var block = HprpBinder.BindGeneric(node, data: null, labels, context: null);
+        var table = Assert.IsType<KeyValueTableReportBlock>(block);
+        var row = Assert.Single(table.Rows);
+        Assert.Equal("หมายเหตุเพิ่ม", row.Label);
+        Assert.Equal("sample", row.Value);
+    }
+
+    [Fact]
+    public void BindGeneric_WidgetOnlyNode_ReturnsNull()
+    {
+        var node = new HprpLayoutNode { Widget = HprpWidgetIds.ClinicalHctEpoCopay };
+        var block = HprpBinder.BindGeneric(
+            node,
+            data: null,
+            labels: new Dictionary<string, string>(),
+            context: null);
+        Assert.Null(block);
+    }
 }
 
 public class HprpPackageAndStoreTests

@@ -111,6 +111,73 @@ public class HprpLayoutPlanTests
         Assert.All(blocks, b => Assert.IsType<Hemo.Pdf.Core.Models.Preview.TextReportBlock>(b));
     }
 
+    [Fact]
+    public void ResolveNodes_KeepsGenericBlocksBetweenWidgets()
+    {
+        var package = Package(
+            "clinical-01-hct-epo",
+            HprpDataAdapterIds.Clinical01HctEpo,
+            header: HprpWidgetIds.ThaiUrHeader,
+            body:
+            [
+                HprpWidgetIds.ClinicalHctEpoAnnualTable,
+                HprpWidgetIds.ClinicalHctEpoCopay,
+            ]);
+        package = WithBody(package,
+        [
+            new HprpLayoutNode { Widget = HprpWidgetIds.ClinicalHctEpoAnnualTable },
+            new HprpLayoutNode { Type = "key-value-table" },
+            new HprpLayoutNode { Widget = HprpWidgetIds.ClinicalHctEpoCopay },
+        ]);
+
+        var nodes = HprpLayoutPlan.ResolveNodes(
+            package,
+            HprpClinicalWidgetSets.Clinical01DefaultOrder,
+            HprpClinicalWidgetSets.Clinical01Allowed);
+
+        Assert.Equal(4, nodes.Count);
+        Assert.Equal(HprpWidgetIds.ThaiUrHeader, nodes[0].Widget);
+        Assert.Equal(HprpWidgetIds.ClinicalHctEpoAnnualTable, nodes[1].Widget);
+        Assert.Equal("key-value-table", nodes[2].Type);
+        Assert.Equal(HprpWidgetIds.ClinicalHctEpoCopay, nodes[3].Widget);
+    }
+
+    [Fact]
+    public void ResolveNodes_DropsDisallowedWidgetEvenIfTypeIsSet()
+    {
+        var package = Package(
+            "clinical-01-hct-epo",
+            HprpDataAdapterIds.Clinical01HctEpo,
+            header: HprpWidgetIds.ThaiUrHeader,
+            body: [HprpWidgetIds.ClinicalHctEpoAnnualTable]);
+        package = WithBody(package,
+        [
+            new HprpLayoutNode { Widget = HprpWidgetIds.ClinicalSoapTable, Type = "text" },
+            new HprpLayoutNode { Widget = HprpWidgetIds.ClinicalHctEpoCopay },
+        ]);
+
+        var nodes = HprpLayoutPlan.ResolveNodes(
+            package,
+            HprpClinicalWidgetSets.Clinical01DefaultOrder,
+            HprpClinicalWidgetSets.Clinical01Allowed);
+
+        Assert.Equal(2, nodes.Count);
+        Assert.Equal(HprpWidgetIds.ThaiUrHeader, nodes[0].Widget);
+        Assert.Equal(HprpWidgetIds.ClinicalHctEpoCopay, nodes[1].Widget);
+    }
+
+    private static HprpPackage WithBody(HprpPackage package, IReadOnlyList<HprpLayoutNode> body) =>
+        new()
+        {
+            Manifest = package.Manifest,
+            Layout = new HprpLayout
+            {
+                Header = package.Layout.Header,
+                Body = body,
+            },
+            LabelsByLanguage = package.LabelsByLanguage,
+        };
+
     private static HprpPackage Package(
         string id,
         string adapter,

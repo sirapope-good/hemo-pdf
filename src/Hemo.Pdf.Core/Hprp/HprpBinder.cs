@@ -44,8 +44,25 @@ public static class HprpBinder
                 return fromWidget;
         }
 
+        return BindGeneric(node, data, labels, context);
+    }
+
+    /// <summary>
+    /// Binds a form <c>type</c> node (<c>text</c>, <c>key-value-table</c>, …).
+    /// Dedicated composers use this for extra blocks declared next to dense widgets.
+    /// Widget-only nodes return null (pixels stay in C# section drawers).
+    /// </summary>
+    public static ReportBlock? BindGeneric(
+        HprpLayoutNode node,
+        JsonElement? data,
+        IReadOnlyDictionary<string, string> labels,
+        PdfReportContext? context)
+    {
+        if (!HprpWhen.MatchesDto(node.When, data))
+            return null;
+
         var type = node.Type?.Trim().ToLowerInvariant();
-        if (string.IsNullOrWhiteSpace(type))
+        if (string.IsNullOrWhiteSpace(type) || !HprpWidgetIds.BlockTypes.Contains(type))
             return null;
 
         return type switch

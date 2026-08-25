@@ -40,10 +40,11 @@ public sealed class ConsentReportComposer : ILayoutComposer
             package,
             HprpWidgetIds.ThaiUrHeader,
             HprpClinicalWidgetSets.ConsentHeaderAllowed);
-        var bodyWidgets = HprpLayoutPlan.ResolveBodyWidgets(
+        var bodyNodes = HprpLayoutPlan.ResolveNodes(
             package,
             HprpClinicalWidgetSets.ConsentBodyDefault,
-            HprpClinicalWidgetSets.ConsentBodyAllowed);
+            HprpClinicalWidgetSets.ConsentBodyAllowed,
+            includeHeader: false);
 
         return new QuestLayout
         {
@@ -53,7 +54,7 @@ public sealed class ConsentReportComposer : ILayoutComposer
             MarginLeft = margin,
             MarginRight = margin,
             Header = null,
-            Content = c => ComposeContent(c, vm, labels, headerWidget, bodyWidgets),
+            Content = c => ComposeContent(c, vm, labels, overlay, headerWidget, bodyNodes, context),
             Footer = null,
         };
     }
@@ -62,8 +63,10 @@ public sealed class ConsentReportComposer : ILayoutComposer
         IContainer container,
         ConsentReportViewModel vm,
         ConsentReportLabels labels,
+        IReadOnlyDictionary<string, string> overlay,
         string headerWidget,
-        IReadOnlyList<string> bodyWidgets)
+        IReadOnlyList<HprpLayoutNode> bodyNodes,
+        PdfReportContext context)
     {
         var isEn = string.Equals(vm.Language, "en", StringComparison.OrdinalIgnoreCase);
         var isTreatment = !string.Equals(vm.Type, "PDPA", StringComparison.OrdinalIgnoreCase);
@@ -90,7 +93,15 @@ public sealed class ConsentReportComposer : ILayoutComposer
                 body.Column(col =>
                 {
                     col.Spacing(0);
-                    HprpWidgetDispatch.ComposeColumn(col, bodyWidgets, bodyHandlers);
+                    HprpWidgetDispatch.ComposeColumn(
+                        col,
+                        bodyNodes,
+                        bodyHandlers,
+                        node => HprpGenericBlockComposer.TryCreateDrawer(
+                            node,
+                            context.Data,
+                            overlay,
+                            context));
                 });
             });
     }

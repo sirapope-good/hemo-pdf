@@ -37,9 +37,44 @@ assets/templates/
 
 Changing `layout.json` / labels in the unpacked folder does **not** require a C# rebuild, but **does not affect runtime** until you pack again (packed files win). Rebuild C# only when adding a widget id or a new `layoutKind`.
 
-Open **HPRP Studio** at `http://localhost:5090/` or `http://localhost:5090/hprp-studio/` (Development). Use Bearer `dev` with mock auth. The UI edits JSON, validates with `HprpValidator`, and writes `packages/*.hprp`. Writes require `HemoPdf:EnableHprpStudioWrite=true`.
+Open **HPRP Studio** at `http://localhost:5090/` or `http://localhost:5090/hprp-studio/` (Development). Use Bearer `dev` with mock auth. Writes require `HemoPdf:EnableHprpStudioWrite=true`.
 
-Pixels still live in C# (`HctEpoAnnualTableSection`, hemosheet section renderers, `ReportBlock` types). `.hprp` controls **which** widgets run, **order**, **labels**, and catalog `ui` — not QuestPDF drawing code.
+| Studio button | Writes |
+|---------------|--------|
+| **Save and pack** | JSON in the editor → `packages/{id}.hprp` |
+| **Pack this from disk** | `assets/templates/reports/{id}/` → that `.hprp`, then reloads the editor |
+| **Pack all from disk** | every unpacked report folder → `packages/` |
+
+Pixels still live in C# (`HctEpoAnnualTableSection`, hemosheet section renderers, `ReportBlock` types). `.hprp` controls **which** widgets run, **order**, **labels**, extra form **blocks**, and catalog `ui` — not QuestPDF drawing code inside a dense widget.
+
+### Labels vs layout (why a new key does not appear)
+
+The **labels** tab is a dictionary of strings. Widgets and `$label` references **look up** keys they already know. Adding a new key does nothing until something in **layout** (or a C# widget) asks for that key.
+
+| What you want | Where to edit | Notes |
+|---------------|---------------|--------|
+| Rename an existing header (`สปสช` → something else) | **labels** only | Widget already calls `HprpLabels.Get(..., "nhso", …)` |
+| Add a new line/block on the page | **layout** `body` + optional **labels** | Use a form `type` (`text`, `key-value-table`, `field-grid`). No new C# widget. |
+| Add a **column inside** `clinical.hct-epo-copay` / annual table | C# widget (+ DTO field if it is data) | Dense widgets still own their grid. Labels cannot invent columns. |
+
+Example extra block (after pack, no compile). Duplicate JSON keys in one object are invalid — use one object per `rows[]` item:
+
+```json
+{
+  "widget": "clinical.hct-epo-copay"
+},
+{
+  "type": "key-value-table",
+  "rows": [
+    {
+      "label": { "$label": "extraNote" },
+      "content": "…"
+    }
+  ]
+}
+```
+
+Then in labels: `"extraNote": "หมายเหตุเพิ่ม"`. Literal values belong in layout `content` (or `bind`), not only in the labels dictionary.
 
 ## manifest.json
 
@@ -138,19 +173,19 @@ JSON schema: `assets/templates/schema/hprp-layout.schema.json`
 
 ### Dedicated reports (01, 02, 05, 08, 09)
 
-`layout.json` declares widget ids. Dedicated composers resolve order via shared **`HprpLayoutPlan`** + **`HprpWidgetDispatch`** (handler map per report).
+`layout.json` declares widget ids **and optional form `type` blocks**. Dedicated composers resolve order via shared **`HprpLayoutPlan.ResolveNodes`** + **`HprpWidgetDispatch`** (handler map per report). Extra `text` / `key-value-table` / `field-grid` / `data-grid` nodes render through `HprpBinder.BindGeneric` + `ReportBlockPdfComposer` — no new widget id.
 
 | Report | `.hprp` / data drives today |
 |--------|------------------------------|
 | **clinical-03** | `layout.sections` → planner (Rama) or dense form (Default/Thai UR). Dense dialysis **headers** come from `columns` / `columnsWhen` + optional `chrome` |
-| **clinical-01** | Section order (`header`+`body`) + labels — pixels in C# sections |
-| **clinical-02** | Same; `clinical.epo-drug-table` includes meta band (not separate widget yet) |
-| **clinical-05** | `layout.header` → repeating page header; `layout.body` → SOAP |
-| **clinical-08/09** | `layout.header` + `clinical.consent-narrative` body; narrative internals stay C# |
+| **clinical-01** | Section order (`header`+`body`) + labels + extra form blocks — pixels of dense widgets stay in C# sections |
+| **clinical-02** | Same; `clinical.epo-drug-table` includes meta band (not a separate widget yet) |
+| **clinical-05** | `layout.header` → repeating page header; `layout.body` → SOAP + extra form blocks |
+| **clinical-08/09** | `layout.header` + `clinical.consent-narrative` body + extra form blocks; narrative internals stay C# |
 | **clinical-04 / 06 / 10–16** | Trusted `report-data` via `ClinicalFormReportDataService` + HPRP `$.fields` / `$.rows` |
 | **clinical-07** | Dedicated lab matrix endpoint (unchanged) |
 
-Tenant override can reorder widgets that the allow-list understands (e.g. clinical-01 co-pay above annual table) without rebuilding the engine.
+Tenant override can reorder widgets that the allow-list understands (e.g. clinical-01 co-pay above annual table) and insert form blocks without rebuilding the engine.
 
 ### Widget reuse (efficiency model)
 

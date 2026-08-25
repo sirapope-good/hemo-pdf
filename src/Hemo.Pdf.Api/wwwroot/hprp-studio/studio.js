@@ -15,6 +15,7 @@ const els = {
   status: document.getElementById("status"),
   validate: document.getElementById("btnValidate"),
   save: document.getElementById("btnSave"),
+  packThis: document.getElementById("btnPackThis"),
 };
 
 function headers() {
@@ -97,6 +98,7 @@ async function openPackage(item) {
   els.editor.disabled = false;
   els.validate.disabled = false;
   els.save.disabled = false;
+  els.packThis.disabled = false;
   showTab();
   setStatus("Loaded " + item.id, "ok");
 }
@@ -156,8 +158,33 @@ async function save() {
 
 async function packAll() {
   const result = await api("/api/hprp/pack-from-templates", { method: "POST" });
-  setStatus(`Packed ${result.length} package(s) from assets/templates/reports.`, "ok");
+  const count = Array.isArray(result) ? result.length : 0;
   await loadList();
+  if (state.selected)
+    await openPackage(state.selected);
+  setStatus(`Packed ${count} package(s) from assets/templates/reports.`, "ok");
+}
+
+async function packSelectedFromDisk() {
+  const item = state.selected;
+  if (!item)
+    throw new Error("Select a package first.");
+
+  const result = await api(
+    `/api/hprp/pack-from-templates/${encodeURIComponent(item.id)}`,
+    { method: "POST" }
+  );
+  const files = Array.isArray(result)
+    ? result.map((r) => r.outputPath || r.OutputPath).filter(Boolean)
+    : [];
+  await loadList();
+  await openPackage(item);
+  setStatus(
+    files.length
+      ? `Packed from disk:\n${files.join("\n")}`
+      : `Packed ${item.id} from assets/templates/reports.`,
+    "ok"
+  );
 }
 
 document.querySelectorAll(".tab").forEach((btn) => {
@@ -176,6 +203,7 @@ document.querySelectorAll(".tab").forEach((btn) => {
 document.getElementById("btnReload").addEventListener("click", () => loadList().catch((err) => setStatus(err.message, "err")));
 document.getElementById("btnPackAll").addEventListener("click", () => packAll().catch((err) => setStatus(err.message, "err")));
 els.validate.addEventListener("click", () => validate().catch((err) => setStatus(err.message, "err")));
+els.packThis.addEventListener("click", () => packSelectedFromDisk().catch((err) => setStatus(err.message, "err")));
 els.save.addEventListener("click", () => save().catch((err) => setStatus(err.message, "err")));
 
 Promise.all([loadList(), loadCatalog()]).catch((err) => setStatus(err.message, "err"));

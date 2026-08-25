@@ -12,8 +12,9 @@ namespace Hemo.Pdf.Layouts.Clinical.Clinical01_HctEpo;
 
 /// <summary>
 /// Dense QuestPDF layout for clinical-01. Section <b>order</b> comes from the
-/// <c>.hprp</c> package (<c>layout.header</c> + <c>layout.body</c> widgets);
-/// pixel drawing stays in dedicated section composers (ThaiUr header, annual table, co-pay).
+/// <c>.hprp</c> package (<c>layout.header</c> + <c>layout.body</c> widgets and
+/// optional form <c>type</c> blocks). Pixel drawing of dense widgets stays in
+/// dedicated section composers (ThaiUr header, annual table, co-pay).
 /// </summary>
 public sealed class Clinical01HctEpoComposer : ILayoutComposer
 {
@@ -43,7 +44,7 @@ public sealed class Clinical01HctEpoComposer : ILayoutComposer
         var monthRowHeightMm = BudgetMonthRowHeightMm(vm.CoPayCriteria);
         var labels = HprpLabelResolver.Resolve(_templates, context);
         var package = HprpLayoutPlan.TryGetPackage(_templates, context);
-        var widgets = HprpLayoutPlan.ResolveWidgetOrder(
+        var nodes = HprpLayoutPlan.ResolveNodes(
             package,
             HprpClinicalWidgetSets.Clinical01DefaultOrder,
             HprpClinicalWidgetSets.Clinical01Allowed);
@@ -56,7 +57,7 @@ public sealed class Clinical01HctEpoComposer : ILayoutComposer
             MarginLeft = margin,
             MarginRight = margin,
             Header = null,
-            Content = c => ComposeContent(c, vm, monthRowHeightMm, labels, widgets),
+            Content = c => ComposeContent(c, vm, monthRowHeightMm, labels, nodes, context),
             Footer = null,
         };
     }
@@ -66,7 +67,8 @@ public sealed class Clinical01HctEpoComposer : ILayoutComposer
         HctEpoReportViewModel vm,
         float monthRowHeightMm,
         IReadOnlyDictionary<string, string> labels,
-        IReadOnlyList<string> widgets)
+        IReadOnlyList<HprpLayoutNode> nodes,
+        PdfReportContext context)
     {
         var handlers = new Dictionary<string, Action<IContainer>>(StringComparer.OrdinalIgnoreCase)
         {
@@ -78,7 +80,11 @@ public sealed class Clinical01HctEpoComposer : ILayoutComposer
         container.Column(col =>
         {
             col.Spacing(SectionSpacingMm);
-            HprpWidgetDispatch.ComposeColumn(col, widgets, handlers);
+            HprpWidgetDispatch.ComposeColumn(
+                col,
+                nodes,
+                handlers,
+                node => HprpGenericBlockComposer.TryCreateDrawer(node, context.Data, labels, context));
         });
     }
 

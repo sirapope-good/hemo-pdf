@@ -72,7 +72,12 @@ code { color: var(--accent); }
   border-bottom: 1px solid var(--line);
 }
 
-.actions { display: flex; gap: 8px; }
+.actions { display: flex; gap: 8px; flex-wrap: wrap; }
+
+button.primary {
+  background: #1c4a73;
+  border-color: var(--accent);
+}
 
 button {
   background: #243140;

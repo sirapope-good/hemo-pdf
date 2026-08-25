@@ -42,10 +42,11 @@ public sealed class Clinical05ProgressNoteComposer : ILayoutComposer
             package,
             HprpWidgetIds.ThaiUrHeader,
             HprpClinicalWidgetSets.Clinical05HeaderAllowed);
-        var bodyWidgets = HprpLayoutPlan.ResolveBodyWidgets(
+        var bodyNodes = HprpLayoutPlan.ResolveNodes(
             package,
             HprpClinicalWidgetSets.Clinical05BodyDefault,
-            HprpClinicalWidgetSets.Clinical05BodyAllowed);
+            HprpClinicalWidgetSets.Clinical05BodyAllowed,
+            includeHeader: false);
 
         return new QuestLayout
         {
@@ -57,7 +58,7 @@ public sealed class Clinical05ProgressNoteComposer : ILayoutComposer
             Header = string.Equals(headerWidget, HprpWidgetIds.ThaiUrHeader, StringComparison.OrdinalIgnoreCase)
                 ? c => ComposeRepeatingHeader(c, vm)
                 : null,
-            Content = c => ComposeBody(c, vm, rowHeightMm, labels, bodyWidgets),
+            Content = c => ComposeBody(c, vm, rowHeightMm, labels, bodyNodes, context),
             Footer = null,
         };
     }
@@ -67,7 +68,8 @@ public sealed class Clinical05ProgressNoteComposer : ILayoutComposer
         Clinical05ProgressNoteReportViewModel vm,
         float rowHeightMm,
         IReadOnlyDictionary<string, string> labels,
-        IReadOnlyList<string> bodyWidgets)
+        IReadOnlyList<HprpLayoutNode> bodyNodes,
+        PdfReportContext context)
     {
         var handlers = new Dictionary<string, Action<IContainer>>(StringComparer.OrdinalIgnoreCase)
         {
@@ -77,7 +79,11 @@ public sealed class Clinical05ProgressNoteComposer : ILayoutComposer
         container.Column(col =>
         {
             col.Spacing(SectionSpacingMm);
-            HprpWidgetDispatch.ComposeColumn(col, bodyWidgets, handlers);
+            HprpWidgetDispatch.ComposeColumn(
+                col,
+                bodyNodes,
+                handlers,
+                node => HprpGenericBlockComposer.TryCreateDrawer(node, context.Data, labels, context));
         });
     }
 

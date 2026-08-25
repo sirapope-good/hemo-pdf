@@ -1,3 +1,4 @@
+using Hemo.Pdf.Core.Hprp;
 using QuestPDF.Fluent;
 using QuestPDF.Infrastructure;
 
@@ -27,6 +28,35 @@ public static class HprpWidgetDispatch
                 continue;
 
             column.Item().Element(draw);
+        }
+    }
+
+    /// <summary>
+    /// Mixed plan: allowed dense widgets via <paramref name="handlers"/>, extra form
+    /// blocks via <paramref name="tryGeneric"/>. Null generic drawers are skipped.
+    /// </summary>
+    public static void ComposeColumn(
+        ColumnDescriptor column,
+        IReadOnlyList<HprpLayoutNode> nodes,
+        IReadOnlyDictionary<string, Action<IContainer>> handlers,
+        Func<HprpLayoutNode, Action<IContainer>?>? tryGeneric)
+    {
+        ArgumentNullException.ThrowIfNull(column);
+        ArgumentNullException.ThrowIfNull(nodes);
+        ArgumentNullException.ThrowIfNull(handlers);
+
+        foreach (var node in nodes)
+        {
+            if (!string.IsNullOrWhiteSpace(node.Widget)
+                && TryGetHandler(handlers, node.Widget.Trim(), out var draw))
+            {
+                column.Item().Element(draw);
+                continue;
+            }
+
+            var generic = tryGeneric?.Invoke(node);
+            if (generic is not null)
+                column.Item().Element(generic);
         }
     }
 

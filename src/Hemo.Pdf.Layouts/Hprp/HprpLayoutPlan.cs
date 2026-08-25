@@ -21,11 +21,33 @@ public static class HprpLayoutPlan
     /// <summary>
     /// Ordered widgets from <c>layout.header</c> then <c>layout.body</c>.
     /// Empty / unknown packages return <paramref name="defaults"/>.
+    /// Generic <c>type</c> blocks are ignored here — use <see cref="ResolveNodes"/>.
     /// </summary>
     public static IReadOnlyList<string> ResolveWidgetOrder(
         HprpPackage? package,
         IReadOnlyList<string> defaults,
         IReadOnlySet<string>? allowed = null)
+    {
+        var widgets = new List<string>();
+        foreach (var node in ResolveNodes(package, defaults, allowed, includeHeader: true))
+        {
+            if (!string.IsNullOrWhiteSpace(node.Widget))
+                widgets.Add(node.Widget.Trim());
+        }
+
+        return widgets.Count > 0 ? widgets : defaults;
+    }
+
+    /// <summary>
+    /// Header (optional) then body: allowed dense widgets <b>and</b> generic form blocks
+    /// (<c>text</c>, <c>key-value-table</c>, …). Empty / unknown packages return
+    /// <paramref name="defaults"/> as widget-only nodes.
+    /// </summary>
+    public static IReadOnlyList<HprpLayoutNode> ResolveNodes(
+        HprpPackage? package,
+        IReadOnlyList<string> defaults,
+        IReadOnlySet<string>? allowed = null,
+        bool includeHeader = true)
     {
         ArgumentNullException.ThrowIfNull(defaults);
         if (defaults.Count == 0)
@@ -33,14 +55,19 @@ public static class HprpLayoutPlan
 
         var allow = allowed ?? ToAllowSet(defaults);
         if (package is null)
-            return defaults;
+            return ToWidgetNodes(defaults);
 
-        var order = new List<string>();
-        AppendWidget(order, package.Layout.Header?.Widget, allow);
+        var nodes = new List<HprpLayoutNode>();
+        if (includeHeader && package.Layout.Header is { } header && ShouldKeep(header, allow))
+            nodes.Add(header);
+
         foreach (var node in package.Layout.Body)
-            AppendWidget(order, node.Widget, allow);
+        {
+            if (ShouldKeep(node, allow))
+                nodes.Add(node);
+        }
 
-        return order.Count > 0 ? order : defaults;
+        return nodes.Count > 0 ? nodes : ToWidgetNodes(defaults);
     }
 
     /// <summary>Single header widget id, or <paramref name="fallback"/> when missing.</summary>
@@ -71,29 +98,37 @@ public static class HprpLayoutPlan
         if (defaults.Count == 0)
             throw new ArgumentException("defaults must not be empty.", nameof(defaults));
 
-        var allow = allowed ?? ToAllowSet(defaults);
-        if (package is null)
-            return defaults;
+        var widgets = new List<string>();
+        foreach (var node in ResolveNodes(package, defaults, allowed, includeHeader: false))
+        {
+            if (!string.IsNullOrWhiteSpace(node.Widget))
+                widgets.Add(node.Widget.Trim());
+        }
 
-        var order = new List<string>();
-        foreach (var node in package.Layout.Body)
-            AppendWidget(order, node.Widget, allow);
-
-        return order.Count > 0 ? order : defaults;
+        return widgets.Count > 0 ? widgets : defaults;
     }
+
+    public static bool IsGenericBlock(HprpLayoutNode node) =>
+        HprpWidgetIds.IsBlockType(node.Type);
 
     private static HashSet<string> ToAllowSet(IReadOnlyList<string> defaults) =>
         new(defaults, StringComparer.OrdinalIgnoreCase);
 
-    private static void AppendWidget(List<string> order, string? widget, IReadOnlySet<string> allowed)
+    private static IReadOnlyList<HprpLayoutNode> ToWidgetNodes(IReadOnlyList<string> widgets) =>
+        widgets.Select(w => new HprpLayoutNode { Widget = w }).ToList();
+
+    /// <summary>
+    /// Widget nodes must be on the report allow-list. A node that names a widget
+    /// is never treated as a generic block fallback (even if <c>type</c> is set).
+    /// </summary>
+    private static bool ShouldKeep(HprpLayoutNode node, IReadOnlySet<string> allowed)
     {
-        if (string.IsNullOrWhiteSpace(widget))
-            return;
+        if (!string.IsNullOrWhiteSpace(node.Widget))
+        {
+            var id = node.Widget.Trim();
+            return HprpWidgetIds.All.Contains(id) && allowed.Contains(id);
+        }
 
-        var id = widget.Trim();
-        if (!HprpWidgetIds.All.Contains(id) || !allowed.Contains(id))
-            return;
-
-        order.Add(id);
+        return IsGenericBlock(node);
     }
 }
