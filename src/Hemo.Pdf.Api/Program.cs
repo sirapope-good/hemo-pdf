@@ -123,11 +123,19 @@ public sealed class Program
         });
 
         app.UseCors();
-        // MapGet("/hprp-studio") → /hprp-studio/ loops (same path matches both). Rewrite instead.
+        // Rewrite /hprp-studio/ in-place so the browser URL stays under /hprp-studio/ and
+        // relative ./studio.css + ./studio.js resolve. Rewriting "/" to index.html leaves the
+        // URL at / so those assets 404 as /studio.css. Redirect / instead (MapGet loops).
         app.Use(async (context, next) =>
         {
             var path = context.Request.Path.Value ?? "";
-            if (path is "/" or "/hprp-studio" or "/hprp-studio/")
+            if (path is "/" or "/hprp-studio")
+            {
+                context.Response.Redirect("/hprp-studio/");
+                return;
+            }
+
+            if (path is "/hprp-studio/")
             {
                 context.Request.Path = "/hprp-studio/index.html";
             }
