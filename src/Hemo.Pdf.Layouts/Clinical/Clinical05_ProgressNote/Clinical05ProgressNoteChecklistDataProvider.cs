@@ -17,7 +17,7 @@ public sealed class Clinical05ProgressNoteChecklistDataProvider : IReportDataPro
         ClinicalReportCatalog.ProgressNoteChecklist,
         out var def)
         ? def!.DisplayName
-        : "Doctor progress note report";
+        : "Hemodialysis Progress note";
 
     private static readonly JsonSerializerOptions JsonOptions = new()
     {

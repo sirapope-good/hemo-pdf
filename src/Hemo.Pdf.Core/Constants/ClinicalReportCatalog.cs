@@ -41,7 +41,7 @@ public static class ClinicalReportCatalog
             [HemodialysisRecord] = new() { Id = HemodialysisRecord, DisplayName = "Hemodialysis Record", RequiresSignature = true },
             [Prescription] = new() { Id = Prescription, DisplayName = "Hemodialysis Prescription", RequiresSignature = true },
             [ProgressNote] = new() { Id = ProgressNote, DisplayName = "Hemodialysis Progress note", RequiresSignature = true },
-            [ProgressNoteChecklist] = new() { Id = ProgressNoteChecklist, DisplayName = "Doctor progress note report", RequiresSignature = false },
+            [ProgressNoteChecklist] = new() { Id = ProgressNoteChecklist, DisplayName = "Hemodialysis Progress note", RequiresSignature = false },
             [Medication] = new() { Id = Medication, DisplayName = "Medication Record", RequiresSignature = false },
             [Lab] = new() { Id = Lab, DisplayName = "Laboratory Record", RequiresSignature = false },
             // Signatures are embedded images in report-data (not hemosheet signing workflow).

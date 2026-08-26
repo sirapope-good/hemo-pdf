@@ -11,7 +11,7 @@ using QuestPDF.Infrastructure;
 namespace Hemo.Pdf.Layouts.Clinical.Clinical05_ProgressNote;
 
 /// <summary>
-/// Landscape Doctor progress note report — monthly checklist grid (clinical-05-checklist).
+/// Landscape Hemodialysis Progress note — monthly checklist grid (clinical-05-checklist).
 /// Widget order from <c>layout.body</c>; matches Doctor View pdfmake layout.
 /// </summary>
 public sealed class Clinical05ProgressNoteChecklistComposer : ILayoutComposer

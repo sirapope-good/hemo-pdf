@@ -7,6 +7,7 @@
   "requiresSignature": true,
   "language": "th",
   "ui": {
+    "profileLabel": "SOAP",
     "entryMode": "patientMonth",
     "menuGroup": "clinical",
     "sortOrder": 50,

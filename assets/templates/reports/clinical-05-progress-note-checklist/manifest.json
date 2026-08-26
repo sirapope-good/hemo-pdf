@@ -1,12 +1,13 @@
 {
   "id": "clinical-05-progress-note-checklist",
   "version": "1.0.0",
-  "displayName": "Doctor progress note report",
+  "displayName": "Hemodialysis Progress note",
   "engineVersion": 1,
   "dataAdapter": "clinical-05-progress-note-checklist",
   "requiresSignature": false,
   "language": "en",
   "ui": {
+    "profileLabel": "Default",
     "entryMode": "patient",
     "menuGroup": "clinical",
     "sortOrder": 51,
