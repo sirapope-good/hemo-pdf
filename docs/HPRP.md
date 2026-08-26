@@ -150,7 +150,7 @@ Optional. **Omitted fields keep the composer C# defaults** (hemosheet 2mm, form 
 | `size` | `A4` (default) |
 | `marginMm` | Uniform margin (mm) for all sides |
 | `margin` | `{ top, right, bottom, left }` — named sides override shorthand |
-| `spacingMm` | Gap between stacked body blocks |
+| `spacingMm` | Gap between stacked body blocks. On **clinical-05**, also the gap under the repeating `thaiur.header` before the SOAP table (0 = flush). |
 | `fontSize` | Default body data font for primitive blocks |
 
 Per-node `box.marginMm` / `box.paddingMm`: number, `[v,h]`, `[t,r,b,l]`, or named sides.

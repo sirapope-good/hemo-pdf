@@ -116,6 +116,15 @@ public class Clinical05ProgressNoteSmokeTests
     }
 
     [Fact]
+    public void BudgetRowHeight_ZeroSectionSpacing_GivesSlightlyTallerRows()
+    {
+        var vm = MinimalViewModel(sessionCount: 0);
+        var withGap = Clinical05ProgressNoteComposer.BudgetRowHeightMm(vm, sectionSpacingMm: 2);
+        var flush = Clinical05ProgressNoteComposer.BudgetRowHeightMm(vm, sectionSpacingMm: 0);
+        Assert.True(flush > withGap);
+    }
+
+    [Fact]
     public void BudgetRowHeight_TallTableHeader_DoesNotExceedLeftoverPage()
     {
         var vm = MinimalViewModel(sessionCount: 0);

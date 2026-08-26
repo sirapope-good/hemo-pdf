@@ -812,6 +812,10 @@ function renderPageInspector() {
     if (v == null) delete p.spacingMm;
     else p.spacingMm = v;
   }))));
+  const spacingHint = document.createElement("p");
+  spacingHint.className = "muted";
+  spacingHint.textContent = "clinical-05: ระยะใต้ thaiur.header ก่อนตาราง — ใส่ 0 เพื่อให้กรอบชิดกัน";
+  els.inspector.appendChild(spacingHint);
   els.inspector.appendChild(field("fontSize", numberInput(page.fontSize, (v) => mutateSelected((p) => {
     if (v == null) delete p.fontSize;
     else p.fontSize = v;

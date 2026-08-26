@@ -47,7 +47,7 @@ public sealed class Clinical05ProgressNoteComposer : ILayoutComposer
             .FirstOrDefault(n => string.Equals(n.Widget, HprpWidgetIds.ClinicalSoapTable, StringComparison.OrdinalIgnoreCase))
             ?.Chrome;
         var tableHeaderMm = HprpChrome.ResolveHeaderHeightMm(soapChrome, HemosheetThaiUrStyle.HeaderBarHeightMm);
-        var rowHeightMm = BudgetRowHeightMm(vm, page.Vertical, tableHeaderMm);
+        var rowHeightMm = BudgetRowHeightMm(vm, page.Vertical, tableHeaderMm, page.SpacingMm);
 
         var labels = HprpLabelResolver.Resolve(_templates, context);
         var headerWidget = HprpLayoutPlan.ResolveHeaderWidget(
@@ -58,7 +58,7 @@ public sealed class Clinical05ProgressNoteComposer : ILayoutComposer
         return HprpQuestPages.Create(
             page,
             header: string.Equals(headerWidget, HprpWidgetIds.ThaiUrHeader, StringComparison.OrdinalIgnoreCase)
-                ? c => ComposeRepeatingHeader(c, vm)
+                ? c => ComposeRepeatingHeader(c, vm, page.SpacingMm)
                 : null,
             content: c => ComposeBody(c, vm, rowHeightMm, labels, bodyNodes, context, page.SpacingMm),
             footer: null);
@@ -90,11 +90,15 @@ public sealed class Clinical05ProgressNoteComposer : ILayoutComposer
         });
     }
 
-    private static void ComposeRepeatingHeader(IContainer container, Clinical05ProgressNoteReportViewModel vm)
+    private static void ComposeRepeatingHeader(
+        IContainer container,
+        Clinical05ProgressNoteReportViewModel vm,
+        float spacingMm)
     {
-        container
-            .PaddingBottom(SectionSpacingMm, Mm)
-            .Element(c => ThaiUrReportHeader.Compose(c, vm.Header, vm.Title));
+        // Gap under thaiur.header ↔ first body block — driven by layout.page.spacingMm (Studio Page inspector).
+        var gap = spacingMm >= 0 ? spacingMm : SectionSpacingMm;
+        var box = gap > 0 ? container.PaddingBottom(gap, Mm) : container;
+        box.Element(c => ThaiUrReportHeader.Compose(c, vm.Header, vm.Title));
     }
 
     /// <summary>
@@ -104,7 +108,8 @@ public sealed class Clinical05ProgressNoteComposer : ILayoutComposer
     internal static float BudgetRowHeightMm(
         Clinical05ProgressNoteReportViewModel vm,
         float verticalMarginMm = -1,
-        float tableHeaderMm = -1)
+        float tableHeaderMm = -1,
+        float sectionSpacingMm = -1)
     {
         var margin = verticalMarginMm >= 0 ? verticalMarginMm : 2f * HemosheetThaiUrStyle.PageMarginMm;
         var pageContentMm = A4HeightMm
@@ -114,9 +119,10 @@ public sealed class Clinical05ProgressNoteComposer : ILayoutComposer
         var headerMm = HemosheetThaiUrStyle.TitleHeightMm
             + HemosheetThaiUrStyle.MetaRowHeightMm;
         var soapHeaderMm = tableHeaderMm > 0 ? tableHeaderMm : HemosheetThaiUrStyle.HeaderBarHeightMm;
+        var gapMm = sectionSpacingMm >= 0 ? sectionSpacingMm : SectionSpacingMm;
         var availableForRowsMm = pageContentMm
             - headerMm
-            - SectionSpacingMm
+            - gapMm
             - soapHeaderMm
             - LayoutSafetyMm;
         var fromBudget = availableForRowsMm / Clinical05SoapTableSection.MinEmptyRows;
