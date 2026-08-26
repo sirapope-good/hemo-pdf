@@ -3,5 +3,6 @@
   "patientName": "ชื่อ-สกุล",
   "unit": "หน่วย",
   "reportDate": "วันที่รายงาน",
-  "title": "Patient Data Record"
+  "title": "Patient Data Record",
+  "footerNote": "หมายเหตุ / ลายเซ็น"
 }

@@ -49,6 +49,8 @@ public static class HprpWidgetIds
         "text",
         "signature",
         "patient-info",
+        "row",
+        "column-stack",
     };
 
     public static bool IsBlockType(string? type) =>
