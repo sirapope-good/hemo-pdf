@@ -5,6 +5,13 @@ using System.Text.Json.Serialization;
 
 namespace Hemo.Pdf.Core.Hprp;
 
+public enum HprpHeaderAlign
+{
+    Middle,
+    Top,
+    Bottom,
+}
+
 /// <summary>
 /// File-driven table chrome for primitive blocks and hemosheet section nodes.
 /// Omitted fields keep engine / branding defaults.
@@ -36,6 +43,18 @@ public sealed class HprpChrome
     /// </summary>
     [JsonPropertyName("bandWeights")]
     public IReadOnlyList<float>? BandWeights { get; init; }
+
+    /// <summary>Table column-header bar height (mm). Omitted = widget default.</summary>
+    [JsonPropertyName("headerHeightMm")]
+    public float? HeaderHeightMm { get; init; }
+
+    /// <summary><c>top</c>, <c>middle</c> (default), or <c>bottom</c> for header label vertical align.</summary>
+    [JsonPropertyName("headerAlign")]
+    public string? HeaderAlign { get; init; }
+
+    /// <summary>Uniform inset inside the header cell (mm). Omitted = 0.</summary>
+    [JsonPropertyName("headerPaddingMm")]
+    public float? HeaderPaddingMm { get; init; }
 
     public static string ResolveHeaderFill(
         HprpChrome? chrome,
@@ -161,12 +180,44 @@ public sealed class HprpChrome
         if (chrome.RowHeightMm is <= 0 or > 200)
             errors.Add($"{path}.rowHeightMm must be between 0 and 200.");
 
+        if (chrome.HeaderHeightMm is <= 0 or > HprpBox.MaxMm)
+            errors.Add($"{path}.headerHeightMm must be between 0 and {HprpBox.MaxMm}.");
+
+        var align = chrome.HeaderAlign?.Trim().ToLowerInvariant();
+        if (!string.IsNullOrWhiteSpace(align)
+            && align is not ("top" or "middle" or "bottom"))
+        {
+            errors.Add($"{path}.headerAlign must be top, middle, or bottom.");
+        }
+
+        if (chrome.HeaderPaddingMm is < 0 or > HprpBox.MaxMm)
+            errors.Add($"{path}.headerPaddingMm must be between 0 and {HprpBox.MaxMm}.");
+
         if (chrome.BandWeights is { Count: > 0 } bands)
         {
             if (bands.Any(w => w <= 0 || float.IsNaN(w) || float.IsInfinity(w)))
                 errors.Add($"{path}.bandWeights must be positive finite numbers.");
         }
     }
+
+    public static float ResolveHeaderHeightMm(HprpChrome? chrome, float fallback) =>
+        chrome?.HeaderHeightMm is > 0 and <= HprpBox.MaxMm
+            ? chrome.HeaderHeightMm.Value
+            : fallback;
+
+    /// <summary>Omitted / unknown → middle (engine default).</summary>
+    public static HprpHeaderAlign ResolveHeaderAlign(HprpChrome? chrome) =>
+        chrome?.HeaderAlign?.Trim().ToLowerInvariant() switch
+        {
+            "top" => HprpHeaderAlign.Top,
+            "bottom" => HprpHeaderAlign.Bottom,
+            _ => HprpHeaderAlign.Middle,
+        };
+
+    public static float ResolveHeaderPaddingMm(HprpChrome? chrome) =>
+        chrome?.HeaderPaddingMm is >= 0 and <= HprpBox.MaxMm
+            ? chrome.HeaderPaddingMm.Value
+            : 0f;
 
     /// <summary>
     /// Parses mixed constant-mm / relative column tokens.

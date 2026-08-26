@@ -144,6 +144,9 @@
         "border": { "type": "string", "enum": ["none", "thin", "medium"] },
         "fontSize": { "type": "number" },
         "rowHeightMm": { "type": "number" },
+        "headerHeightMm": { "type": "number", "exclusiveMinimum": 0, "maximum": 80 },
+        "headerAlign": { "type": "string", "enum": ["top", "middle", "bottom"] },
+        "headerPaddingMm": { "type": "number", "minimum": 0, "maximum": 80 },
         "columnWidths": {
           "type": "array",
           "items": { "type": "string" },

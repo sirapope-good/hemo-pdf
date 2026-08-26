@@ -189,8 +189,12 @@ Optional on form `body` nodes (`data-grid`, `field-grid`, `key-value-table`) and
 | `headerFill` | `#RRGGBB` or `$branding.sectionHeaderBackground` |
 | `border` | `none` / `thin` (default) / `medium` |
 | `fontSize` | Data and column-header font size |
-| `rowHeightMm` | Min row height (`data-grid`) |
+| `headerHeightMm` | Column-header bar height (SOAP / dense tables that read it) |
+| `headerAlign` | `top` / `middle` (default) / `bottom` — label vertical align in the header bar |
+| `headerPaddingMm` | Uniform inset inside the header cell |
+| `rowHeightMm` | Min row height (`data-grid`) / body row height (SOAP) |
 | `columnWidths` | Relative weights (`*` = 1). Applied only when count matches columns |
+| `bandWeights` | SOAP S:O:A:P band weights (clinical-05) |
 
 Example: `clinical-07-lab` `data-grid`. Pack after editing — runtime reads `packages/*.hprp` first.
 

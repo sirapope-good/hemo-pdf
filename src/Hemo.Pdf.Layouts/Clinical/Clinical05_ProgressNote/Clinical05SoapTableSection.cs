@@ -81,10 +81,15 @@ public sealed class Clinical05SoapTableSection
 
             t.Header(header =>
             {
-                HeaderCell(header, HprpLabels.Get(labels, "colDate", "DATE"), border, headerFill);
-                HeaderCell(header, HprpLabels.Get(labels, "colProgress", "PROGRESS NOTE"), border, headerFill);
-                HeaderCell(header, HprpLabels.Get(labels, "colOrderOneDay", "ORDER FOR ONE DAY"), border, headerFill);
-                HeaderCell(header, HprpLabels.Get(labels, "colOrderContinuation", "ORDER FOR CONTINUATION"), border, headerFill);
+                var headerHeightMm = HprpChrome.ResolveHeaderHeightMm(
+                    chrome,
+                    HemosheetThaiUrStyle.HeaderBarHeightMm);
+                var headerAlign = HprpChrome.ResolveHeaderAlign(chrome);
+                var headerPaddingMm = HprpChrome.ResolveHeaderPaddingMm(chrome);
+                HeaderCell(header, HprpLabels.Get(labels, "colDate", "DATE"), border, headerFill, headerHeightMm, headerAlign, headerPaddingMm);
+                HeaderCell(header, HprpLabels.Get(labels, "colProgress", "PROGRESS NOTE"), border, headerFill, headerHeightMm, headerAlign, headerPaddingMm);
+                HeaderCell(header, HprpLabels.Get(labels, "colOrderOneDay", "ORDER FOR ONE DAY"), border, headerFill, headerHeightMm, headerAlign, headerPaddingMm);
+                HeaderCell(header, HprpLabels.Get(labels, "colOrderContinuation", "ORDER FOR CONTINUATION"), border, headerFill, headerHeightMm, headerAlign, headerPaddingMm);
             });
 
             var rows = vm.Sessions ?? [];
@@ -100,14 +105,31 @@ public sealed class Clinical05SoapTableSection
         });
     }
 
-    private static void HeaderCell(TableCellDescriptor t, string text, float border, string headerFill)
+    private static void HeaderCell(
+        TableCellDescriptor t,
+        string text,
+        float border,
+        string headerFill,
+        float heightMm,
+        HprpHeaderAlign align,
+        float paddingMm)
     {
-        t.Cell()
+        var cell = t.Cell()
             .Border(border)
             .Background(headerFill)
-            .Height(HemosheetThaiUrStyle.HeaderBarHeightMm, Mm)
-            .AlignMiddle()
-            .AlignCenter()
+            .Height(heightMm, Mm);
+
+        if (paddingMm > 0)
+            cell = cell.Padding(paddingMm, Mm);
+
+        cell = align switch
+        {
+            HprpHeaderAlign.Top => cell.AlignTop(),
+            HprpHeaderAlign.Bottom => cell.AlignBottom(),
+            _ => cell.AlignMiddle(),
+        };
+
+        cell.AlignCenter()
             .Text(text)
             .Style(ThaiUrText.Bold);
     }

@@ -38,17 +38,22 @@ public sealed class Clinical05ProgressNoteComposer : ILayoutComposer
         var page = HprpPageLayout.FromPackage(
             package,
             HprpPageFallback.Uniform(HemosheetThaiUrStyle.PageMarginMm, SectionSpacingMm));
-        var rowHeightMm = BudgetRowHeightMm(vm, page.Vertical);
-        var labels = HprpLabelResolver.Resolve(_templates, context);
-        var headerWidget = HprpLayoutPlan.ResolveHeaderWidget(
-            package,
-            HprpWidgetIds.ThaiUrHeader,
-            HprpClinicalWidgetSets.Clinical05HeaderAllowed);
         var bodyNodes = HprpLayoutPlan.ResolveNodes(
             package,
             HprpClinicalWidgetSets.Clinical05BodyDefault,
             HprpClinicalWidgetSets.Clinical05BodyAllowed,
             includeHeader: false);
+        var soapChrome = bodyNodes
+            .FirstOrDefault(n => string.Equals(n.Widget, HprpWidgetIds.ClinicalSoapTable, StringComparison.OrdinalIgnoreCase))
+            ?.Chrome;
+        var tableHeaderMm = HprpChrome.ResolveHeaderHeightMm(soapChrome, HemosheetThaiUrStyle.HeaderBarHeightMm);
+        var rowHeightMm = BudgetRowHeightMm(vm, page.Vertical, tableHeaderMm);
+
+        var labels = HprpLabelResolver.Resolve(_templates, context);
+        var headerWidget = HprpLayoutPlan.ResolveHeaderWidget(
+            package,
+            HprpWidgetIds.ThaiUrHeader,
+            HprpClinicalWidgetSets.Clinical05HeaderAllowed);
 
         return HprpQuestPages.Create(
             page,
@@ -96,7 +101,10 @@ public sealed class Clinical05ProgressNoteComposer : ILayoutComposer
     /// Page budget for SOAP mode: ~2 progress-note rows per A4 (1 plan page).
     /// Row height is fixed — SOAP overflow must not grow the table.
     /// </summary>
-    internal static float BudgetRowHeightMm(Clinical05ProgressNoteReportViewModel vm, float verticalMarginMm = -1)
+    internal static float BudgetRowHeightMm(
+        Clinical05ProgressNoteReportViewModel vm,
+        float verticalMarginMm = -1,
+        float tableHeaderMm = -1)
     {
         var margin = verticalMarginMm >= 0 ? verticalMarginMm : 2f * HemosheetThaiUrStyle.PageMarginMm;
         var pageContentMm = A4HeightMm
@@ -105,11 +113,11 @@ public sealed class Clinical05ProgressNoteComposer : ILayoutComposer
 
         var headerMm = HemosheetThaiUrStyle.TitleHeightMm
             + HemosheetThaiUrStyle.MetaRowHeightMm;
-        var tableHeaderMm = HemosheetThaiUrStyle.HeaderBarHeightMm;
+        var soapHeaderMm = tableHeaderMm > 0 ? tableHeaderMm : HemosheetThaiUrStyle.HeaderBarHeightMm;
         var availableForRowsMm = pageContentMm
             - headerMm
             - SectionSpacingMm
-            - tableHeaderMm
+            - soapHeaderMm
             - LayoutSafetyMm;
 
         return Math.Max(availableForRowsMm / Clinical05SoapTableSection.MinEmptyRows, MinBlockHeightMm);

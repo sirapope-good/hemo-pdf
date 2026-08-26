@@ -832,6 +832,8 @@ function renderCapabilityStrip(node, recipe) {
   note.className = "inspector-note";
   if (node.type === "row") {
     note.textContent = "แถว: ลูกใน cells อยู่แถวเดียวกัน — Place beside สร้างแถวนี้ / Break row ดึงบล็อกออกมา";
+  } else if (recipe && (recipe.inspectorFields || []).includes("chrome.headerAlign")) {
+    note.textContent = "แถบหัวคอลัมน์: headerAlign=top ชิดขอบบน · headerHeightMm / headerPaddingMm ปรับความสูงและ inset";
   } else if (recipe && recipe.kind === "dense" && !(recipe.inspectorFields || []).includes("columnPlan")
       && !(recipe.inspectorFields || []).includes("columns")) {
     note.textContent = "Widget หนาแน่น: แก้ได้เฉพาะ knobs ใน inspector (chrome/when) — พิกเซลในตารางยังเป็น C#";
@@ -986,6 +988,9 @@ function renderInspector() {
       const c = n.chrome || {};
       const empty = !c.headerFill && !c.border && c.fontSize == null
         && c.rowHeightMm == null
+        && c.headerHeightMm == null
+        && !c.headerAlign
+        && c.headerPaddingMm == null
         && !(c.columnWidths && c.columnWidths.length)
         && !(c.bandWeights && c.bandWeights.length);
       if (empty) delete n.chrome;
@@ -1009,6 +1014,36 @@ function renderInspector() {
       n.chrome = { ...(n.chrome || {}), fontSize: v };
       clearChromeIfEmpty(n);
     }))));
+
+    if (fields.includes("chrome.headerHeightMm")) {
+      const h = numberInput(chrome.headerHeightMm, (v) => mutateSelected((n) => {
+        n.chrome = { ...(n.chrome || {}), headerHeightMm: v };
+        clearChromeIfEmpty(n);
+      }));
+      h.placeholder = "ว่าง = ความสูงแถบหัวเดิม (mm)";
+      els.inspector.appendChild(field("chrome.headerHeightMm", h));
+    }
+
+    if (fields.includes("chrome.headerAlign")) {
+      els.inspector.appendChild(field("chrome.headerAlign", selectInput(chrome.headerAlign || "", [
+        { value: "", label: "(default middle)" },
+        { value: "top", label: "top — ชิดขอบบน" },
+        { value: "middle", label: "middle" },
+        { value: "bottom", label: "bottom" },
+      ], (v) => mutateSelected((n) => {
+        n.chrome = { ...(n.chrome || {}), headerAlign: v || undefined };
+        clearChromeIfEmpty(n);
+      }))));
+    }
+
+    if (fields.includes("chrome.headerPaddingMm")) {
+      const pad = numberInput(chrome.headerPaddingMm, (v) => mutateSelected((n) => {
+        n.chrome = { ...(n.chrome || {}), headerPaddingMm: v };
+        clearChromeIfEmpty(n);
+      }));
+      pad.placeholder = "inset ในเซลล์หัว (mm)";
+      els.inspector.appendChild(field("chrome.headerPaddingMm", pad));
+    }
 
     if (fields.includes("chrome.rowHeightMm")) {
       const rowH = numberInput(chrome.rowHeightMm, (v) => mutateSelected((n) => {
