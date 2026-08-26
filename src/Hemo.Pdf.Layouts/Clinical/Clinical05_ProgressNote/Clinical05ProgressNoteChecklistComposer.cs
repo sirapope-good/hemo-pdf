@@ -1,6 +1,8 @@
 using Hemo.Pdf.Core.Abstractions;
 using Hemo.Pdf.Core.Context;
+using Hemo.Pdf.Core.Hprp;
 using Hemo.Pdf.Core.Models.Clinical;
+using Hemo.Pdf.Layouts.Hprp;
 using Hemo.Pdf.Rendering;
 using QuestPDF.Fluent;
 using QuestPDF.Helpers;
@@ -10,7 +12,7 @@ namespace Hemo.Pdf.Layouts.Clinical.Clinical05_ProgressNote;
 
 /// <summary>
 /// Landscape Doctor progress note report — monthly checklist grid (clinical-05-checklist).
-/// Matches Doctor View pdfmake layout: header, patient block, WNL/X grid, optional text notes.
+/// Widget order from <c>layout.body</c>; matches Doctor View pdfmake layout.
 /// </summary>
 public sealed class Clinical05ProgressNoteChecklistComposer : ILayoutComposer
 {
@@ -22,10 +24,25 @@ public sealed class Clinical05ProgressNoteChecklistComposer : ILayoutComposer
     private const float TitleFontSize = 14f;
     private const float SectionTitleFontSize = 11f;
     private const float CellPaddingMm = 1.5f;
+    private const float SectionSpacingMm = 3f;
+
+    private readonly IHprpTemplateStore? _templates;
+
+    public Clinical05ProgressNoteChecklistComposer(IHprpTemplateStore? templates = null)
+    {
+        _templates = templates;
+    }
 
     public object Compose(object dataModel, PdfReportContext context)
     {
         var vm = (Clinical05ProgressNoteChecklistReportViewModel)dataModel;
+        var labels = HprpLabelResolver.Resolve(_templates, context);
+        var package = HprpLayoutPlan.TryGetPackage(_templates, context);
+        var bodyNodes = HprpLayoutPlan.ResolveNodes(
+            package,
+            HprpClinicalWidgetSets.Clinical05ChecklistBodyDefault,
+            HprpClinicalWidgetSets.Clinical05ChecklistBodyAllowed,
+            includeHeader: false);
 
         return new QuestLayout
         {
@@ -36,9 +53,34 @@ public sealed class Clinical05ProgressNoteChecklistComposer : ILayoutComposer
             MarginLeft = MarginMm,
             MarginRight = MarginMm,
             Header = c => ComposePageHeader(c, vm),
-            Content = c => ComposeContent(c, vm),
-            Footer = c => ComposeFooter(c),
+            Content = c => ComposeBody(c, vm, labels, bodyNodes, context),
+            Footer = ComposeFooter,
         };
+    }
+
+    private void ComposeBody(
+        IContainer container,
+        Clinical05ProgressNoteChecklistReportViewModel vm,
+        IReadOnlyDictionary<string, string> labels,
+        IReadOnlyList<HprpLayoutNode> bodyNodes,
+        PdfReportContext context)
+    {
+        var handlers = new Dictionary<string, Action<IContainer, HprpLayoutNode>>(StringComparer.OrdinalIgnoreCase)
+        {
+            [HprpWidgetIds.ClinicalChecklistPatient] = (c, _) => ComposePatientTable(c, vm),
+            [HprpWidgetIds.ClinicalChecklistGrid] = (c, _) => ComposeChecklistGridSection(c, vm),
+            [HprpWidgetIds.ClinicalChecklistTextNotes] = (c, _) => ComposeTextNotes(c, vm),
+        };
+
+        container.Column(col =>
+        {
+            col.Spacing(SectionSpacingMm, Mm);
+            HprpWidgetDispatch.ComposeColumn(
+                col,
+                bodyNodes,
+                handlers,
+                node => HprpGenericBlockComposer.TryCreateDrawer(node, context.Data, labels, context));
+        });
     }
 
     private static void ComposePageHeader(IContainer container, Clinical05ProgressNoteChecklistReportViewModel vm)
@@ -59,28 +101,6 @@ public sealed class Clinical05ProgressNoteChecklistComposer : ILayoutComposer
             {
                 col.Item().PaddingTop(1, Mm).AlignCenter().Text(vm.RangeLabel)
                     .FontSize(HeaderFontSize);
-            }
-        });
-    }
-
-    private static void ComposeContent(IContainer container, Clinical05ProgressNoteChecklistReportViewModel vm)
-    {
-        container.Column(col =>
-        {
-            col.Spacing(3, Mm);
-            col.Item().Element(c => ComposePatientTable(c, vm));
-            col.Item().Text("Check lists").FontSize(SectionTitleFontSize).Bold();
-            col.Item().Element(c => ComposeChecklistGrid(c, vm));
-
-            if (vm.TextNotes.Count > 0)
-            {
-                col.Item().PageBreak();
-                col.Item().Text("Text note").FontSize(SectionTitleFontSize).Bold();
-                foreach (var note in vm.TextNotes)
-                {
-                    col.Item().PaddingTop(2, Mm).Text(note.MonthLabel).FontSize(HeaderFontSize).Bold();
-                    col.Item().PaddingTop(1, Mm).Text(note.Content).FontSize(FontSize);
-                }
             }
         });
     }
@@ -106,6 +126,15 @@ public sealed class Clinical05ProgressNoteChecklistComposer : ILayoutComposer
             table.Cell().Element(Cell).Text(t => LabelValue(t, "Coverage scheme:", p.CoverageScheme));
             table.Cell().Element(Cell).Text(t => LabelValue(t, "Dialysis mode:", p.DialysisMode));
             table.Cell().Element(Cell).Text(t => LabelValue(t, "Underlying:", p.Underlying));
+        });
+    }
+
+    private static void ComposeChecklistGridSection(IContainer container, Clinical05ProgressNoteChecklistReportViewModel vm)
+    {
+        container.Column(col =>
+        {
+            col.Item().Text("Check lists").FontSize(SectionTitleFontSize).Bold();
+            col.Item().PaddingTop(1, Mm).Element(c => ComposeChecklistGrid(c, vm));
         });
     }
 
@@ -162,6 +191,26 @@ public sealed class Clinical05ProgressNoteChecklistComposer : ILayoutComposer
                 {
                     table.Cell().Element(BodyCell).AlignCenter().Text(mark ?? string.Empty);
                 }
+            }
+        });
+    }
+
+    private static void ComposeTextNotes(IContainer container, Clinical05ProgressNoteChecklistReportViewModel vm)
+    {
+        if (vm.TextNotes.Count == 0)
+        {
+            container.Height(0.1f, Mm);
+            return;
+        }
+
+        container.Column(col =>
+        {
+            col.Item().PageBreak();
+            col.Item().Text("Text note").FontSize(SectionTitleFontSize).Bold();
+            foreach (var note in vm.TextNotes)
+            {
+                col.Item().PaddingTop(2, Mm).Text(note.MonthLabel).FontSize(HeaderFontSize).Bold();
+                col.Item().PaddingTop(1, Mm).Text(note.Content).FontSize(FontSize);
             }
         });
     }

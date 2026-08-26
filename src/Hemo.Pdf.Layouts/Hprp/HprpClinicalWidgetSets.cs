@@ -39,6 +39,16 @@ public static class HprpClinicalWidgetSets
     public static readonly IReadOnlySet<string> Clinical05BodyAllowed =
         new HashSet<string>(Clinical05BodyDefault, StringComparer.OrdinalIgnoreCase);
 
+    public static readonly IReadOnlyList<string> Clinical05ChecklistBodyDefault =
+    [
+        HprpWidgetIds.ClinicalChecklistPatient,
+        HprpWidgetIds.ClinicalChecklistGrid,
+        HprpWidgetIds.ClinicalChecklistTextNotes,
+    ];
+
+    public static readonly IReadOnlySet<string> Clinical05ChecklistBodyAllowed =
+        new HashSet<string>(Clinical05ChecklistBodyDefault, StringComparer.OrdinalIgnoreCase);
+
     public static readonly IReadOnlyList<string> ConsentBodyDefault =
     [
         HprpWidgetIds.ClinicalConsentNarrative,

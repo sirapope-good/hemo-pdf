@@ -3,5 +3,20 @@
     "size": "A4",
     "orientation": "landscape"
   },
-  "body": []
+  "body": [
+    {
+      "widget": "clinical.checklist-patient"
+    },
+    {
+      "widget": "clinical.checklist-grid",
+      "chrome": {
+        "headerFill": "#E8EEF5",
+        "border": "0.5",
+        "fontSize": 9
+      }
+    },
+    {
+      "widget": "clinical.checklist-text-notes"
+    }
+  ]
 }

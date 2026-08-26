@@ -119,7 +119,7 @@ public class StudioSamplePayloadsSmokeTests
         {
             return new Clinical05ProgressNoteChecklistReportRenderer(
                 new Clinical05ProgressNoteChecklistDataProvider(),
-                new Clinical05ProgressNoteChecklistComposer(),
+                new Clinical05ProgressNoteChecklistComposer(store),
                 quest).RenderReportAsync(context, CancellationToken.None);
         }
 

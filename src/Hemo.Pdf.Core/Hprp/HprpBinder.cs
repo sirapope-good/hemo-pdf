@@ -119,6 +119,9 @@ public static class HprpBinder
         || string.Equals(widget, HprpWidgetIds.ClinicalHctEpoCopay, StringComparison.OrdinalIgnoreCase)
         || string.Equals(widget, HprpWidgetIds.ClinicalEpoDrugTable, StringComparison.OrdinalIgnoreCase)
         || string.Equals(widget, HprpWidgetIds.ClinicalSoapTable, StringComparison.OrdinalIgnoreCase)
+        || string.Equals(widget, HprpWidgetIds.ClinicalChecklistPatient, StringComparison.OrdinalIgnoreCase)
+        || string.Equals(widget, HprpWidgetIds.ClinicalChecklistGrid, StringComparison.OrdinalIgnoreCase)
+        || string.Equals(widget, HprpWidgetIds.ClinicalChecklistTextNotes, StringComparison.OrdinalIgnoreCase)
         || string.Equals(widget, HprpWidgetIds.ClinicalConsentNarrative, StringComparison.OrdinalIgnoreCase);
 
     private static TextReportBlock BindText(

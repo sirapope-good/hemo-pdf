@@ -225,6 +225,30 @@ public static class HprpWidgetRecipes
             },
             new()
             {
+                Id = HprpWidgetIds.ClinicalChecklistPatient,
+                Kind = HprpWidgetRecipe.KindDense,
+                Slot = HprpWidgetRecipe.SlotBody,
+                AllowedOn = [ClinicalReportCatalog.ProgressNoteChecklist],
+                InspectorFields = ["when"],
+            },
+            new()
+            {
+                Id = HprpWidgetIds.ClinicalChecklistGrid,
+                Kind = HprpWidgetRecipe.KindDense,
+                Slot = HprpWidgetRecipe.SlotBody,
+                AllowedOn = [ClinicalReportCatalog.ProgressNoteChecklist],
+                InspectorFields = ["chrome.headerFill", "chrome.border", "chrome.fontSize", "when"],
+            },
+            new()
+            {
+                Id = HprpWidgetIds.ClinicalChecklistTextNotes,
+                Kind = HprpWidgetRecipe.KindDense,
+                Slot = HprpWidgetRecipe.SlotBody,
+                AllowedOn = [ClinicalReportCatalog.ProgressNoteChecklist],
+                InspectorFields = ["when"],
+            },
+            new()
+            {
                 Id = HprpWidgetIds.ClinicalConsentNarrative,
                 Kind = HprpWidgetRecipe.KindDense,
                 Slot = HprpWidgetRecipe.SlotBody,
