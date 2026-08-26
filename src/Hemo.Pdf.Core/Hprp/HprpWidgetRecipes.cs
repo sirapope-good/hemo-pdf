@@ -189,6 +189,7 @@ public static class HprpWidgetRecipes
                 [
                     ClinicalReportCatalog.HctEpo,
                     ClinicalReportCatalog.EpoDrug,
+                    ClinicalReportCatalog.Prescription,
                     ClinicalReportCatalog.ProgressNote,
                     ClinicalReportCatalog.ConsentTh,
                     ClinicalReportCatalog.ConsentEn,
@@ -224,6 +225,31 @@ public static class HprpWidgetRecipes
                     "chrome.columnWidths",
                     "chrome.bandWeights",
                     "when",
+                ],
+            },
+            new()
+            {
+                Id = HprpWidgetIds.ClinicalPrescriptionColumns,
+                Kind = HprpWidgetRecipe.KindDense,
+                Slot = HprpWidgetRecipe.SlotBody,
+                AllowedOn = [ClinicalReportCatalog.Prescription],
+                InspectorFields =
+                [
+                    "chrome.headerFill",
+                    "chrome.border",
+                    "chrome.fontSize",
+                    "chrome.headerHeightMm",
+                    "when",
+                ],
+                LabelKeys =
+                [
+                    "colDateTime",
+                    "colPrescription",
+                    "colPhysiciansOrder",
+                    "sectionMedPresc",
+                    "sectionMedHist",
+                    "doctorSignatureBlank",
+                    "doctorSignatureNamed",
                 ],
             },
             new()

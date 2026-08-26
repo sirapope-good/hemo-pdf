@@ -3,7 +3,7 @@ using Hemo.Pdf.Core.Models;
 namespace Hemo.Pdf.Core.Constants;
 
 /// <summary>
-/// Central clinical report pack (16 documents; baseline: thaiur-reports 01–16).
+/// Central clinical report pack (17 documents; baseline: thaiur-reports 01–16 + checklist).
 /// Canonical engine ids for Hemo-PDF. Legacy aliases (<c>hemosheet</c>,
 /// <c>template-04-hemosheet</c>) still normalize to <see cref="HemodialysisRecord"/>.
 /// </summary>
@@ -94,6 +94,7 @@ public static class ClinicalReportCatalog
         var engineId = ResolveEngineTemplateId(templateId ?? string.Empty);
         return string.Equals(engineId, HctEpo, StringComparison.OrdinalIgnoreCase)
             || string.Equals(engineId, EpoDrug, StringComparison.OrdinalIgnoreCase)
+            || string.Equals(engineId, Prescription, StringComparison.OrdinalIgnoreCase)
             || string.Equals(engineId, ProgressNote, StringComparison.OrdinalIgnoreCase)
             || string.Equals(engineId, ProgressNoteChecklist, StringComparison.OrdinalIgnoreCase)
             || string.Equals(engineId, Lab, StringComparison.OrdinalIgnoreCase)

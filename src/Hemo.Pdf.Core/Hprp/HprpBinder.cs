@@ -121,6 +121,7 @@ public static class HprpBinder
         || string.Equals(widget, HprpWidgetIds.ClinicalHctEpoCopay, StringComparison.OrdinalIgnoreCase)
         || string.Equals(widget, HprpWidgetIds.ClinicalEpoDrugTable, StringComparison.OrdinalIgnoreCase)
         || string.Equals(widget, HprpWidgetIds.ClinicalSoapTable, StringComparison.OrdinalIgnoreCase)
+        || string.Equals(widget, HprpWidgetIds.ClinicalPrescriptionColumns, StringComparison.OrdinalIgnoreCase)
         || string.Equals(widget, HprpWidgetIds.ClinicalChecklistPatient, StringComparison.OrdinalIgnoreCase)
         || string.Equals(widget, HprpWidgetIds.ClinicalChecklistGrid, StringComparison.OrdinalIgnoreCase)
         || string.Equals(widget, HprpWidgetIds.ClinicalChecklistTextNotes, StringComparison.OrdinalIgnoreCase)
@@ -360,6 +361,14 @@ public static class HprpBinder
             if (item.ValueKind == JsonValueKind.Array)
             {
                 rows.Add(item.EnumerateArray().Select(cell => HprpJsonPath.AsString(cell) ?? "").ToList());
+                continue;
+            }
+
+            if (item.ValueKind == JsonValueKind.String)
+            {
+                if (headers.Count == 0)
+                    headers = [""];
+                rows.Add([item.GetString() ?? ""]);
                 continue;
             }
 

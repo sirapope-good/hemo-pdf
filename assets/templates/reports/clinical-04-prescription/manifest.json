@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "displayName": "Hemodialysis Prescription",
   "engineVersion": 1,
-  "dataAdapter": "flatten-dto",
+  "dataAdapter": "clinical-04-prescription",
   "requiresSignature": true,
   "language": "th",
   "ui": {

@@ -28,6 +28,17 @@ public static class HprpClinicalWidgetSets
     public static readonly IReadOnlySet<string> Clinical02Allowed =
         new HashSet<string>(Clinical02DefaultOrder, StringComparer.OrdinalIgnoreCase);
 
+    public static readonly IReadOnlyList<string> Clinical04BodyDefault =
+    [
+        HprpWidgetIds.ClinicalPrescriptionColumns,
+    ];
+
+    public static readonly IReadOnlySet<string> Clinical04HeaderAllowed =
+        new HashSet<string>([HprpWidgetIds.ThaiUrHeader], StringComparer.OrdinalIgnoreCase);
+
+    public static readonly IReadOnlySet<string> Clinical04BodyAllowed =
+        new HashSet<string>(Clinical04BodyDefault, StringComparer.OrdinalIgnoreCase);
+
     public static readonly IReadOnlyList<string> Clinical05BodyDefault =
     [
         HprpWidgetIds.ClinicalSoapTable,

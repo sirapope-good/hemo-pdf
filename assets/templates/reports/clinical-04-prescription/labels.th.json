@@ -1,7 +1,13 @@
 {
-  "hn": "HN",
-  "patientName": "ชื่อ-สกุล",
-  "unit": "หน่วย",
-  "reportDate": "วันที่รายงาน",
-  "title": "Hemodialysis Prescription"
+  "colDateTime": "Date / Time",
+  "colPrescription": "Prescription / Review of Treatment",
+  "colPhysiciansOrder": "Physicians Order",
+  "sectionMedPresc": "Medication",
+  "sectionMedHist": "Medication History",
+  "doctorSignatureBlank": "(นพ/พญ. ........................................)",
+  "doctorSignatureNamed": "(นพ/พญ. {0})",
+  "sectionHemo": "คำสั่งการฟอกเลือด",
+  "sectionDoctorInfo": "ข้อมูลแพทย์ผู้สั่ง",
+  "doctorName": "ชื่อแพทย์:",
+  "doctorUpdated": "อัปเดต:"
 }

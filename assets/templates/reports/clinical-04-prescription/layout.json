@@ -1,49 +1,20 @@
 {
   "page": {
     "size": "A4",
-    "marginMm": 10
+    "marginMm": 2,
+    "spacingMm": 2
+  },
+  "header": {
+    "widget": "thaiur.header"
   },
   "body": [
     {
-      "type": "text",
-      "style": "title",
-      "bind": "$title"
-    },
-    {
-      "type": "field-grid",
-      "columns": 2,
-      "fields": [
-        {
-          "label": { "$label": "hn" },
-          "bind": "$.patient.hn"
-        },
-        {
-          "label": { "$label": "patientName" },
-          "bind": "$.patient.name"
-        },
-        {
-          "label": { "$label": "unit" },
-          "bind": "$.patient.unit"
-        },
-        {
-          "label": { "$label": "reportDate" },
-          "bind": "$.reportDate"
-        }
-      ]
-    },
-    {
-      "type": "key-value-table",
-      "bindRows": "$.fields",
-      "when": "$.fields.length > 0"
-    },
-    {
-      "type": "data-grid",
-      "columnHeadersBind": "$.columnHeaders",
-      "bindRows": "$.rows",
-      "when": "$.rows.length > 0"
-    },
-    {
-      "type": "signature"
+      "widget": "clinical.prescription-columns",
+      "chrome": {
+        "headerFill": "$branding.sectionHeaderBackground",
+        "border": "thin",
+        "fontSize": 7.5
+      }
     }
   ]
 }

@@ -13,6 +13,7 @@ public static class HprpWidgetIds
     public const string ClinicalHctEpoCopay = "clinical.hct-epo-copay";
     public const string ClinicalEpoDrugTable = "clinical.epo-drug-table";
     public const string ClinicalSoapTable = "clinical.soap-table";
+    public const string ClinicalPrescriptionColumns = "clinical.prescription-columns";
     public const string ClinicalChecklistPatient = "clinical.checklist-patient";
     public const string ClinicalChecklistGrid = "clinical.checklist-grid";
     public const string ClinicalChecklistTextNotes = "clinical.checklist-text-notes";
@@ -63,6 +64,7 @@ public static class HprpWidgetIds
         ClinicalHctEpoCopay,
         ClinicalEpoDrugTable,
         ClinicalSoapTable,
+        ClinicalPrescriptionColumns,
         ClinicalChecklistPatient,
         ClinicalChecklistGrid,
         ClinicalChecklistTextNotes,
