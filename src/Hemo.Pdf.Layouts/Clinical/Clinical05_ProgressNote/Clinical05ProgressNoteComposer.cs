@@ -94,6 +94,10 @@ public sealed class Clinical05ProgressNoteComposer : ILayoutComposer
             .Element(c => ThaiUrReportHeader.Compose(c, vm.Header, vm.Title));
     }
 
+    /// <summary>
+    /// Page budget for SOAP mode: ~2 progress-note rows per A4 (1 plan page).
+    /// Row height is fixed — SOAP overflow must not grow the table.
+    /// </summary>
     internal static float BudgetRowHeightMm(Clinical05ProgressNoteReportViewModel vm)
     {
         var pageContentMm = A4HeightMm

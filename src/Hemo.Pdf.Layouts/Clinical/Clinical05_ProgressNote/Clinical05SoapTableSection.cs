@@ -18,12 +18,20 @@ public sealed class Clinical05SoapTableSection
     internal const int MinEmptyRows = 2;
 
     private const float SoapLetterMm = 8f;
+    private const float SoapPadMm = 1.6f;
     private const float ExamLabelMm = 24f;
     private const float ExamNColMm = 16f;
     private const float ExamAbnColMm = 20f;
     private const float LineMinMm = 4.6f;
     private const float CheckSizePt = 6.5f;
     private const float CheckGapPt = 2f;
+
+    /// <summary>S : O : A : P = 1 : 2.5 : 1 : 1 (integer weights 2:5:2:2).</summary>
+    private const int SoapWeightS = 2;
+    private const int SoapWeightO = 5;
+    private const int SoapWeightA = 2;
+    private const int SoapWeightP = 2;
+    private const int SoapWeightTotal = SoapWeightS + SoapWeightO + SoapWeightA + SoapWeightP;
 
     public const string GoodConscious = "goodConscious";
     public const string Drowsiness = "drowsiness";
@@ -83,7 +91,7 @@ public sealed class Clinical05SoapTableSection
     private static void DateCell(IContainer c, string? dateLabel, float heightMm)
     {
         c.Border(Bw)
-            .MinHeight(heightMm, Mm)
+            .Height(heightMm, Mm)
             .Padding(1.2f, Mm)
             .AlignTop()
             .AlignCenter()
@@ -94,7 +102,7 @@ public sealed class Clinical05SoapTableSection
     private static void OrderCell(IContainer c, string? text, float heightMm)
     {
         c.Border(Bw)
-            .MinHeight(heightMm, Mm)
+            .Height(heightMm, Mm)
             .Padding(1.2f, Mm)
             .AlignTop()
             .Text(text ?? string.Empty)
@@ -103,23 +111,31 @@ public sealed class Clinical05SoapTableSection
 
     private static void SoapCell(IContainer c, Clinical05SoapSession? row, float heightMm)
     {
+        // Fixed cell height (1 plan ≈ 2 progress-note rows): do not grow with SOAP overflow.
+        // Bands fill the Progress Note column — S:O:A:P = 1:2.5:1:1, no dividers.
+        var innerMm = Math.Max(heightMm - 2f * SoapPadMm, 0f);
+        var sMm = innerMm * SoapWeightS / SoapWeightTotal;
+        var oMm = innerMm * SoapWeightO / SoapWeightTotal;
+        var aMm = innerMm * SoapWeightA / SoapWeightTotal;
+        var pMm = Math.Max(innerMm - sMm - oMm - aMm, 0f);
+
         c.Border(Bw)
-            .MinHeight(heightMm, Mm)
-            .Padding(1.6f, Mm)
+            .Height(heightMm, Mm)
+            .Padding(SoapPadMm, Mm)
             .AlignTop()
             .Column(col =>
             {
-                col.Spacing(1.1f);
-                SoapLine(col, "S", row?.Subjective);
-                col.Item().Element(inner => ComposeObjective(inner, row));
-                SoapLine(col, "A", row?.Assessment);
-                SoapLine(col, "P", row?.Plan);
+                col.Spacing(0);
+                col.Item().Height(sMm, Mm).AlignTop().Element(band => SoapBand(band, "S", row?.Subjective));
+                col.Item().Height(oMm, Mm).AlignTop().Element(band => ComposeObjective(band, row));
+                col.Item().Height(aMm, Mm).AlignTop().Element(band => SoapBand(band, "A", row?.Assessment));
+                col.Item().Height(pMm, Mm).AlignTop().Element(band => SoapBand(band, "P", row?.Plan));
             });
     }
 
-    private static void SoapLine(ColumnDescriptor col, string letter, string? value)
+    private static void SoapBand(IContainer c, string letter, string? value)
     {
-        col.Item().MinHeight(LineMinMm, Mm).Row(r =>
+        c.Row(r =>
         {
             r.ConstantItem(SoapLetterMm, Mm).AlignTop().Text(letter + " :").Style(ThaiUrText.Bold);
             r.RelativeItem().AlignTop().Text(value ?? string.Empty).Style(ThaiUrText.Base);

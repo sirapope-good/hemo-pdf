@@ -105,6 +105,16 @@ public class Clinical05ProgressNoteSmokeTests
     }
 
     [Fact]
+    public void BudgetRowHeight_UsesTwoRowsPerPage()
+    {
+        var vm = MinimalViewModel(sessionCount: 0);
+        var height = Clinical05ProgressNoteComposer.BudgetRowHeightMm(vm);
+        Assert.True(height >= 90f);
+        // Two empty slots share the page; one row must not claim the full content height.
+        Assert.True(height < 200f);
+    }
+
+    [Fact]
     public void Compose_PutsThaiUrHeaderOnRepeatingPageSlot()
     {
         var composer = new Clinical05ProgressNoteComposer();
