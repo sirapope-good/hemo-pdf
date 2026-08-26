@@ -54,8 +54,4 @@ public static class ClinicalReportLayoutResolver
 
     public static bool TryParseLayoutKind(string? layoutKind, out ClinicalLayoutKind kind) =>
         Enum.TryParse(layoutKind, ignoreCase: true, out kind);
-
-    /// <summary>Obsolete name — use <see cref="UsesDenseForm"/>.</summary>
-    public static bool UsesHemosheetForm(string reportTemplateId, HemosheetLayoutProfile profile) =>
-        UsesDenseForm(reportTemplateId, profile);
 }

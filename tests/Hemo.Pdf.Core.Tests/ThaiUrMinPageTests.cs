@@ -23,7 +23,7 @@ public class ThaiUrMinPageTests
     [InlineData(5)]
     public async Task Pages_ForDialysisCount(int dialysisCount)
     {
-        var root = FindTemplatesRoot();
+        var root = HprpTestAssets.TemplatesRoot();
         var package = HprpPackageReader.ReadDirectory(
             Path.Combine(root, "reports", ClinicalReportCatalog.HemodialysisRecord, "variants", "thaiur"));
 
@@ -82,19 +82,5 @@ public class ThaiUrMinPageTests
             .Count;
 
         Assert.True(pages == 1, $"dialysis={dialysisCount} pages={pages} bytes={bytes.Length}");
-    }
-
-    private static string FindTemplatesRoot()
-    {
-        var dir = new DirectoryInfo(AppContext.BaseDirectory);
-        while (dir is not null)
-        {
-            var candidate = Path.Combine(dir.FullName, "assets", "templates");
-            if (Directory.Exists(Path.Combine(candidate, "reports", ClinicalReportCatalog.HemodialysisRecord)))
-                return candidate;
-            dir = dir.Parent;
-        }
-
-        throw new DirectoryNotFoundException();
     }
 }

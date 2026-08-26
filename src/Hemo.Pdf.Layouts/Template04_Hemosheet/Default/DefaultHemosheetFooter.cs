@@ -137,13 +137,6 @@ internal static class DefaultHemosheetFooter
         });
     }
 
-    /// <summary>Deprecated entry — use <see cref="ComposeBand"/>.</summary>
-    public static void ComposeUpper(IContainer c, HemosheetReportViewModel vm) => ComposeBand(c, vm);
-
-    /// <summary>Deprecated — strips are composed inside <see cref="ComposeBand"/>.</summary>
-    public static void ComposeLowerStrips(IContainer c, HemosheetReportViewModel vm) =>
-        RightLowerStrips(c, vm);
-
     private static void NephrologistCell(IContainer c, HemosheetReportViewModel vm, float heightMm)
     {
         c.Border(Bw).Height(heightMm, Mm).AlignMiddle().AlignCenter()
@@ -233,28 +226,6 @@ internal static class DefaultHemosheetFooter
         var leftMm = AssessmentPanelHeightMm() + NephrologistRowHeightMm;
         var rightMm = HealthMedRowHeightMm(vm) + nurseNotesHeightMm + RightStripBandHeightMm;
         return FluidSummaryHeightMm + Math.Max(leftMm, rightMm);
-    }
-
-    /// <summary>
-    /// Legacy leftover budget for nurse-note height. Prefer dialysis row budgeting in the form composer.
-    /// </summary>
-    public static float ComputePrePostTotalHeightMm(HemosheetReportViewModel vm, float mainBandHeightMm)
-    {
-        var pageContentMm = 297f
-            - 2f * HemosheetDefaultStyle.PageMarginMm
-            - PageNumberFooterMm;
-        var notesFloor = NurseNotesFloorHeightMm(vm);
-        var bottomFloorMm = BottomBlockHeightMm(vm, notesFloor);
-        var maxOnSamePageMm = pageContentMm
-            - LayoutSafetyMm
-            - mainBandHeightMm
-            - bottomFloorMm
-            + notesFloor;
-
-        if (maxOnSamePageMm < notesFloor)
-            return notesFloor;
-
-        return notesFloor;
     }
 
     public static float AssessmentPanelHeightMm() => Math.Max(

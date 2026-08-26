@@ -117,7 +117,7 @@ public class HctEpoAnnualColumnPlanTests
     [Fact]
     public void SamplePayload_Clinical01_Exists()
     {
-        var root = FindTemplatesRoot();
+        var root = HprpTestAssets.TemplatesRoot();
         var data = HprpStudioSamplePayloads.TryLoad(root, ClinicalReportCatalog.HctEpo);
         Assert.True(data.HasValue);
         Assert.Equal(JsonValueKind.Object, data!.Value.ValueKind);
@@ -127,7 +127,7 @@ public class HctEpoAnnualColumnPlanTests
     [Fact]
     public void SamplePayload_Clinical03_Exists_AndVariantSetsLayoutProfile()
     {
-        var root = FindTemplatesRoot();
+        var root = HprpTestAssets.TemplatesRoot();
         Assert.Contains(ClinicalReportCatalog.HemodialysisRecord, HprpStudioSamplePayloads.KnownTemplateIds);
 
         var thaiur = HprpStudioSamplePayloads.TryLoad(root, ClinicalReportCatalog.HemodialysisRecord, "thaiur");
@@ -150,7 +150,7 @@ public class HctEpoAnnualColumnPlanTests
     [Fact]
     public void ApplyHemosheetPreviewContext_PrefersManifestLayoutProfile()
     {
-        var root = FindTemplatesRoot();
+        var root = HprpTestAssets.TemplatesRoot();
         var sample = HprpStudioSamplePayloads.TryLoad(root, ClinicalReportCatalog.HemodialysisRecord, "default");
         Assert.True(sample.HasValue);
 
@@ -176,7 +176,7 @@ public class HctEpoAnnualColumnPlanTests
     [Fact]
     public void Clinical03_ProductionLayouts_HaveNoExperimentalKeys()
     {
-        var root = FindTemplatesRoot();
+        var root = HprpTestAssets.TemplatesRoot();
         foreach (var variant in new[] { "default", "rama", "thaiur" })
         {
             var path = Path.Combine(root, "reports", ClinicalReportCatalog.HemodialysisRecord, "variants", variant, "layout.json");
@@ -190,23 +190,5 @@ public class HctEpoAnnualColumnPlanTests
                 Assert.False(section.TryGetProperty("x-", out _), $"{variant}: x- key");
             }
         }
-    }
-
-    private static string FindTemplatesRoot()
-    {
-        var outputCandidate = Path.Combine(AppContext.BaseDirectory, "assets", "templates");
-        if (Directory.Exists(Path.Combine(outputCandidate, "reports", "clinical-01-hct-epo")))
-            return outputCandidate;
-
-        var dir = new DirectoryInfo(AppContext.BaseDirectory);
-        while (dir is not null)
-        {
-            var candidate = Path.Combine(dir.FullName, "assets", "templates");
-            if (Directory.Exists(Path.Combine(candidate, "reports", "clinical-01-hct-epo")))
-                return candidate;
-            dir = dir.Parent;
-        }
-
-        throw new DirectoryNotFoundException("assets/templates/reports/clinical-01-hct-epo not found.");
     }
 }

@@ -125,7 +125,4 @@ public static class ClinicalReportCatalog
         var engineId = ResolveEngineTemplateId(templateId ?? string.Empty);
         return DefaultScaffoldIds.Any(id => string.Equals(id, engineId, StringComparison.OrdinalIgnoreCase));
     }
-
-    /// <summary>Obsolete name — always false; report-data endpoints exist for former scaffolds.</summary>
-    public static bool IsDefaultScaffoldWithoutReportData(string? templateId) => false;
 }

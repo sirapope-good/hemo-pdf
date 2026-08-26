@@ -22,7 +22,7 @@ public class ThaiUrStudioPreviewSmokeTests
     [Fact]
     public async Task SamplePayload_ThaiUrDenseForm_FitsOnePage()
     {
-        var root = FindTemplatesRoot();
+        var root = HprpTestAssets.TemplatesRoot();
         var samplePath = Path.Combine(root, "reports", ClinicalReportCatalog.HemodialysisRecord, "sample.json");
         Assert.True(File.Exists(samplePath), samplePath);
 
@@ -77,23 +77,5 @@ public class ThaiUrStudioPreviewSmokeTests
     {
         var text = System.Text.Encoding.Latin1.GetString(pdf);
         return System.Text.RegularExpressions.Regex.Matches(text, @"/Type\s*/Page[^s]").Count;
-    }
-
-    private static string FindTemplatesRoot()
-    {
-        var outputCandidate = Path.Combine(AppContext.BaseDirectory, "assets", "templates");
-        if (Directory.Exists(Path.Combine(outputCandidate, "reports", ClinicalReportCatalog.HemodialysisRecord)))
-            return outputCandidate;
-
-        var dir = new DirectoryInfo(AppContext.BaseDirectory);
-        while (dir is not null)
-        {
-            var candidate = Path.Combine(dir.FullName, "assets", "templates");
-            if (Directory.Exists(Path.Combine(candidate, "reports", ClinicalReportCatalog.HemodialysisRecord)))
-                return candidate;
-            dir = dir.Parent;
-        }
-
-        throw new DirectoryNotFoundException("assets/templates/reports/clinical-03 not found.");
     }
 }

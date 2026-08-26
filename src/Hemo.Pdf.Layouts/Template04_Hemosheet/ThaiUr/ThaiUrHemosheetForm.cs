@@ -136,7 +136,7 @@ internal sealed class ThaiUrHemosheetForm
     }
 
     // Every row in this band is a fixed-length checklist (same count for every patient), so each
-    // side's total height is deterministic and can be computed up front from Rh/row counts เนโฌโ€
+    // side's total height is deterministic and can be computed up front from Rh/row counts —
     // no ExtendVertical needed (that fills *all* available space up to the page boundary, which
     // is why the dividers previously ballooned across two extra pages instead of just closing the
     // gap). MinHeight computed from real content gives an exact match with no wasted space, while
@@ -222,7 +222,7 @@ internal sealed class ThaiUrHemosheetForm
                     leftCol.Item().Element(v => Vitals(v, vm));
                     leftCol.Item().Element(s => Symptoms(s, vm));
                 });
-                // Vertical divider only เนโฌโ€ no per-row horizontal grid inside the section.
+                // Vertical divider only — no per-row horizontal grid inside the section.
                 // MinHeight (computed from real row counts) closes this exactly at the taller
                 // Vitals+Symptoms column instead of stopping short at its own shorter content.
                 t.Cell().AlignTop().BorderLeft(Bw).MinHeight(splitMm, Mm).Column(rightCol =>
@@ -368,7 +368,7 @@ internal sealed class ThaiUrHemosheetForm
 
     private static void VascularAccess(IContainer c, HemosheetReportViewModel vm)
     {
-        // Telerik: header cell only + vertical column splits เนโฌโ€ no bottom closing box around content.
+        // Telerik: header cell only + vertical column splits — no bottom closing box around content.
         c.Column(col =>
         {
             col.Item().HeaderBar("Vascular Access");
@@ -506,7 +506,7 @@ internal sealed class ThaiUrHemosheetForm
         var timeRh = HemosheetThaiUrStyle.TimeDialysisRowHeightMm;
         // Include TopBand slack (Predialysis taller than Prescription) so BorderLeft reaches Nursing Plan.
         var fillMm = AnticoagulantFillMm();
-        // Vertical divider only (same 51mm split as Prescription) เนโฌโ€ no top/bottom closing box.
+        // Vertical divider only (same 51mm split as Prescription) — no top/bottom closing box.
         // Table + MinHeight fills Predialysis slack so the divider does not stop mid-gap.
         c.Table(t =>
         {
@@ -539,7 +539,7 @@ internal sealed class ThaiUrHemosheetForm
 
     private static void NursingPlan(IContainer c, HemosheetReportViewModel vm)
     {
-        // Source: Nurse Processing (Progress Notes) เนโฌโ€ Focus / I / E, not assessments.Other.
+        // Source: Nurse Processing (Progress Notes) — Focus / I / E, not assessments.Other.
         var planRows = ThaiUrData.NursingPlanRows(vm);
         c.Table(t =>
         {

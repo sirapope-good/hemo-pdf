@@ -191,7 +191,7 @@ public class Clinical01HctEpoSmokeTests
     [Fact]
     public async Task Render_WithHprpPackage_ProducesPdfBytes()
     {
-        var templatesRoot = FindTemplatesRoot();
+        var templatesRoot = HprpTestAssets.TemplatesRoot();
         var store = new Hemo.Pdf.Application.Hprp.FileHprpTemplateStore(
             Microsoft.Extensions.Options.Options.Create(
                 new Hemo.Pdf.Application.Hprp.HprpTemplateOptions
@@ -230,7 +230,7 @@ public class Clinical01HctEpoSmokeTests
         var options = Microsoft.Extensions.Options.Options.Create(
             new Hemo.Pdf.Application.Hprp.HprpTemplateOptions
             {
-                RootPath = FindTemplatesRoot(),
+                RootPath = HprpTestAssets.TemplatesRoot(),
                 PackagesRootPath = packages,
                 PackagesWritePath = packages,
             });
@@ -266,24 +266,5 @@ public class Clinical01HctEpoSmokeTests
 
         Assert.True(rowH >= 12f, $"expected month row ≥ 12mm, got {rowH}");
         Assert.True(rowH < 30f, $"expected month row < 30mm, got {rowH}");
-    }
-
-    private static string FindTemplatesRoot()
-    {
-        // Prefer content copied next to test assembly (csproj Content link).
-        var outputCandidate = Path.Combine(AppContext.BaseDirectory, "assets", "templates");
-        if (Directory.Exists(Path.Combine(outputCandidate, "reports", "clinical-01-hct-epo")))
-            return outputCandidate;
-
-        var dir = new DirectoryInfo(AppContext.BaseDirectory);
-        while (dir is not null)
-        {
-            var candidate = Path.Combine(dir.FullName, "assets", "templates");
-            if (Directory.Exists(Path.Combine(candidate, "reports", "clinical-01-hct-epo")))
-                return candidate;
-            dir = dir.Parent;
-        }
-
-        throw new DirectoryNotFoundException("assets/templates/reports/clinical-01-hct-epo not found.");
     }
 }
