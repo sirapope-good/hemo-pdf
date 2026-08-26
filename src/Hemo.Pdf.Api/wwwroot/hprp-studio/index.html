@@ -10,7 +10,7 @@
   <header class="top">
     <div>
       <h1>HPRP Studio</h1>
-      <p class="muted">เรียง <code>layout.body</code> หรือ <code>layout.sections</code> (hemosheet) แล้วแก้ chrome / คอลัมน์ใน inspector</p>
+      <p class="muted">เรียงบล็อกเป็นต้นไม้ (แถว/เซลล์) แก้หน้ากระดาษ / chrome / คอลัมน์ใน inspector — พรีวิว PDF คือความถูกต้อง</p>
     </div>
     <div class="top-right">
       <div class="mode-toggle" role="group" aria-label="Editor mode">
@@ -55,11 +55,18 @@
           <div class="subhead" id="orderListTitle">Body order</div>
           <ul id="bodyList" class="node-list"></ul>
         </div>
+        <div class="subpane schematic-pane">
+          <div class="subhead">Schematic</div>
+          <div id="schematic" class="schematic"></div>
+        </div>
       </div>
     </section>
 
     <section class="pane inspector-col" id="inspectorPane">
-      <div class="pane-head"><strong>Inspector</strong></div>
+      <div class="pane-head">
+        <strong>Inspector</strong>
+        <button id="btnPage" type="button">Page</button>
+      </div>
       <div id="inspector" class="inspector"><p class="muted">เลือกบล็อกในรายการ</p></div>
     </section>
 

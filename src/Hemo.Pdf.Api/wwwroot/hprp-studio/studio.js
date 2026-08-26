@@ -24,6 +24,7 @@ const els = {
   palette: document.getElementById("palette"),
   bodyList: document.getElementById("bodyList"),
   inspector: document.getElementById("inspector"),
+  schematic: document.getElementById("schematic"),
   preview: document.getElementById("previewFrame"),
   btnPreview: document.getElementById("btnPreview"),
   sampleScenario: document.getElementById("sampleScenario"),
@@ -146,39 +147,78 @@ function allowedOn(recipe, templateId) {
 
 function nodeAt(key) {
   ensureLayout();
+  if (!key || key === "page")
+    return pageObject();
   if (key === "header") return state.draft.layout.header || null;
-  if (key && key.startsWith("body:")) {
-    const i = Number(key.slice(5));
-    return state.draft.layout.body[i] || null;
+  const hit = locate(key);
+  return hit ? hit.value : null;
+}
+
+function pageObject() {
+  if (!state.draft.layout.page || typeof state.draft.layout.page !== "object")
+    state.draft.layout.page = { size: "A4" };
+  return state.draft.layout.page;
+}
+
+function parsePath(key) {
+  if (!key || key === "page") return [{ kind: "page" }];
+  if (key === "header") return [{ kind: "header" }];
+  return String(key).split("/").map((seg) => {
+    const colon = seg.indexOf(":");
+    if (colon < 0) return { kind: seg, index: 0 };
+    return { kind: seg.slice(0, colon), index: Number(seg.slice(colon + 1)) };
+  });
+}
+
+function locate(key) {
+  ensureLayout();
+  if (!key || key === "page") return { parent: state.draft.layout, prop: "page", value: pageObject() };
+  if (key === "header") return { parent: state.draft.layout, prop: "header", value: state.draft.layout.header || null };
+  const parts = parsePath(key);
+  let parent = state.draft.layout;
+  let value = parent;
+  let prop = null;
+  let index = null;
+  for (const part of parts) {
+    if (part.kind === "body" || part.kind === "sections" || part.kind === "nodes" || part.kind === "cells") {
+      const list = part.kind === "body" ? parent.body
+        : part.kind === "sections" ? parent.sections
+        : part.kind === "cells" ? (parent.cells || [])
+        : (parent.nodes || []);
+      parent = list;
+      index = part.index;
+      prop = part.kind;
+      value = list[part.index];
+    } else {
+      return null;
+    }
   }
-  if (key && key.startsWith("sections:")) {
-    const i = Number(key.slice(9));
-    return state.draft.layout.sections[i] || null;
-  }
-  return null;
+  return { parent, prop, index, value };
 }
 
 function setNodeAt(key, node) {
   ensureLayout();
+  if (key === "page") {
+    state.draft.layout.page = node;
+    return;
+  }
   if (key === "header") {
     state.draft.layout.header = node;
     return;
   }
-  if (key && key.startsWith("body:")) {
-    const i = Number(key.slice(5));
-    if (node == null)
-      state.draft.layout.body.splice(i, 1);
-    else
-      state.draft.layout.body[i] = node;
-    return;
-  }
-  if (key && key.startsWith("sections:")) {
-    const i = Number(key.slice(9));
-    if (node == null)
-      state.draft.layout.sections.splice(i, 1);
-    else
-      state.draft.layout.sections[i] = node;
-  }
+  const hit = locate(key);
+  if (!hit || !Array.isArray(hit.parent) || hit.index == null) return;
+  if (node == null)
+    hit.parent.splice(hit.index, 1);
+  else
+    hit.parent[hit.index] = node;
+}
+
+function parentKey(key) {
+  if (!key || key === "page" || key === "header") return null;
+  const i = key.lastIndexOf("/");
+  if (i < 0) return "page";
+  return key.slice(0, i);
 }
 
 function nodeTitle(node) {
@@ -311,6 +351,17 @@ function newBlock(type) {
     return { type, columns: 2, fields: [] };
   if (type === "text")
     return { type, content: "" };
+  if (type === "row")
+    return {
+      type: "row",
+      gapMm: 2,
+      cells: [
+        { width: "*", nodes: [{ type: "text", content: "" }] },
+        { width: "*", nodes: [{ type: "text", content: "" }] },
+      ],
+    };
+  if (type === "column-stack")
+    return { type: "column-stack", nodes: [{ type: "text", content: "" }] };
   return { type };
 }
 
@@ -324,41 +375,57 @@ function addNode(node) {
     state.draft.layout.sections.push(node);
     state.selectedKey = "sections:" + (state.draft.layout.sections.length - 1);
   } else {
-    state.draft.layout.body.push(node);
-    state.selectedKey = "body:" + (state.draft.layout.body.length - 1);
+    const sel = state.selectedKey && locate(state.selectedKey);
+    const target = sel && sel.value;
+    if (target && Array.isArray(target.cells)) {
+      target.cells.push({ width: "*", nodes: [node] });
+      state.selectedKey = state.selectedKey + "/cells:" + (target.cells.length - 1);
+    } else if (target && Array.isArray(target.nodes) && target.type === "column-stack") {
+      target.nodes.push(node);
+      state.selectedKey = state.selectedKey + "/nodes:" + (target.nodes.length - 1);
+    } else if (sel && sel.prop === "cells" && sel.value && Array.isArray(sel.value.nodes)) {
+      sel.value.nodes.push(node);
+      state.selectedKey = state.selectedKey + "/nodes:" + (sel.value.nodes.length - 1);
+    } else {
+      state.draft.layout.body.push(node);
+      state.selectedKey = "body:" + (state.draft.layout.body.length - 1);
+    }
   }
   renderDesigner();
   schedulePreview();
 }
 
-function moveListItem(index, delta) {
-  ensureLayout();
-  const next = index + delta;
-  const list = nodeList();
-  if (next < 0 || next >= list.length) return;
-  const [item] = list.splice(index, 1);
-  list.splice(next, 0, item);
-  state.selectedKey = listSlot() + ":" + next;
+function moveInParent(key, delta) {
+  const hit = locate(key);
+  if (!hit || !Array.isArray(hit.parent) || hit.index == null) return;
+  const next = hit.index + delta;
+  if (next < 0 || next >= hit.parent.length) return;
+  const [item] = hit.parent.splice(hit.index, 1);
+  hit.parent.splice(next, 0, item);
+  const parent = parentKey(key);
+  const last = parsePath(key).pop();
+  state.selectedKey = (!parent || parent === "page")
+    ? last.kind + ":" + next
+    : parent + "/" + last.kind + ":" + next;
   renderDesigner();
   schedulePreview();
+}
+
+function moveListItem(index, delta) {
+  const slot = listSlot();
+  moveInParent(slot + ":" + index, delta);
 }
 
 function removeNode(key) {
   if (key === "header") {
     state.draft.layout.header = undefined;
-    if (state.selectedKey === "header") state.selectedKey = null;
-  } else if (key.startsWith("body:")) {
-    const i = Number(key.slice(5));
-    state.draft.layout.body.splice(i, 1);
-    state.selectedKey = state.draft.layout.body.length
-      ? "body:" + Math.min(i, state.draft.layout.body.length - 1)
-      : null;
-  } else if (key.startsWith("sections:")) {
-    const i = Number(key.slice(9));
-    state.draft.layout.sections.splice(i, 1);
-    state.selectedKey = state.draft.layout.sections.length
-      ? "sections:" + Math.min(i, state.draft.layout.sections.length - 1)
-      : null;
+    state.selectedKey = "page";
+  } else if (key === "page") {
+    return;
+  } else {
+    const parent = parentKey(key);
+    setNodeAt(key, null);
+    state.selectedKey = parent && parent !== "page" ? parent : "page";
   }
   renderDesigner();
   schedulePreview();
@@ -373,40 +440,85 @@ function renderBodyList() {
     const variant = state.selected && state.selected.variant ? state.selected.variant : "default";
     titleEl.textContent = slot === "sections"
       ? `Sections order · ${variant}`
-      : "Body order";
+      : "Structure";
   }
+
+  const pageLi = document.createElement("li");
+  pageLi.className = (!state.selectedKey || state.selectedKey === "page") ? "active" : "";
+  pageLi.innerHTML = `<span class="id">Page</span><span class="meta">size / margin / font</span>`;
+  pageLi.addEventListener("click", () => { state.selectedKey = "page"; renderDesigner(); });
+  els.bodyList.appendChild(pageLi);
+
   if (slot === "body") {
     const header = state.draft.layout.header;
     if (header)
       els.bodyList.appendChild(bodyItem("header", header, { header: true }));
   }
   const list = nodeList();
-  list.forEach((node, i) => {
-    els.bodyList.appendChild(bodyItem(slot + ":" + i, node, {
-      index: i,
-      count: list.length,
-      slot,
-    }));
-  });
+  list.forEach((node, i) => appendTree(els.bodyList, slot + ":" + i, node, {
+    index: i,
+    count: list.length,
+    slot,
+  }));
+  renderSchematic();
+}
+
+function appendTree(ul, key, node, opts) {
+  ul.appendChild(bodyItem(key, node, opts));
+  if (!node) return;
+  if (Array.isArray(node.cells)) {
+    node.cells.forEach((cell, i) => {
+      const cellKey = key + "/cells:" + i;
+      ul.appendChild(bodyItem(cellKey, cell, {
+        index: i,
+        count: node.cells.length,
+        slot: "cells",
+        cell: true,
+        width: cell.width,
+      }));
+      (cell.nodes || []).forEach((child, n) => {
+        appendTree(ul, cellKey + "/nodes:" + n, child, {
+          index: n,
+          count: (cell.nodes || []).length,
+          slot: "nodes",
+          nested: true,
+        });
+      });
+    });
+  } else if (node.type === "column-stack" && Array.isArray(node.nodes)) {
+    node.nodes.forEach((child, n) => {
+      appendTree(ul, key + "/nodes:" + n, child, {
+        index: n,
+        count: node.nodes.length,
+        slot: "nodes",
+        nested: true,
+      });
+    });
+  }
 }
 
 function bodyItem(key, node, opts) {
   const li = document.createElement("li");
   li.className = key === state.selectedKey ? "active" : "";
   if (opts.header) li.classList.add("header-node");
+  if (opts.nested || opts.cell) li.classList.add("nested");
+  if (opts.cell) li.classList.add("cell-node");
   if (isDenseHemosheetForm() && node && node.widget === DIALYSIS_WIDGET)
     li.classList.add("preview-affects");
+  const title = opts.cell
+    ? "cell " + (opts.width || "*")
+    : nodeTitle(node);
   const slotLabel = opts.header ? "header" : ((opts.slot || "body") + "[" + opts.index + "]");
-  li.innerHTML = `<span class="id">${nodeTitle(node)}</span><span class="meta">${slotLabel}</span>`;
+  li.innerHTML = `<span class="id">${title}</span><span class="meta">${slotLabel}</span>`;
   if (!opts.header) {
     li.draggable = true;
-    li.addEventListener("dragstart", () => { state.dragIndex = opts.index; });
+    li.addEventListener("dragstart", () => { state.dragKey = key; });
     li.addEventListener("dragover", (e) => e.preventDefault());
     li.addEventListener("drop", (e) => {
       e.preventDefault();
-      if (state.dragIndex == null || state.dragIndex === opts.index) return;
-      moveListItem(state.dragIndex, opts.index - state.dragIndex);
-      state.dragIndex = null;
+      if (!state.dragKey || state.dragKey === key) return;
+      dropOnto(state.dragKey, key, opts);
+      state.dragKey = null;
     });
   }
   li.addEventListener("click", () => {
@@ -420,13 +532,27 @@ function bodyItem(key, node, opts) {
     up.type = "button";
     up.textContent = "Up";
     up.disabled = opts.index === 0;
-    up.addEventListener("click", (e) => { e.stopPropagation(); moveListItem(opts.index, -1); });
+    up.addEventListener("click", (e) => { e.stopPropagation(); moveInParent(key, -1); });
     const down = document.createElement("button");
     down.type = "button";
     down.textContent = "Down";
     down.disabled = opts.index === opts.count - 1;
-    down.addEventListener("click", (e) => { e.stopPropagation(); moveListItem(opts.index, 1); });
+    down.addEventListener("click", (e) => { e.stopPropagation(); moveInParent(key, 1); });
     actions.append(up, down);
+    if (!usesSectionsMode() && !opts.cell) {
+      const beside = document.createElement("button");
+      beside.type = "button";
+      beside.textContent = "Place beside";
+      beside.addEventListener("click", (e) => { e.stopPropagation(); placeBeside(key); });
+      actions.append(beside);
+      if (String(key).includes("/cells:")) {
+        const br = document.createElement("button");
+        br.type = "button";
+        br.textContent = "Break row";
+        br.addEventListener("click", (e) => { e.stopPropagation(); breakRow(key); });
+        actions.append(br);
+      }
+    }
   }
   const del = document.createElement("button");
   del.type = "button";
@@ -435,6 +561,117 @@ function bodyItem(key, node, opts) {
   actions.append(del);
   li.appendChild(actions);
   return li;
+}
+
+function dropOnto(fromKey, toKey) {
+  const from = locate(fromKey);
+  if (!from || from.value == null || !Array.isArray(from.parent)) return;
+  const moving = from.value;
+  from.parent.splice(from.index, 1);
+  const to = locate(toKey);
+  if (to && to.value && Array.isArray(to.value.cells)) {
+    to.value.cells.push({ width: "*", nodes: [moving] });
+  } else if (to && Array.isArray(to.parent)) {
+    to.parent.splice(Math.min(to.index + 1, to.parent.length), 0, moving);
+  } else {
+    nodeList().push(moving);
+  }
+  renderDesigner();
+  schedulePreview();
+}
+
+function placeBeside(key) {
+  if (usesSectionsMode()) return;
+  const hit = locate(key);
+  if (!hit || !hit.value || hit.prop === "cells") return;
+  const node = hit.value;
+  if (!Array.isArray(hit.parent)) return;
+  const row = {
+    type: "row",
+    gapMm: 2,
+    cells: [
+      { width: "*", nodes: [node] },
+      { width: "*", nodes: [{ type: "text", content: "" }] },
+    ],
+  };
+  hit.parent[hit.index] = row;
+  state.selectedKey = key + "/cells:1/nodes:0";
+  renderDesigner();
+  schedulePreview();
+}
+
+function breakRow(key) {
+  const parts = parsePath(key);
+  const cellPart = parts.findIndex((p) => p.kind === "cells");
+  if (cellPart < 0) return;
+  const rowKey = parts.slice(0, cellPart).map((p) => p.kind + ":" + p.index).join("/");
+  const nodeKey = key.includes("/nodes:") ? key : null;
+  const rowHit = locate(rowKey);
+  const nodeHit = nodeKey ? locate(nodeKey) : locate(key);
+  if (!rowHit || !rowHit.value || !Array.isArray(rowHit.parent)) return;
+  const lifted = nodeHit && nodeHit.value && nodeHit.prop === "nodes"
+    ? nodeHit.value
+    : (nodeHit && nodeHit.value && nodeHit.value.nodes && nodeHit.value.nodes[0]);
+  if (!lifted) return;
+  if (nodeHit && Array.isArray(nodeHit.parent) && nodeHit.prop === "nodes")
+    nodeHit.parent.splice(nodeHit.index, 1);
+  rowHit.parent.splice(rowHit.index + 1, 0, lifted);
+  const parent = parentKey(rowKey);
+  const last = parsePath(rowKey).pop();
+  state.selectedKey = (!parent || parent === "page")
+    ? last.kind + ":" + (rowHit.index + 1)
+    : parent + "/" + last.kind + ":" + (rowHit.index + 1);
+  renderDesigner();
+  schedulePreview();
+}
+
+function renderSchematic() {
+  if (!els.schematic) return;
+  els.schematic.innerHTML = "";
+  if (usesSectionsMode()) {
+    els.schematic.innerHTML = `<p class="muted">Hemosheet sections stay stacked. Use Page inspector for margin.</p>`;
+    return;
+  }
+  ensureLayout();
+  (state.draft.layout.body || []).forEach((node, i) => {
+    els.schematic.appendChild(schematicNode("body:" + i, node));
+  });
+}
+
+function schematicNode(key, node) {
+  if (node && node.type === "row" && Array.isArray(node.cells)) {
+    const row = document.createElement("div");
+    row.className = "schematic-row";
+    node.cells.forEach((cell, i) => {
+      const cellKey = key + "/cells:" + i;
+      const cellEl = document.createElement("div");
+      cellEl.className = "schematic-cell" + (state.selectedKey === cellKey ? " active" : "");
+      cellEl.style.flex = cell.width && cell.width.endsWith("%") ? cell.width.slice(0, -1) : "1";
+      cellEl.addEventListener("click", (e) => {
+        e.stopPropagation();
+        state.selectedKey = cellKey;
+        renderDesigner();
+      });
+      (cell.nodes || []).forEach((child, n) => {
+        cellEl.appendChild(schematicBlock(cellKey + "/nodes:" + n, child));
+      });
+      row.appendChild(cellEl);
+    });
+    return row;
+  }
+  return schematicBlock(key, node);
+}
+
+function schematicBlock(key, node) {
+  const el = document.createElement("div");
+  el.className = "schematic-block" + (key === state.selectedKey ? " active" : "");
+  el.innerHTML = `<div>${nodeTitle(node)}</div><div class="meta">${key}</div>`;
+  el.addEventListener("click", (e) => {
+    e.stopPropagation();
+    state.selectedKey = key;
+    renderDesigner();
+  });
+  return el;
 }
 
 function field(label, input) {
@@ -491,6 +728,14 @@ function checkboxRow(label, checked, onChange) {
 }
 
 function mutateSelected(mutator) {
+  if (!state.selectedKey || state.selectedKey === "page") {
+    const page = pageObject();
+    mutator(page);
+    state.draft.layout.page = page;
+    renderDesigner();
+    schedulePreview();
+    return;
+  }
   const node = nodeAt(state.selectedKey);
   if (!node) return;
   mutator(node);
@@ -540,17 +785,168 @@ function persistStringColumns(node, recipe, cols) {
     node.columns = cols.slice();
 }
 
+function renderPageInspector() {
+  const page = pageObject();
+  const head = document.createElement("p");
+  head.innerHTML = "<strong>Page</strong><br/><span class=\"muted\">มีผลเมื่อไฟล์ระบุค่า — ว่าง = ค่า C# เดิม</span>";
+  els.inspector.appendChild(head);
+  els.inspector.appendChild(field("size", textInput(page.size || "A4", (v) => mutateSelected((p) => { p.size = v.trim() || "A4"; }))));
+  const margin = page.margin || {};
+  const setSide = (side, v) => mutateSelected((p) => {
+    p.margin = { ...(p.margin || {}) };
+    if (v == null) delete p.margin[side];
+    else p.margin[side] = v;
+    if (!p.margin.top && p.margin.top !== 0 && !p.margin.right && p.margin.right !== 0
+      && !p.margin.bottom && p.margin.bottom !== 0 && !p.margin.left && p.margin.left !== 0)
+      delete p.margin;
+  });
+  els.inspector.appendChild(field("margin.top mm", numberInput(margin.top, (v) => setSide("top", v))));
+  els.inspector.appendChild(field("margin.right mm", numberInput(margin.right, (v) => setSide("right", v))));
+  els.inspector.appendChild(field("margin.bottom mm", numberInput(margin.bottom, (v) => setSide("bottom", v))));
+  els.inspector.appendChild(field("margin.left mm", numberInput(margin.left, (v) => setSide("left", v))));
+  els.inspector.appendChild(field("marginMm (shorthand ทุกด้าน)", numberInput(page.marginMm, (v) => mutateSelected((p) => {
+    if (v == null) delete p.marginMm;
+    else p.marginMm = v;
+  }))));
+  els.inspector.appendChild(field("spacingMm", numberInput(page.spacingMm, (v) => mutateSelected((p) => {
+    if (v == null) delete p.spacingMm;
+    else p.spacingMm = v;
+  }))));
+  els.inspector.appendChild(field("fontSize", numberInput(page.fontSize, (v) => mutateSelected((p) => {
+    if (v == null) delete p.fontSize;
+    else p.fontSize = v;
+  }))));
+}
+
+function renderCellInspector(cell) {
+  const head = document.createElement("p");
+  head.innerHTML = "<strong>Row cell</strong><br/><span class=\"muted\">width: * / 40% / 32mm</span>";
+  els.inspector.appendChild(head);
+  els.inspector.appendChild(field("width", textInput(cell.width || "*", (v) => mutateSelected((n) => {
+    n.width = v.trim() || "*";
+  }))));
+}
+
+function renderCapabilityStrip(node, recipe) {
+  const note = document.createElement("p");
+  note.className = "inspector-note";
+  if (node.type === "row") {
+    note.textContent = "แถว: ลูกใน cells อยู่แถวเดียวกัน — Place beside สร้างแถวนี้ / Break row ดึงบล็อกออกมา";
+  } else if (recipe && recipe.kind === "dense" && !(recipe.inspectorFields || []).includes("columnPlan")
+      && !(recipe.inspectorFields || []).includes("columns")) {
+    note.textContent = "Widget หนาแน่น: แก้ได้เฉพาะ knobs ใน inspector (chrome/when) — พิกเซลในตารางยังเป็น C#";
+  } else if (recipe && (recipe.inspectorFields || []).includes("columnPlan")) {
+    note.textContent = "คอลัมน์ตารางข้อมูล (columnPlan) — เพิ่ม/ลบได้เฉพาะ bind ที่สูตรยอม";
+  } else if (node.type === "field-grid") {
+    note.textContent = "คอลัมน์กริด label/value — จำนวนช่อง + columnSpan ต่อฟิลด์ ไม่ใช่คอลัมน์ตารางข้อมูล";
+  } else {
+    return;
+  }
+  els.inspector.appendChild(note);
+}
+
+function renderBoxInspector(node) {
+  const box = node.box || {};
+  const title = document.createElement("p");
+  title.innerHTML = "<strong>box</strong>";
+  els.inspector.appendChild(title);
+  const marginVal = box.marginMm == null ? "" : (Array.isArray(box.marginMm) ? box.marginMm.join(",") : String(box.marginMm));
+  els.inspector.appendChild(field("box.marginMm", textInput(marginVal, (v) => mutateSelected((n) => {
+    n.box = { ...(n.box || {}) };
+    const parsed = parseInset(v);
+    if (parsed == null) delete n.box.marginMm;
+    else n.box.marginMm = parsed;
+    if (!n.box.marginMm && n.box.paddingMm == null) delete n.box;
+  }))));
+  const padVal = box.paddingMm == null ? "" : (Array.isArray(box.paddingMm) ? box.paddingMm.join(",") : String(box.paddingMm));
+  els.inspector.appendChild(field("box.paddingMm", textInput(padVal, (v) => mutateSelected((n) => {
+    n.box = { ...(n.box || {}) };
+    const parsed = parseInset(v);
+    if (parsed == null) delete n.box.paddingMm;
+    else n.box.paddingMm = parsed;
+    if (!n.box.paddingMm && n.box.marginMm == null) delete n.box;
+  }))));
+}
+
+function parseInset(raw) {
+  const v = String(raw || "").trim();
+  if (!v) return null;
+  if (v.includes(",")) {
+    const parts = v.split(",").map((s) => Number(s.trim())).filter((n) => Number.isFinite(n));
+    return parts.length ? parts : null;
+  }
+  const n = Number(v);
+  return Number.isFinite(n) ? n : null;
+}
+
+function renderFieldGridFields(node) {
+  const title = document.createElement("p");
+  title.innerHTML = "<strong>fields</strong>";
+  els.inspector.appendChild(title);
+  const fields = Array.isArray(node.fields) ? node.fields : [];
+  fields.forEach((item, i) => {
+    const card = document.createElement("div");
+    card.className = "col-card";
+    const labelVal = item && item.label && typeof item.label === "object" && item.label.$label
+      ? "$" + item.label.$label
+      : (item && typeof item.label === "string" ? item.label : "");
+    card.appendChild(field("label", textInput(labelVal, (v) => mutateSelected((n) => {
+      const copy = [...(n.fields || [])];
+      const next = { ...(copy[i] || {}) };
+      if (v.startsWith("$") && v.length > 1) next.label = { $label: v.slice(1) };
+      else next.label = v;
+      copy[i] = next;
+      n.fields = copy;
+    }))));
+    card.appendChild(field("bind", textInput((item && item.bind) || "", (v) => mutateSelected((n) => {
+      const copy = [...(n.fields || [])];
+      copy[i] = { ...(copy[i] || {}), bind: v };
+      n.fields = copy;
+    }))));
+    card.appendChild(field("columnSpan", numberInput((item && item.columnSpan) || 1, (v) => mutateSelected((n) => {
+      const copy = [...(n.fields || [])];
+      copy[i] = { ...(copy[i] || {}), columnSpan: v && v > 0 ? Math.round(v) : 1 };
+      n.fields = copy;
+    }))));
+    const del = document.createElement("button");
+    del.type = "button";
+    del.textContent = "Remove field";
+    del.addEventListener("click", () => mutateSelected((n) => {
+      n.fields = (n.fields || []).filter((_, idx) => idx !== i);
+    }));
+    card.appendChild(del);
+    els.inspector.appendChild(card);
+  });
+  const add = document.createElement("button");
+  add.type = "button";
+  add.textContent = "Add field";
+  add.addEventListener("click", () => mutateSelected((n) => {
+    n.fields = [...(n.fields || []), { label: "", bind: "", columnSpan: 1 }];
+  }));
+  els.inspector.appendChild(add);
+}
+
 function renderInspector() {
-  const node = nodeAt(state.selectedKey);
+  const key = state.selectedKey;
   els.inspector.innerHTML = "";
+  if (!key || key === "page") {
+    renderPageInspector();
+    return;
+  }
+  const node = nodeAt(key);
   if (!node) {
-    els.inspector.innerHTML = `<p class="muted">เลือกบล็อกในรายการ</p>`;
+    els.inspector.innerHTML = `<p class="muted">เลือกบล็อกในรายการ หรือกด Page</p>`;
+    return;
+  }
+  if (String(key).includes("/cells:") && Array.isArray(node.nodes) && !node.type && !node.widget) {
+    renderCellInspector(node);
     return;
   }
   const recipe = recipeFor(node);
   const head = document.createElement("p");
   head.innerHTML = `<strong>${nodeTitle(node)}</strong><br/><span class="muted">${recipe ? recipe.kind : "custom"}</span>`;
   els.inspector.appendChild(head);
+  renderCapabilityStrip(node, recipe);
 
   if (isDenseHemosheetForm() && node.widget !== DIALYSIS_WIDGET) {
     const note = document.createElement("p");
@@ -720,7 +1116,13 @@ function renderInspector() {
     els.inspector.appendChild(add);
   }
 
-  if (fields.includes("columns") && !fields.includes("columnPlan")
+  if (fields.includes("columns") && node.type === "field-grid") {
+    els.inspector.appendChild(field("field-grid columns", numberInput(node.columns || 2, (v) => mutateSelected((n) => {
+      n.columns = v && v > 0 ? Math.round(v) : 2;
+    }))));
+  }
+
+  if (fields.includes("columns") && !fields.includes("columnPlan") && node.type !== "field-grid"
       && recipe && (recipe.slot === "sections" || (recipe.defaultColumns || []).length || Array.isArray(node.columns))) {
     const cols = workingStringColumns(node, recipe);
     const title = document.createElement("p");
@@ -896,6 +1298,41 @@ function renderInspector() {
     els.inspector.appendChild(field("title", textInput(titleVal, (v) => mutateSelected((n) => { n.title = v; }))));
   }
 
+  if (fields.includes("bind")) {
+    els.inspector.appendChild(field("bind", textInput(node.bind || "", (v) => mutateSelected((n) => {
+      if (v.trim()) n.bind = v.trim();
+      else delete n.bind;
+    }))));
+  }
+
+  if (fields.includes("style")) {
+    els.inspector.appendChild(field("style", selectInput(node.style || "body", [
+      { value: "body", label: "body" },
+      { value: "title", label: "title" },
+      { value: "subtitle", label: "subtitle" },
+    ], (v) => mutateSelected((n) => { n.style = v; }))));
+  }
+
+  if (fields.includes("bindRows")) {
+    els.inspector.appendChild(field("bindRows", textInput(node.bindRows || "", (v) => mutateSelected((n) => {
+      if (v.trim()) n.bindRows = v.trim();
+      else delete n.bindRows;
+    }))));
+  }
+
+  if (fields.includes("fields") && node.type === "field-grid")
+    renderFieldGridFields(node);
+
+  if (fields.includes("gapMm") || node.type === "row") {
+    els.inspector.appendChild(field("gapMm", numberInput(node.gapMm, (v) => mutateSelected((n) => {
+      if (v == null) delete n.gapMm;
+      else n.gapMm = v;
+    }))));
+  }
+
+  if (!usesSectionsMode())
+    renderBoxInspector(node);
+
   if (recipe && recipe.labelKeys && recipe.labelKeys.length) {
     const map = labelMap();
     const title = document.createElement("p");
@@ -959,16 +1396,7 @@ async function openPackage(item) {
     labels: pkg.labels || {},
   };
   ensureLayout();
-  if (usesSectionsMode()) {
-    state.selectedKey = findDialysisSectionKey()
-      || (state.draft.layout.sections[0] ? "sections:0" : null);
-  } else if (state.draft.layout.header) {
-    state.selectedKey = "header";
-  } else if (state.draft.layout.body[0]) {
-    state.selectedKey = "body:0";
-  } else {
-    state.selectedKey = null;
-  }
+  state.selectedKey = "page";
   selectPackage(item);
   const label = profileLabel(item);
   const kind = item.layoutKind || state.draft.manifest.layoutKind || "";
@@ -1148,6 +1576,7 @@ function onClick(id, handler) {
   el.addEventListener("click", handler);
 }
 
+onClick("btnPage", () => { state.selectedKey = "page"; renderDesigner(); });
 onClick("btnModeDesigner", () => setMode("designer"));
 onClick("btnModeJson", () => setMode("json"));
 onClick("btnReload", () => loadList().catch((err) => setStatus(err.message, "err")));
