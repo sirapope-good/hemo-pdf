@@ -26,7 +26,7 @@ public sealed class DataGridSection : IContentSection
         var chrome = grid.Chrome;
         var border = HprpChrome.ResolveBorderWidth(chrome);
         var headerFill = HprpChrome.ResolveHeaderFill(chrome, context, PdfSectionMetrics.SectionHeaderBackground);
-        var fontSize = HprpChrome.ResolveFontSize(chrome, PdfStyleDefaults.Body.DataFontSize);
+        var fontSize = HprpChrome.ResolveFontSize(chrome, context.DefaultFontSize ?? PdfStyleDefaults.Body.DataFontSize);
         var rowHeightMm = chrome?.RowHeightMm;
 
         container.Border(border).Table(table =>

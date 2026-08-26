@@ -12,11 +12,13 @@ public static class PdfTextHelpers
         TextDescriptor text,
         string label,
         string? value,
-        bool showPlaceholderForEmpty = true)
+        bool showPlaceholderForEmpty = true,
+        float? fontSize = null)
     {
+        var size = fontSize ?? PdfStyleDefaults.Body.DataFontSize;
         text.Span($"{label} : ")
             .FontFamily(PdfStyleDefaults.Header.MetadataFontFamily)
-            .FontSize(PdfStyleDefaults.Header.MetadataFontSize)
+            .FontSize(size)
             .SemiBold();
 
         var displayValue = string.IsNullOrWhiteSpace(value) && !showPlaceholderForEmpty
@@ -25,7 +27,7 @@ public static class PdfTextHelpers
 
         text.Span(displayValue)
             .FontFamily(PdfStyleDefaults.Body.DataFontFamily)
-            .FontSize(PdfStyleDefaults.Body.DataFontSize);
+            .FontSize(size);
     }
 
     public static void RenderLabelValue(ColumnDescriptor column, string label, string? value)
