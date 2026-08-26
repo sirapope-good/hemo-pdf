@@ -75,6 +75,14 @@ public static class HprpStudioCatalog
             fontSize = "number",
             rowHeightMm = "number",
             columnWidths = "array of number or *",
+            bandWeights = "array of number",
+        },
+        page = new
+        {
+            marginMm = "uniform mm (omitted = engine default)",
+            margin = "{ top, right, bottom, left }",
+            spacingMm = "number",
+            fontSize = "default body font",
         },
     };
 }

@@ -128,16 +128,57 @@ Nodes use `type` = existing `ReportBlock`:
 
 | `type` | Purpose |
 |--------|---------|
-| `text` | Title / subtitle / paragraph (`style`: `title`, `subtitle`, `body`) |
-| `field-grid` | Label/value columns (`fields[]`, `columns`) |
+| `text` | Title / subtitle / paragraph (`style`: `title`, `subtitle`, `body`). Optional `chrome.fontSize` overrides the token. |
+| `field-grid` | Label/value **grid** (`fields[]`, integer `columns`, per-field `columnSpan`) |
 | `key-value-table` | Two-column rows; `appendFlatten: true` adds scalar DTO keys |
 | `data-grid` | Tabular data via `bindRows` (JSONPath to array) |
 | `patient-info` | Patient header block |
 | `signature` | Signature slots from request context |
+| `row` | Place child `cells[]` **on the same line**. Cell `width`: `*` / `40%` / `32mm`. Nested `nodes[]` stack inside a cell. |
+| `column-stack` | Vertical stack of `nodes[]` (also implied when a cell has more than one node) |
 
 Bind with JSONPath (`$.patient.hn`) or special binds: `$title`, `$subtitle`, `$flatten`.
 
 `when` on a node: JSONPath expression (e.g. `"$.rows.length > 0"`) or omitted (= always show).
+
+### `page`
+
+Optional. **Omitted fields keep the composer C# defaults** (hemosheet 2mm, form `ReportPageLayout` 2/4mm). When set, Studio/PDF use the file.
+
+| Field | Meaning |
+|-------|---------|
+| `size` | `A4` (default) |
+| `marginMm` | Uniform margin (mm) for all sides |
+| `margin` | `{ top, right, bottom, left }` — named sides override shorthand |
+| `spacingMm` | Gap between stacked body blocks |
+| `fontSize` | Default body data font for primitive blocks |
+
+Per-node `box.marginMm` / `box.paddingMm`: number, `[v,h]`, `[t,r,b,l]`, or named sides.
+
+### Three meanings of “column”
+
+| Where | What it changes | Studio control |
+|-------|-----------------|----------------|
+| `field-grid.columns` | How many label/value **cells per grid row** | Integer stepper + `columnSpan` |
+| `columnPlan` / hemosheet `columns` | **Table data** columns (HCT/EPO, dialysis headers) | Add/remove/reorder in inspector |
+| `row.cells[].width` | Side-by-side **blocks** | Place beside / cell width `*` `40%` `32mm` |
+
+Dense widgets (SOAP, consent narrative, most hemosheet sections) still own inner pixels in C#. Chrome / recipe knobs only.
+
+Studio is a **constraint editor** (`Page → Flow → Row/Cell → Block`), not a free canvas. Do not promise extra SOAP/consent columns in the UI unless the recipe already has `columnPlan`.
+
+### File knobs vs C# rebuild
+
+| Driven by `.hprp` / Studio (pack, no compile) | Needs a C# widget / recipe change |
+|-----------------------------------------------|-----------------------------------|
+| Page `margin` / `spacingMm` / `fontSize` when the file sets them | Inner pixels of SOAP, HCT/EPO tables, consent narrative |
+| Per-node `box`, `chrome.fontSize`, labels, bind paths | New widget ids, new `layoutKind` |
+| `row` / `column-stack` around form blocks and allowed widgets | Hemosheet **section order** as a free grid; Place beside between hemosheet sections |
+| `field-grid.columns`, `columnPlan` / dialysis `columns` when the recipe already lists them | Bind fields inside HCT tables outside the C# formula |
+
+**Page margin:** omitted → composer C# default (hemosheet 2mm, forms 2/4mm). Set in the file → used. Forms that already wrote `marginMm: 10` or `8` start applying that value after pack.
+
+**Hemosheet (`sections[]`):** Page inspector still applies. Place beside is **off** — vertical section order stays C#. Do not treat hemosheet as a free layout.
 
 ### `chrome` (table appearance)
 
