@@ -1,5 +1,6 @@
 using Hemo.Pdf.Core.Constants;
 using Hemo.Pdf.Core.Context;
+using Hemo.Pdf.Core.Hprp;
 using Hemo.Pdf.Core.Models.Preview;
 using QuestPDF.Fluent;
 using QuestPDF.Infrastructure;
@@ -15,6 +16,11 @@ public static class ReportBlockPdfComposer
       return;
     }
 
+    HprpBoxComposer.Apply(container, block.Box, inner => ComposeInner(inner, block, context));
+  }
+
+  private static void ComposeInner(IContainer container, ReportBlock block, PdfReportContext context)
+  {
     switch (block)
     {
       case PatientInfoReportBlock patientInfo:
@@ -55,7 +61,7 @@ public static class ReportBlockPdfComposer
         new KeyValueTableSection().Compose(container, new ReportBlockAdapters.KeyValueRowsAdapter(vascular.Title, vascular.Rows), context);
         break;
       case TextReportBlock text:
-        ComposeText(container, text);
+        ComposeText(container, text, context);
         break;
       case SignatureReportBlock:
         new SignatureBlockSection().Compose(container, block, context);
@@ -63,9 +69,17 @@ public static class ReportBlockPdfComposer
     }
   }
 
-  private static void ComposeText(IContainer container, TextReportBlock text)
+  private static void ComposeText(IContainer container, TextReportBlock text, PdfReportContext context)
   {
     var style = (text.Style ?? "body").Trim().ToLowerInvariant();
+    var fallback = style switch
+    {
+      "title" => PdfStyleDefaults.Body.SectionTitleFontSize,
+      "subtitle" => 9f,
+      _ => context.DefaultFontSize ?? PdfStyleDefaults.Body.BaseFontSize,
+    };
+    var fontSize = HprpChrome.ResolveFontSize(text.Chrome, fallback);
+
     container.Column(col =>
     {
       if (!string.IsNullOrWhiteSpace(text.Title) && style is not "title" and not "subtitle")
@@ -83,11 +97,9 @@ public static class ReportBlockPdfComposer
         .FontFamily(PdfStyleDefaults.Body.SectionTitleFontFamily);
 
       if (style == "title")
-        item.FontSize(PdfStyleDefaults.Body.SectionTitleFontSize).SemiBold();
-      else if (style == "subtitle")
-        item.FontSize(9);
+        item.FontSize(fontSize).SemiBold();
       else
-        item.FontSize(PdfStyleDefaults.Body.BaseFontSize);
+        item.FontSize(fontSize);
     });
   }
 }

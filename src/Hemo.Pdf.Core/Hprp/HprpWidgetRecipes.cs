@@ -308,12 +308,14 @@ public static class HprpWidgetRecipes
                 AllowedOn = [],
                 InspectorFields = type switch
                 {
-                    "key-value-table" => ["title", "rows", "chrome.headerFill", "chrome.border", "when"],
-                    "field-grid" => ["title", "fields", "columns", "chrome.headerFill", "when"],
-                    "data-grid" => ["title", "bindRows", "columnHeaders", "chrome.headerFill", "when"],
-                    "text" => ["title", "content", "bind", "style", "when"],
+                    "key-value-table" => ["title", "rows", "chrome.headerFill", "chrome.border", "chrome.fontSize", "when"],
+                    "field-grid" => ["title", "fields", "columns", "chrome.headerFill", "chrome.fontSize", "when"],
+                    "data-grid" => ["title", "bindRows", "columnHeaders", "chrome.headerFill", "chrome.fontSize", "when"],
+                    "text" => ["title", "content", "bind", "style", "chrome.fontSize", "when"],
                     "signature" => ["title", "when"],
                     "patient-info" => ["when"],
+                    "row" => ["gapMm", "when"],
+                    "column-stack" => ["when"],
                     _ => ["title", "when"],
                 },
             })

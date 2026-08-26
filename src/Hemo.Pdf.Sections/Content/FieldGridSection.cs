@@ -28,6 +28,8 @@ public sealed class FieldGridSection : IContentSection
         var headerFill = HprpChrome.ResolveHeaderFill(chrome, context, PdfSectionMetrics.SectionHeaderBackground);
         var weights = HprpChrome.ParseColumnWeights(chrome?.ColumnWidths, columns);
 
+        var fontSize = HprpChrome.ResolveFontSize(chrome, context.DefaultFontSize ?? PdfStyleDefaults.Body.DataFontSize);
+
         container.Border(border).Table(table =>
         {
             table.ColumnsDefinition(def =>
@@ -58,7 +60,7 @@ public sealed class FieldGridSection : IContentSection
                 {
                     var field = grid.Fields[index];
                     var span = Math.Clamp(field.ColumnSpan, 1, columns - colUsed);
-                    ComposeFieldCell(table, field, span, border);
+                    ComposeFieldCell(table, field, span, border, fontSize);
                     colUsed += span;
                     index++;
                 }
@@ -66,16 +68,16 @@ public sealed class FieldGridSection : IContentSection
                 while (colUsed < columns)
                 {
                     table.Cell().Border(border).Padding(PdfSectionMetrics.CellPadding).Text("—")
-                        .FontSize(PdfStyleDefaults.Body.DataFontSize);
+                        .FontSize(fontSize);
                     colUsed++;
                 }
             }
         });
     }
 
-    private static void ComposeFieldCell(TableDescriptor table, FieldGridItem field, int span, float border)
+    private static void ComposeFieldCell(TableDescriptor table, FieldGridItem field, int span, float border, float fontSize)
     {
         table.Cell().ColumnSpan((uint)span).Border(border).Padding(PdfSectionMetrics.CellPadding)
-            .Text(text => PdfTextHelpers.ComposeInlineLabelValue(text, field.Label, field.Value));
+            .Text(text => PdfTextHelpers.ComposeInlineLabelValue(text, field.Label, field.Value, fontSize: fontSize));
     }
 }
