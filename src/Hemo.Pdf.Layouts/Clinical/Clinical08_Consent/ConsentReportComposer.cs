@@ -32,10 +32,12 @@ public sealed class ConsentReportComposer : ILayoutComposer
     public object Compose(object dataModel, PdfReportContext context)
     {
         var vm = (ConsentReportViewModel)dataModel;
-        var margin = HemosheetThaiUrStyle.PageMarginMm;
+        var package = HprpLayoutPlan.TryGetPackage(_templates, context);
+        var page = HprpPageLayout.FromPackage(
+            package,
+            HprpPageFallback.Uniform(HemosheetThaiUrStyle.PageMarginMm));
         var overlay = HprpLabelResolver.Resolve(_templates, context, vm.Language);
         var labels = ConsentReportLabels.For(vm.Language, overlay);
-        var package = HprpLayoutPlan.TryGetPackage(_templates, context);
         var headerWidget = HprpLayoutPlan.ResolveHeaderWidget(
             package,
             HprpWidgetIds.ThaiUrHeader,
@@ -46,17 +48,11 @@ public sealed class ConsentReportComposer : ILayoutComposer
             HprpClinicalWidgetSets.ConsentBodyAllowed,
             includeHeader: false);
 
-        return new QuestLayout
-        {
-            MarginMillimeters = margin,
-            MarginTop = margin,
-            MarginBottom = margin,
-            MarginLeft = margin,
-            MarginRight = margin,
-            Header = null,
-            Content = c => ComposeContent(c, vm, labels, overlay, headerWidget, bodyNodes, context),
-            Footer = null,
-        };
+        return HprpQuestPages.Create(
+            page,
+            header: null,
+            content: c => ComposeContent(c, vm, labels, overlay, headerWidget, bodyNodes, context),
+            footer: null);
     }
 
     private static void ComposeContent(

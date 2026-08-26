@@ -14,6 +14,7 @@ public static class HprpValidator
         var errors = new List<string>();
         ValidateManifest(package.Manifest, errors);
         ValidateLayout(package.Layout, errors);
+        HprpPageLayout.Validate(package.Layout.Page, errors);
         return new HprpValidationResult { Errors = errors };
     }
 
@@ -22,6 +23,7 @@ public static class HprpValidator
         var errors = new List<string>();
         ValidateManifest(manifest, errors);
         ValidateLayout(layout, errors);
+        HprpPageLayout.Validate(layout.Page, errors);
         return new HprpValidationResult { Errors = errors };
     }
 
@@ -115,7 +117,37 @@ public static class HprpValidator
             errors.Add($"{path} unknown widget '{node.Widget}'.");
 
         HprpChrome.Validate(node.Chrome, path + ".chrome", errors);
+        HprpBox.Validate(node.Box, path + ".box", errors);
         ValidateColumnPlan(node, path, errors);
+
+        if (node.GapMm is < 0 or > HprpBox.MaxMm)
+            errors.Add($"{path}.gapMm must be between 0 and {HprpBox.MaxMm}.");
+
+        var type = node.Type?.Trim().ToLowerInvariant();
+        if (type == "row")
+        {
+            var cells = node.Cells ?? [];
+            if (cells.Count == 0)
+                errors.Add($"{path}.cells is required for type row.");
+
+            for (var i = 0; i < cells.Count; i++)
+            {
+                var cellPath = $"{path}.cells[{i}]";
+                if (cells[i].Nodes.Count == 0)
+                    errors.Add($"{cellPath}.nodes must not be empty.");
+                for (var n = 0; n < cells[i].Nodes.Count; n++)
+                    ValidateNode(cells[i].Nodes[n], $"{cellPath}.nodes[{n}]", errors);
+            }
+        }
+
+        if (type == "column-stack")
+        {
+            var children = node.Nodes ?? [];
+            if (children.Count == 0)
+                errors.Add($"{path}.nodes is required for type column-stack.");
+            for (var i = 0; i < children.Count; i++)
+                ValidateNode(children[i], $"{path}.nodes[{i}]", errors);
+        }
     }
 
     private static void ValidateColumnPlan(HprpLayoutNode node, string path, List<string> errors)

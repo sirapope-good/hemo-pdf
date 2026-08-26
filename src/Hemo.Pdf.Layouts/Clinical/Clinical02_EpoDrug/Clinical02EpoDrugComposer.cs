@@ -38,26 +38,22 @@ public sealed class Clinical02EpoDrugComposer : ILayoutComposer
     public object Compose(object dataModel, PdfReportContext context)
     {
         var vm = (EpoDrugReportViewModel)dataModel;
-        var margin = HemosheetThaiUrStyle.PageMarginMm;
-        var rowHeightMm = BudgetRowHeightMm(vm);
-        var labels = HprpLabelResolver.Resolve(_templates, context);
         var package = HprpLayoutPlan.TryGetPackage(_templates, context);
+        var page = HprpPageLayout.FromPackage(
+            package,
+            HprpPageFallback.Uniform(HemosheetThaiUrStyle.PageMarginMm, SectionSpacingMm));
+        var rowHeightMm = BudgetRowHeightMm(vm, page.Vertical);
+        var labels = HprpLabelResolver.Resolve(_templates, context);
         var nodes = HprpLayoutPlan.ResolveNodes(
             package,
             HprpClinicalWidgetSets.Clinical02DefaultOrder,
             HprpClinicalWidgetSets.Clinical02Allowed);
 
-        return new QuestLayout
-        {
-            MarginMillimeters = margin,
-            MarginTop = margin,
-            MarginBottom = margin,
-            MarginLeft = margin,
-            MarginRight = margin,
-            Header = null,
-            Content = c => ComposeContent(c, vm, rowHeightMm, labels, nodes, context),
-            Footer = null,
-        };
+        return HprpQuestPages.Create(
+            page,
+            header: null,
+            content: c => ComposeContent(c, vm, rowHeightMm, labels, nodes, context, page.SpacingMm),
+            footer: null);
     }
 
     private void ComposeContent(
@@ -66,7 +62,8 @@ public sealed class Clinical02EpoDrugComposer : ILayoutComposer
         float rowHeightMm,
         IReadOnlyDictionary<string, string> labels,
         IReadOnlyList<HprpLayoutNode> nodes,
-        PdfReportContext context)
+        PdfReportContext context,
+        float spacingMm)
     {
         var handlers = new Dictionary<string, Action<IContainer, HprpLayoutNode>>(StringComparer.OrdinalIgnoreCase)
         {
@@ -78,7 +75,7 @@ public sealed class Clinical02EpoDrugComposer : ILayoutComposer
 
         container.Column(col =>
         {
-            col.Spacing(SectionSpacingMm);
+            col.Spacing(spacingMm);
             HprpWidgetDispatch.ComposeColumn(
                 col,
                 nodes,
@@ -133,10 +130,11 @@ public sealed class Clinical02EpoDrugComposer : ILayoutComposer
             });
     }
 
-    internal static float BudgetRowHeightMm(EpoDrugReportViewModel vm)
+    internal static float BudgetRowHeightMm(EpoDrugReportViewModel vm, float verticalMarginMm = -1)
     {
+        var margin = verticalMarginMm >= 0 ? verticalMarginMm : 2f * HemosheetThaiUrStyle.PageMarginMm;
         var pageContentMm = A4HeightMm
-            - 2f * HemosheetThaiUrStyle.PageMarginMm
+            - margin
             - PageNumberFooterMm;
 
         var headerMm = HemosheetThaiUrStyle.TitleHeightMm

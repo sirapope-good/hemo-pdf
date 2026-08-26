@@ -7,9 +7,13 @@
   "properties": {
     "page": {
       "type": "object",
+      "additionalProperties": false,
       "properties": {
         "size": { "type": "string" },
-        "marginMm": { "type": "number" }
+        "marginMm": { "type": "number", "minimum": 0, "maximum": 80 },
+        "margin": { "$ref": "#/$defs/sides" },
+        "spacingMm": { "type": "number", "minimum": 0, "maximum": 80 },
+        "fontSize": { "type": "number", "exclusiveMinimum": 0, "exclusiveMaximum": 48 }
       }
     },
     "header": { "$ref": "#/$defs/node" },
@@ -23,12 +27,38 @@
     }
   },
   "$defs": {
+    "sides": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "top": { "type": "number", "minimum": 0, "maximum": 80 },
+        "right": { "type": "number", "minimum": 0, "maximum": 80 },
+        "bottom": { "type": "number", "minimum": 0, "maximum": 80 },
+        "left": { "type": "number", "minimum": 0, "maximum": 80 }
+      }
+    },
+    "inset": {
+      "description": "CSS-like mm: number, [v,h], [t,r,b,l], or named sides",
+      "oneOf": [
+        { "type": "number", "minimum": 0, "maximum": 80 },
+        { "type": "array", "items": { "type": "number" }, "minItems": 1, "maxItems": 4 },
+        { "$ref": "#/$defs/sides" }
+      ]
+    },
+    "box": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "marginMm": { "$ref": "#/$defs/inset" },
+        "paddingMm": { "$ref": "#/$defs/inset" }
+      }
+    },
     "node": {
       "type": "object",
       "properties": {
         "type": {
           "type": "string",
-          "enum": ["field-grid", "key-value-table", "data-grid", "text", "signature", "patient-info"]
+          "enum": ["field-grid", "key-value-table", "data-grid", "text", "signature", "patient-info", "row", "column-stack"]
         },
         "widget": { "type": "string" },
         "when": { "oneOf": [{ "type": "string" }, { "type": "array", "items": { "type": "string" } }] },
@@ -45,10 +75,34 @@
         "appendFlatten": { "type": "boolean" },
         "variant": { "type": "string" },
         "chrome": { "$ref": "#/$defs/chrome" },
+        "box": { "$ref": "#/$defs/box" },
+        "gapMm": { "type": "number", "minimum": 0, "maximum": 80 },
+        "cells": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/cell" }
+        },
+        "nodes": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/node" }
+        },
         "columnPlan": {
           "type": "array",
           "description": "Ordered entry columns for dense table recipes. Empty/omitted = widget default. Not field-grid columns (integer) or hemosheet section columns (string[]).",
           "items": { "$ref": "#/$defs/columnPlanItem" }
+        }
+      }
+    },
+    "cell": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "width": {
+          "type": "string",
+          "description": "*, 40%, or 32mm"
+        },
+        "nodes": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/node" }
         }
       }
     },
@@ -94,6 +148,10 @@
           "type": "array",
           "items": { "type": "string" },
           "description": "Relative weights; * = 1. Applied when count matches columns."
+        },
+        "bandWeights": {
+          "type": "array",
+          "items": { "type": "number" }
         }
       }
     }

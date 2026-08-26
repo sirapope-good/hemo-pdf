@@ -34,10 +34,12 @@ public sealed class Clinical05ProgressNoteComposer : ILayoutComposer
     public object Compose(object dataModel, PdfReportContext context)
     {
         var vm = (Clinical05ProgressNoteReportViewModel)dataModel;
-        var margin = HemosheetThaiUrStyle.PageMarginMm;
-        var rowHeightMm = BudgetRowHeightMm(vm);
-        var labels = HprpLabelResolver.Resolve(_templates, context);
         var package = HprpLayoutPlan.TryGetPackage(_templates, context);
+        var page = HprpPageLayout.FromPackage(
+            package,
+            HprpPageFallback.Uniform(HemosheetThaiUrStyle.PageMarginMm, SectionSpacingMm));
+        var rowHeightMm = BudgetRowHeightMm(vm, page.Vertical);
+        var labels = HprpLabelResolver.Resolve(_templates, context);
         var headerWidget = HprpLayoutPlan.ResolveHeaderWidget(
             package,
             HprpWidgetIds.ThaiUrHeader,
@@ -48,19 +50,13 @@ public sealed class Clinical05ProgressNoteComposer : ILayoutComposer
             HprpClinicalWidgetSets.Clinical05BodyAllowed,
             includeHeader: false);
 
-        return new QuestLayout
-        {
-            MarginMillimeters = margin,
-            MarginTop = margin,
-            MarginBottom = margin,
-            MarginLeft = margin,
-            MarginRight = margin,
-            Header = string.Equals(headerWidget, HprpWidgetIds.ThaiUrHeader, StringComparison.OrdinalIgnoreCase)
+        return HprpQuestPages.Create(
+            page,
+            header: string.Equals(headerWidget, HprpWidgetIds.ThaiUrHeader, StringComparison.OrdinalIgnoreCase)
                 ? c => ComposeRepeatingHeader(c, vm)
                 : null,
-            Content = c => ComposeBody(c, vm, rowHeightMm, labels, bodyNodes, context),
-            Footer = null,
-        };
+            content: c => ComposeBody(c, vm, rowHeightMm, labels, bodyNodes, context, page.SpacingMm),
+            footer: null);
     }
 
     private void ComposeBody(
@@ -69,7 +65,8 @@ public sealed class Clinical05ProgressNoteComposer : ILayoutComposer
         float rowHeightMm,
         IReadOnlyDictionary<string, string> labels,
         IReadOnlyList<HprpLayoutNode> bodyNodes,
-        PdfReportContext context)
+        PdfReportContext context,
+        float spacingMm)
     {
         var handlers = new Dictionary<string, Action<IContainer, HprpLayoutNode>>(StringComparer.OrdinalIgnoreCase)
         {
@@ -79,7 +76,7 @@ public sealed class Clinical05ProgressNoteComposer : ILayoutComposer
 
         container.Column(col =>
         {
-            col.Spacing(SectionSpacingMm);
+            col.Spacing(spacingMm);
             HprpWidgetDispatch.ComposeColumn(
                 col,
                 bodyNodes,
@@ -99,10 +96,11 @@ public sealed class Clinical05ProgressNoteComposer : ILayoutComposer
     /// Page budget for SOAP mode: ~2 progress-note rows per A4 (1 plan page).
     /// Row height is fixed — SOAP overflow must not grow the table.
     /// </summary>
-    internal static float BudgetRowHeightMm(Clinical05ProgressNoteReportViewModel vm)
+    internal static float BudgetRowHeightMm(Clinical05ProgressNoteReportViewModel vm, float verticalMarginMm = -1)
     {
+        var margin = verticalMarginMm >= 0 ? verticalMarginMm : 2f * HemosheetThaiUrStyle.PageMarginMm;
         var pageContentMm = A4HeightMm
-            - 2f * HemosheetThaiUrStyle.PageMarginMm
+            - margin
             - PageNumberFooterMm;
 
         var headerMm = HemosheetThaiUrStyle.TitleHeightMm

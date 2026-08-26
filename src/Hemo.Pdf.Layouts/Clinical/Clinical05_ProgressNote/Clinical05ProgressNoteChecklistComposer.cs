@@ -38,24 +38,28 @@ public sealed class Clinical05ProgressNoteChecklistComposer : ILayoutComposer
         var vm = (Clinical05ProgressNoteChecklistReportViewModel)dataModel;
         var labels = HprpLabelResolver.Resolve(_templates, context);
         var package = HprpLayoutPlan.TryGetPackage(_templates, context);
+        var page = HprpPageLayout.FromPackage(
+            package,
+            new HprpPageFallback
+            {
+                Top = 12f,
+                Bottom = 10f,
+                Left = MarginMm,
+                Right = MarginMm,
+                SpacingMm = SectionSpacingMm,
+            });
         var bodyNodes = HprpLayoutPlan.ResolveNodes(
             package,
             HprpClinicalWidgetSets.Clinical05ChecklistBodyDefault,
             HprpClinicalWidgetSets.Clinical05ChecklistBodyAllowed,
             includeHeader: false);
 
-        return new QuestLayout
-        {
-            Landscape = true,
-            MarginMillimeters = MarginMm,
-            MarginTop = 12f,
-            MarginBottom = 10f,
-            MarginLeft = MarginMm,
-            MarginRight = MarginMm,
-            Header = c => ComposePageHeader(c, vm),
-            Content = c => ComposeBody(c, vm, labels, bodyNodes, context),
-            Footer = ComposeFooter,
-        };
+        return HprpQuestPages.Create(
+            page,
+            header: c => ComposePageHeader(c, vm),
+            content: c => ComposeBody(c, vm, labels, bodyNodes, context),
+            footer: ComposeFooter,
+            landscape: true);
     }
 
     private void ComposeBody(

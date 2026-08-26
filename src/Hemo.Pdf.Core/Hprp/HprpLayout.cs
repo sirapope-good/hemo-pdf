@@ -24,8 +24,18 @@ public sealed class HprpPage
     [JsonPropertyName("size")]
     public string Size { get; init; } = "A4";
 
+    /// <summary>Uniform margin (mm) when <see cref="Margin"/> sides are omitted.</summary>
     [JsonPropertyName("marginMm")]
     public float? MarginMm { get; init; }
+
+    [JsonPropertyName("margin")]
+    public HprpSides? Margin { get; init; }
+
+    [JsonPropertyName("spacingMm")]
+    public float? SpacingMm { get; init; }
+
+    [JsonPropertyName("fontSize")]
+    public float? FontSize { get; init; }
 }
 
 public sealed class HprpLayoutNode
@@ -85,6 +95,29 @@ public sealed class HprpLayoutNode
     /// </summary>
     [JsonPropertyName("columnPlan")]
     public IReadOnlyList<HprpColumnPlanItem>? ColumnPlan { get; init; }
+
+    [JsonPropertyName("box")]
+    public HprpNodeBox? Box { get; init; }
+
+    [JsonPropertyName("gapMm")]
+    public float? GapMm { get; init; }
+
+    /// <summary>Cells for <c>type: row</c>.</summary>
+    [JsonPropertyName("cells")]
+    public IReadOnlyList<HprpCellNode>? Cells { get; init; }
+
+    /// <summary>Child nodes for <c>type: column-stack</c> (or implicit stack inside a cell).</summary>
+    [JsonPropertyName("nodes")]
+    public IReadOnlyList<HprpLayoutNode>? Nodes { get; init; }
+}
+
+public sealed class HprpCellNode
+{
+    [JsonPropertyName("width")]
+    public string? Width { get; init; }
+
+    [JsonPropertyName("nodes")]
+    public IReadOnlyList<HprpLayoutNode> Nodes { get; init; } = [];
 }
 
 public sealed class HprpColumnPlanItem
