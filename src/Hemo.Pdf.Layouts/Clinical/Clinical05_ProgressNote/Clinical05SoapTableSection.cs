@@ -1,4 +1,5 @@
 using Hemo.Pdf.Core.Constants;
+using Hemo.Pdf.Core.Context;
 using Hemo.Pdf.Core.Hprp;
 using Hemo.Pdf.Core.Models.Clinical;
 using Hemo.Pdf.Sections.ThaiUr;
@@ -9,14 +10,12 @@ namespace Hemo.Pdf.Layouts.Clinical.Clinical05_ProgressNote;
 
 /// <summary>
 /// Thai UR #05 table: DATE | PROGRESS NOTE (SOAP) | ORDER FOR ONE DAY | ORDER FOR CONTINUATION.
-/// About two session blocks per A4 page.
+/// About two session blocks per A4 page. Chrome (widths / row height / SOAP bands) from Studio.
 /// </summary>
 public sealed class Clinical05SoapTableSection
 {
     private const Unit Mm = Unit.Millimetre;
-    private const float Bw = HemosheetThaiUrStyle.BorderWidth;
-    internal const int MinEmptyRows = 2;
-
+    private const float DefaultBorder = HemosheetThaiUrStyle.BorderWidth;
     private const float SoapLetterMm = 8f;
     private const float SoapPadMm = 1.6f;
     private const float ExamLabelMm = 24f;
@@ -26,12 +25,10 @@ public sealed class Clinical05SoapTableSection
     private const float CheckSizePt = 6.5f;
     private const float CheckGapPt = 2f;
 
-    /// <summary>S : O : A : P = 1 : 2.5 : 1 : 1 (integer weights 2:5:2:2).</summary>
-    private const int SoapWeightS = 2;
-    private const int SoapWeightO = 5;
-    private const int SoapWeightA = 2;
-    private const int SoapWeightP = 2;
-    private const int SoapWeightTotal = SoapWeightS + SoapWeightO + SoapWeightA + SoapWeightP;
+    internal const int MinEmptyRows = 2;
+
+    /// <summary>Default S:O:A:P = 1:2.5:1:1.</summary>
+    internal static readonly IReadOnlyList<float> DefaultSoapBandWeights = [1f, 2.5f, 1f, 1f];
 
     public const string GoodConscious = "goodConscious";
     public const string Drowsiness = "drowsiness";
@@ -43,24 +40,51 @@ public sealed class Clinical05SoapTableSection
         IContainer container,
         Clinical05ProgressNoteReportViewModel vm,
         float rowHeightMm,
-        IReadOnlyDictionary<string, string>? labels = null)
+        IReadOnlyDictionary<string, string>? labels = null,
+        HprpLayoutNode? node = null,
+        PdfReportContext? context = null)
     {
+        var chrome = node?.Chrome;
+        var border = chrome?.Border is null ? DefaultBorder : HprpChrome.ResolveBorderWidth(chrome);
+        var headerFill = HprpChrome.ResolveHeaderFill(
+            chrome,
+            context,
+            HemosheetThaiUrStyle.HeaderBackground);
+        var bands = HprpChrome.ResolveBandWeights(chrome?.BandWeights, DefaultSoapBandWeights);
+        var heightMm = chrome?.RowHeightMm is > 0 and <= 200
+            ? chrome.RowHeightMm.Value
+            : rowHeightMm;
+
         container.Table(t =>
         {
             t.ColumnsDefinition(cols =>
             {
-                cols.ConstantColumn(18, Mm);
-                cols.RelativeColumn(2.4f);
-                cols.RelativeColumn(1.1f);
-                cols.RelativeColumn(1.1f);
+                var mixed = HprpChrome.ParseMixedColumns(chrome?.ColumnWidths);
+                if (mixed.Count == 4)
+                {
+                    foreach (var (constantMm, value) in mixed)
+                    {
+                        if (constantMm)
+                            cols.ConstantColumn(value, Mm);
+                        else
+                            cols.RelativeColumn(value);
+                    }
+                }
+                else
+                {
+                    cols.ConstantColumn(18, Mm);
+                    cols.RelativeColumn(2.4f);
+                    cols.RelativeColumn(1.1f);
+                    cols.RelativeColumn(1.1f);
+                }
             });
 
             t.Header(header =>
             {
-                HeaderCell(header, HprpLabels.Get(labels, "colDate", "DATE"));
-                HeaderCell(header, HprpLabels.Get(labels, "colProgress", "PROGRESS NOTE"));
-                HeaderCell(header, HprpLabels.Get(labels, "colOrderOneDay", "ORDER FOR ONE DAY"));
-                HeaderCell(header, HprpLabels.Get(labels, "colOrderContinuation", "ORDER FOR CONTINUATION"));
+                HeaderCell(header, HprpLabels.Get(labels, "colDate", "DATE"), border, headerFill);
+                HeaderCell(header, HprpLabels.Get(labels, "colProgress", "PROGRESS NOTE"), border, headerFill);
+                HeaderCell(header, HprpLabels.Get(labels, "colOrderOneDay", "ORDER FOR ONE DAY"), border, headerFill);
+                HeaderCell(header, HprpLabels.Get(labels, "colOrderContinuation", "ORDER FOR CONTINUATION"), border, headerFill);
             });
 
             var rows = vm.Sessions ?? [];
@@ -68,19 +92,19 @@ public sealed class Clinical05SoapTableSection
             for (var i = 0; i < drawCount; i++)
             {
                 var row = i < rows.Count ? rows[i] : null;
-                t.Cell().Element(c => DateCell(c, row?.DateLabel, rowHeightMm));
-                t.Cell().Element(c => SoapCell(c, row, rowHeightMm));
-                t.Cell().Element(c => OrderCell(c, row?.OrderForOneDay, rowHeightMm));
-                t.Cell().Element(c => OrderCell(c, row?.OrderForContinuation, rowHeightMm));
+                t.Cell().Element(c => DateCell(c, row?.DateLabel, heightMm, border));
+                t.Cell().Element(c => SoapCell(c, row, heightMm, border, bands));
+                t.Cell().Element(c => OrderCell(c, row?.OrderForOneDay, heightMm, border));
+                t.Cell().Element(c => OrderCell(c, row?.OrderForContinuation, heightMm, border));
             }
         });
     }
 
-    private static void HeaderCell(TableCellDescriptor t, string text)
+    private static void HeaderCell(TableCellDescriptor t, string text, float border, string headerFill)
     {
         t.Cell()
-            .Border(Bw)
-            .Background(ReportSectionHeaderChrome.Resolve(HemosheetThaiUrStyle.HeaderBackground))
+            .Border(border)
+            .Background(headerFill)
             .Height(HemosheetThaiUrStyle.HeaderBarHeightMm, Mm)
             .AlignMiddle()
             .AlignCenter()
@@ -88,9 +112,9 @@ public sealed class Clinical05SoapTableSection
             .Style(ThaiUrText.Bold);
     }
 
-    private static void DateCell(IContainer c, string? dateLabel, float heightMm)
+    private static void DateCell(IContainer c, string? dateLabel, float heightMm, float border)
     {
-        c.Border(Bw)
+        c.Border(border)
             .Height(heightMm, Mm)
             .Padding(1.2f, Mm)
             .AlignTop()
@@ -99,9 +123,9 @@ public sealed class Clinical05SoapTableSection
             .Style(ThaiUrText.Base);
     }
 
-    private static void OrderCell(IContainer c, string? text, float heightMm)
+    private static void OrderCell(IContainer c, string? text, float heightMm, float border)
     {
-        c.Border(Bw)
+        c.Border(border)
             .Height(heightMm, Mm)
             .Padding(1.2f, Mm)
             .AlignTop()
@@ -109,18 +133,42 @@ public sealed class Clinical05SoapTableSection
             .Style(ThaiUrText.Base);
     }
 
-    private static void SoapCell(IContainer c, Clinical05SoapSession? row, float heightMm)
+    private static void SoapCell(
+        IContainer c,
+        Clinical05SoapSession? row,
+        float heightMm,
+        float border,
+        IReadOnlyList<float> bandWeights)
     {
-        // Fixed cell height (1 plan ≈ 2 progress-note rows): do not grow with SOAP overflow.
-        // Explicit band heights fill the cell — S:O:A:P = 1:2.5:1:1. No outer AlignTop
-        // (that shrink-wraps the Column to content and piles S/O/A/P at the top).
+        // Fixed cell height — do not grow with SOAP overflow.
+        // Explicit band heights fill the cell (no outer AlignTop).
         var innerMm = Math.Max(heightMm - 2f * SoapPadMm, 0f);
-        var sMm = innerMm * SoapWeightS / SoapWeightTotal;
-        var oMm = innerMm * SoapWeightO / SoapWeightTotal;
-        var aMm = innerMm * SoapWeightA / SoapWeightTotal;
-        var pMm = Math.Max(innerMm - sMm - oMm - aMm, 0f);
+        var total = bandWeights.Sum();
+        if (total <= 0)
+            total = DefaultSoapBandWeights.Sum();
 
-        c.Border(Bw)
+        var heights = new float[bandWeights.Count];
+        var used = 0f;
+        for (var i = 0; i < bandWeights.Count; i++)
+        {
+            if (i == bandWeights.Count - 1)
+                heights[i] = Math.Max(innerMm - used, 0f);
+            else
+            {
+                heights[i] = innerMm * (bandWeights[i] / total);
+                used += heights[i];
+            }
+        }
+
+        // Expect S, O, A, P — pad/truncate to 4 for drawing.
+        var sMm = heights.ElementAtOrDefault(0);
+        var oMm = heights.ElementAtOrDefault(1);
+        var aMm = heights.ElementAtOrDefault(2);
+        var pMm = heights.Length >= 4
+            ? heights[3]
+            : Math.Max(innerMm - sMm - oMm - aMm, 0f);
+
+        c.Border(border)
             .Height(heightMm, Mm)
             .Padding(SoapPadMm, Mm)
             .Column(col =>

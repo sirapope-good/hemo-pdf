@@ -1,6 +1,7 @@
 using System.Text.Json;
 using Hemo.Pdf.Core.Constants;
 using Hemo.Pdf.Core.Context;
+using Hemo.Pdf.Core.Hprp;
 using Hemo.Pdf.Core.Models;
 using Hemo.Pdf.Core.Models.Clinical;
 using Hemo.Pdf.Layouts.Clinical.Clinical05_ProgressNote;
@@ -112,6 +113,20 @@ public class Clinical05ProgressNoteSmokeTests
         Assert.True(height >= 90f);
         // Two empty slots share the page; one row must not claim the full content height.
         Assert.True(height < 200f);
+    }
+
+    [Fact]
+    public void SoapChrome_OverridesColumnWidthsAndBandWeights()
+    {
+        var mixed = HprpChrome.ParseMixedColumns(["18mm", "3", "1", "1"]);
+        Assert.Equal(4, mixed.Count);
+        Assert.True(mixed[0].ConstantMm);
+        Assert.Equal(18f, mixed[0].Value);
+        Assert.False(mixed[1].ConstantMm);
+        Assert.Equal(3f, mixed[1].Value);
+
+        var bands = HprpChrome.ResolveBandWeights([1f, 3f, 1f, 1f], Clinical05SoapTableSection.DefaultSoapBandWeights);
+        Assert.Equal([1f, 3f, 1f, 1f], bands);
     }
 
     [Fact]

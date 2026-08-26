@@ -586,9 +586,17 @@ function renderInspector() {
 
   if (fields.some((f) => f.startsWith("chrome"))) {
     const chrome = node.chrome || {};
+    const clearChromeIfEmpty = (n) => {
+      const c = n.chrome || {};
+      const empty = !c.headerFill && !c.border && c.fontSize == null
+        && c.rowHeightMm == null
+        && !(c.columnWidths && c.columnWidths.length)
+        && !(c.bandWeights && c.bandWeights.length);
+      if (empty) delete n.chrome;
+    };
     const fillInput = textInput(chrome.headerFill || "", (v) => mutateSelected((n) => {
       n.chrome = { ...(n.chrome || {}), headerFill: v.trim() || undefined };
-      if (!n.chrome.headerFill && !n.chrome.border && n.chrome.fontSize == null) delete n.chrome;
+      clearChromeIfEmpty(n);
     }));
     fillInput.placeholder = "$branding.sectionHeaderBackground หรือ #384BA8";
     els.inspector.appendChild(field("chrome.headerFill", fillInput));
@@ -599,10 +607,43 @@ function renderInspector() {
       { value: "medium", label: "medium" },
     ], (v) => mutateSelected((n) => {
       n.chrome = { ...(n.chrome || {}), border: v || undefined };
+      clearChromeIfEmpty(n);
     }))));
     els.inspector.appendChild(field("chrome.fontSize", numberInput(chrome.fontSize, (v) => mutateSelected((n) => {
       n.chrome = { ...(n.chrome || {}), fontSize: v };
+      clearChromeIfEmpty(n);
     }))));
+
+    if (fields.includes("chrome.rowHeightMm")) {
+      const rowH = numberInput(chrome.rowHeightMm, (v) => mutateSelected((n) => {
+        n.chrome = { ...(n.chrome || {}), rowHeightMm: v };
+        clearChromeIfEmpty(n);
+      }));
+      rowH.placeholder = "ว่าง = budget อัตโนมัติ (mm)";
+      els.inspector.appendChild(field("chrome.rowHeightMm", rowH));
+    }
+
+    if (fields.includes("chrome.columnWidths")) {
+      const widthsVal = Array.isArray(chrome.columnWidths) ? chrome.columnWidths.join(",") : "";
+      const widthsInput = textInput(widthsVal, (v) => mutateSelected((n) => {
+        const parts = v.split(",").map((s) => s.trim()).filter(Boolean);
+        n.chrome = { ...(n.chrome || {}), columnWidths: parts.length ? parts : undefined };
+        clearChromeIfEmpty(n);
+      }));
+      widthsInput.placeholder = "เช่น 18mm,2.4,1.1,1.1";
+      els.inspector.appendChild(field("chrome.columnWidths", widthsInput));
+    }
+
+    if (fields.includes("chrome.bandWeights")) {
+      const bandsVal = Array.isArray(chrome.bandWeights) ? chrome.bandWeights.join(",") : "";
+      const bandsInput = textInput(bandsVal, (v) => mutateSelected((n) => {
+        const parts = v.split(",").map((s) => s.trim()).filter(Boolean).map(Number).filter((x) => Number.isFinite(x) && x > 0);
+        n.chrome = { ...(n.chrome || {}), bandWeights: parts.length ? parts : undefined };
+        clearChromeIfEmpty(n);
+      }));
+      bandsInput.placeholder = "S,O,A,P เช่น 1,2.5,1,1";
+      els.inspector.appendChild(field("chrome.bandWeights", bandsInput));
+    }
   }
 
   if (fields.includes("columnPlan") && recipe) {

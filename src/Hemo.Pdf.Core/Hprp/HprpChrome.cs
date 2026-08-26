@@ -26,9 +26,16 @@ public sealed class HprpChrome
     [JsonPropertyName("rowHeightMm")]
     public float? RowHeightMm { get; init; }
 
-    /// <summary>Relative weights per column; <c>*</c> = 1. Applied when count matches.</summary>
+    /// <summary>Relative weights per column; <c>*</c> = 1. Tokens ending in <c>mm</c> are constant mm.</summary>
     [JsonPropertyName("columnWidths")]
     public IReadOnlyList<string>? ColumnWidths { get; init; }
+
+    /// <summary>
+    /// Vertical band weights inside a cell (e.g. clinical-05 SOAP S:O:A:P).
+    /// Omitted = widget default.
+    /// </summary>
+    [JsonPropertyName("bandWeights")]
+    public IReadOnlyList<float>? BandWeights { get; init; }
 
     public static string ResolveHeaderFill(
         HprpChrome? chrome,
@@ -151,7 +158,60 @@ public sealed class HprpChrome
         if (chrome.FontSize is <= 0 or >= 48)
             errors.Add($"{path}.fontSize must be between 0 and 48.");
 
-        if (chrome.RowHeightMm is <= 0 or > 80)
-            errors.Add($"{path}.rowHeightMm must be between 0 and 80.");
+        if (chrome.RowHeightMm is <= 0 or > 200)
+            errors.Add($"{path}.rowHeightMm must be between 0 and 200.");
+
+        if (chrome.BandWeights is { Count: > 0 } bands)
+        {
+            if (bands.Any(w => w <= 0 || float.IsNaN(w) || float.IsInfinity(w)))
+                errors.Add($"{path}.bandWeights must be positive finite numbers.");
+        }
+    }
+
+    /// <summary>
+    /// Parses mixed constant-mm / relative column tokens.
+    /// Empty result = invalid or omitted — caller keeps defaults.
+    /// </summary>
+    public static IReadOnlyList<(bool ConstantMm, float Value)> ParseMixedColumns(IReadOnlyList<string>? widths)
+    {
+        if (widths is null || widths.Count == 0)
+            return [];
+
+        var parsed = new List<(bool ConstantMm, float Value)>(widths.Count);
+        foreach (var raw in widths)
+        {
+            var token = raw?.Trim() ?? "";
+            if (token.Length == 0)
+                return [];
+
+            var constant = token.EndsWith("mm", StringComparison.OrdinalIgnoreCase);
+            if (constant)
+                token = token[..^2].Trim();
+            else if (token == "*")
+                token = "1";
+
+            if (!float.TryParse(token, NumberStyles.Float, CultureInfo.InvariantCulture, out var value)
+                || value <= 0)
+            {
+                return [];
+            }
+
+            parsed.Add((constant, value));
+        }
+
+        return parsed;
+    }
+
+    public static IReadOnlyList<float> ResolveBandWeights(
+        IReadOnlyList<float>? configured,
+        IReadOnlyList<float> defaults)
+    {
+        if (configured is null || configured.Count == 0)
+            return defaults;
+
+        if (configured.Any(w => w <= 0 || float.IsNaN(w) || float.IsInfinity(w)))
+            return defaults;
+
+        return configured;
     }
 }

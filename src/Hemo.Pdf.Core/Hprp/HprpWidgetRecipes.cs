@@ -212,7 +212,16 @@ public static class HprpWidgetRecipes
                 Kind = HprpWidgetRecipe.KindDense,
                 Slot = HprpWidgetRecipe.SlotBody,
                 AllowedOn = [ClinicalReportCatalog.ProgressNote],
-                InspectorFields = ["chrome.headerFill", "chrome.border", "when"],
+                InspectorFields =
+                [
+                    "chrome.headerFill",
+                    "chrome.border",
+                    "chrome.fontSize",
+                    "chrome.rowHeightMm",
+                    "chrome.columnWidths",
+                    "chrome.bandWeights",
+                    "when",
+                ],
             },
             new()
             {

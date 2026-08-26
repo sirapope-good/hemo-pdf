@@ -71,9 +71,10 @@ public sealed class Clinical05ProgressNoteComposer : ILayoutComposer
         IReadOnlyList<HprpLayoutNode> bodyNodes,
         PdfReportContext context)
     {
-        var handlers = new Dictionary<string, Action<IContainer>>(StringComparer.OrdinalIgnoreCase)
+        var handlers = new Dictionary<string, Action<IContainer, HprpLayoutNode>>(StringComparer.OrdinalIgnoreCase)
         {
-            [HprpWidgetIds.ClinicalSoapTable] = c => _table.Compose(c, vm, rowHeightMm, labels),
+            [HprpWidgetIds.ClinicalSoapTable] = (c, node) =>
+                _table.Compose(c, vm, rowHeightMm, labels, node, context),
         };
 
         container.Column(col =>

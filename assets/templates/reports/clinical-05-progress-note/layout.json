@@ -7,7 +7,11 @@
   },
   "body": [
     {
-      "widget": "clinical.soap-table"
+      "widget": "clinical.soap-table",
+      "chrome": {
+        "columnWidths": ["18mm", "2.4", "1.1", "1.1"],
+        "bandWeights": [1, 2.5, 1, 1]
+      }
     }
   ]
 }
