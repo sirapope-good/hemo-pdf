@@ -112,7 +112,8 @@ public sealed class Clinical05SoapTableSection
     private static void SoapCell(IContainer c, Clinical05SoapSession? row, float heightMm)
     {
         // Fixed cell height (1 plan ≈ 2 progress-note rows): do not grow with SOAP overflow.
-        // Bands fill the Progress Note column — S:O:A:P = 1:2.5:1:1, no dividers.
+        // Explicit band heights fill the cell — S:O:A:P = 1:2.5:1:1. No outer AlignTop
+        // (that shrink-wraps the Column to content and piles S/O/A/P at the top).
         var innerMm = Math.Max(heightMm - 2f * SoapPadMm, 0f);
         var sMm = innerMm * SoapWeightS / SoapWeightTotal;
         var oMm = innerMm * SoapWeightO / SoapWeightTotal;
@@ -122,7 +123,6 @@ public sealed class Clinical05SoapTableSection
         c.Border(Bw)
             .Height(heightMm, Mm)
             .Padding(SoapPadMm, Mm)
-            .AlignTop()
             .Column(col =>
             {
                 col.Spacing(0);
