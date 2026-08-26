@@ -14,6 +14,7 @@ public static class ClinicalReportCatalog
     public const string HemodialysisRecord = "clinical-03-hemodialysis-record";
     public const string Prescription = "clinical-04-prescription";
     public const string ProgressNote = "clinical-05-progress-note";
+    public const string ProgressNoteChecklist = "clinical-05-progress-note-checklist";
     public const string Medication = "clinical-06-medication";
     public const string Lab = "clinical-07-lab";
     public const string ConsentTh = "clinical-08-consent-th";
@@ -40,6 +41,7 @@ public static class ClinicalReportCatalog
             [HemodialysisRecord] = new() { Id = HemodialysisRecord, DisplayName = "Hemodialysis Record", RequiresSignature = true },
             [Prescription] = new() { Id = Prescription, DisplayName = "Hemodialysis Prescription", RequiresSignature = true },
             [ProgressNote] = new() { Id = ProgressNote, DisplayName = "Hemodialysis Progress note", RequiresSignature = true },
+            [ProgressNoteChecklist] = new() { Id = ProgressNoteChecklist, DisplayName = "Doctor progress note report", RequiresSignature = false },
             [Medication] = new() { Id = Medication, DisplayName = "Medication Record", RequiresSignature = false },
             [Lab] = new() { Id = Lab, DisplayName = "Laboratory Record", RequiresSignature = false },
             // Signatures are embedded images in report-data (not hemosheet signing workflow).
@@ -93,6 +95,7 @@ public static class ClinicalReportCatalog
         return string.Equals(engineId, HctEpo, StringComparison.OrdinalIgnoreCase)
             || string.Equals(engineId, EpoDrug, StringComparison.OrdinalIgnoreCase)
             || string.Equals(engineId, ProgressNote, StringComparison.OrdinalIgnoreCase)
+            || string.Equals(engineId, ProgressNoteChecklist, StringComparison.OrdinalIgnoreCase)
             || string.Equals(engineId, Lab, StringComparison.OrdinalIgnoreCase)
             || string.Equals(engineId, "medicine-preparation-round", StringComparison.OrdinalIgnoreCase)
             || IsConsentReport(engineId);
@@ -114,6 +117,7 @@ public static class ClinicalReportCatalog
             && !string.Equals(id, HctEpo, StringComparison.OrdinalIgnoreCase)
             && !string.Equals(id, EpoDrug, StringComparison.OrdinalIgnoreCase)
             && !string.Equals(id, ProgressNote, StringComparison.OrdinalIgnoreCase)
+            && !string.Equals(id, ProgressNoteChecklist, StringComparison.OrdinalIgnoreCase)
             && !IsConsentReport(id));
 
     /// <summary>

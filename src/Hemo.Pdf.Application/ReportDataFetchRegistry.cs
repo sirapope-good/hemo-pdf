@@ -10,6 +10,7 @@ public enum ReportDataFetchKind
     Clinical01HctEpoPatientYear,
     Clinical02EpoDrugPatientMonthMed,
     Clinical05ProgressNotePatientMonth,
+    Clinical05ProgressNoteChecklistPatientMonthRange,
     Clinical07LabPatient,
     MedicinePreparationRound,
     ConsentPatientTemplateOrRecord,
@@ -44,6 +45,9 @@ public static class ReportDataFetchRegistry
 
         if (string.Equals(engineId, ClinicalReportCatalog.ProgressNote, StringComparison.OrdinalIgnoreCase))
             return ReportDataFetchKind.Clinical05ProgressNotePatientMonth;
+
+        if (string.Equals(engineId, ClinicalReportCatalog.ProgressNoteChecklist, StringComparison.OrdinalIgnoreCase))
+            return ReportDataFetchKind.Clinical05ProgressNoteChecklistPatientMonthRange;
 
         if (string.Equals(engineId, ClinicalReportCatalog.Lab, StringComparison.OrdinalIgnoreCase))
             return ReportDataFetchKind.Clinical07LabPatient;

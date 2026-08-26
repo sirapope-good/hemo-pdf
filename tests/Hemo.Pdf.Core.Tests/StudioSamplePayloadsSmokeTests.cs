@@ -115,6 +115,14 @@ public class StudioSamplePayloadsSmokeTests
                 quest).RenderReportAsync(context, CancellationToken.None);
         }
 
+        if (string.Equals(engine, ClinicalReportCatalog.ProgressNoteChecklist, StringComparison.OrdinalIgnoreCase))
+        {
+            return new Clinical05ProgressNoteChecklistReportRenderer(
+                new Clinical05ProgressNoteChecklistDataProvider(),
+                new Clinical05ProgressNoteChecklistComposer(),
+                quest).RenderReportAsync(context, CancellationToken.None);
+        }
+
         if (ClinicalReportCatalog.IsConsentReport(engine))
         {
             return new ConsentReportRenderer(

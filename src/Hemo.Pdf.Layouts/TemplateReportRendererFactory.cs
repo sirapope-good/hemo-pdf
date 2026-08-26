@@ -18,6 +18,7 @@ public static class TemplateReportRendererFactory
             [ClinicalReportCatalog.HctEpo] = typeof(Clinical01HctEpoReportRenderer),
             [ClinicalReportCatalog.EpoDrug] = typeof(Clinical02EpoDrugReportRenderer),
             [ClinicalReportCatalog.ProgressNote] = typeof(Clinical05ProgressNoteReportRenderer),
+            [ClinicalReportCatalog.ProgressNoteChecklist] = typeof(Clinical05ProgressNoteChecklistReportRenderer),
             [ClinicalReportCatalog.ConsentTh] = typeof(ConsentReportRenderer),
             [ClinicalReportCatalog.ConsentEn] = typeof(ConsentReportRenderer),
             [ClinicalReportCatalog.HemodialysisRecord] = typeof(HemosheetReportRenderer),

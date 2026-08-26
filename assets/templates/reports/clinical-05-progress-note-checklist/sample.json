@@ -1,0 +1,73 @@
+{
+  "title": "Doctor progress note report",
+  "reportCodeValue": "DOC-PROG-NOTE-RP-001",
+  "fromYearMonth": "2025-07",
+  "toYearMonth": "2026-06",
+  "rangeLabel": "JUL 2025 – JUN 2026",
+  "patient": {
+    "name": "จินนี่ วัลลีย์",
+    "hospitalNumber": "6512620",
+    "birthDateLabel": "03/01/1995 (31 years)",
+    "sessionsPerWeekLabel": "2 times/week",
+    "dialysisDays": "Wed Fri",
+    "coverageScheme": "—",
+    "dialysisMode": "HD",
+    "underlying": "—"
+  },
+  "columns": [
+    { "yearMonth": "2025-07", "calendarYear": 2025, "calendarMonth": 7 },
+    { "yearMonth": "2025-08", "calendarYear": 2025, "calendarMonth": 8 },
+    { "yearMonth": "2025-09", "calendarYear": 2025, "calendarMonth": 9 },
+    { "yearMonth": "2025-10", "calendarYear": 2025, "calendarMonth": 10 },
+    { "yearMonth": "2025-11", "calendarYear": 2025, "calendarMonth": 11 },
+    { "yearMonth": "2025-12", "calendarYear": 2025, "calendarMonth": 12 },
+    { "yearMonth": "2026-01", "calendarYear": 2026, "calendarMonth": 1 },
+    { "yearMonth": "2026-02", "calendarYear": 2026, "calendarMonth": 2 },
+    { "yearMonth": "2026-03", "calendarYear": 2026, "calendarMonth": 3 },
+    { "yearMonth": "2026-04", "calendarYear": 2026, "calendarMonth": 4 },
+    { "yearMonth": "2026-05", "calendarYear": 2026, "calendarMonth": 5 },
+    { "yearMonth": "2026-06", "calendarYear": 2026, "calendarMonth": 6 }
+  ],
+  "yearSpans": [
+    { "year": 2025, "colSpan": 6 },
+    { "year": 2026, "colSpan": 6 }
+  ],
+  "checklistItems": [
+    {
+      "label": "General symptoms",
+      "group": null,
+      "marks": ["", "", "", "", "", "WNL", "", "", "", "", "", ""]
+    },
+    {
+      "label": "Dyspnea",
+      "group": "Volume status",
+      "marks": ["", "", "", "", "", "WNL", "", "", "", "", "", ""]
+    },
+    {
+      "label": "Edema",
+      "group": "Volume status",
+      "marks": ["", "", "", "", "", "WNL", "", "", "", "", "", ""]
+    },
+    {
+      "label": "Dry weight",
+      "group": "Volume status",
+      "marks": ["", "", "", "", "", "WNL", "", "", "", "", "", ""]
+    },
+    {
+      "label": "Dialysis tolerance",
+      "group": null,
+      "marks": ["", "", "", "", "", "WNL", "", "", "", "", "", ""]
+    },
+    {
+      "label": "Vascular access",
+      "group": "Volume status",
+      "marks": ["", "", "", "", "", "WNL", "", "", "", "", "", ""]
+    },
+    {
+      "label": "Clinical plan",
+      "group": null,
+      "marks": ["", "", "", "", "", "WNL", "", "", "", "", "", ""]
+    }
+  ],
+  "textNotes": []
+}

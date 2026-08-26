@@ -28,7 +28,14 @@ public sealed class QuestPdfRenderer : IPdfRenderer
             {
                 container.Page(page =>
                 {
-                    page.Size(PageSizes.A4);
+                    if (questLayout.Landscape)
+                    {
+                        page.Size(PageSizes.A4.Landscape());
+                    }
+                    else
+                    {
+                        page.Size(PageSizes.A4);
+                    }
 
                     var marginTop = questLayout.MarginTop ?? questLayout.MarginMillimeters;
                     var marginBottom = questLayout.MarginBottom ?? questLayout.MarginMillimeters;

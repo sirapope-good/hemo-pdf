@@ -9,6 +9,7 @@ public class ReportDataFetchRegistryTests
     [InlineData(ClinicalReportCatalog.HctEpo, ReportDataFetchKind.Clinical01HctEpoPatientYear)]
     [InlineData(ClinicalReportCatalog.EpoDrug, ReportDataFetchKind.Clinical02EpoDrugPatientMonthMed)]
     [InlineData(ClinicalReportCatalog.ProgressNote, ReportDataFetchKind.Clinical05ProgressNotePatientMonth)]
+    [InlineData(ClinicalReportCatalog.ProgressNoteChecklist, ReportDataFetchKind.Clinical05ProgressNoteChecklistPatientMonthRange)]
     [InlineData(ClinicalReportCatalog.Lab, ReportDataFetchKind.Clinical07LabPatient)]
     [InlineData(ClinicalReportCatalog.Prescription, ReportDataFetchKind.FormPatientByAdapter)]
     [InlineData(ClinicalReportCatalog.Medication, ReportDataFetchKind.FormPatientByAdapter)]

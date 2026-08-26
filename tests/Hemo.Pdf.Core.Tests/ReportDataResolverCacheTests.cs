@@ -120,6 +120,15 @@ public class ReportDataResolverCacheTests
             CancellationToken cancellationToken) =>
             throw new NotImplementedException();
 
+        public Task<JsonElement> GetClinical05ProgressNoteChecklistReportDataAsync(
+            string patientId,
+            string fromYearMonth,
+            string toYearMonth,
+            string? authorizationHeader,
+            string tenantCode,
+            CancellationToken cancellationToken) =>
+            throw new NotImplementedException();
+
         public Task<JsonElement> GetClinical07LabReportDataAsync(
             string patientId,
             string? from,

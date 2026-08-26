@@ -21,4 +21,7 @@ public sealed class QuestLayout
     /// Null keeps each layout's built-in fallback color.
     /// </summary>
     public string? SectionHeaderBackground { get; set; }
+
+    /// <summary>When true, renders A4 landscape (width &gt; height).</summary>
+    public bool Landscape { get; init; }
 }

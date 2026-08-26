@@ -8,6 +8,7 @@ public static class HprpDataAdapterIds
     public const string Clinical01HctEpo = "clinical-01-hct-epo";
     public const string Clinical02EpoDrug = "clinical-02-epo-drug";
     public const string Clinical05ProgressNote = "clinical-05-progress-note";
+    public const string Clinical05ProgressNoteChecklist = "clinical-05-progress-note-checklist";
     public const string Consent = "consent";
     public const string MedicinePreparationRound = "medicine-preparation-round";
 
@@ -18,6 +19,7 @@ public static class HprpDataAdapterIds
         Clinical01HctEpo,
         Clinical02EpoDrug,
         Clinical05ProgressNote,
+        Clinical05ProgressNoteChecklist,
         Consent,
         MedicinePreparationRound,
     };

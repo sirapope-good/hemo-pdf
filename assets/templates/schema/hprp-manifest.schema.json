@@ -24,6 +24,7 @@
         "clinical-01-hct-epo",
         "clinical-02-epo-drug",
         "clinical-05-progress-note",
+        "clinical-05-progress-note-checklist",
         "consent",
         "medicine-preparation-round"
       ]

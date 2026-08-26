@@ -113,6 +113,21 @@ public sealed class HemosheetReportDataClient : IHemosheetReportDataClient
         return SendAsync(path, authorizationHeader, tenantCode, cancellationToken);
     }
 
+    public Task<JsonElement> GetClinical05ProgressNoteChecklistReportDataAsync(
+        string patientId,
+        string fromYearMonth,
+        string toYearMonth,
+        string? authorizationHeader,
+        string tenantCode,
+        CancellationToken cancellationToken)
+    {
+        var path =
+            $"api/Patients/{Uri.EscapeDataString(patientId)}/reports/{ClinicalReportCatalog.ProgressNoteChecklist}/report-data" +
+            $"?fromYearMonth={Uri.EscapeDataString(fromYearMonth.Trim())}" +
+            $"&toYearMonth={Uri.EscapeDataString(toYearMonth.Trim())}";
+        return SendAsync(path, authorizationHeader, tenantCode, cancellationToken);
+    }
+
     public Task<JsonElement> GetClinical07LabReportDataAsync(
         string patientId,
         string? from,

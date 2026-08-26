@@ -51,6 +51,10 @@ public static class TemplateRegistration
         services.AddScoped<Clinical05ProgressNoteComposer>();
         services.AddScoped<Clinical05ProgressNoteReportRenderer>();
 
+        services.AddScoped<Clinical05ProgressNoteChecklistDataProvider>();
+        services.AddScoped<Clinical05ProgressNoteChecklistComposer>();
+        services.AddScoped<Clinical05ProgressNoteChecklistReportRenderer>();
+
         services.AddScoped<ConsentReportDataProvider>();
         services.AddScoped<ConsentReportComposer>();
         services.AddScoped<ConsentReportRenderer>();

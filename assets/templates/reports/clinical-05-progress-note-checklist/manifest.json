@@ -1,0 +1,27 @@
+{
+  "id": "clinical-05-progress-note-checklist",
+  "version": "1.0.0",
+  "displayName": "Doctor progress note report",
+  "engineVersion": 1,
+  "dataAdapter": "clinical-05-progress-note-checklist",
+  "requiresSignature": false,
+  "language": "en",
+  "ui": {
+    "entryMode": "patient",
+    "menuGroup": "clinical",
+    "sortOrder": 51,
+    "visibleInMenu": false,
+    "parameters": [
+      {
+        "name": "fromYearMonth",
+        "source": "query",
+        "required": true
+      },
+      {
+        "name": "toYearMonth",
+        "source": "query",
+        "required": true
+      }
+    ]
+  }
+}
