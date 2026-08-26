@@ -17,24 +17,26 @@
     },
     "unit": { "id": -1, "fullName": "Hemodialysis Unit" },
     "layoutContext": {
-      "reportSettings": { "showDateAndHdNo": false, "showHdPerWeek": true }
+      "reportSettings": { "showDateAndHdNo": false, "showHdPerWeek": false }
     }
   },
   "dialysisFields": [
-    { "label": "Hemodialysis:", "value": "3 time/week" },
-    { "label": "Dialysis Hours:", "value": "4H 0M" },
-    { "label": "Dialyzer:", "value": "FX80" },
-    { "label": "Vascular Access Route:", "value": "AVF left" },
-    { "label": "Blood Flow Rate:", "value": "300 ml/min" },
-    { "label": "Dialysis Flow rate:", "value": "500 ml/min" },
-    { "label": "Dry weight:", "value": "62.5 kg" },
-    { "label": "Anti-Coagulant:", "value": "Heparin" },
-    { "label": "Heparin Initial Dose:", "value": "1000 unit" },
-    { "label": "Continue:", "value": "500 unit" },
-    { "label": "Na:", "value": "138 mEq/L" },
-    { "label": "K/Ca:", "value": "2 / 1.25 mEq/L" },
-    { "label": "Bicarb:", "value": "32 mEq/L" },
-    { "label": "Dialysis Prescription Note:", "value": "Sample prescription for Studio preview" }
+    { "label": "☐ HD", "value": "3 time/week Time/Wks", "indent": 0 },
+    { "label": "Duration", "value": "4H 0M Hrs.", "indent": 0 },
+    { "label": "Dialyzer", "value": "FX80", "indent": 0 },
+    { "label": "Vascular Access", "value": "", "indent": 0 },
+    { "label": "● Lt    ○ Rt", "value": "", "indent": 1 },
+    { "label": "(●) Avf  ( ) Avg  ( ) Double Lumen  ( ) Permanent Catheter", "value": "", "indent": 2 },
+    { "label": "Dialysate", "value": "Na 138 / K 2 / Ca 1.25 / HCO3 32 mEq/L", "indent": 0 },
+    { "label": "☐ Blood Flow Rate", "value": "300 ml/min", "indent": 0 },
+    { "label": "☐ Dialysate Flow", "value": "500 ml/min", "indent": 0 },
+    { "label": "☐ Dry Weight", "value": "62.5 kg", "indent": 0 },
+    { "label": "☐ Anticoagulant", "value": "", "indent": 0 },
+    { "label": "( ) Non Heparin    (●) Heparin", "value": "Heparin", "indent": 1 },
+    { "label": "2. Heparin Total", "value": "", "indent": 2 },
+    { "label": "Loading", "value": "1000 unit", "indent": 3 },
+    { "label": "Maintenance", "value": "500 unit", "indent": 3 },
+    { "label": "Note", "value": "Sample prescription for Studio preview", "indent": 0 }
   ],
   "medicinePrescriptionLines": [
     "Eprex (IU) : 4000 IU x 1 (= 4000 IU) (1 dose) within 1 week.",

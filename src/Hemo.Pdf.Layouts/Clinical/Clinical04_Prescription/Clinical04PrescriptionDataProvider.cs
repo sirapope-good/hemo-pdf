@@ -49,6 +49,7 @@ public sealed class Clinical04PrescriptionDataProvider : IReportDataProvider
                 {
                     Label = f.Label ?? string.Empty,
                     Value = f.Value ?? string.Empty,
+                    Indent = f.Indent,
                 })
                 .ToList(),
             MedicinePrescriptionLines = (wire.MedicinePrescriptionLines ?? [])
@@ -82,7 +83,7 @@ public sealed class Clinical04PrescriptionDataProvider : IReportDataProvider
                 ReportSettings = new HemosheetReportSettingsViewModel
                 {
                     ShowDateAndHdNo = false,
-                    ShowHdPerWeek = true,
+                    ShowHdPerWeek = false,
                     HemosheetTemplate = source.LayoutContext.ReportSettings.HemosheetTemplate,
                     NurseInShiftEnabled = source.LayoutContext.ReportSettings.NurseInShiftEnabled,
                     FixedLines = source.LayoutContext.ReportSettings.FixedLines,
@@ -109,5 +110,6 @@ public sealed class Clinical04PrescriptionDataProvider : IReportDataProvider
     {
         public string? Label { get; set; }
         public string? Value { get; set; }
+        public int Indent { get; set; }
     }
 }

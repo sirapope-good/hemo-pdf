@@ -36,9 +36,15 @@ public class Clinical04PrescriptionSmokeTests
             }
           },
           "dialysisFields": [
-            { "label": "Hemodialysis:", "value": "3 time/week" },
-            { "label": "Dialysis Hours:", "value": "4H 0M" },
-            { "label": "Dry weight:", "value": "62.5 kg" }
+            { "label": "☐ HD", "value": "3 time/week Time/Wks", "indent": 0 },
+            { "label": "Duration", "value": "4H 0M Hrs.", "indent": 0 },
+            { "label": "Vascular Access", "value": "", "indent": 0 },
+            { "label": "● Lt    ○ Rt", "value": "", "indent": 1 },
+            { "label": "(●) Avf  ( ) Avg  ( ) Double Lumen  ( ) Permanent Catheter", "value": "", "indent": 2 },
+            { "label": "☐ Dry Weight", "value": "62.5 kg", "indent": 0 },
+            { "label": "☐ Anticoagulant", "value": "", "indent": 0 },
+            { "label": "( ) Non Heparin    (●) Heparin", "value": "Heparin", "indent": 1 },
+            { "label": "Loading", "value": "1000 unit", "indent": 3 }
           ],
           "medicinePrescriptionLines": [
             "Eprex (IU) : 4000 IU x 1"
@@ -73,10 +79,13 @@ public class Clinical04PrescriptionSmokeTests
         var vm = Assert.IsType<Clinical04PrescriptionReportViewModel>(model);
 
         Assert.False(vm.Header.LayoutContext.ReportSettings.ShowDateAndHdNo);
-        Assert.True(vm.Header.LayoutContext.ReportSettings.ShowHdPerWeek);
+        Assert.False(vm.Header.LayoutContext.ReportSettings.ShowHdPerWeek);
         Assert.Equal(Clinical04PrescriptionDataProvider.ReportTitle, vm.Title);
         Assert.Equal("Sample Patient", vm.Header.Patient.Name);
-        Assert.Equal(3, vm.DialysisFields.Count);
+        Assert.Equal(9, vm.DialysisFields.Count);
+        Assert.Equal(1, vm.DialysisFields[3].Indent);
+        Assert.Equal(2, vm.DialysisFields[4].Indent);
+        Assert.Equal(3, vm.DialysisFields[8].Indent);
         Assert.Single(vm.MedicinePrescriptionLines);
         Assert.Single(vm.MedHistoryLines);
         Assert.True(vm.IsSigned);

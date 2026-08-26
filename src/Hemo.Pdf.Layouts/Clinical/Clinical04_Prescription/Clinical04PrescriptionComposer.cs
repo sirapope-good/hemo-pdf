@@ -19,7 +19,7 @@ public sealed class Clinical04PrescriptionComposer : ILayoutComposer
     private const Unit Mm = Unit.Millimetre;
     private const float A4HeightMm = 297f;
     private const float PageNumberFooterMm = 7f;
-    private const float LayoutSafetyMm = 8f;
+    private const float LayoutSafetyMm = 1.5f;
     private const float SectionSpacingMm = 2f;
     private const float MinBlockHeightMm = 120f;
 

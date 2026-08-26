@@ -20,6 +20,7 @@ public sealed class Clinical04PrescriptionColumnsSection
     private const float DateStripMm = 14f;
     private const float SignatureMm = 22f;
     private const float LinePadMm = 1.2f;
+    private const float IndentStepMm = 3.5f;
     private const float MinLineMm = 5.2f;
     private const float MinHeaderMm = 8f;
 
@@ -34,7 +35,7 @@ public sealed class Clinical04PrescriptionColumnsSection
         CheckItem,
     }
 
-    private readonly record struct ContentLine(string Text, LineKind Kind);
+    private readonly record struct ContentLine(string Text, LineKind Kind, int Indent = 0);
 
     public void Compose(
         IContainer container,
@@ -67,7 +68,7 @@ public sealed class Clinical04PrescriptionColumnsSection
         // Fit exactly into the content band so blank prints still fill the page.
         var lineHeightMm = contentHeightMm / lineCount;
 
-        container.MinHeight(blockHeightMm, Mm).Row(row =>
+        container.Height(blockHeightMm, Mm).Row(row =>
         {
             row.RelativeItem().Element(c => ComposeColumn(
                 c,
@@ -88,7 +89,7 @@ public sealed class Clinical04PrescriptionColumnsSection
                 c,
                 dateLabel: vm.OrderDate,
                 title: HprpLabels.Get(labels, "colPhysiciansOrder", "Physicians Order"),
-                lines: PadLines(rightLines, lineCount, LineKind.CheckItem),
+                lines: PadLines(rightLines, lineCount, LineKind.Blank),
                 lineHeightMm,
                 headerHeightMm,
                 contentHeightMm,
@@ -118,14 +119,13 @@ public sealed class Clinical04PrescriptionColumnsSection
     {
         container.Border(border).Column(col =>
         {
-            // MinHeight: exact Height + label/padding taller than the bar throws DocumentLayoutException.
-            col.Item().MinHeight(headerHeightMm, Mm).Element(c =>
+            col.Item().Height(headerHeightMm, Mm).Element(c =>
                 ComposeHeader(c, title, border, headerFill, fontSize, labels));
 
             col.Item().Height(contentHeightMm, Mm).Element(c =>
                 ComposeBody(c, dateLabel, lines, lineHeightMm, contentHeightMm, border, fontSize));
 
-            col.Item().MinHeight(SignatureMm, Mm).Element(c =>
+            col.Item().Height(SignatureMm, Mm).Element(c =>
                 ComposeSignature(c, doctorName, doctorUpdated, border, fontSize, labels));
         });
     }
@@ -197,9 +197,10 @@ public sealed class Clinical04PrescriptionColumnsSection
                         ? Math.Max(contentHeightMm - usedMm, MinLineMm)
                         : lineHeightMm;
                     usedMm += h;
+                    var indentMm = Math.Max(line.Indent, 0) * IndentStepMm;
                     var cell = col.Item().Height(h, Mm)
-                        .BorderBottom(i < lines.Count - 1 ? border * 0.55f : 0)
-                        .PaddingHorizontal(LinePadMm, Mm)
+                        .PaddingLeft(LinePadMm + indentMm, Mm)
+                        .PaddingRight(LinePadMm, Mm)
                         .AlignMiddle();
                     var text = cell.Text(display)
                         .FontFamily(line.Kind == LineKind.Section
@@ -260,12 +261,15 @@ public sealed class Clinical04PrescriptionColumnsSection
             if (label.Length == 0 && value.Length == 0)
                 continue;
 
+            string text;
             if (label.Length == 0)
-                lines.Add(new ContentLine(value, LineKind.Text));
+                text = value;
             else if (value.Length == 0)
-                lines.Add(new ContentLine(label, LineKind.Text));
+                text = label;
             else
-                lines.Add(new ContentLine($"{label} {value}", LineKind.Text));
+                text = $"{label} {value}";
+
+            lines.Add(new ContentLine(text, LineKind.Text, Math.Max(field.Indent, 0)));
         }
 
         return lines;
@@ -297,7 +301,7 @@ public sealed class Clinical04PrescriptionColumnsSection
                 HprpLabels.Get(labels, "sectionMedHist", "Medication History"),
                 LineKind.Section));
             foreach (var item in hist)
-                lines.Add(new ContentLine(item, LineKind.CheckItem));
+                lines.Add(new ContentLine(item, LineKind.Text));
         }
 
         return lines;
