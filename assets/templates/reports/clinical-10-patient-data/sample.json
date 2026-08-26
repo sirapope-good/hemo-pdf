@@ -1,0 +1,23 @@
+{
+  "title": "Patient Data Record",
+  "reportDate": "26/08/2026",
+  "patient": {
+    "hn": "6512620",
+    "name": "Sample Patient",
+    "unit": "Hemodialysis Unit"
+  },
+  "fields": [
+    { "label": "Gender", "value": "M" },
+    { "label": "Birth date", "value": "15/03/1971" },
+    { "label": "Identity No", "value": "3101401131780" },
+    { "label": "Coverage", "value": "สปสช." },
+    { "label": "Blood group", "value": "O+" },
+    { "label": "Underlying", "value": "DM / HT" },
+    { "label": "Cause of kidney disease", "value": "Diabetic nephropathy" },
+    { "label": "First dialysis", "value": "12/01/2020" },
+    { "label": "Allergies", "value": "ไม่มีแพ้ยา" },
+    { "label": "Note", "value": "Sample patient demographics for Studio" }
+  ],
+  "columnHeaders": [],
+  "rows": []
+}

@@ -1,0 +1,18 @@
+{
+  "title": "Hemodialysis Patient Education",
+  "reportDate": "26/08/2026",
+  "patient": {
+    "hn": "6512620",
+    "name": "Sample Patient",
+    "unit": "Hemodialysis Unit"
+  },
+  "fields": [
+    { "label": "Allergies", "value": "No known drug allergy" },
+    { "label": "Underlying", "value": "DM / HT" },
+    { "label": "Cause of kidney disease", "value": "Diabetic nephropathy" },
+    { "label": "Note", "value": "Studio sample payload" },
+    { "label": "Checklist", "value": "Education checklist content is package-driven (.hprp)." }
+  ],
+  "columnHeaders": [],
+  "rows": []
+}

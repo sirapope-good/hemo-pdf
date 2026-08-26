@@ -1,0 +1,21 @@
+{
+  "title": "Admission Note and History Review",
+  "reportDate": "26/08/2026",
+  "patient": {
+    "hn": "6512620",
+    "name": "Sample Patient",
+    "unit": "Hemodialysis Unit"
+  },
+  "fields": [
+    { "label": "Admit date", "value": "20/08/2026" },
+    { "label": "Discharge date", "value": "" },
+    { "label": "Chief complaint", "value": "Shortness of breath" },
+    { "label": "Present illness", "value": "Progressive dyspnea for 3 days" },
+    { "label": "Past history", "value": "ESRD on HD 3×/week" },
+    { "label": "Physical exam", "value": "BP 160/90, mild edema" },
+    { "label": "Assessment", "value": "Volume overload" },
+    { "label": "Plan", "value": "Extra HD session" }
+  ],
+  "columnHeaders": [],
+  "rows": []
+}

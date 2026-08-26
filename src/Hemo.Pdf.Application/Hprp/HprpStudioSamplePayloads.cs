@@ -11,10 +11,7 @@ public static class HprpStudioSamplePayloads
     private static readonly Regex SafeScenario = new("^[a-z0-9-]{1,32}$", RegexOptions.CultureInvariant);
 
     public static readonly IReadOnlyList<string> KnownTemplateIds =
-    [
-        ClinicalReportCatalog.HctEpo,
-        ClinicalReportCatalog.HemodialysisRecord,
-    ];
+        ClinicalReportCatalog.All.Select(d => d.Id).ToList();
 
     public static JsonElement? TryLoad(
         string templatesRoot,

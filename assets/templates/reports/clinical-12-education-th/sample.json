@@ -1,0 +1,18 @@
+{
+  "title": "แบบบันทึกการให้ความรู้ผู้ป่วยฟอกเลือด",
+  "reportDate": "26/08/2026",
+  "patient": {
+    "hn": "6512620",
+    "name": "Sample Patient",
+    "unit": "Hemodialysis Unit"
+  },
+  "fields": [
+    { "label": "ยาที่แพ้", "value": "ไม่มีแพ้ยา" },
+    { "label": "โรคประจำตัว", "value": "DM / HT" },
+    { "label": "สาเหตุโรคไต", "value": "เบาหวานลงไต" },
+    { "label": "หมายเหตุ", "value": "ตัวอย่างสำหรับ Studio" },
+    { "label": "รายการให้ความรู้", "value": "รายการให้ความรู้ขับจาก .hprp ของแพ็กเกจ" }
+  ],
+  "columnHeaders": [],
+  "rows": []
+}

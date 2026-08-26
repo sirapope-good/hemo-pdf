@@ -1,0 +1,54 @@
+{
+  "title": "Erythropoietin Drug Record",
+  "header": {
+    "logoBase64": null,
+    "patient": {
+      "name": "Sample Patient",
+      "hn": "6512620",
+      "identityNumber": "3101401131780",
+      "age": 55,
+      "allergies": ["ไม่มีแพ้ยา"],
+      "coverage": "สปสช.",
+      "diagnosis": "ESRD",
+      "underlying": "ESRD",
+      "hdPerWeek": "3"
+    },
+    "unit": { "id": -1, "fullName": "Hemodialysis Unit" },
+    "layoutContext": {
+      "reportSettings": { "showDateAndHdNo": false, "showHdPerWeek": true }
+    }
+  },
+  "meta": {
+    "monthKey": "2023-02",
+    "monthLabel": "ก.พ.",
+    "yearBe": 2566,
+    "medicineId": 12,
+    "epoName": "Eprex 4000",
+    "needlesPerWeek": "2"
+  },
+  "rows": [
+    {
+      "dateLabel": "06/02/2023",
+      "doseIndex": 1,
+      "stickerText": null,
+      "nurseName": "Nurse A",
+      "remarks": null
+    },
+    {
+      "dateLabel": "13/02/2023",
+      "doseIndex": 2,
+      "stickerText": null,
+      "nurseName": "Nurse B",
+      "remarks": "note"
+    }
+  ],
+  "coPayCriteria": {
+    "title": "ปริมาณยาที่มีสิทธิได้รับโดยไม่ต้องร่วมจ่าย",
+    "nhsoRules": [
+      { "condition": "Hb < 10", "injectionsPerWeek": "2" }
+    ],
+    "ssoRules": [
+      { "medicine": "Espogen 4000 U", "hctLe36": "3", "hctGt36": "2", "hctGe39": "0" }
+    ]
+  }
+}

@@ -1,0 +1,30 @@
+{
+  "title": "Hemodialysis Prescription",
+  "reportDate": "26/08/2026",
+  "patient": {
+    "hn": "6512620",
+    "name": "Sample Patient",
+    "unit": "Hemodialysis Unit"
+  },
+  "fields": [
+    { "label": "Mode", "value": "HD" },
+    { "label": "Temporary", "value": "No" },
+    { "label": "Duration", "value": "4:00" },
+    { "label": "Frequency / week", "value": "3" },
+    { "label": "Dry weight (kg)", "value": "62.5" },
+    { "label": "UF / excess fluid (L)", "value": "2.5" },
+    { "label": "Blood flow (ml/min)", "value": "300" },
+    { "label": "Dialyzer", "value": "FX80" },
+    { "label": "Dialysate flow (ml/min)", "value": "500" },
+    { "label": "Na", "value": "138" },
+    { "label": "HCO3", "value": "32" },
+    { "label": "K", "value": "2.0" },
+    { "label": "Ca", "value": "1.25" },
+    { "label": "Temperature (°C)", "value": "36.5" },
+    { "label": "Anticoagulant", "value": "Heparin" },
+    { "label": "Blood access", "value": "AVF left" },
+    { "label": "Note", "value": "Sample prescription for Studio preview" }
+  ],
+  "columnHeaders": [],
+  "rows": []
+}

@@ -1,0 +1,28 @@
+{
+  "language": "th",
+  "type": "Treatment",
+  "title": "หนังสือแสดงความยินยอมทำการรักษาโดยการฟอกเลือดด้วยเครื่องไตเทียม",
+  "centerName": "Hemodialysis Unit",
+  "patientName": "เดรโก มัลฟอย",
+  "patientHn": "184706",
+  "coverageScheme": "Social Security",
+  "patientAge": 31,
+  "identityNumber": "3120600881117",
+  "diagnosis": "-",
+  "allergies": ["ไม่มีแพ้ยา"],
+  "signedByName": "เดรโก มัลฟอย",
+  "isRepresentative": false,
+  "patientGender": "M",
+  "expiryMonths": 6,
+  "signedDate": { "day": "17", "month": "สิงหาคม", "year": "2569" },
+  "bodyParagraphs": [
+    { "text": "ข้าพเจ้าได้รับทราบและเข้าใจถึงวิธีการรักษาโดยการฟอกเลือดด้วยเครื่องไตเทียม ดังต่อไปนี้", "sub": false },
+    { "text": "1. การฟอกเลือดด้วยเครื่องไตเทียม เป็นการกำจัดของเสียและน้ำส่วนเกินออกจากร่างกาย", "sub": false },
+    { "text": "2. ภาวะแทรกซ้อนที่อาจเกิดขึ้นได้ระหว่างหรือหลังการรักษา ได้แก่", "sub": false },
+    { "text": "2.1 การติดเชื้อ", "sub": true },
+    { "text": "2.2 เลือดออก", "sub": true },
+    { "text": "2.3 ความดันโลหิตต่ำ", "sub": true },
+    { "text": "2.4 ตะคริว", "sub": true },
+    { "text": "2.5 อาการแพ้สารที่ใช้ในกระบวนการฟอกเลือด", "sub": true }
+  ]
+}

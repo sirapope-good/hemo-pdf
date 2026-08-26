@@ -1,0 +1,19 @@
+{
+  "title": "Medication Administration Record (Per Month)",
+  "reportDate": "26/08/2026",
+  "period": "2026-08",
+  "patient": {
+    "hn": "6512620",
+    "name": "Sample Patient",
+    "unit": "Hemodialysis Unit"
+  },
+  "fields": [
+    { "label": "Month", "value": "2026-08" },
+    { "label": "Lines overlapping month", "value": "2" }
+  ],
+  "columnHeaders": ["Medicine", "Dose", "Frequency", "Start", "Expire", "Route", "Hospital"],
+  "rows": [
+    ["Eprex 4000", "4000 U", "2", "01/08/2026", "", "SC", "Thai UR"],
+    ["Calcium carbonate", "1000 mg", "3", "15/07/2026", "31/12/2026", "PO", "Thai UR"]
+  ]
+}

@@ -1,0 +1,37 @@
+{
+  "title": "Laboratory Record",
+  "reportDate": "26/08/2026",
+  "patient": {
+    "hn": "6512620",
+    "name": "Sample Patient",
+    "unit": "Hemodialysis Unit"
+  },
+  "header": {
+    "logoBase64": null,
+    "patient": {
+      "name": "Sample Patient",
+      "hn": "6512620",
+      "identityNumber": "3101401131780",
+      "age": 55,
+      "allergies": ["ไม่มีแพ้ยา"],
+      "coverage": "สปสช.",
+      "diagnosis": "ESRD",
+      "underlying": "ESRD",
+      "hdPerWeek": "3"
+    },
+    "unit": { "id": -1, "fullName": "Hemodialysis Unit" },
+    "layoutContext": {
+      "reportSettings": { "showDateAndHdNo": false, "showHdPerWeek": true }
+    }
+  },
+  "columnHeaders": ["Lab", "01/07/2026", "15/07/2026", "01/08/2026", "15/08/2026"],
+  "rows": [
+    ["Hb (g/dL)", "9.5", "9.8", "10.1", "10.4"],
+    ["Hct (%)", "28.0", "29.4", "30.2", "31.0"],
+    ["BUN (mg/dL)", "62", "58", "55", "52"],
+    ["Cr (mg/dL)", "8.2", "7.9", "7.6", "7.4"],
+    ["K (mmol/L)", "5.1", "4.8", "4.6", "4.5"],
+    ["Ca (mg/dL)", "8.4", "8.6", "8.8", "9.0"],
+    ["PO4 (mg/dL)", "5.2", "4.9", "4.7", "4.5"]
+  ]
+}

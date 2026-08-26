@@ -1,0 +1,22 @@
+{
+  "title": "Hemodialysis Summary",
+  "reportDate": "26/08/2026",
+  "period": "2026-08",
+  "patient": {
+    "hn": "6512620",
+    "name": "Sample Patient",
+    "unit": "Hemodialysis Unit"
+  },
+  "fields": [
+    { "label": "Month", "value": "2026-08" },
+    { "label": "Sessions", "value": "3" },
+    { "label": "Completed", "value": "3" },
+    { "label": "Avg UF (L)", "value": "2.4" }
+  ],
+  "columnHeaders": ["Date", "Type", "Pre (kg)", "Post (kg)", "UF goal (L)", "Hours"],
+  "rows": [
+    ["05/08/2026", "HD", "65.2", "62.8", "2.5", "4"],
+    ["08/08/2026", "HD", "64.9", "62.6", "2.4", "4"],
+    ["12/08/2026", "HD", "65.5", "62.9", "2.6", "4"]
+  ]
+}

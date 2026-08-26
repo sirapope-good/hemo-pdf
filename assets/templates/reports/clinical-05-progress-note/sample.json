@@ -1,0 +1,48 @@
+{
+  "title": "Hemodialysis Progress note",
+  "monthKey": "2026-08",
+  "header": {
+    "patient": {
+      "name": "Sample Patient",
+      "hn": "6512620",
+      "identityNumber": "3101401131780",
+      "age": 55,
+      "allergies": ["ไม่มีแพ้ยา"],
+      "coverage": "สปสช.",
+      "diagnosis": "ESRD",
+      "underlying": "DM"
+    },
+    "unit": { "id": -1, "fullName": "Hemodialysis Unit" },
+    "layoutContext": {
+      "reportSettings": { "showDateAndHdNo": true, "showHdPerWeek": false }
+    }
+  },
+  "sessions": [
+    {
+      "hemodialysisId": "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa",
+      "dateLabel": "12/08/2026",
+      "subjective": "No complaint",
+      "generalAppearance": "goodConscious",
+      "heent": "normal",
+      "lung": "normal",
+      "extremities": "normal",
+      "assessment": "ESRD c U/D DM",
+      "plan": "Continue HD",
+      "orderForOneDay": "CBC",
+      "orderForContinuation": "EPO"
+    },
+    {
+      "hemodialysisId": "bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb",
+      "dateLabel": "15/08/2026",
+      "subjective": "Mild cramps after UF",
+      "generalAppearance": "goodConscious",
+      "heent": "normal",
+      "lung": "normal",
+      "extremities": "edema+",
+      "assessment": "ESRD c U/D DM",
+      "plan": "Reduce UF goal",
+      "orderForOneDay": null,
+      "orderForContinuation": "EPO"
+    }
+  ]
+}

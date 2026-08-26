@@ -1,0 +1,21 @@
+{
+  "title": "Hemodialysis Adequacy Summary",
+  "reportDate": "26/08/2026",
+  "period": "2026-08",
+  "patient": {
+    "hn": "6512620",
+    "name": "Sample Patient",
+    "unit": "Hemodialysis Unit"
+  },
+  "fields": [
+    { "label": "Month", "value": "2026-08" },
+    { "label": "Sessions with Kt/V", "value": "2" },
+    { "label": "Avg spKt/V", "value": "1.45" },
+    { "label": "Avg URR (%)", "value": "68" }
+  ],
+  "columnHeaders": ["Date", "spKt/V", "URR (%)", "Hours", "Blood flow"],
+  "rows": [
+    ["05/08/2026", "1.42", "67", "4", "300"],
+    ["12/08/2026", "1.48", "69", "4", "320"]
+  ]
+}

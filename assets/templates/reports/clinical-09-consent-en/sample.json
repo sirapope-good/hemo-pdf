@@ -1,0 +1,28 @@
+{
+  "language": "en",
+  "type": "Treatment",
+  "title": "Consent for Hemodialysis Treatment",
+  "centerName": "Hemodialysis Unit",
+  "patientName": "Draco Malfoy",
+  "patientHn": "184706",
+  "coverageScheme": "Social Security",
+  "patientAge": 31,
+  "identityNumber": "3120600881117",
+  "diagnosis": "-",
+  "allergies": ["No known drug allergy"],
+  "signedByName": "Draco Malfoy",
+  "isRepresentative": false,
+  "patientGender": "M",
+  "expiryMonths": 6,
+  "signedDate": { "day": "17", "month": "August", "year": "2026" },
+  "bodyParagraphs": [
+    { "text": "I acknowledge that I have been informed and understand hemodialysis treatment as follows:", "sub": false },
+    { "text": "1. Hemodialysis removes waste products and excess fluid from the body.", "sub": false },
+    { "text": "2. Possible complications during or after treatment include:", "sub": false },
+    { "text": "2.1 Infection", "sub": true },
+    { "text": "2.2 Bleeding", "sub": true },
+    { "text": "2.3 Hypotension", "sub": true },
+    { "text": "2.4 Muscle cramps", "sub": true },
+    { "text": "2.5 Allergic reaction to materials used in dialysis", "sub": true }
+  ]
+}
