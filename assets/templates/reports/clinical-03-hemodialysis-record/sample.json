@@ -1,0 +1,168 @@
+{
+  "id": "b7f1e2c3-4d5a-6789-abcd-ef0123456789",
+  "ward": "Nephro",
+  "bed": "6 (Nikkiso DBB-05)",
+  "treatmentNo": 61,
+  "cycleStartTime": "2026-08-04T06:00:00Z",
+  "cycleEndTime": "2026-08-04T10:00:00Z",
+  "completedTime": "2026-08-04T10:05:00Z",
+  "ktv": 1.42,
+  "urr": 71.5,
+  "isAcNotUsed": true,
+  "isConsent": false,
+  "nursesInShift": "โสภณ สงกรานต์",
+  "nursesInShiftNonPn": "นพรัตน์ เชยชัยนิจ",
+  "doctorName": "นพ.ธัญ จันทร์ปงกร",
+  "preVital": { "bps": 175, "bpd": 115, "hr": 79, "rr": 20, "temp": 36.2, "spO2": 99 },
+  "postVital": { "bps": 133, "bpd": 67, "hr": 54, "rr": 20, "temp": 36.0, "spO2": 100 },
+  "patient": {
+    "name": "ชาติชาย วิเศษสังข์",
+    "hn": "6901007",
+    "identityNumber": "1100700123451",
+    "birthDate": "1995-03-12T00:00:00Z",
+    "sex": "Male",
+    "age": 31,
+    "doctorName": "นพ.ธัญ จันทร์ปงกร",
+    "allergies": ["ไม่มีแพ้ยา"],
+    "coverage": "Civil Servant",
+    "diagnosis": "ESRD",
+    "underlying": "HTN, DM"
+  },
+  "unit": { "id": -1, "fullName": "TRD" },
+  "dehydration": {
+    "preWeight": 62.4,
+    "postWeight": 59.6,
+    "lastPostWeight": 59.8,
+    "foodIntakeWeight": 0.2,
+    "extraFluid": 0.1,
+    "ufNet": 2.8,
+    "totalUf": 2.8,
+    "ufEstimate": 2.6,
+    "ufGoal": 2.8,
+    "flushNss": 0.15,
+    "flushNssTotal": 0.15
+  },
+  "dialysisPrescription": {
+    "mode": "HD",
+    "bloodAccessRoute": "AV Fistula / Left / Forearm",
+    "durationHours": 4,
+    "durationMinutes": 0,
+    "anticoagulant": "No Heparin",
+    "dryWeight": 59.5,
+    "dialyzer": "FUX-21",
+    "dialyzerSurfaceArea": 2.1,
+    "dialysateK": 2,
+    "dialysateCa": 3.5,
+    "dialysateNa": 138,
+    "dialysateHco3": 35,
+    "dialysateTemperature": 36,
+    "dialysateFlowRate": 500,
+    "bloodFlow": 280,
+    "initialAmountMl": null,
+    "maintainAmountMl": null
+  },
+  "avShunt": {
+    "avShuntId": "c1d2e3f4-a5b6-7890-cdef-1234567890ab",
+    "catheterType": 0,
+    "shuntSite": "AV Fistula / Left / Forearm",
+    "aNeedleSize": 16,
+    "vNeedleSize": 16
+  },
+  "assessments": {
+    "pre": [
+      { "name": "pain", "checked": true, "text": "2" },
+      { "name": "pale", "checked": false, "text": "" },
+      { "name": "edema", "checked": true, "text": "" },
+      { "name": "dys", "checked": false, "text": "" },
+      { "name": "fever", "checked": false, "text": "" },
+      { "name": "crep", "checked": false, "text": "" },
+      { "name": "head", "checked": false, "text": "" },
+      { "name": "vomit", "checked": false, "text": "" },
+      { "name": "ano", "checked": false, "text": "" },
+      { "name": "itch", "checked": false, "text": "" },
+      { "name": "neck", "checked": false, "text": "" },
+      { "name": "anxiety", "checked": false, "text": "" },
+      { "name": "sleep", "checked": false, "text": "" },
+      { "name": "cons", "checked": false, "text": "" },
+      { "name": "pbleed", "checked": false, "text": "" },
+      { "name": "thrill", "checked": true, "text": "" },
+      { "name": "bruit", "checked": true, "text": "" },
+      { "name": "vas:edema", "checked": false, "text": "" },
+      { "name": "inf", "checked": false, "text": "" }
+    ],
+    "re": [],
+    "post": [
+      {
+        "name": "complication",
+        "checked": true,
+        "text": "",
+        "selectedOptions": ["No complication"]
+      },
+      {
+        "name": "nursing",
+        "checked": true,
+        "text": "",
+        "selectedOptions": ["Monitor vital signs", "Post HD nursing care"]
+      },
+      {
+        "name": "health",
+        "checked": true,
+        "text": "",
+        "selectedOptions": ["Nutrition", "Fluid control", "Vascular Access"]
+      }
+    ],
+    "other": [
+      { "name": "urine", "checked": true, "text": "200" }
+    ]
+  },
+  "dialysisRecords": [
+    { "timestamp": "2026-08-04T06:00:00Z", "bps": 168, "bpd": 98, "hr": 82, "bfr": 250, "ap": -90, "vp": 110, "tmp": 80, "dc": 14.0, "ufRate": 0.70, "ufTotal": 0 },
+    { "timestamp": "2026-08-04T06:30:00Z", "bps": 160, "bpd": 92, "hr": 80, "bfr": 280, "ap": -95, "vp": 120, "tmp": 85, "dc": 13.9, "ufRate": 0.70, "ufTotal": 0.35 },
+    { "timestamp": "2026-08-04T07:00:00Z", "bps": 152, "bpd": 88, "hr": 78, "bfr": 280, "ap": -88, "vp": 115, "tmp": 90, "dc": 13.8, "ufRate": 0.70, "ufTotal": 0.70 },
+    { "timestamp": "2026-08-04T07:30:00Z", "bps": 148, "bpd": 84, "hr": 76, "bfr": 280, "ap": -85, "vp": 108, "tmp": 88, "dc": 13.8, "ufRate": 0.70, "ufTotal": 1.05 },
+    { "timestamp": "2026-08-04T08:00:00Z", "bps": 142, "bpd": 80, "hr": 74, "bfr": 280, "ap": -82, "vp": 100, "tmp": 92, "dc": 13.7, "ufRate": 0.70, "ufTotal": 1.40 },
+    { "timestamp": "2026-08-04T08:30:00Z", "bps": 138, "bpd": 76, "hr": 72, "bfr": 280, "ap": -80, "vp": 95, "tmp": 95, "dc": 13.7, "ufRate": 0.70, "ufTotal": 1.75 },
+    { "timestamp": "2026-08-04T09:00:00Z", "bps": 136, "bpd": 72, "hr": 70, "bfr": 280, "ap": -78, "vp": 90, "tmp": 98, "dc": 13.7, "ufRate": 0.70, "ufTotal": 2.10 },
+    { "timestamp": "2026-08-04T09:58:00Z", "bps": 133, "bpd": 67, "hr": 68, "bfr": 250, "ap": -70, "vp": 80, "tmp": 100, "dc": 13.6, "ufRate": 0.50, "ufTotal": 2.80 }
+  ],
+  "nurseRecords": [
+    { "timestamp": "2026-08-04T06:05:00Z", "content": "Pre HD assessment OK, cannulation without difficulty", "creatorName": "RN Somchai" },
+    { "timestamp": "2026-08-04T10:00:00Z", "content": "Post HD stable, no bleeding at puncture site", "creatorName": "RN Malee" }
+  ],
+  "doctorRecords": [],
+  "medicineRecords": [
+    { "timestamp": "2026-08-04T08:00:00Z", "medicineName": "EPO 4000 U", "route": "IV", "quantity": 1 },
+    { "timestamp": "2026-08-04T09:30:00Z", "medicineName": "NSS flush", "route": "IV", "quantity": 100 }
+  ],
+  "progressNotes": [
+    {
+      "focus": "Risk for intradialytic complication",
+      "i": "Monitor V/S q 30 min",
+      "e": "No complication; post vital stable"
+    }
+  ],
+  "labs": { "hct": "32", "hb": "10.5" },
+  "signatureNames": {
+    "pre_hd": "โสภณ สงกรานต์",
+    "post_hd": "นพรัตน์ เชยชัยนิจ"
+  },
+  "layoutContext": {
+    "layoutProfile": "ThaiUr",
+    "dialysisMode": "HD",
+    "vascularAccess": "AvFistula",
+    "reportSettings": {
+      "hemosheetTemplate": "Hemosheet-ThaiUR.trdp",
+      "nurseInShiftEnabled": true,
+      "showDateAndHdNo": true,
+      "fixedLines": { "dialysis": 8, "nurse": 2, "medicine": 2, "doctor": 2, "progressNote": 2 }
+    },
+    "features": {
+      "showHdfColumns": false,
+      "showAvPanel": true,
+      "showCathPanel": false,
+      "showAcFields": true,
+      "showNurseInShift": true,
+      "showProgressNote": true
+    }
+  }
+}

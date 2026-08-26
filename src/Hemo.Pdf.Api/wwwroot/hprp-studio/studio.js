@@ -8,7 +8,11 @@ const state = {
   selectedKey: null,
   previewUrl: null,
   previewTimer: null,
+  sampleScenario: "",
 };
+
+const DIALYSIS_WIDGET = "hemosheet.dialysis-records";
+const DENSE_HEMOSHEET_KINDS = new Set(["DefaultForm", "ThaiUrForm"]);
 
 const els = {
   token: document.getElementById("token"),
@@ -22,6 +26,8 @@ const els = {
   inspector: document.getElementById("inspector"),
   preview: document.getElementById("previewFrame"),
   btnPreview: document.getElementById("btnPreview"),
+  sampleScenario: document.getElementById("sampleScenario"),
+  previewEntityId: document.getElementById("previewEntityId"),
 };
 
 function headers() {
@@ -63,8 +69,49 @@ function ensureLayout() {
     state.draft.layout = {};
   if (!Array.isArray(state.draft.layout.body))
     state.draft.layout.body = [];
+  if (!Array.isArray(state.draft.layout.sections))
+    state.draft.layout.sections = [];
   if (!state.draft.labels || typeof state.draft.labels !== "object")
     state.draft.labels = {};
+}
+
+/** Hemosheet packages edit layout.sections[]; clinical-01 style edits body[]. */
+function usesSectionsMode() {
+  ensureLayout();
+  if ((state.draft.layout.sections || []).length > 0)
+    return true;
+  const id = (state.selected && state.selected.id) || "";
+  return String(id).toLowerCase().includes("hemodialysis-record")
+    || String(id).toLowerCase() === "clinical-03-hemodialysis-record"
+    || String(id).toLowerCase() === "template-04-hemosheet";
+}
+
+function manifestLayoutKind() {
+  return state.draft.manifest && state.draft.manifest.layoutKind;
+}
+
+function isDenseHemosheetForm() {
+  return usesSectionsMode() && DENSE_HEMOSHEET_KINDS.has(manifestLayoutKind() || "");
+}
+
+function profileLabel(item) {
+  if (!item) return "default";
+  return item.profileLabel || item.layoutProfile || item.variant || "default";
+}
+
+function findDialysisSectionKey() {
+  ensureLayout();
+  const idx = state.draft.layout.sections.findIndex((n) => n && n.widget === DIALYSIS_WIDGET);
+  return idx >= 0 ? "sections:" + idx : null;
+}
+
+function listSlot() {
+  return usesSectionsMode() ? "sections" : "body";
+}
+
+function nodeList() {
+  ensureLayout();
+  return usesSectionsMode() ? state.draft.layout.sections : state.draft.layout.body;
 }
 
 function labelLang() {
@@ -104,6 +151,10 @@ function nodeAt(key) {
     const i = Number(key.slice(5));
     return state.draft.layout.body[i] || null;
   }
+  if (key && key.startsWith("sections:")) {
+    const i = Number(key.slice(9));
+    return state.draft.layout.sections[i] || null;
+  }
   return null;
 }
 
@@ -119,6 +170,14 @@ function setNodeAt(key, node) {
       state.draft.layout.body.splice(i, 1);
     else
       state.draft.layout.body[i] = node;
+    return;
+  }
+  if (key && key.startsWith("sections:")) {
+    const i = Number(key.slice(9));
+    if (node == null)
+      state.draft.layout.sections.splice(i, 1);
+    else
+      state.draft.layout.sections[i] = node;
   }
 }
 
@@ -187,7 +246,8 @@ async function loadList() {
   for (const item of state.list) {
     const li = document.createElement("li");
     li.dataset.key = keyOf(item);
-    li.innerHTML = `<span class="id">${item.displayName || item.id}</span><span class="meta">${item.id}${item.variant ? " · " + item.variant : ""} · ${item.packed ? "packed" : "folder"}</span>`;
+    const label = profileLabel(item);
+    li.innerHTML = `<span class="id">${item.displayName || item.id}</span><span class="meta">${label}${item.variant ? " · " + item.variant : ""} · ${item.packed ? "packed" : "folder"}</span>`;
     li.addEventListener("click", () => openPackage(item).catch((err) => setStatus(err.message, "err")));
     els.list.appendChild(li);
   }
@@ -199,8 +259,12 @@ async function loadCatalog() {
 
 function renderPalette() {
   const templateId = state.selected && state.selected.id;
-  const widgets = (state.catalog.widgets || []).filter((w) => allowedOn(w, templateId));
-  const blocks = state.catalog.blockTypes || [];
+  const slot = listSlot();
+  const widgets = (state.catalog.widgets || []).filter((w) => {
+    if (!allowedOn(w, templateId)) return false;
+    const recipeSlot = w.slot || "body";
+    return recipeSlot === slot;
+  });
   els.palette.innerHTML = "";
   const addGroup = (title) => {
     const g = document.createElement("div");
@@ -214,17 +278,30 @@ function renderPalette() {
     btn.type = "button";
     btn.textContent = recipe.id;
     btn.title = recipe.kind + (recipe.allowedOn && recipe.allowedOn.length ? " · " + recipe.allowedOn.join(", ") : "");
-    btn.addEventListener("click", () => addNode({ widget: recipe.id }));
+    btn.addEventListener("click", () => addNode(newWidgetNode(recipe)));
     els.palette.appendChild(btn);
   }
-  addGroup("Blocks");
-  for (const recipe of blocks) {
-    const btn = document.createElement("button");
-    btn.type = "button";
-    btn.textContent = recipe.id;
-    btn.addEventListener("click", () => addNode(newBlock(recipe.id)));
-    els.palette.appendChild(btn);
+  if (slot === "body") {
+    addGroup("Blocks");
+    for (const recipe of state.catalog.blockTypes || []) {
+      const btn = document.createElement("button");
+      btn.type = "button";
+      btn.textContent = recipe.id;
+      btn.addEventListener("click", () => addNode(newBlock(recipe.id)));
+      els.palette.appendChild(btn);
+    }
   }
+}
+
+function newWidgetNode(recipe) {
+  const node = { widget: recipe.id };
+  if (recipe.defaultColumns && recipe.defaultColumns.length)
+    node.columns = recipe.defaultColumns.slice();
+  if (recipe.defaultColumnsWhen && typeof recipe.defaultColumnsWhen === "object")
+    node.columnsWhen = JSON.parse(JSON.stringify(recipe.defaultColumnsWhen));
+  if (recipe.chromeDefaults && recipe.chromeDefaults.headerFill)
+    node.chrome = { headerFill: recipe.chromeDefaults.headerFill };
+  return node;
 }
 
 function newBlock(type) {
@@ -240,9 +317,12 @@ function newBlock(type) {
 function addNode(node) {
   if (!state.selected) return;
   ensureLayout();
-  if (node.widget === "thaiur.header" && !state.draft.layout.header) {
+  if (!usesSectionsMode() && node.widget === "thaiur.header" && !state.draft.layout.header) {
     state.draft.layout.header = node;
     state.selectedKey = "header";
+  } else if (usesSectionsMode()) {
+    state.draft.layout.sections.push(node);
+    state.selectedKey = "sections:" + (state.draft.layout.sections.length - 1);
   } else {
     state.draft.layout.body.push(node);
     state.selectedKey = "body:" + (state.draft.layout.body.length - 1);
@@ -251,14 +331,14 @@ function addNode(node) {
   schedulePreview();
 }
 
-function moveBody(index, delta) {
+function moveListItem(index, delta) {
   ensureLayout();
   const next = index + delta;
-  const body = state.draft.layout.body;
-  if (next < 0 || next >= body.length) return;
-  const [item] = body.splice(index, 1);
-  body.splice(next, 0, item);
-  state.selectedKey = "body:" + next;
+  const list = nodeList();
+  if (next < 0 || next >= list.length) return;
+  const [item] = list.splice(index, 1);
+  list.splice(next, 0, item);
+  state.selectedKey = listSlot() + ":" + next;
   renderDesigner();
   schedulePreview();
 }
@@ -270,7 +350,15 @@ function removeNode(key) {
   } else if (key.startsWith("body:")) {
     const i = Number(key.slice(5));
     state.draft.layout.body.splice(i, 1);
-    state.selectedKey = state.draft.layout.body.length ? "body:" + Math.min(i, state.draft.layout.body.length - 1) : null;
+    state.selectedKey = state.draft.layout.body.length
+      ? "body:" + Math.min(i, state.draft.layout.body.length - 1)
+      : null;
+  } else if (key.startsWith("sections:")) {
+    const i = Number(key.slice(9));
+    state.draft.layout.sections.splice(i, 1);
+    state.selectedKey = state.draft.layout.sections.length
+      ? "sections:" + Math.min(i, state.draft.layout.sections.length - 1)
+      : null;
   }
   renderDesigner();
   schedulePreview();
@@ -279,12 +367,26 @@ function removeNode(key) {
 function renderBodyList() {
   ensureLayout();
   els.bodyList.innerHTML = "";
-  const header = state.draft.layout.header;
-  if (header) {
-    els.bodyList.appendChild(bodyItem("header", header, { header: true }));
+  const titleEl = document.getElementById("orderListTitle");
+  const slot = listSlot();
+  if (titleEl) {
+    const variant = state.selected && state.selected.variant ? state.selected.variant : "default";
+    titleEl.textContent = slot === "sections"
+      ? `Sections order · ${variant}`
+      : "Body order";
   }
-  state.draft.layout.body.forEach((node, i) => {
-    els.bodyList.appendChild(bodyItem("body:" + i, node, { index: i, count: state.draft.layout.body.length }));
+  if (slot === "body") {
+    const header = state.draft.layout.header;
+    if (header)
+      els.bodyList.appendChild(bodyItem("header", header, { header: true }));
+  }
+  const list = nodeList();
+  list.forEach((node, i) => {
+    els.bodyList.appendChild(bodyItem(slot + ":" + i, node, {
+      index: i,
+      count: list.length,
+      slot,
+    }));
   });
 }
 
@@ -292,7 +394,10 @@ function bodyItem(key, node, opts) {
   const li = document.createElement("li");
   li.className = key === state.selectedKey ? "active" : "";
   if (opts.header) li.classList.add("header-node");
-  li.innerHTML = `<span class="id">${nodeTitle(node)}</span><span class="meta">${opts.header ? "header" : "body[" + opts.index + "]"}</span>`;
+  if (isDenseHemosheetForm() && node && node.widget === DIALYSIS_WIDGET)
+    li.classList.add("preview-affects");
+  const slotLabel = opts.header ? "header" : ((opts.slot || "body") + "[" + opts.index + "]");
+  li.innerHTML = `<span class="id">${nodeTitle(node)}</span><span class="meta">${slotLabel}</span>`;
   if (!opts.header) {
     li.draggable = true;
     li.addEventListener("dragstart", () => { state.dragIndex = opts.index; });
@@ -300,7 +405,7 @@ function bodyItem(key, node, opts) {
     li.addEventListener("drop", (e) => {
       e.preventDefault();
       if (state.dragIndex == null || state.dragIndex === opts.index) return;
-      moveBody(state.dragIndex, opts.index - state.dragIndex);
+      moveListItem(state.dragIndex, opts.index - state.dragIndex);
       state.dragIndex = null;
     });
   }
@@ -315,12 +420,12 @@ function bodyItem(key, node, opts) {
     up.type = "button";
     up.textContent = "Up";
     up.disabled = opts.index === 0;
-    up.addEventListener("click", (e) => { e.stopPropagation(); moveBody(opts.index, -1); });
+    up.addEventListener("click", (e) => { e.stopPropagation(); moveListItem(opts.index, -1); });
     const down = document.createElement("button");
     down.type = "button";
     down.textContent = "Down";
     down.disabled = opts.index === opts.count - 1;
-    down.addEventListener("click", (e) => { e.stopPropagation(); moveBody(opts.index, 1); });
+    down.addEventListener("click", (e) => { e.stopPropagation(); moveListItem(opts.index, 1); });
     actions.append(up, down);
   }
   const del = document.createElement("button");
@@ -417,6 +522,24 @@ function persistColumnPlan(node, recipe, plan) {
     node.columnPlan = plan;
 }
 
+function workingStringColumns(node, recipe) {
+  if (Array.isArray(node.columns) && node.columns.length)
+    return node.columns.map((c) => String(c));
+  return ((recipe && recipe.defaultColumns) || []).map((c) => String(c));
+}
+
+function stringColsEqual(a, b) {
+  if (!a || !b || a.length !== b.length) return false;
+  return a.every((c, i) => String(c) === String(b[i]));
+}
+
+function persistStringColumns(node, recipe, cols) {
+  if (stringColsEqual(cols, (recipe && recipe.defaultColumns) || []))
+    delete node.columns;
+  else
+    node.columns = cols.slice();
+}
+
 function renderInspector() {
   const node = nodeAt(state.selectedKey);
   els.inspector.innerHTML = "";
@@ -429,6 +552,13 @@ function renderInspector() {
   head.innerHTML = `<strong>${nodeTitle(node)}</strong><br/><span class="muted">${recipe ? recipe.kind : "custom"}</span>`;
   els.inspector.appendChild(head);
 
+  if (isDenseHemosheetForm() && node.widget !== DIALYSIS_WIDGET) {
+    const note = document.createElement("p");
+    note.className = "inspector-note";
+    note.textContent = "แบบ " + (manifestLayoutKind() || "dense") + ": บล็อกนี้ยังไม่ขับ preview (ลำดับ/when/chrome ไม่มีผล) — แก้ hemosheet.dialysis-records เพื่อดูผลใน PDF";
+    els.inspector.appendChild(note);
+  }
+
   const fields = (recipe && recipe.inspectorFields) || [];
   if (fields.includes("when")) {
     const whenVal = Array.isArray(node.when) ? node.when.join(",") : (node.when || "");
@@ -440,12 +570,28 @@ function renderInspector() {
     }))));
   }
 
+  if (fields.includes("variant")) {
+    els.inspector.appendChild(field("variant", textInput(node.variant || "", (v) => mutateSelected((n) => {
+      if (v.trim()) n.variant = v.trim();
+      else delete n.variant;
+    }))));
+  }
+
+  if (fields.includes("fixedLinesFrom")) {
+    els.inspector.appendChild(field("fixedLinesFrom", textInput(node.fixedLinesFrom || "", (v) => mutateSelected((n) => {
+      if (v.trim()) n.fixedLinesFrom = v.trim();
+      else delete n.fixedLinesFrom;
+    }))));
+  }
+
   if (fields.some((f) => f.startsWith("chrome"))) {
     const chrome = node.chrome || {};
-    els.inspector.appendChild(field("chrome.headerFill", textInput(chrome.headerFill || "", (v) => mutateSelected((n) => {
+    const fillInput = textInput(chrome.headerFill || "", (v) => mutateSelected((n) => {
       n.chrome = { ...(n.chrome || {}), headerFill: v.trim() || undefined };
       if (!n.chrome.headerFill && !n.chrome.border && n.chrome.fontSize == null) delete n.chrome;
-    }))));
+    }));
+    fillInput.placeholder = "$branding.sectionHeaderBackground หรือ #384BA8";
+    els.inspector.appendChild(field("chrome.headerFill", fillInput));
     els.inspector.appendChild(field("chrome.border", selectInput(chrome.border || "", [
       { value: "", label: "(default thin)" },
       { value: "none", label: "none" },
@@ -533,6 +679,129 @@ function renderInspector() {
     els.inspector.appendChild(add);
   }
 
+  if (fields.includes("columns") && !fields.includes("columnPlan")
+      && recipe && (recipe.slot === "sections" || (recipe.defaultColumns || []).length || Array.isArray(node.columns))) {
+    const cols = workingStringColumns(node, recipe);
+    const title = document.createElement("p");
+    title.innerHTML = "<strong>columns</strong>";
+    els.inspector.appendChild(title);
+    cols.forEach((label, i) => {
+      const card = document.createElement("div");
+      card.className = "col-card";
+      card.appendChild(field("label", textInput(label, (v) => {
+        cols[i] = v;
+        mutateSelected((n) => persistStringColumns(n, recipe, cols));
+      })));
+      const nav = document.createElement("div");
+      nav.className = "node-actions";
+      const up = document.createElement("button");
+      up.type = "button";
+      up.textContent = "Up";
+      up.disabled = i === 0;
+      up.addEventListener("click", () => {
+        if (i === 0) return;
+        [cols[i - 1], cols[i]] = [cols[i], cols[i - 1]];
+        mutateSelected((n) => persistStringColumns(n, recipe, cols));
+      });
+      const down = document.createElement("button");
+      down.type = "button";
+      down.textContent = "Down";
+      down.disabled = i === cols.length - 1;
+      down.addEventListener("click", () => {
+        if (i === cols.length - 1) return;
+        [cols[i], cols[i + 1]] = [cols[i + 1], cols[i]];
+        mutateSelected((n) => persistStringColumns(n, recipe, cols));
+      });
+      const hide = document.createElement("button");
+      hide.type = "button";
+      hide.textContent = "Remove";
+      hide.addEventListener("click", () => {
+        cols.splice(i, 1);
+        mutateSelected((n) => persistStringColumns(n, recipe, cols));
+      });
+      nav.append(up, down, hide);
+      card.appendChild(nav);
+      els.inspector.appendChild(card);
+    });
+    const addCol = document.createElement("button");
+    addCol.type = "button";
+    addCol.textContent = "Add column";
+    addCol.addEventListener("click", () => {
+      cols.push("");
+      mutateSelected((n) => persistStringColumns(n, recipe, cols));
+    });
+    els.inspector.appendChild(addCol);
+  }
+
+  if (fields.includes("columnsWhen") && recipe) {
+    const key = "feature:showHdfColumns";
+    const whenMap = node.columnsWhen && typeof node.columnsWhen === "object"
+      ? node.columnsWhen
+      : (recipe.defaultColumnsWhen || {});
+    const hdfCols = Array.isArray(whenMap[key])
+      ? whenMap[key].slice()
+      : ((recipe.defaultColumnsWhen && recipe.defaultColumnsWhen[key]) || []).slice();
+    const title = document.createElement("p");
+    title.innerHTML = "<strong>columnsWhen." + key + "</strong>";
+    els.inspector.appendChild(title);
+    hdfCols.forEach((label, i) => {
+      const card = document.createElement("div");
+      card.className = "col-card";
+      card.appendChild(field("label", textInput(label, (v) => {
+        hdfCols[i] = v;
+        mutateSelected((n) => {
+          n.columnsWhen = { ...(n.columnsWhen || {}), [key]: hdfCols.slice() };
+        });
+      })));
+      const nav = document.createElement("div");
+      nav.className = "node-actions";
+      const up = document.createElement("button");
+      up.type = "button";
+      up.textContent = "Up";
+      up.disabled = i === 0;
+      up.addEventListener("click", () => {
+        if (i === 0) return;
+        [hdfCols[i - 1], hdfCols[i]] = [hdfCols[i], hdfCols[i - 1]];
+        mutateSelected((n) => {
+          n.columnsWhen = { ...(n.columnsWhen || {}), [key]: hdfCols.slice() };
+        });
+      });
+      const down = document.createElement("button");
+      down.type = "button";
+      down.textContent = "Down";
+      down.disabled = i === hdfCols.length - 1;
+      down.addEventListener("click", () => {
+        if (i === hdfCols.length - 1) return;
+        [hdfCols[i], hdfCols[i + 1]] = [hdfCols[i + 1], hdfCols[i]];
+        mutateSelected((n) => {
+          n.columnsWhen = { ...(n.columnsWhen || {}), [key]: hdfCols.slice() };
+        });
+      });
+      const hide = document.createElement("button");
+      hide.type = "button";
+      hide.textContent = "Remove";
+      hide.addEventListener("click", () => {
+        hdfCols.splice(i, 1);
+        mutateSelected((n) => {
+          n.columnsWhen = { ...(n.columnsWhen || {}), [key]: hdfCols.slice() };
+        });
+      });
+      nav.append(up, down, hide);
+      card.appendChild(nav);
+      els.inspector.appendChild(card);
+    });
+    const addHdf = document.createElement("button");
+    addHdf.type = "button";
+    addHdf.textContent = "Add HDF column";
+    addHdf.addEventListener("click", () => {
+      hdfCols.push("");
+      mutateSelected((n) => {
+        n.columnsWhen = { ...(n.columnsWhen || {}), [key]: hdfCols.slice() };
+      });
+    });
+    els.inspector.appendChild(addHdf);
+  }
+
   if (fields.includes("rows")) {
     const rows = Array.isArray(node.rows) ? node.rows : [];
     const title = document.createElement("p");
@@ -604,8 +873,26 @@ function renderInspector() {
   }
 }
 
+function renderDenseFormHint() {
+  const el = document.getElementById("denseFormHint");
+  if (!el) return;
+  if (!isDenseHemosheetForm()) {
+    el.classList.add("hidden");
+    el.textContent = "";
+    return;
+  }
+  const profile = state.draft.manifest.layoutProfile || profileLabel(state.selected);
+  el.classList.remove("hidden");
+  el.innerHTML = `<strong>Preview แบบ ${profile}</strong> — ตั้งค่า tenant (Thai UR) ไม่มีผลใน Studio ต้องเปิดแพ็กเกจ variant ที่ตรงกัน `
+    + `(เช่น <code>thaiur</code> ไม่ใช่ <code>default</code>). `
+    + `บน ${manifestLayoutKind()} แก้แล้วเห็นผลใน preview เฉพาะ <code>${DIALYSIS_WIDGET}</code> `
+    + `(columns / columnsWhen / chrome.headerFill / fixedLinesFrom) และต้องคงจำนวนคอลัมน์ 12 (HD) หรือ 14 (HDF).<br>`
+    + `พรีวิวใช้ renderer เดียวกับพิมพ์จริง — เลือก Sample (HD/HDF mock) หรือใส่ EntityId เพื่อดึง report-data จริงเหมือนแอป`;
+}
+
 function renderDesigner() {
   if (state.mode !== "designer") return;
+  renderDenseFormHint();
   renderPalette();
   renderBodyList();
   renderInspector();
@@ -631,14 +918,49 @@ async function openPackage(item) {
     labels: pkg.labels || {},
   };
   ensureLayout();
-  state.selectedKey = state.draft.layout.header ? "header" : (state.draft.layout.body[0] ? "body:0" : null);
+  if (usesSectionsMode()) {
+    state.selectedKey = findDialysisSectionKey()
+      || (state.draft.layout.sections[0] ? "sections:0" : null);
+  } else if (state.draft.layout.header) {
+    state.selectedKey = "header";
+  } else if (state.draft.layout.body[0]) {
+    state.selectedKey = "body:0";
+  } else {
+    state.selectedKey = null;
+  }
   selectPackage(item);
-  els.title.textContent = `${item.id}${item.variant ? " (" + item.variant + ")" : ""}`;
+  const label = profileLabel(item);
+  const kind = item.layoutKind || state.draft.manifest.layoutKind || "";
+  els.title.textContent = `${item.id} · ${label}${kind ? " (" + kind + ")" : ""}`;
   setButtonsEnabled(true);
   if (state.mode === "json") showJsonTab();
   else renderDesigner();
   setStatus("Loaded " + item.id, "ok");
+  await loadSampleScenarios(item.id);
   schedulePreview();
+}
+
+async function loadSampleScenarios(templateId) {
+  if (!els.sampleScenario) return;
+  try {
+    const rows = await api(`/api/hprp/packages/${encodeURIComponent(templateId)}/samples`);
+    els.sampleScenario.innerHTML = "";
+    for (const row of rows || []) {
+      const opt = document.createElement("option");
+      opt.value = row.scenario || "";
+      opt.textContent = row.label || row.id || "default";
+      els.sampleScenario.appendChild(opt);
+    }
+    if (!els.sampleScenario.options.length) {
+      const opt = document.createElement("option");
+      opt.value = "";
+      opt.textContent = "Full HD mock";
+      els.sampleScenario.appendChild(opt);
+    }
+    els.sampleScenario.value = state.sampleScenario || "";
+  } catch {
+    els.sampleScenario.innerHTML = `<option value="">Full HD mock</option>`;
+  }
 }
 
 async function validate() {
@@ -725,14 +1047,23 @@ function schedulePreview() {
 async function preview() {
   const item = state.selected;
   if (!item) return;
+  const entityId = els.previewEntityId && els.previewEntityId.value.trim();
+  const sampleScenario = els.sampleScenario ? els.sampleScenario.value : "";
+  state.sampleScenario = sampleScenario;
+  const payload = {
+    templateId: item.id,
+    variant: item.variant || undefined,
+    package: currentBody(),
+  };
+  if (entityId) {
+    payload.entityId = entityId;
+  } else if (sampleScenario) {
+    payload.sampleScenario = sampleScenario;
+  }
   const res = await fetch("/api/hprp/preview", {
     method: "POST",
     headers: headers(),
-    body: JSON.stringify({
-      templateId: item.id,
-      variant: item.variant || undefined,
-      package: currentBody(),
-    }),
+    body: JSON.stringify(payload),
   });
   if (!res.ok) {
     const text = await res.text();
@@ -749,6 +1080,12 @@ async function preview() {
   state.previewUrl = URL.createObjectURL(blob);
   els.preview.classList.add("has-pdf");
   els.preview.src = state.previewUrl;
+  setStatus(
+    entityId
+      ? `Preview from entity ${entityId} (same fetch path as print).`
+      : `Preview from sample${sampleScenario ? "." + sampleScenario : ""} (print renderer + draft package).`,
+    "ok"
+  );
 }
 
 document.querySelectorAll(".tab").forEach((btn) => {
@@ -785,6 +1122,14 @@ onClick("btnPackAll", () => packAll().catch((err) => setStatus(err.message, "err
 });
 if (els.btnPreview)
   els.btnPreview.addEventListener("click", () => preview().catch((err) => setStatus(err.message, "err")));
+if (els.sampleScenario)
+  els.sampleScenario.addEventListener("change", () => schedulePreview());
+if (els.previewEntityId) {
+  els.previewEntityId.addEventListener("change", () => schedulePreview());
+  els.previewEntityId.addEventListener("keydown", (ev) => {
+    if (ev.key === "Enter") schedulePreview();
+  });
+}
 
 loadList().catch((err) => {
   els.list.innerHTML = `<li class="muted">Failed to load packages</li>`;

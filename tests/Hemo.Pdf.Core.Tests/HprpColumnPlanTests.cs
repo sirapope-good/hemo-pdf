@@ -37,6 +37,32 @@ public class HprpWidgetRecipeCatalogTests
         Assert.Contains("chrome.headerFill", recipe.InspectorFields);
         Assert.Contains("nhso", recipe.LabelKeys);
     }
+
+    [Fact]
+    public void DialysisRecipe_HasSectionsSlotAndDefaultColumns()
+    {
+        var recipe = HprpWidgetRecipes.HemosheetDialysisRecords;
+        Assert.Equal(HprpWidgetRecipe.SlotSections, recipe.Slot);
+        Assert.Contains(ClinicalReportCatalog.HemodialysisRecord, recipe.AllowedOn);
+        Assert.Equal(12, recipe.DefaultColumns.Count);
+        Assert.Equal("เวลา", recipe.DefaultColumns[0]);
+        Assert.NotNull(recipe.DefaultColumnsWhen);
+        Assert.True(recipe.DefaultColumnsWhen!.ContainsKey("feature:showHdfColumns"));
+        Assert.Contains("columns", recipe.InspectorFields);
+        Assert.Contains("columnsWhen", recipe.InspectorFields);
+        Assert.DoesNotContain("columnPlan", recipe.InspectorFields);
+        Assert.Empty(recipe.DefaultColumnPlan);
+    }
+
+    [Fact]
+    public void HemosheetWidgets_UseSectionsSlot()
+    {
+        foreach (var recipe in HprpWidgetRecipes.Dense.Where(r => r.Id.StartsWith("hemosheet.", StringComparison.OrdinalIgnoreCase)))
+        {
+            Assert.Equal(HprpWidgetRecipe.SlotSections, recipe.Slot);
+            Assert.Contains(ClinicalReportCatalog.HemodialysisRecord, recipe.AllowedOn);
+        }
+    }
 }
 
 public class HctEpoAnnualColumnPlanTests
@@ -96,6 +122,74 @@ public class HctEpoAnnualColumnPlanTests
         Assert.True(data.HasValue);
         Assert.Equal(JsonValueKind.Object, data!.Value.ValueKind);
         Assert.True(data.Value.TryGetProperty("months", out _));
+    }
+
+    [Fact]
+    public void SamplePayload_Clinical03_Exists_AndVariantSetsLayoutProfile()
+    {
+        var root = FindTemplatesRoot();
+        Assert.Contains(ClinicalReportCatalog.HemodialysisRecord, HprpStudioSamplePayloads.KnownTemplateIds);
+
+        var thaiur = HprpStudioSamplePayloads.TryLoad(root, ClinicalReportCatalog.HemodialysisRecord, "thaiur");
+        Assert.True(thaiur.HasValue);
+        Assert.Equal(
+            "ThaiUr",
+            thaiur!.Value.GetProperty("layoutContext").GetProperty("layoutProfile").GetString());
+
+        var rama = HprpStudioSamplePayloads.TryLoad(root, ClinicalReportCatalog.HemodialysisRecord, "rama");
+        Assert.Equal(
+            "Rama",
+            rama!.Value.GetProperty("layoutContext").GetProperty("layoutProfile").GetString());
+
+        var def = HprpStudioSamplePayloads.TryLoad(root, ClinicalReportCatalog.HemodialysisRecord, "default");
+        Assert.Equal(
+            "Default",
+            def!.Value.GetProperty("layoutContext").GetProperty("layoutProfile").GetString());
+    }
+
+    [Fact]
+    public void ApplyHemosheetPreviewContext_PrefersManifestLayoutProfile()
+    {
+        var root = FindTemplatesRoot();
+        var sample = HprpStudioSamplePayloads.TryLoad(root, ClinicalReportCatalog.HemodialysisRecord, "default");
+        Assert.True(sample.HasValue);
+
+        var overlay = new HprpPackage
+        {
+            Manifest = new HprpManifest
+            {
+                Id = ClinicalReportCatalog.HemodialysisRecord,
+                Variant = "thaiur",
+                LayoutProfile = "ThaiUr",
+            },
+            Layout = new HprpLayout(),
+            LabelsByLanguage = new Dictionary<string, IReadOnlyDictionary<string, string>>(),
+            SourcePath = "",
+        };
+
+        var adjusted = HprpStudioSamplePayloads.ApplyHemosheetPreviewContext(sample!.Value, overlay, "default");
+        Assert.Equal(
+            "ThaiUr",
+            adjusted.GetProperty("layoutContext").GetProperty("layoutProfile").GetString());
+    }
+
+    [Fact]
+    public void Clinical03_ProductionLayouts_HaveNoExperimentalKeys()
+    {
+        var root = FindTemplatesRoot();
+        foreach (var variant in new[] { "default", "rama", "thaiur" })
+        {
+            var path = Path.Combine(root, "reports", ClinicalReportCatalog.HemodialysisRecord, "variants", variant, "layout.json");
+            Assert.True(File.Exists(path), path);
+            using var doc = JsonDocument.Parse(File.ReadAllText(path));
+            Assert.True(doc.RootElement.TryGetProperty("sections", out var sections));
+            foreach (var section in sections.EnumerateArray())
+            {
+                Assert.False(section.TryGetProperty("columnPlan", out _), $"{variant}: columnPlan is clinical-01 only");
+                Assert.False(section.TryGetProperty("experimental", out _), $"{variant}: experimental key");
+                Assert.False(section.TryGetProperty("x-", out _), $"{variant}: x- key");
+            }
+        }
     }
 
     private static string FindTemplatesRoot()

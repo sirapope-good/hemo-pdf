@@ -26,6 +26,10 @@ internal sealed class ThaiUrHemosheetForm
     {
         // Dialysis rows absorb leftover page space so the footer band (checks + Nephrologist |
         // notes + Post Vital…NA) sits flush at the bottom of page 1 as one unit.
+        //
+        // Do NOT wrap header+top+nursing+dialysis in one Border().Column — QuestPDF then orphans
+        // page 1 as an empty bordered box when the stack overflows (Studio sample looks "เพี้ยน"
+        // vs the normal generate path that often fits). Same rule as DefaultHemosheetForm.
         var notesFloorMm = ThaiUrHemosheetFooter.NurseNotesFloorHeightMm(vm);
         var aboveDialysisMm = EstimateAboveDialysisMm(vm);
         var bottomFloorMm = ThaiUrHemosheetFooter.BottomBlockHeightMm(vm, notesFloorMm);
@@ -37,22 +41,19 @@ internal sealed class ThaiUrHemosheetForm
             .DefaultTextStyle(ThaiUrText.Base)
             .Column(page =>
             {
-                page.Item().Border(Bw).Column(main =>
+                page.Item().Element(c => ThaiUrReportHeader.Compose(c, vm));
+                page.Item().Border(Bw).Element(c => TopBand(c, vm));
+                page.Item().Element(c => NursingPlan(c, vm));
+                page.Item().Element(c =>
                 {
-                    main.Item().Element(c => ThaiUrReportHeader.Compose(c, vm));
-                    main.Item().Element(c => TopBand(c, vm));
-                    main.Item().Element(c => NursingPlan(c, vm));
-                    main.Item().Element(c =>
+                    if (dialysisFill is null)
                     {
-                        if (dialysisFill is null)
-                        {
-                            DialysisTable(c, vm, dialysisRows, dialysisHeaders);
-                            return;
-                        }
+                        DialysisTable(c, vm, Math.Max(dialysisRows, vm.DialysisRecords.Count), dialysisHeaders);
+                        return;
+                    }
 
-                        using (ReportSectionHeaderChrome.Begin(dialysisFill))
-                            DialysisTable(c, vm, dialysisRows, dialysisHeaders);
-                    });
+                    using (ReportSectionHeaderChrome.Begin(dialysisFill))
+                        DialysisTable(c, vm, Math.Max(dialysisRows, vm.DialysisRecords.Count), dialysisHeaders);
                 });
                 page.Item().Border(Bw).Column(mid =>
                 {
@@ -67,9 +68,30 @@ internal sealed class ThaiUrHemosheetForm
     {
         var headerMm = HemosheetThaiUrStyle.TitleHeightMm + HemosheetThaiUrStyle.MetaRowHeightMm;
         var topMm = Math.Max(PredialysisTotalHeightMm(), PrescriptionTotalHeightMm());
-        var planRows = ThaiUrData.NursingPlanRows(vm).Count;
-        var nursingMm = HemosheetThaiUrStyle.HeaderBarHeightMm + planRows * Rh;
-        return headerMm + topMm + nursingMm;
+        var planRows = ThaiUrData.NursingPlanRows(vm);
+        // Cells grow past Rh when Focus/I/E wrap — budget with a conservative 2-line floor per row.
+        var nursingBodyMm = 0f;
+        foreach (var (diagnosis, intervention, outcome) in planRows)
+        {
+            var lines = Math.Max(
+                EstimateWrappedLines(diagnosis),
+                Math.Max(EstimateWrappedLines(intervention), EstimateWrappedLines(outcome)));
+            nursingBodyMm += Math.Max(Rh, lines * Rh);
+        }
+
+        var nursingMm = HemosheetThaiUrStyle.HeaderBarHeightMm + nursingBodyMm;
+        // PreVital / filled cells can render taller than fixed-Rh estimates (QuestPDF table growth).
+        const float topBandContentSlackMm = 12f;
+        return headerMm + topMm + nursingMm + topBandContentSlackMm;
+    }
+
+    private static int EstimateWrappedLines(string? text)
+    {
+        if (string.IsNullOrWhiteSpace(text))
+            return 1;
+        // Nursing plan columns are ~60–75mm wide at 7.5pt — ~28 Thai/Latin chars per line.
+        const int charsPerLine = 28;
+        return Math.Clamp((int)Math.Ceiling(text.Trim().Length / (double)charsPerLine), 1, 4);
     }
 
     /// <summary>
@@ -85,12 +107,6 @@ internal sealed class ThaiUrHemosheetForm
             - 2f * HemosheetThaiUrStyle.PageMarginMm
             - ThaiUrHemosheetFooter.PageNumberFooterMm;
 
-        // One blank slot past real data; FixedLines / page budget can raise it further.
-        var minRows = Math.Max(
-            vm.LayoutContext.ReportSettings.FixedLines.Dialysis,
-            vm.DialysisRecords.Count + 1);
-        if (minRows <= 0) minRows = 8;
-
         var showHdf = HemosheetDialysisColumns.ShowHdf(vm);
         var dialysisHeaderMm = HemosheetDialysisColumns.HeaderHeightMm(showHdf, Rh);
         var availableForDialysisMm = pageContentMm
@@ -98,8 +114,25 @@ internal sealed class ThaiUrHemosheetForm
             - aboveDialysisMm
             - bottomFloorMm;
 
+        // Negative / zero space → no blank padding rows (still paint real records below).
         var maxRowsBySpace = (int)Math.Floor((availableForDialysisMm - dialysisHeaderMm) / Rh);
-        return maxRowsBySpace < minRows ? minRows : maxRowsBySpace;
+        if (maxRowsBySpace < 0)
+            maxRowsBySpace = 0;
+
+        var dataRows = vm.DialysisRecords.Count;
+        // Prefer one trailing blank when space allows; never invent blanks that shove the footer
+        // to page 2 (Studio sample + PreVital used to tip over with a forced blank row).
+        var desired = Math.Max(
+            vm.LayoutContext.ReportSettings.FixedLines.Dialysis,
+            dataRows == 0 ? 0 : dataRows + 1);
+        if (desired <= 0)
+            desired = dataRows > 0 ? dataRows : Math.Min(8, maxRowsBySpace);
+
+        // Paint every real record even when that needs a 2nd page; otherwise clamp to page budget.
+        if (dataRows > maxRowsBySpace)
+            return dataRows;
+
+        return Math.Min(desired, maxRowsBySpace);
     }
 
     // Every row in this band is a fixed-length checklist (same count for every patient), so each
@@ -247,7 +280,12 @@ internal sealed class ThaiUrHemosheetForm
             });
 
             t.Cell().AlignMiddle().PaddingLeft(1f).Text(label1).Style(ThaiUrText.Base);
-            t.Cell().AlignMiddle().PaddingLeft(1f).Text(string.IsNullOrWhiteSpace(value1) ? "-" : value1).Style(ThaiUrText.Base);
+            t.Cell().AlignMiddle().PaddingLeft(1f).Text(text =>
+            {
+                text.DefaultTextStyle(ThaiUrText.Base);
+                text.ClampLines(1, "\u2026");
+                text.Span(string.IsNullOrWhiteSpace(value1) ? "-" : value1);
+            });
             t.Cell().AlignMiddle().Text(unit1).Style(ThaiUrText.UnitText);
 
             if (label2 is null)
@@ -259,7 +297,12 @@ internal sealed class ThaiUrHemosheetForm
             else
             {
                 t.Cell().AlignMiddle().PaddingLeft(1f).Text(label2).Style(ThaiUrText.Base);
-                t.Cell().AlignMiddle().PaddingLeft(1f).Text(string.IsNullOrWhiteSpace(value2) ? "-" : value2).Style(ThaiUrText.Base);
+                t.Cell().AlignMiddle().PaddingLeft(1f).Text(text =>
+                {
+                    text.DefaultTextStyle(ThaiUrText.Base);
+                    text.ClampLines(1, "\u2026");
+                    text.Span(string.IsNullOrWhiteSpace(value2) ? "-" : value2);
+                });
                 t.Cell().AlignMiddle().Text(unit2!).Style(ThaiUrText.UnitText);
             }
         });
@@ -369,7 +412,7 @@ internal sealed class ThaiUrHemosheetForm
                     LabelValue(left, "Last TCV", "-", 17f);
                     LabelValue(left, "Grade", "-", 17f);
                     PassRow(left, "Test Leak");
-                    left.Item().MinHeight(Rh, Mm).Row(r =>
+                    left.Item().Height(Rh, Mm).Row(r =>
                     {
                         r.ConstantItem(20, Mm).Label("Disinfectant");
                         r.Checkbox(false);
@@ -416,7 +459,7 @@ internal sealed class ThaiUrHemosheetForm
 
     private static void PassRow(ColumnDescriptor col, string label)
     {
-        col.Item().MinHeight(Rh, Mm).Row(r =>
+        col.Item().Height(Rh, Mm).Row(r =>
         {
             r.ConstantItem(20, Mm).Label(label);
             r.Checkbox(false);
@@ -526,7 +569,8 @@ internal sealed class ThaiUrHemosheetForm
         int fixedLines,
         IReadOnlyList<string>? fileHeaders)
     {
-        if (fixedLines <= 0) fixedLines = 8;
+        // Row count is owned by BudgetDialysisRows — do not re-inflate 0 → 8 (that orphans the footer).
+        if (fixedLines < 0) fixedLines = 0;
         var showHdf = HemosheetDialysisColumns.ShowHdf(vm);
         var colMm = HemosheetDialysisColumns.DataColumnWidthMm(showHdf);
         var useFileHeaders = fileHeaders is { Count: > 0 };
@@ -594,14 +638,19 @@ internal sealed class ThaiUrHemosheetForm
                 var rec = i < vm.DialysisRecords.Count ? vm.DialysisRecords[i] : null;
                 foreach (var value in HemosheetDialysisColumns.CellValues(rec, showHdf))
                 {
-                    t.Cell().Border(Bw).MinHeight(Rh, Mm).AlignMiddle().AlignCenter()
-                        .Text(value).Style(ThaiUrText.Dialysis);
+                    t.Cell().Border(Bw).Height(Rh, Mm).AlignMiddle().AlignCenter()
+                        .Text(text =>
+                        {
+                            text.DefaultTextStyle(ThaiUrText.Dialysis);
+                            text.ClampLines(1, "\u2026");
+                            text.Span(value ?? "");
+                        });
                 }
-                t.Cell().Border(Bw).MinHeight(Rh, Mm).PaddingHorizontal(1f).PaddingVertical(0.5f).AlignMiddle()
+                t.Cell().Border(Bw).Height(Rh, Mm).PaddingHorizontal(1f).AlignMiddle()
                     .Text(text =>
                     {
                         text.DefaultTextStyle(ThaiUrText.Dialysis);
-                        text.ClampLines(HemosheetThaiUrStyle.DialysisNoteMaxLines, "\u2026");
+                        text.ClampLines(1, "\u2026");
                         text.Span(rec?.Note ?? "");
                     });
             }
@@ -623,9 +672,21 @@ internal sealed class ThaiUrHemosheetForm
             .Height(headerMm, Mm).AlignCenter().AlignMiddle()
             .Column(cc =>
             {
-                cc.Item().AlignCenter().Text(head).Style(ThaiUrText.DialysisBold);
+                cc.Item().AlignCenter().Text(text =>
+                {
+                    text.DefaultTextStyle(ThaiUrText.DialysisBold);
+                    text.ClampLines(1, "\u2026");
+                    text.Span(head);
+                });
                 if (!string.IsNullOrEmpty(unit))
-                    cc.Item().AlignCenter().Text(unit).Style(ThaiUrText.DialysisUnit);
+                {
+                    cc.Item().AlignCenter().Text(text =>
+                    {
+                        text.DefaultTextStyle(ThaiUrText.DialysisUnit);
+                        text.ClampLines(1, "\u2026");
+                        text.Span(unit);
+                    });
+                }
             });
     }
 
@@ -650,12 +711,22 @@ internal sealed class ThaiUrHemosheetForm
 
             foreach (var (span, label, value) in boxes)
             {
-                t.Cell().ColumnSpan((uint)span).Border(Bw).MinHeight(6.5f, Mm).Padding(1f)
+                t.Cell().ColumnSpan((uint)span).Border(Bw).Height(ThaiUrHemosheetFooter.FluidSummaryHeightMm, Mm).Padding(1f)
                     .AlignMiddle().AlignCenter()
                     .Column(cc =>
                     {
-                        cc.Item().AlignCenter().Text(label).Style(ThaiUrText.DialysisBold);
-                        cc.Item().AlignCenter().Text(value).Style(ThaiUrText.Dialysis);
+                        cc.Item().AlignCenter().Text(text =>
+                        {
+                            text.DefaultTextStyle(ThaiUrText.DialysisBold);
+                            text.ClampLines(1, "\u2026");
+                            text.Span(label);
+                        });
+                        cc.Item().AlignCenter().Text(text =>
+                        {
+                            text.DefaultTextStyle(ThaiUrText.Dialysis);
+                            text.ClampLines(1, "\u2026");
+                            text.Span(value);
+                        });
                     });
             }
         });

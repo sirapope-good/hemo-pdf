@@ -10,7 +10,7 @@
   <header class="top">
     <div>
       <h1>HPRP Studio</h1>
-      <p class="muted">เรียงบล็อกใน <code>layout.body</code> แล้วแก้ chrome / คอลัมน์ใน inspector — ไม่ใช่ลากพิกัดบนกระดาษ</p>
+      <p class="muted">เรียง <code>layout.body</code> หรือ <code>layout.sections</code> (hemosheet) แล้วแก้ chrome / คอลัมน์ใน inspector</p>
     </div>
     <div class="top-right">
       <div class="mode-toggle" role="group" aria-label="Editor mode">
@@ -45,13 +45,14 @@
           <button id="btnSave" type="button" disabled title="Write the editor JSON to packages/*.hprp">Save and pack</button>
         </div>
       </div>
+      <div id="denseFormHint" class="dense-hint hidden" role="note"></div>
       <div class="designer-split">
         <div class="subpane">
           <div class="subhead">Palette</div>
           <div id="palette" class="palette"></div>
         </div>
         <div class="subpane">
-          <div class="subhead">Body order</div>
+          <div class="subhead" id="orderListTitle">Body order</div>
           <ul id="bodyList" class="node-list"></ul>
         </div>
       </div>
@@ -65,10 +66,19 @@
     <section class="pane preview-col" id="previewPane">
       <div class="pane-head">
         <strong>Preview</strong>
-        <div class="actions">
-          <button id="btnPreview" type="button" disabled>Refresh sample PDF</button>
+        <div class="actions preview-toolbar">
+          <label class="preview-opt">Sample
+            <select id="sampleScenario" title="Mock payload scenario">
+              <option value="">Full HD mock</option>
+            </select>
+          </label>
+          <label class="preview-opt">EntityId
+            <input id="previewEntityId" type="text" placeholder="hemosheet GUID" autocomplete="off" title="ถ้าใส่ จะดึง report-data จริงเหมือน /api/pdf/generate" />
+          </label>
+          <button id="btnPreview" type="button" disabled>Refresh PDF</button>
         </div>
       </div>
+      <p id="previewParityHint" class="muted preview-parity-hint">พรีวิวใช้ renderer เดียวกับพิมพ์จริง — Sample = mock ครบเคส / EntityId = ข้อมูลจริงจาก Web.Api</p>
       <iframe id="previewFrame" src="about:blank" title="PDF preview"></iframe>
     </section>
 

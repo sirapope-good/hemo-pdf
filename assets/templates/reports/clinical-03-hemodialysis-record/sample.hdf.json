@@ -1,0 +1,126 @@
+{
+  "id": "b7f1e2c3-4d5a-6789-abcd-ef0123456789",
+  "ward": "Nephro",
+  "bed": "3 (Fresenius 5008)",
+  "treatmentNo": 12,
+  "cycleStartTime": "2026-08-04T07:00:00Z",
+  "cycleEndTime": "2026-08-04T11:00:00Z",
+  "completedTime": "2026-08-04T11:05:00Z",
+  "ktv": 1.5,
+  "urr": 73.0,
+  "isAcNotUsed": false,
+  "isConsent": false,
+  "nursesInShift": "RN A",
+  "nursesInShiftNonPn": "RN B",
+  "doctorName": "นพ.ทดสอบ HDF",
+  "preVital": { "bps": 150, "bpd": 90, "hr": 76, "rr": 18, "temp": 36.4, "spO2": 98 },
+  "postVital": { "bps": 128, "bpd": 70, "hr": 70, "rr": 18, "temp": 36.1, "spO2": 99 },
+  "patient": {
+    "name": "ทดสอบ โหมด HDF",
+    "hn": "6902099",
+    "identityNumber": "1100700999999",
+    "birthDate": "1970-01-01T00:00:00Z",
+    "sex": "Female",
+    "age": 56,
+    "doctorName": "นพ.ทดสอบ HDF",
+    "allergies": ["PCN"],
+    "coverage": "Universal Coverage",
+    "diagnosis": "ESRD on HDF",
+    "underlying": "DM"
+  },
+  "unit": { "id": -1, "fullName": "TRD" },
+  "dehydration": {
+    "preWeight": 58.0,
+    "postWeight": 55.5,
+    "lastPostWeight": 55.8,
+    "foodIntakeWeight": 0,
+    "extraFluid": 0,
+    "ufNet": 2.5,
+    "totalUf": 2.5,
+    "ufEstimate": 2.5,
+    "ufGoal": 2.5,
+    "flushNss": 0,
+    "flushNssTotal": 0
+  },
+  "dialysisPrescription": {
+    "mode": "HDF",
+    "bloodAccessRoute": "Double Lumen / Right / Jugular",
+    "durationHours": 4,
+    "durationMinutes": 0,
+    "anticoagulant": "Heparin",
+    "dryWeight": 55.5,
+    "dialyzer": "FX CorDiax 80",
+    "dialyzerSurfaceArea": 1.8,
+    "dialysateK": 2,
+    "dialysateCa": 3.0,
+    "dialysateNa": 140,
+    "dialysateHco3": 32,
+    "dialysateTemperature": 36,
+    "dialysateFlowRate": 500,
+    "bloodFlow": 300,
+    "initialAmountMl": 1000,
+    "maintainAmountMl": 500
+  },
+  "avShunt": {
+    "avShuntId": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
+    "catheterType": 2,
+    "shuntSite": "Double Lumen / Right / Jugular",
+    "aNeedleSize": null,
+    "vNeedleSize": null
+  },
+  "assessments": {
+    "pre": [
+      { "name": "thrill", "checked": false, "text": "" },
+      { "name": "bruit", "checked": false, "text": "" },
+      { "name": "edema", "checked": false, "text": "" }
+    ],
+    "re": [],
+    "post": [
+      {
+        "name": "complication",
+        "checked": true,
+        "text": "",
+        "selectedOptions": ["No complication"]
+      }
+    ],
+    "other": []
+  },
+  "dialysisRecords": [
+    { "timestamp": "2026-08-04T07:00:00Z", "bps": 150, "bpd": 90, "hr": 76, "bfr": 300, "ap": -100, "vp": 140, "tmp": 100, "dc": 14.0, "ufRate": 0.65, "ufTotal": 0, "hdfVolume": 1.2, "hdfRate": 0.3 },
+    { "timestamp": "2026-08-04T08:00:00Z", "bps": 140, "bpd": 82, "hr": 74, "bfr": 300, "ap": -95, "vp": 130, "tmp": 105, "dc": 13.9, "ufRate": 0.65, "ufTotal": 0.65, "hdfVolume": 1.2, "hdfRate": 0.3 },
+    { "timestamp": "2026-08-04T09:00:00Z", "bps": 134, "bpd": 76, "hr": 72, "bfr": 300, "ap": -90, "vp": 120, "tmp": 110, "dc": 13.8, "ufRate": 0.65, "ufTotal": 1.30, "hdfVolume": 1.1, "hdfRate": 0.28 },
+    { "timestamp": "2026-08-04T10:00:00Z", "bps": 130, "bpd": 72, "hr": 70, "bfr": 280, "ap": -85, "vp": 110, "tmp": 112, "dc": 13.7, "ufRate": 0.60, "ufTotal": 1.90, "hdfVolume": 1.0, "hdfRate": 0.25 },
+    { "timestamp": "2026-08-04T10:55:00Z", "bps": 128, "bpd": 70, "hr": 70, "bfr": 250, "ap": -70, "vp": 90, "tmp": 115, "dc": 13.6, "ufRate": 0.40, "ufTotal": 2.50, "hdfVolume": 0.8, "hdfRate": 0.2 }
+  ],
+  "nurseRecords": [
+    { "timestamp": "2026-08-04T07:05:00Z", "content": "HDF start, sub volume per Rx", "creatorName": "RN A" },
+    { "timestamp": "2026-08-04T11:00:00Z", "content": "HDF complete, catheter locked", "creatorName": "RN B" }
+  ],
+  "doctorRecords": [],
+  "medicineRecords": [],
+  "progressNotes": [],
+  "labs": { "hct": "30", "hb": "9.8" },
+  "signatureNames": {
+    "pre_hd": "RN A",
+    "post_hd": "RN B"
+  },
+  "layoutContext": {
+    "layoutProfile": "ThaiUr",
+    "dialysisMode": "HDF",
+    "vascularAccess": "PermCath",
+    "reportSettings": {
+      "hemosheetTemplate": "Hemosheet-ThaiUR.trdp",
+      "nurseInShiftEnabled": true,
+      "showDateAndHdNo": true,
+      "fixedLines": { "dialysis": 6, "nurse": 2, "medicine": 2, "doctor": 2, "progressNote": 1 }
+    },
+    "features": {
+      "showHdfColumns": true,
+      "showAvPanel": false,
+      "showCathPanel": true,
+      "showAcFields": true,
+      "showNurseInShift": true,
+      "showProgressNote": false
+    }
+  }
+}

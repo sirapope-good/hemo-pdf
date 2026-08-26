@@ -46,6 +46,9 @@ public sealed class HprpStudioController : ControllerBase
                 Id = p.Manifest.Id,
                 Variant = p.Manifest.Variant,
                 DisplayName = p.Manifest.DisplayName,
+                LayoutKind = p.Manifest.LayoutKind,
+                LayoutProfile = p.Manifest.LayoutProfile,
+                ProfileLabel = p.Manifest.Ui?.ProfileLabel,
                 SourcePath = p.SourcePath,
                 Packed = p.SourcePath.EndsWith(HprpEngine.FileExtension, StringComparison.OrdinalIgnoreCase),
             })
@@ -99,6 +102,18 @@ public sealed class HprpStudioController : ControllerBase
 
         var withVariant = _pack.PackageOutputPath(templateId, variant, includeVariantSegment: true);
         return System.IO.File.Exists(withVariant);
+    }
+
+    [HttpGet("packages/{templateId}/samples")]
+    public IActionResult ListSamples(string templateId)
+    {
+        var scenarios = HprpStudioSamplePayloads.ListScenarios(_pack.TemplatesRoot, templateId);
+        return Ok(scenarios.Select(s => new
+        {
+            id = string.IsNullOrEmpty(s) ? "default" : s,
+            scenario = s,
+            label = string.IsNullOrEmpty(s) ? "Full HD mock (print-shaped)" : s.ToUpperInvariant(),
+        }));
     }
 
     [HttpPost("preview")]

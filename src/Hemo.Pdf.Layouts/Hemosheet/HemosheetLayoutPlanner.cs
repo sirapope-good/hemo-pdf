@@ -26,14 +26,17 @@ public sealed class HemosheetLayoutPlanner : IHemosheetLayoutPlanner
         _tenant = tenant;
     }
 
-    public IReadOnlyList<HemosheetSectionPlan> Plan(HemosheetReportViewModel viewModel)
+    public IReadOnlyList<HemosheetSectionPlan> Plan(
+        HemosheetReportViewModel viewModel,
+        HprpPackage? packageOverlay = null)
     {
         var tenantCode = _tenant?.TenantCode ?? "";
         var variant = HprpTemplatePaths.FromLayoutProfile(viewModel.LayoutContext.LayoutProfile);
-        var package = _templates?.TryGetCached(
-            tenantCode,
-            ClinicalReportCatalog.HemodialysisRecord,
-            variant);
+        var package = packageOverlay
+            ?? _templates?.TryGetCached(
+                tenantCode,
+                ClinicalReportCatalog.HemodialysisRecord,
+                variant);
         if (package is not null && package.Layout.Sections.Count > 0)
         {
             var interpreted = Hprp.HprpHemosheetPlanInterpreter.Interpret(package.Layout, viewModel);

@@ -45,10 +45,11 @@ public sealed class HemosheetComposer : BaseReportComposer<HemosheetReportViewMo
     {
         var viewModel = (HemosheetReportViewModel)dataModel;
         var variant = HprpTemplatePaths.FromLayoutProfile(viewModel.LayoutContext.LayoutProfile);
-        var package = _templates?.TryGetCached(
-            _tenant?.TenantCode ?? context.TenantCode,
-            ClinicalReportCatalog.HemodialysisRecord,
-            variant);
+        var package = context.LayoutPackage
+            ?? _templates?.TryGetCached(
+                _tenant?.TenantCode ?? context.TenantCode,
+                ClinicalReportCatalog.HemodialysisRecord,
+                variant);
         var kind = ClinicalReportLayoutResolver.Resolve(
             ClinicalReportCatalog.HemodialysisRecord,
             viewModel.LayoutContext.LayoutProfile,
@@ -92,7 +93,7 @@ public sealed class HemosheetComposer : BaseReportComposer<HemosheetReportViewMo
         {
             col.Spacing(PdfSectionMetrics.BlockSpacing);
 
-            foreach (var plan in _planner.Plan(viewModel))
+            foreach (var plan in _planner.Plan(viewModel, context.LayoutPackage))
             {
                 col.Item().Element(c => _renderers.ComposePdf(c, plan, viewModel, context));
             }

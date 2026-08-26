@@ -46,8 +46,8 @@ internal static class ThaiUrHemosheetFooter
     /// <summary>Approx. height of the default page-number strip under page content.</summary>
     public const float PageNumberFooterMm = 7f;
 
-    /// <summary>Headroom so slight wrap / border error does not push the footer band to page 2.</summary>
-    public const float LayoutSafetyMm = 2f;
+    /// <summary>Headroom so slight wrap / border / page-footer error does not push content to page 2.</summary>
+    public const float LayoutSafetyMm = 10f;
 
     /// <summary>Post Vital + AVF + Dialysis Nurse + Dialysis NA (right column only).</summary>
     public static float RightStripBandHeightMm => 4f * HemosheetThaiUrStyle.PostStripRowHeightMm;

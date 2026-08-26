@@ -20,11 +20,21 @@ public sealed class HprpWidgetRecipe
     public const string KindDense = "dense";
     public const string KindBlock = "block";
 
+    public const string SlotBody = "body";
+    public const string SlotSections = "sections";
+
     [JsonPropertyName("id")]
     public required string Id { get; init; }
 
     [JsonPropertyName("kind")]
     public string Kind { get; init; } = KindDense;
+
+    /// <summary>
+    /// Studio list slot: clinical reports use <see cref="SlotBody"/>;
+    /// hemosheet uses <see cref="SlotSections"/>.
+    /// </summary>
+    [JsonPropertyName("slot")]
+    public string Slot { get; init; } = SlotBody;
 
     [JsonPropertyName("allowedOn")]
     public IReadOnlyList<string> AllowedOn { get; init; } = [];
@@ -34,6 +44,13 @@ public sealed class HprpWidgetRecipe
 
     [JsonPropertyName("defaultColumnPlan")]
     public IReadOnlyList<HprpColumnPlanItem> DefaultColumnPlan { get; init; } = [];
+
+    /// <summary>Hemosheet dialysis header labels (string[]), not clinical-01 columnPlan.</summary>
+    [JsonPropertyName("defaultColumns")]
+    public IReadOnlyList<string> DefaultColumns { get; init; } = [];
+
+    [JsonPropertyName("defaultColumnsWhen")]
+    public Dictionary<string, string[]>? DefaultColumnsWhen { get; init; }
 
     [JsonPropertyName("chromeDefaults")]
     public HprpChrome? ChromeDefaults { get; init; }
@@ -60,6 +77,7 @@ public static class HprpWidgetRecipes
 {
     public static readonly HprpWidgetRecipe ClinicalHctEpoAnnualTable = CreateAnnualTable();
     public static readonly HprpWidgetRecipe ClinicalHctEpoCopay = CreateCopay();
+    public static readonly HprpWidgetRecipe HemosheetDialysisRecords = CreateDialysisRecords();
 
     public static readonly IReadOnlyList<HprpWidgetRecipe> Dense = BuildDense();
     public static readonly IReadOnlyList<HprpWidgetRecipe> Blocks = BuildBlocks();
@@ -91,6 +109,7 @@ public static class HprpWidgetRecipes
         {
             Id = HprpWidgetIds.ClinicalHctEpoAnnualTable,
             Kind = HprpWidgetRecipe.KindDense,
+            Slot = HprpWidgetRecipe.SlotBody,
             AllowedOn = [ClinicalReportCatalog.HctEpo],
             BindFields = binds,
             DefaultColumnPlan =
@@ -116,6 +135,7 @@ public static class HprpWidgetRecipes
     {
         Id = HprpWidgetIds.ClinicalHctEpoCopay,
         Kind = HprpWidgetRecipe.KindDense,
+        Slot = HprpWidgetRecipe.SlotBody,
         AllowedOn = [ClinicalReportCatalog.HctEpo, ClinicalReportCatalog.EpoDrug],
         ChromeDefaults = new HprpChrome
         {
@@ -126,6 +146,36 @@ public static class HprpWidgetRecipes
         LabelKeys = ["nhso", "nhsoInjections", "sso", "ssoHctLe36", "ssoHctGt36", "ssoHctGe39"],
     };
 
+    /// <summary>Defaults match thaiur layout (Thai Time/Note); default/rama variants store English in their layout files.</summary>
+    private static HprpWidgetRecipe CreateDialysisRecords() => new()
+    {
+        Id = HprpWidgetIds.HemosheetDialysisRecords,
+        Kind = HprpWidgetRecipe.KindDense,
+        Slot = HprpWidgetRecipe.SlotSections,
+        AllowedOn = [ClinicalReportCatalog.HemodialysisRecord],
+        DefaultColumns =
+        [
+            "เวลา", "BP", "MAP", "Pulse", "EBFR", "AP", "VP", "TMP", "Cond.", "UFR", "Total UF", "หมายเหตุ",
+        ],
+        DefaultColumnsWhen = new Dictionary<string, string[]>(StringComparer.OrdinalIgnoreCase)
+        {
+            ["feature:showHdfColumns"] =
+            [
+                "เวลา", "BP", "MAP", "Pulse", "EBFR", "AP", "VP",
+                "Substitute total", "Substitute rate",
+                "TMP", "Cond.", "UFR", "Total UF", "หมายเหตุ",
+            ],
+        },
+        ChromeDefaults = new HprpChrome
+        {
+            HeaderFill = HprpChrome.BrandingHeaderFill,
+        },
+        InspectorFields =
+        [
+            "when", "variant", "chrome.headerFill", "chrome.border", "columns", "columnsWhen", "fixedLinesFrom",
+        ],
+    };
+
     private static IReadOnlyList<HprpWidgetRecipe> BuildDense()
     {
         var list = new List<HprpWidgetRecipe>
@@ -134,6 +184,7 @@ public static class HprpWidgetRecipes
             {
                 Id = HprpWidgetIds.ThaiUrHeader,
                 Kind = HprpWidgetRecipe.KindDense,
+                Slot = HprpWidgetRecipe.SlotBody,
                 AllowedOn =
                 [
                     ClinicalReportCatalog.HctEpo,
@@ -150,6 +201,7 @@ public static class HprpWidgetRecipes
             {
                 Id = HprpWidgetIds.ClinicalEpoDrugTable,
                 Kind = HprpWidgetRecipe.KindDense,
+                Slot = HprpWidgetRecipe.SlotBody,
                 AllowedOn = [ClinicalReportCatalog.EpoDrug],
                 InspectorFields = ["chrome.headerFill", "chrome.border", "when"],
                 LabelKeys = ["month", "yearBe", "epoName", "needlesPerWeek"],
@@ -158,6 +210,7 @@ public static class HprpWidgetRecipes
             {
                 Id = HprpWidgetIds.ClinicalSoapTable,
                 Kind = HprpWidgetRecipe.KindDense,
+                Slot = HprpWidgetRecipe.SlotBody,
                 AllowedOn = [ClinicalReportCatalog.ProgressNote],
                 InspectorFields = ["chrome.headerFill", "chrome.border", "when"],
             },
@@ -165,26 +218,50 @@ public static class HprpWidgetRecipes
             {
                 Id = HprpWidgetIds.ClinicalConsentNarrative,
                 Kind = HprpWidgetRecipe.KindDense,
+                Slot = HprpWidgetRecipe.SlotBody,
                 AllowedOn = [ClinicalReportCatalog.ConsentTh, ClinicalReportCatalog.ConsentEn],
                 InspectorFields = ["when"],
             },
+            HemosheetDialysisRecords,
         };
 
         foreach (var id in HprpWidgetIds.All)
         {
             if (!id.StartsWith("hemosheet.", StringComparison.OrdinalIgnoreCase))
                 continue;
+            if (string.Equals(id, HprpWidgetIds.HemosheetDialysisRecords, StringComparison.OrdinalIgnoreCase))
+                continue;
 
-            list.Add(new HprpWidgetRecipe
-            {
-                Id = id,
-                Kind = HprpWidgetRecipe.KindDense,
-                AllowedOn = [ClinicalReportCatalog.HemodialysisRecord],
-                InspectorFields = ["chrome.headerFill", "chrome.border", "columns", "when", "variant"],
-            });
+            list.Add(CreateHemosheetSection(id));
         }
 
         return list;
+    }
+
+    private static HprpWidgetRecipe CreateHemosheetSection(string id)
+    {
+        var fixedLines = id switch
+        {
+            HprpWidgetIds.HemosheetNurseRecords
+                or HprpWidgetIds.HemosheetDoctorRecords
+                or HprpWidgetIds.HemosheetMedicineRecords
+                or HprpWidgetIds.HemosheetProgressNotes => true,
+            _ => false,
+        };
+
+        var fields = new List<string> { "when", "variant" };
+        if (fixedLines)
+            fields.Add("fixedLinesFrom");
+        fields.AddRange(["chrome.headerFill", "chrome.border"]);
+
+        return new HprpWidgetRecipe
+        {
+            Id = id,
+            Kind = HprpWidgetRecipe.KindDense,
+            Slot = HprpWidgetRecipe.SlotSections,
+            AllowedOn = [ClinicalReportCatalog.HemodialysisRecord],
+            InspectorFields = fields,
+        };
     }
 
     private static IReadOnlyList<HprpWidgetRecipe> BuildBlocks() =>
@@ -194,6 +271,7 @@ public static class HprpWidgetRecipes
             {
                 Id = type,
                 Kind = HprpWidgetRecipe.KindBlock,
+                Slot = HprpWidgetRecipe.SlotBody,
                 AllowedOn = [],
                 InspectorFields = type switch
                 {

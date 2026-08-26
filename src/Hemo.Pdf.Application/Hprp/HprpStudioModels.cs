@@ -47,6 +47,9 @@ public sealed class HprpStudioListItemDto
     public required string Id { get; init; }
     public string? Variant { get; init; }
     public required string DisplayName { get; init; }
+    public string? LayoutKind { get; init; }
+    public string? LayoutProfile { get; init; }
+    public string? ProfileLabel { get; init; }
     public required string SourcePath { get; init; }
     public bool Packed { get; init; }
 }
