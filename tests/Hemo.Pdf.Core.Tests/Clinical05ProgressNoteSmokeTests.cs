@@ -116,6 +116,63 @@ public class Clinical05ProgressNoteSmokeTests
     }
 
     [Fact]
+    public void BudgetRowHeight_TallTableHeader_DoesNotExceedLeftoverPage()
+    {
+        var vm = MinimalViewModel(sessionCount: 0);
+        var height = Clinical05ProgressNoteComposer.BudgetRowHeightMm(vm, tableHeaderMm: 80);
+        Assert.True(height < 90f);
+        Assert.True(height >= 8f);
+    }
+
+    [Fact]
+    public async Task Render_HeaderAlignTop_AndShortHeaderBar_StillProducesPdf()
+    {
+        var renderer = new Clinical05ProgressNoteReportRenderer(
+            new Clinical05ProgressNoteDataProvider(),
+            new Clinical05ProgressNoteComposer(),
+            new QuestPdfRenderer());
+
+        var context = new PdfReportContext
+        {
+            ReportTemplateId = ClinicalReportCatalog.ProgressNote,
+            TenantCode = "local",
+            Metadata = new ReportMetadata { Title = Clinical05ProgressNoteDataProvider.ReportTitle },
+            Data = JsonDocument.Parse(SampleJson).RootElement.Clone(),
+            LayoutPackage = new HprpPackage
+            {
+                Manifest = new HprpManifest
+                {
+                    Id = ClinicalReportCatalog.ProgressNote,
+                    DisplayName = "x",
+                    DataAdapter = HprpDataAdapterIds.Clinical05ProgressNote,
+                },
+                Layout = new HprpLayout
+                {
+                    Header = new HprpLayoutNode { Widget = HprpWidgetIds.ThaiUrHeader },
+                    Body =
+                    [
+                        new HprpLayoutNode
+                        {
+                            Widget = HprpWidgetIds.ClinicalSoapTable,
+                            Chrome = new HprpChrome
+                            {
+                                HeaderAlign = "top",
+                                HeaderHeightMm = 2,
+                                HeaderPaddingMm = 0.2f,
+                                FontSize = 7,
+                            },
+                        },
+                    ],
+                },
+            },
+        };
+
+        var bytes = await renderer.RenderReportAsync(context, CancellationToken.None);
+        Assert.True(bytes.Length > 100);
+        Assert.Equal((byte)'%', bytes[0]);
+    }
+
+    [Fact]
     public void SoapChrome_OverridesColumnWidthsAndBandWeights()
     {
         var mixed = HprpChrome.ParseMixedColumns(["18mm", "3", "1", "1"]);

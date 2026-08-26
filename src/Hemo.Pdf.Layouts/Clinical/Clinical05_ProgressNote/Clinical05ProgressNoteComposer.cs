@@ -119,7 +119,8 @@ public sealed class Clinical05ProgressNoteComposer : ILayoutComposer
             - SectionSpacingMm
             - soapHeaderMm
             - LayoutSafetyMm;
-
-        return Math.Max(availableForRowsMm / Clinical05SoapTableSection.MinEmptyRows, MinBlockHeightMm);
+        var fromBudget = availableForRowsMm / Clinical05SoapTableSection.MinEmptyRows;
+        // Never request more row height than leftover page (tall headerHeightMm used to overflow).
+        return fromBudget >= MinBlockHeightMm ? fromBudget : Math.Max(fromBudget, 8f);
     }
 }

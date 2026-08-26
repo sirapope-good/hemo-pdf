@@ -86,10 +86,11 @@ public sealed class Clinical05SoapTableSection
                     HemosheetThaiUrStyle.HeaderBarHeightMm);
                 var headerAlign = HprpChrome.ResolveHeaderAlign(chrome);
                 var headerPaddingMm = HprpChrome.ResolveHeaderPaddingMm(chrome);
-                HeaderCell(header, HprpLabels.Get(labels, "colDate", "DATE"), border, headerFill, headerHeightMm, headerAlign, headerPaddingMm);
-                HeaderCell(header, HprpLabels.Get(labels, "colProgress", "PROGRESS NOTE"), border, headerFill, headerHeightMm, headerAlign, headerPaddingMm);
-                HeaderCell(header, HprpLabels.Get(labels, "colOrderOneDay", "ORDER FOR ONE DAY"), border, headerFill, headerHeightMm, headerAlign, headerPaddingMm);
-                HeaderCell(header, HprpLabels.Get(labels, "colOrderContinuation", "ORDER FOR CONTINUATION"), border, headerFill, headerHeightMm, headerAlign, headerPaddingMm);
+                var headerFont = chrome?.FontSize is > 0 and < 48 ? chrome.FontSize : null;
+                HeaderCell(header, HprpLabels.Get(labels, "colDate", "DATE"), border, headerFill, headerHeightMm, headerAlign, headerPaddingMm, headerFont);
+                HeaderCell(header, HprpLabels.Get(labels, "colProgress", "PROGRESS NOTE"), border, headerFill, headerHeightMm, headerAlign, headerPaddingMm, headerFont);
+                HeaderCell(header, HprpLabels.Get(labels, "colOrderOneDay", "ORDER FOR ONE DAY"), border, headerFill, headerHeightMm, headerAlign, headerPaddingMm, headerFont);
+                HeaderCell(header, HprpLabels.Get(labels, "colOrderContinuation", "ORDER FOR CONTINUATION"), border, headerFill, headerHeightMm, headerAlign, headerPaddingMm, headerFont);
             });
 
             var rows = vm.Sessions ?? [];
@@ -112,26 +113,32 @@ public sealed class Clinical05SoapTableSection
         string headerFill,
         float heightMm,
         HprpHeaderAlign align,
-        float paddingMm)
+        float paddingMm,
+        float? fontSize)
     {
-        var cell = t.Cell()
+        // MinHeight (not Height): exact Height + label taller than the bar throws
+        // DocumentLayoutException and Studio keeps the previous PDF.
+        t.Cell()
             .Border(border)
             .Background(headerFill)
-            .Height(heightMm, Mm);
+            .MinHeight(heightMm, Mm)
+            .Element(inner =>
+            {
+                IContainer box = inner;
+                if (paddingMm > 0)
+                    box = box.Padding(paddingMm, Mm);
 
-        if (paddingMm > 0)
-            cell = cell.Padding(paddingMm, Mm);
+                box = align switch
+                {
+                    HprpHeaderAlign.Top => box.AlignTop(),
+                    HprpHeaderAlign.Bottom => box.AlignBottom(),
+                    _ => box.AlignMiddle(),
+                };
 
-        cell = align switch
-        {
-            HprpHeaderAlign.Top => cell.AlignTop(),
-            HprpHeaderAlign.Bottom => cell.AlignBottom(),
-            _ => cell.AlignMiddle(),
-        };
-
-        cell.AlignCenter()
-            .Text(text)
-            .Style(ThaiUrText.Bold);
+                var span = box.AlignCenter().Text(text).Style(ThaiUrText.Bold);
+                if (fontSize is > 0)
+                    span.FontSize(fontSize.Value);
+            });
     }
 
     private static void DateCell(IContainer c, string? dateLabel, float heightMm, float border)
