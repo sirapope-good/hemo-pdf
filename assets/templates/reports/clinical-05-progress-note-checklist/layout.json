@@ -11,7 +11,7 @@
       "widget": "clinical.checklist-grid",
       "chrome": {
         "headerFill": "#E8EEF5",
-        "border": "0.5",
+        "border": "thin",
         "fontSize": 9
       }
     },
