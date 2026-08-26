@@ -202,6 +202,75 @@ public sealed class HprpChrome
         return parsed;
     }
 
+    /// <summary>
+    /// Row cell widths: <c>32mm</c> constant, <c>40%</c> relative (percent weight),
+    /// <c>*</c> remaining relative (100 − sum of percents, or 1 when no percents).
+    /// </summary>
+    public static IReadOnlyList<(bool ConstantMm, float Value)> ParseRowCellWidths(IReadOnlyList<string>? widths)
+    {
+        if (widths is null || widths.Count == 0)
+            return [];
+
+        var parsed = new List<(bool ConstantMm, float Value, bool Percent)>(widths.Count);
+        var percentSum = 0f;
+        var starCount = 0;
+        foreach (var raw in widths)
+        {
+            var token = raw?.Trim() ?? "";
+            if (token.Length == 0)
+                return [];
+
+            if (token == "*")
+            {
+                parsed.Add((false, 1f, false));
+                starCount++;
+                continue;
+            }
+
+            var constant = token.EndsWith("mm", StringComparison.OrdinalIgnoreCase);
+            var percent = !constant && token.EndsWith("%", StringComparison.OrdinalIgnoreCase);
+            if (constant)
+                token = token[..^2].Trim();
+            else if (percent)
+                token = token[..^1].Trim();
+
+            if (!float.TryParse(token, NumberStyles.Float, CultureInfo.InvariantCulture, out var value)
+                || value <= 0)
+            {
+                return [];
+            }
+
+            if (percent)
+                percentSum += value;
+
+            parsed.Add((constant, value, percent));
+        }
+
+        var starWeight = starCount > 0
+            ? Math.Max(100f - percentSum, 1f) / starCount
+            : 1f;
+
+        var result = new List<(bool ConstantMm, float Value)>(parsed.Count);
+        foreach (var (constant, value, percent) in parsed)
+        {
+            if (constant)
+            {
+                result.Add((true, value));
+                continue;
+            }
+
+            if (percent)
+            {
+                result.Add((false, value));
+                continue;
+            }
+
+            result.Add((false, starWeight));
+        }
+
+        return result;
+    }
+
     public static IReadOnlyList<float> ResolveBandWeights(
         IReadOnlyList<float>? configured,
         IReadOnlyList<float> defaults)

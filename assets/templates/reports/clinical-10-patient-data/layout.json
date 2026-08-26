@@ -41,6 +41,28 @@
       "columnHeadersBind": "$.columnHeaders",
       "bindRows": "$.rows",
       "when": "$.rows.length > 0"
+    },
+    {
+      "type": "row",
+      "gapMm": 3,
+      "cells": [
+        {
+          "width": "55%",
+          "nodes": [
+            {
+              "type": "text",
+              "style": "body",
+              "content": { "$label": "footerNote" }
+            }
+          ]
+        },
+        {
+          "width": "*",
+          "nodes": [
+            { "type": "signature" }
+          ]
+        }
+      ]
     }
   ]
 }
