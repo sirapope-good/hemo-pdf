@@ -35,7 +35,6 @@ public sealed class HprpTableLayoutModel
 public static class HprpTableLayoutEngine
 {
     private const float HeaderBarHeightMm = 5f;
-    private const float LayoutSafetyMm = 1.5f;
     private const float MinSlotHeightMm = 4f;
 
     private static readonly string[] ThaiMonthLabels =
@@ -80,7 +79,8 @@ public static class HprpTableLayoutEngine
         var groups = rowMode == HprpTableRowModes.Freedom
             ? 1
             : Math.Max(1, groupCount);
-        var available = Math.Max(0f, boxHeightMm - HeaderBarHeightMm - LayoutSafetyMm);
+        // Fill the element box exactly (header + body) so canvas HTML and QuestPDF match.
+        var available = Math.Max(0f, boxHeightMm - HeaderBarHeightMm);
         var perBlock = available / groups;
         return Math.Max(perBlock / Math.Max(1, slotsPerGroup), MinSlotHeightMm);
     }

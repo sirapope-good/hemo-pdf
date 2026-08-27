@@ -30,3 +30,5 @@ services:
       - ./assets/branding:/app/assets/branding
       - ./assets/templates:/app/assets/templates:ro
       - ./packages:/app/packages
+      # Live Studio JS/CSS without rebuild (parity fixes land immediately).
+      - ./src/Hemo.Pdf.Api/wwwroot:/app/wwwroot

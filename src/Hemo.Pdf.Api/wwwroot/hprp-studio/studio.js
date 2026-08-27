@@ -1619,6 +1619,8 @@ function triggerDownload(blob, filename) {
 async function fetchPreviewBlob() {
   const item = state.selected;
   if (!item) throw new Error("Select a package first.");
+  if (window.TableDesigner && typeof TableDesigner.prepareForPreview === "function")
+    TableDesigner.prepareForPreview();
   const entityId = els.previewEntityId && els.previewEntityId.value.trim();
   const sampleScenario = sampleScenarioEl() ? sampleScenarioEl().value : "";
   state.sampleScenario = sampleScenario;

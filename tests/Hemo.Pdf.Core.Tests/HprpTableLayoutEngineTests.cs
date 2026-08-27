@@ -91,4 +91,93 @@ public class HprpTableLayoutEngineTests
 
         Assert.True(result.IsValid, string.Join("; ", result.Errors));
     }
+
+    [Fact]
+    public void Resolve_UsesInlineTablePresetColumnWeights()
+    {
+        var inline = new HprpTablePreset
+        {
+            Id = "inline",
+            RowMode = HprpTableRowModes.Annual,
+            GroupCount = 12,
+            SlotsPerGroup = 3,
+            DateColumns = new HprpTableDateColumns { MonthWeight = 0.2f, DayWeight = 2.0f },
+            Columns =
+            [
+                new HprpTableColumnDef { Id = "hb", Weight = 3.5f, Center = true, IsLab = true },
+                new HprpTableColumnDef { Id = "hct", Weight = 0.5f, Center = true, IsLab = true },
+            ],
+        };
+        var element = new HprpDesignerElement
+        {
+            Id = "annual",
+            Type = "config-table",
+            TablePreset = inline,
+        };
+
+        var resolved = HprpTablePresetResolver.Resolve(inline, element);
+        Assert.Equal(0.2f, resolved.DateColumns.MonthWeight);
+        Assert.Equal(2.0f, resolved.DateColumns.DayWeight);
+        Assert.Equal(3.5f, resolved.Columns[0].Weight);
+        Assert.Equal(0.5f, resolved.Columns[1].Weight);
+    }
+
+    [Fact]
+    public void Build_SlotHeightsFillBoxExactly()
+    {
+        var resolved = HprpTablePresetResolver.Resolve(AnnualPreset);
+        const float boxH = 228f;
+        var model = HprpTableLayoutEngine.Build(
+            resolved,
+            AnnualBindings,
+            new Dictionary<string, string>(),
+            Sample,
+            boxH);
+
+        var total = model.HeaderHeightMm + model.BlockHeightMm * 12;
+        Assert.InRange(total, boxH - 0.05f, boxH + 0.05f);
+    }
+
+    [Fact]
+    public void StudioPreviewJson_InlineTablePreset_DeserializesWeights()
+    {
+        var json = """
+            {
+              "manifest": { "id": "clinical-01-hct-epo-designer", "layoutMode": "designer", "version": "1" },
+              "layout": {
+                "page": { "size": "A4", "marginMm": 2 },
+                "elements": [
+                  {
+                    "id": "annual",
+                    "type": "config-table",
+                    "box": { "xMm": 0, "yMm": 29, "wMm": 206, "hMm": 228 },
+                    "tablePreset": {
+                      "id": "inline",
+                      "rowMode": "annual",
+                      "groupCount": 12,
+                      "slotsPerGroup": 3,
+                      "dateColumns": { "monthWeight": 0.2, "dayWeight": 2.5 },
+                      "columns": [
+                        { "id": "hb", "weight": 4.5, "center": true, "isLab": true },
+                        { "id": "hct", "weight": 0.4, "center": true, "isLab": true }
+                      ]
+                    },
+                    "bindings": []
+                  }
+                ]
+              },
+              "labels": {}
+            }
+            """;
+        var layout = JsonSerializer.Deserialize<HprpLayout>(
+            JsonDocument.Parse(json).RootElement.GetProperty("layout").GetRawText(),
+            HprpJson.Options)!;
+        var el = Assert.Single(layout.Elements);
+        Assert.NotNull(el.TablePreset);
+        var resolved = HprpTablePresetResolver.Resolve(el.TablePreset!, el);
+        Assert.Equal(0.2f, resolved.DateColumns.MonthWeight, 3);
+        Assert.Equal(2.5f, resolved.DateColumns.DayWeight, 3);
+        Assert.Equal(4.5f, resolved.Columns[0].Weight, 3);
+        Assert.Equal(0.4f, resolved.Columns[1].Weight, 3);
+    }
 }

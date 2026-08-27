@@ -149,8 +149,13 @@ public static class DesignerPageComposer
         HprpDesignerElement element,
         DesignerCanvasViewModel vm)
     {
-        if (element.TablePreset is not null && !string.IsNullOrWhiteSpace(element.TablePreset.Id))
+        // Inline tablePreset always wins (Studio column drag writes weights here).
+        if (element.TablePreset is not null
+            && (!string.IsNullOrWhiteSpace(element.TablePreset.Id)
+                || element.TablePreset.Columns is { Count: > 0 }))
+        {
             return element.TablePreset;
+        }
 
         if (!string.IsNullOrWhiteSpace(element.PresetId)
             && vm.Presets.TryGetValue(element.PresetId, out var loaded))

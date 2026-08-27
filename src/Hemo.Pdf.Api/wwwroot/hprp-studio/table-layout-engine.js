@@ -75,7 +75,7 @@
   function budgetSlotHeight(boxHeightMm, rowMode, groupCount, slotsPerGroup) {
     const headerMm = 5;
     const groups = rowMode === ROW_FREEDOM ? 1 : Math.max(1, groupCount);
-    const available = Math.max(0, boxHeightMm - headerMm - 1.5);
+    const available = Math.max(0, boxHeightMm - headerMm);
     const perBlock = available / groups;
     return Math.max(perBlock / Math.max(1, slotsPerGroup), 4);
   }

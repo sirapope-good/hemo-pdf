@@ -150,7 +150,11 @@ public sealed class HprpStudioController : ControllerBase
         {
             id = string.IsNullOrEmpty(s) ? "default" : s,
             scenario = s,
-            label = string.IsNullOrEmpty(s) ? "Full HD mock (print-shaped)" : s.ToUpperInvariant(),
+            label = string.IsNullOrEmpty(s)
+                ? "Full HD mock (print-shaped)"
+                : string.Equals(s, "empty", StringComparison.OrdinalIgnoreCase)
+                    ? "Empty grid (no mock)"
+                    : s.ToUpperInvariant(),
         }));
     }
 

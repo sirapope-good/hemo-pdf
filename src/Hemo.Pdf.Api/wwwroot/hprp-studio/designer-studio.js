@@ -199,9 +199,10 @@
   }
 
   function resolveTablePreset(el) {
-    if (el.tablePreset && el.tablePreset.id) return el.tablePreset;
+    if (el.tablePreset && (el.tablePreset.id || (el.tablePreset.columns && el.tablePreset.columns.length)))
+      return el.tablePreset;
     if (el.presetId && tablePresets[el.presetId]) return tablePresets[el.presetId];
-    return null;
+    return el.tablePreset || null;
   }
 
   async function loadCatalogExtras() {
@@ -348,10 +349,12 @@
       const body = document.createElement("div");
       body.className = "el-body";
       if (el.type === "config-table") {
-        const preset = resolveTablePreset(el);
-        if (preset && global.TableLayoutEngine) {
+        const catalogOrInline = resolveTablePreset(el);
+        if (catalogOrInline && global.TableLayoutEngine) {
+          // Always detach inline so Download PDF uses the same weights as canvas.
+          const preset = ensureWorkingPreset(el, catalogOrInline);
           const model = global.TableLayoutEngine.buildLayout(preset, el, labels, sampleData, box.hMm);
-          body.appendChild(renderTableHtml(model, el));
+          body.appendChild(renderTableHtml(model, el, scale));
         } else {
           body.innerHTML = `<div class="ph-dense">config-table</div>`;
         }
@@ -386,75 +389,124 @@
     host.appendChild(sheet);
   }
 
-  function renderTableHtml(model, el) {
+  /**
+   * HTML table that mirrors ConfigurableTableComposer (QuestPDF):
+   * - Header: DATE (month+day width) | data columns
+   * - Body: month rowspan | day | data columns
+   * - Row heights locked to layout engine mm (parity with Download PDF)
+   */
+  function renderTableHtml(model, el, scale) {
     const root = document.createElement("div");
     root.className = "cfg-table" + (borderOn(el.chrome) ? "" : " cfg-no-border");
     const p = model.preset;
-    const table = document.createElement("table");
-
-    // Column width from weights
-    const dateW = (p.dateColumns && (p.dateColumns.monthWeight + p.dateColumns.dayWeight)) || 1.8;
+    const isGrouped = String(p.rowMode || "").toLowerCase() !== "freedom";
+    const monthW = Number((p.dateColumns && p.dateColumns.monthWeight) || 0.45);
+    const dayW = Number((p.dateColumns && p.dateColumns.dayWeight) || 0);
+    const dayWSafe = dayW > 0 ? dayW : 1.35;
     const cols = p.columns || [];
-    const weights = [];
-    if (p.rowMode !== "freedom") {
-      weights.push(p.dateColumns ? p.dateColumns.monthWeight : 0.45);
-      weights.push(p.dateColumns ? p.dateColumns.dayWeight : 1.35);
-    }
-    cols.forEach((c) => weights.push(Number(c.weight) || 1));
-    const sum = weights.reduce((a, b) => a + b, 0) || 1;
+    const colWeights = cols.map((c) => Math.max(0.1, Number(c.weight) || 1));
+
+    // Visual header weights match PDF RelativeItem list: [month+day, ...cols]
+    const headerWeights = isGrouped
+      ? [monthW + dayWSafe].concat(colWeights)
+      : colWeights.slice();
+    const sum = headerWeights.reduce((a, b) => a + b, 0) || 1;
+
+    // Exact mm→px so canvas height equals PDF box (no leftover white gap).
+    const headerPx = Math.max(4, model.headerHeightMm * scale);
+    const slotPx = Math.max(3, model.slotHeightMm * scale);
+    const bodyRowCount = Math.max(1, (model.rows && model.rows.length) || 1);
+    const tablePx = headerPx + slotPx * bodyRowCount;
+    const nbsp = "\u00A0";
+
+    const table = document.createElement("table");
+    table.className = "cfg-table-grid";
+    table.style.height = tablePx.toFixed(2) + "px";
+    table.style.maxHeight = tablePx.toFixed(2) + "px";
+    root.style.height = "100%";
 
     const colgroup = document.createElement("colgroup");
-    weights.forEach((w) => {
-      const col = document.createElement("col");
-      col.style.width = ((w / sum) * 100).toFixed(2) + "%";
-      colgroup.appendChild(col);
-    });
+    if (isGrouped) {
+      const bodySum = monthW + dayWSafe + colWeights.reduce((a, b) => a + b, 0);
+      [monthW, dayWSafe].concat(colWeights).forEach((w) => {
+        const col = document.createElement("col");
+        col.style.width = ((w / (bodySum || 1)) * 100).toFixed(3) + "%";
+        colgroup.appendChild(col);
+      });
+    } else {
+      colWeights.forEach((w) => {
+        const col = document.createElement("col");
+        col.style.width = ((w / sum) * 100).toFixed(3) + "%";
+        colgroup.appendChild(col);
+      });
+    }
     table.appendChild(colgroup);
 
     const thead = document.createElement("thead");
     const hr = document.createElement("tr");
-    model.headerLabels.forEach((text, hi) => {
-      const th = document.createElement("th");
-      th.textContent = text;
-      hr.appendChild(th);
-      if (hi < model.headerLabels.length - 1) {
-        // resizer after each header cell except last — attached via absolute on table wrap
-      }
-    });
+    hr.style.height = headerPx.toFixed(2) + "px";
+    if (isGrouped) {
+      const thDate = document.createElement("th");
+      thDate.colSpan = 2;
+      thDate.textContent = model.headerLabels[0] || "วัน/เดือน/ปี";
+      thDate.style.height = headerPx.toFixed(2) + "px";
+      hr.appendChild(thDate);
+      cols.forEach((c, i) => {
+        const th = document.createElement("th");
+        th.textContent = model.headerLabels[i + 1] || c.title || c.id;
+        th.style.height = headerPx.toFixed(2) + "px";
+        hr.appendChild(th);
+      });
+    } else {
+      cols.forEach((c, i) => {
+        const th = document.createElement("th");
+        th.textContent = model.headerLabels[i] || c.title || c.id;
+        th.style.height = headerPx.toFixed(2) + "px";
+        hr.appendChild(th);
+      });
+    }
     thead.appendChild(hr);
     table.appendChild(thead);
 
     const tbody = document.createElement("tbody");
-    if (p.rowMode === "freedom") {
+    if (!isGrouped) {
       model.rows.forEach((row) => {
         const tr = document.createElement("tr");
+        tr.style.height = slotPx.toFixed(2) + "px";
         row.cells.forEach((cell) => {
           const td = document.createElement("td");
-          td.textContent = cell.text;
+          td.textContent = cellText(cell.text, nbsp);
           if (cell.historical) td.className = "historical";
+          if (cell.center) td.classList.add("center");
           tr.appendChild(td);
         });
+        for (let i = row.cells.length; i < cols.length; i++) {
+          const td = document.createElement("td");
+          td.textContent = nbsp;
+          tr.appendChild(td);
+        }
         tbody.appendChild(tr);
       });
     } else {
       let g = -1;
       model.rows.forEach((row) => {
         const tr = document.createElement("tr");
+        tr.style.height = slotPx.toFixed(2) + "px";
         if (row.groupIndex !== g) {
           g = row.groupIndex;
-          if (row.slotIndex === 0 && row.groupLabel) {
+          if (row.slotIndex === 0) {
             const tdMonth = document.createElement("td");
-            tdMonth.rowSpan = p.slotsPerGroup;
+            tdMonth.rowSpan = Math.max(1, p.slotsPerGroup);
             tdMonth.className = "month-cell";
-            tdMonth.textContent = row.groupLabel;
+            tdMonth.textContent = cellText(row.groupLabel, nbsp);
             tr.appendChild(tdMonth);
           }
         }
         row.cells.forEach((cell, ci) => {
           const td = document.createElement("td");
-          td.textContent = cell.text;
+          td.textContent = cellText(cell.text, nbsp);
           if (cell.historical) td.className = "historical";
-          if (ci > 0 && cell.center) td.className = (td.className + " center").trim();
+          if (cell.center || ci === 0) td.classList.add("center");
           tr.appendChild(td);
         });
         tbody.appendChild(tr);
@@ -463,16 +515,33 @@
     table.appendChild(tbody);
     root.appendChild(table);
 
-    // Column resize handles (between data columns in header)
-    attachColumnResizers(root, table, el, p, weights, sum);
+    attachColumnResizers(root, table, el, p, headerWeights, isGrouped, monthW, dayWSafe);
     return root;
   }
 
-  function attachColumnResizers(root, table, el, preset, weights, sum) {
+  function cellText(text, nbsp) {
+    if (text == null || text === "" || text === " ") return nbsp;
+    return String(text);
+  }
+
+  function applyColgroupWidths(table, working, isGrouped) {
+    const colgroup = table.querySelector("colgroup");
+    if (!colgroup) return;
+    const monthW = Number((working.dateColumns && working.dateColumns.monthWeight) || 0.45);
+    const dayW = Number((working.dateColumns && working.dateColumns.dayWeight) || 1.35);
+    const colWeights = (working.columns || []).map((c) => Math.max(0.1, Number(c.weight) || 1));
+    const widths = isGrouped
+      ? [monthW, dayW].concat(colWeights)
+      : colWeights.slice();
+    const total = widths.reduce((a, b) => a + b, 0) || 1;
+    const cols = colgroup.querySelectorAll("col");
+    widths.forEach((w, i) => {
+      if (cols[i]) cols[i].style.width = ((w / total) * 100).toFixed(3) + "%";
+    });
+  }
+
+  function attachColumnResizers(root, table, el, preset, headerWeights, isGrouped, monthW, dayW) {
     const working = ensureWorkingPreset(el, preset);
-    // weights: [month?, day?, ...cols] for annual; freedom = cols only
-    const isGrouped = preset.rowMode !== "freedom";
-    const dataOffset = isGrouped ? 2 : 0;
 
     requestAnimationFrame(() => {
       const ths = table.querySelectorAll("thead th");
@@ -487,42 +556,44 @@
         const handle = document.createElement("div");
         handle.className = "col-resize";
         handle.style.left = (rect.right - rootRect.left - 3) + "px";
+        handle.title = "ลากปรับความกว้างคอลัมน์ (ส่งผลต่อ PDF)";
         handle.addEventListener("pointerdown", (e) => {
           e.preventDefault();
           e.stopPropagation();
-          startColumnResize(e, el, working, hi, dataOffset, isGrouped, weights.slice());
+          startColumnResize(e, el, working, hi, headerWeights.slice(), isGrouped, monthW, dayW, table, handle, root);
         });
         overlay.appendChild(handle);
       });
     });
   }
 
-  function startColumnResize(e, el, working, headerIndex, dataOffset, isGrouped, weights) {
+  function startColumnResize(e, el, working, headerIndex, headerWeights, isGrouped, monthW, dayW, table, handle, root) {
     const startX = e.clientX;
-    const leftW = weights[headerIndex];
-    const rightW = weights[headerIndex + 1];
+    const leftW = headerWeights[headerIndex];
+    const rightW = headerWeights[headerIndex + 1];
     const pair = leftW + rightW;
     const metrics = pageMetrics();
+    const dateRatioMonth = (monthW + dayW) > 0 ? monthW / (monthW + dayW) : 0.25;
 
     function onMove(ev) {
-      const dxPx = ev.clientX - startX;
-      const dxMm = dxPx / metrics.scale;
-      // Approximate: convert mm delta into weight share of table width
-      const tableW = el.box.wMm;
-      const dWeight = (dxMm / tableW) * weights.reduce((a, b) => a + b, 0);
+      const dxMm = (ev.clientX - startX) / metrics.scale;
+      const total = headerWeights.reduce((a, b) => a + b, 0);
+      const dWeight = (dxMm / Math.max(1, el.box.wMm)) * total;
       let newLeft = Math.max(MIN_COL_WEIGHT, leftW + dWeight);
       let newRight = Math.max(MIN_COL_WEIGHT, pair - newLeft);
-      if (newLeft + newRight > pair) {
-        newRight = Math.max(MIN_COL_WEIGHT, pair - newLeft);
-      }
-      weights[headerIndex] = newLeft;
-      weights[headerIndex + 1] = newRight;
-      applyWeightsToPreset(working, weights, isGrouped, dataOffset);
+      headerWeights[headerIndex] = newLeft;
+      headerWeights[headerIndex + 1] = newRight;
+      applyHeaderWeightsToPreset(working, headerWeights, isGrouped, dateRatioMonth);
       commitWorking(el, working);
-      // live update without full reflow cost — still re-render
-      renderCanvas();
-      // keep selection
-      selectedElementId = el.id;
+      applyColgroupWidths(table, working, isGrouped);
+      // Move handle with divider (approx from header cell)
+      const ths = table.querySelectorAll("thead th");
+      const th = ths[headerIndex];
+      if (th && handle && root) {
+        const rootRect = root.getBoundingClientRect();
+        const rect = th.getBoundingClientRect();
+        handle.style.left = (rect.right - rootRect.left - 3) + "px";
+      }
     }
     function onUp() {
       document.removeEventListener("pointermove", onMove);
@@ -530,12 +601,31 @@
       suppressClick = true;
       setTimeout(() => { suppressClick = false; }, 0);
       renderAll();
+      if (setStatusRef) setStatusRef("คอลัมน์อัปเดต — Download PDF จะใช้ความกว้างชุดนี้", "ok");
     }
     document.addEventListener("pointermove", onMove);
     document.addEventListener("pointerup", onUp);
   }
 
+  /** headerWeights: grouped = [month+day, ...cols]; freedom = [...cols] */
+  function applyHeaderWeightsToPreset(working, headerWeights, isGrouped, dateRatioMonth) {
+    if (isGrouped) {
+      const dateTotal = headerWeights[0];
+      working.dateColumns = working.dateColumns || {};
+      working.dateColumns.monthWeight = Math.max(MIN_COL_WEIGHT, dateTotal * dateRatioMonth);
+      working.dateColumns.dayWeight = Math.max(MIN_COL_WEIGHT, dateTotal * (1 - dateRatioMonth));
+      (working.columns || []).forEach((c, i) => {
+        c.weight = headerWeights[i + 1] || c.weight || 1;
+      });
+    } else {
+      (working.columns || []).forEach((c, i) => {
+        c.weight = headerWeights[i] || c.weight || 1;
+      });
+    }
+  }
+
   function applyWeightsToPreset(working, weights, isGrouped, dataOffset) {
+    // kept for compatibility; prefer applyHeaderWeightsToPreset
     if (isGrouped) {
       working.dateColumns = working.dateColumns || {};
       working.dateColumns.monthWeight = weights[0];
@@ -872,8 +962,24 @@
   }
 
   function commitWorking(el, working) {
+    // Persist inline preset so Download PDF uses the same weights as canvas
     el.tablePreset = working;
     delete el.presetId;
+    el.columnOverrides = (working.columns || []).map((c) => ({
+      id: c.id,
+      labelKey: c.labelKey,
+      title: c.title,
+      weight: Number(c.weight) || 1,
+      center: !!c.center,
+      isLab: !!c.isLab,
+    }));
+    if (working.dateColumns) {
+      el.tablePreset.dateColumns = {
+        monthWeight: Number(working.dateColumns.monthWeight) || 0.45,
+        dayWeight: Number(working.dateColumns.dayWeight) || 1.35,
+        dateHeaderLabelKey: working.dateColumns.dateHeaderLabelKey || "colDate",
+      };
+    }
     stateRef.draft.manifest.layoutMode = "designer";
   }
 
@@ -1136,6 +1242,20 @@
     }
   }
 
+  function prepareForPreview() {
+    ensureElements();
+    (stateRef.draft.layout.elements || []).forEach((el) => {
+      if (el.type !== "config-table") return;
+      const preset = resolveTablePreset(el);
+      if (preset) {
+        ensureWorkingPreset(el, preset);
+        commitWorking(el, el.tablePreset);
+      }
+    });
+    if (!stateRef.draft.manifest) stateRef.draft.manifest = {};
+    stateRef.draft.manifest.layoutMode = "designer";
+  }
+
   function isDesignerMode() {
     return isStudioCanvas();
   }
@@ -1146,6 +1266,7 @@
     syncBodyClass,
     renderAll,
     onPackageOpened,
+    prepareForPreview,
     ensureElements,
     promoteToDesignerIfNeeded,
     reflowElements,
