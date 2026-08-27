@@ -54,6 +54,9 @@ public static class ServiceCollectionExtensions
         services.AddScoped<IBrandingResolver, BrandingResolver>();
         services.AddSingleton<IHprpTemplateStore, Hprp.FileHprpTemplateStore>();
         services.AddSingleton<Hprp.HprpPackService>();
+        services.AddSingleton<Hprp.HprpTablePresetStore>();
+        services.AddSingleton<Hprp.HprpAdapterSchemaStore>();
+        services.AddSingleton<IHprpTablePresetCatalog, Hprp.HprpTablePresetCatalog>();
         services.AddScoped<Hprp.HprpStudioPreviewService>();
         services.AddScoped<IReportCatalogService, ReportCatalogService>();
 

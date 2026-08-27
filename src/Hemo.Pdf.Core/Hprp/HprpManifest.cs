@@ -38,8 +38,7 @@ public sealed class HprpManifest
     public string? Language { get; init; }
 
     /// <summary>
-    /// <c>composition</c> (default) or experimental <c>absolute</c> freeform canvas.
-    /// Omitted / null means composition.
+    /// <c>composition</c> (default), <c>designer</c> (config-table canvas), or legacy <c>absolute</c>.
     /// </summary>
     [JsonPropertyName("layoutMode")]
     public string? LayoutMode { get; init; }

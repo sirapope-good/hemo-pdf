@@ -19,11 +19,17 @@ public sealed class HprpLayout
     public IReadOnlyList<HprpSectionNode> Sections { get; init; } = [];
 
     /// <summary>
-    /// Freeform widgets for <see cref="HprpLayoutModes.Absolute"/> (experimental).
-    /// Ignored by composition composers.
+    /// Freeform widgets for <see cref="HprpLayoutModes.Absolute"/> (legacy).
+    /// Ignored by composition / designer composers.
     /// </summary>
     [JsonPropertyName("widgets")]
     public IReadOnlyList<HprpAbsoluteWidget> Widgets { get; init; } = [];
+
+    /// <summary>
+    /// Designer canvas elements for <see cref="HprpLayoutModes.Designer"/>.
+    /// </summary>
+    [JsonPropertyName("elements")]
+    public IReadOnlyList<Hprp.Table.HprpDesignerElement> Elements { get; init; } = [];
 }
 
 public sealed class HprpPage

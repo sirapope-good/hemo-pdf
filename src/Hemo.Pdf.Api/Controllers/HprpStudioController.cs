@@ -2,6 +2,7 @@ using Hemo.Pdf.Application.Hprp;
 using Hemo.Pdf.Core.Abstractions;
 using Hemo.Pdf.Core.Exceptions;
 using Hemo.Pdf.Core.Hprp;
+using Hemo.Pdf.Core.Hprp.Table;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.RateLimiting;
@@ -19,23 +20,60 @@ public sealed class HprpStudioController : ControllerBase
     private readonly ITenantContextAccessor _tenant;
     private readonly HprpTemplateOptions _options;
     private readonly HprpStudioPreviewService _preview;
+    private readonly HprpTablePresetStore _presets;
+    private readonly HprpAdapterSchemaStore _adapterSchemas;
 
     public HprpStudioController(
         HprpPackService pack,
         IHprpTemplateStore store,
         ITenantContextAccessor tenant,
         IOptions<HprpTemplateOptions> options,
-        HprpStudioPreviewService preview)
+        HprpStudioPreviewService preview,
+        HprpTablePresetStore presets,
+        HprpAdapterSchemaStore adapterSchemas)
     {
         _pack = pack;
         _store = store;
         _tenant = tenant;
         _options = options.Value;
         _preview = preview;
+        _presets = presets;
+        _adapterSchemas = adapterSchemas;
     }
 
     [HttpGet("catalog")]
-    public IActionResult Catalog() => Ok(HprpStudioCatalog.Describe());
+    public IActionResult Catalog() => Ok(HprpStudioCatalog.Describe(_presets, _adapterSchemas));
+
+    [HttpGet("presets/tables")]
+    public IActionResult ListTablePresets() => Ok(_presets.ListAll());
+
+    [HttpGet("presets/tables/{presetId}")]
+    public IActionResult GetTablePreset(string presetId)
+    {
+        var preset = _presets.TryGet(presetId);
+        return preset is null ? NotFound() : Ok(preset);
+    }
+
+    [HttpPut("presets/tables/{presetId}")]
+    [EnableRateLimiting("PdfGeneration")]
+    public async Task<IActionResult> SaveTablePreset(
+        string presetId,
+        [FromBody] HprpTablePreset body,
+        CancellationToken cancellationToken)
+    {
+        EnsureWritesEnabled();
+        if (!string.Equals(body.Id, presetId, StringComparison.OrdinalIgnoreCase))
+            throw new PdfGenerationBadRequestException("preset id must match URL.");
+        await _presets.SaveAsync(body, cancellationToken);
+        return Ok(body);
+    }
+
+    [HttpGet("adapters/{dataAdapterId}/schema")]
+    public IActionResult GetAdapterSchema(string dataAdapterId)
+    {
+        var schema = _adapterSchemas.TryGet(dataAdapterId);
+        return schema is null ? NotFound() : Ok(schema);
+    }
 
     [HttpGet("packages")]
     public IActionResult List()
@@ -114,6 +152,23 @@ public sealed class HprpStudioController : ControllerBase
             scenario = s,
             label = string.IsNullOrEmpty(s) ? "Full HD mock (print-shaped)" : s.ToUpperInvariant(),
         }));
+    }
+
+    [HttpGet("packages/{templateId}/sample-data")]
+    public IActionResult GetSampleData(
+        string templateId,
+        [FromQuery] string? variant,
+        [FromQuery] string? scenario)
+    {
+        var sample = HprpStudioSamplePayloads.TryLoad(
+            _pack.TemplatesRoot,
+            templateId,
+            variant,
+            scenario);
+        if (sample is null)
+            return NotFound();
+
+        return Ok(sample.Value);
     }
 
     [HttpPost("preview")]

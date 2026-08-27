@@ -1,4 +1,5 @@
 using Hemo.Pdf.Core.Hprp;
+using Hemo.Pdf.Core.Hprp.Table;
 
 namespace Hemo.Pdf.Application.Hprp;
 
@@ -56,10 +57,18 @@ public sealed class HprpStudioListItemDto
 
 public static class HprpStudioCatalog
 {
-    public static object Describe() => new
+    public static object Describe(
+        HprpTablePresetStore? presets = null,
+        HprpAdapterSchemaStore? adapters = null) => new
     {
         engineVersion = HprpEngine.CurrentVersion,
         fileExtension = HprpEngine.FileExtension,
+        layoutModes = HprpLayoutModes.All.OrderBy(x => x, StringComparer.OrdinalIgnoreCase),
+        tableRowModes = HprpTableRowModes.All.OrderBy(x => x, StringComparer.OrdinalIgnoreCase),
+        bindingContexts = HprpTableBindingContexts.All.OrderBy(x => x, StringComparer.OrdinalIgnoreCase),
+        designerElementTypes = HprpDesignerElementTypes.All.OrderBy(x => x, StringComparer.OrdinalIgnoreCase),
+        tablePresets = presets?.ListAll().Select(p => new { p.Id, p.DisplayName, p.RowMode }) ?? [],
+        adapterSchemas = adapters?.ListAdapterIds() ?? [],
         widgets = HprpWidgetRecipes.Dense,
         blockTypes = HprpWidgetRecipes.Blocks,
         widgetIds = HprpWidgetIds.All.OrderBy(x => x, StringComparer.OrdinalIgnoreCase),

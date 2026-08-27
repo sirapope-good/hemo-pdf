@@ -16,7 +16,9 @@ public class HprpStoreAndPlannerTests
     public void FileStore_LoadsAllClinicalDefaults()
     {
         var store = CreateStore();
-        Assert.Equal(16, store.ListDefaultManifests().Count);
+        var manifests = store.ListDefaultManifests();
+        foreach (var definition in ClinicalReportCatalog.All)
+            Assert.Contains(manifests, m => string.Equals(m.Id, definition.Id, StringComparison.OrdinalIgnoreCase));
         Assert.NotNull(store.TryGetCached("local", ClinicalReportCatalog.Lab));
         Assert.NotNull(store.TryGetCached("local", ClinicalReportCatalog.HemodialysisRecord));
         Assert.False(store.HasTenantOverride("local", ClinicalReportCatalog.Lab));

@@ -23,6 +23,7 @@ public sealed class ClinicalDefaultDataProvider : IReportDataProvider
 
     private readonly IHprpTemplateStore? _templates;
     private readonly Clinical01HctEpoDataProvider _clinical01;
+    private readonly IHprpTablePresetCatalog? _presets;
 
     public ClinicalDefaultDataProvider()
         : this(null)
@@ -30,16 +31,18 @@ public sealed class ClinicalDefaultDataProvider : IReportDataProvider
     }
 
     public ClinicalDefaultDataProvider(IHprpTemplateStore? templates)
-        : this(templates, new Clinical01HctEpoDataProvider())
+        : this(templates, new Clinical01HctEpoDataProvider(), null)
     {
     }
 
     public ClinicalDefaultDataProvider(
         IHprpTemplateStore? templates,
-        Clinical01HctEpoDataProvider clinical01)
+        Clinical01HctEpoDataProvider clinical01,
+        IHprpTablePresetCatalog? presets = null)
     {
         _templates = templates;
         _clinical01 = clinical01;
+        _presets = presets;
     }
 
     public async Task<object> GetDataAsync(PdfReportContext context, CancellationToken cancellationToken)
@@ -50,6 +53,9 @@ public sealed class ClinicalDefaultDataProvider : IReportDataProvider
             ?? _templates?.TryGetCached(
                 context.TenantCode,
                 ClinicalReportCatalog.ResolveEngineTemplateId(context.ReportTemplateId));
+
+        if (package is not null && HprpLayoutModes.IsDesigner(package.Manifest))
+            return BuildDesignerAsync(context, package);
 
         if (package is not null && HprpLayoutModes.IsAbsolute(package.Manifest))
             return await BuildAbsoluteAsync(context, package, cancellationToken);
@@ -75,6 +81,16 @@ public sealed class ClinicalDefaultDataProvider : IReportDataProvider
         }
 
         return BuildFallback(context, title);
+    }
+
+    private object BuildDesignerAsync(PdfReportContext context, HprpPackage package)
+    {
+        JsonElement? data = context.Data is JsonElement je && je.ValueKind == JsonValueKind.Object ? je : null;
+        return DesignerCanvasViewModel.FromPackage(
+            package,
+            data,
+            package.GetLabels(package.Manifest.Language),
+            _presets?.LoadAll());
     }
 
     private async Task<object> BuildAbsoluteAsync(

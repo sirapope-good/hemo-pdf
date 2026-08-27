@@ -13,7 +13,9 @@ public static class HprpValidator
     {
         var errors = new List<string>();
         ValidateManifest(package.Manifest, errors);
-        if (HprpLayoutModes.IsAbsolute(package.Manifest))
+        if (HprpLayoutModes.IsDesigner(package.Manifest))
+            ValidateDesignerLayout(package.Layout, errors);
+        else if (HprpLayoutModes.IsAbsolute(package.Manifest))
             ValidateAbsoluteLayout(package.Layout, errors);
         else
             ValidateLayout(package.Layout, errors);
@@ -25,7 +27,9 @@ public static class HprpValidator
     {
         var errors = new List<string>();
         ValidateManifest(manifest, errors);
-        if (HprpLayoutModes.IsAbsolute(manifest))
+        if (HprpLayoutModes.IsDesigner(manifest))
+            ValidateDesignerLayout(layout, errors);
+        else if (HprpLayoutModes.IsAbsolute(manifest))
             ValidateAbsoluteLayout(layout, errors);
         else
             ValidateLayout(layout, errors);
@@ -175,6 +179,77 @@ public static class HprpValidator
             var itemPath = $"{path}.columnPlan[{i}]";
             if (string.IsNullOrWhiteSpace(item.Bind))
                 errors.Add($"{itemPath}.bind is required.");
+        }
+    }
+
+    private static void ValidateDesignerLayout(HprpLayout layout, List<string> errors)
+    {
+        if (layout.Elements.Count == 0)
+            errors.Add("layout.elements must contain at least one element when layoutMode is designer.");
+
+        for (var i = 0; i < layout.Elements.Count; i++)
+        {
+            var el = layout.Elements[i];
+            var path = $"layout.elements[{i}]";
+            if (string.IsNullOrWhiteSpace(el.Id))
+                errors.Add($"{path}.id is required.");
+
+            var type = el.Type?.Trim() ?? "";
+            if (!Hprp.Table.HprpDesignerElementTypes.All.Contains(type))
+                errors.Add($"{path}.type must be header, config-table, or dense.");
+
+            if (el.Box.WMm <= 0 || el.Box.HMm <= 0)
+                errors.Add($"{path}.box wMm/hMm must be > 0.");
+
+            HprpChrome.Validate(el.Chrome, path + ".chrome", errors);
+
+            if (string.Equals(type, Hprp.Table.HprpDesignerElementTypes.ConfigTable, StringComparison.OrdinalIgnoreCase))
+            {
+                if (string.IsNullOrWhiteSpace(el.PresetId) && el.TablePreset is null)
+                    errors.Add($"{path} presetId or tablePreset is required for config-table.");
+
+                ValidateTableBindings(el.Bindings, path, errors);
+                ValidateTableColumnOverrides(el.ColumnOverrides, path, errors);
+            }
+
+            if (string.Equals(type, Hprp.Table.HprpDesignerElementTypes.Dense, StringComparison.OrdinalIgnoreCase)
+                && (string.IsNullOrWhiteSpace(el.Widget) || !HprpWidgetIds.All.Contains(el.Widget)))
+            {
+                errors.Add($"{path}.widget must be a known widget id for dense elements.");
+            }
+        }
+    }
+
+    private static void ValidateTableBindings(
+        IReadOnlyList<Hprp.Table.HprpTableBinding> bindings,
+        string path,
+        List<string> errors)
+    {
+        for (var i = 0; i < bindings.Count; i++)
+        {
+            var b = bindings[i];
+            var itemPath = $"{path}.bindings[{i}]";
+            if (string.IsNullOrWhiteSpace(b.Path))
+                errors.Add($"{itemPath}.path is required.");
+            if (string.IsNullOrWhiteSpace(b.Column))
+                errors.Add($"{itemPath}.column is required.");
+            if (!Hprp.Table.HprpTableBindingContexts.All.Contains(b.Context))
+                errors.Add($"{itemPath}.context is invalid.");
+        }
+    }
+
+    private static void ValidateTableColumnOverrides(
+        IReadOnlyList<Hprp.Table.HprpTableColumnDef>? overrides,
+        string path,
+        List<string> errors)
+    {
+        if (overrides is null)
+            return;
+
+        for (var i = 0; i < overrides.Count; i++)
+        {
+            if (string.IsNullOrWhiteSpace(overrides[i].Id))
+                errors.Add($"{path}.columnOverrides[{i}].id is required.");
         }
     }
 

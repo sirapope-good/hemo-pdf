@@ -1,0 +1,25 @@
+{
+  "id": "clinical-01-hct-epo-designer",
+  "version": "0.1.0",
+  "displayName": "Hemodialysis Review Hct and EPO (designer)",
+  "engineVersion": 1,
+  "layoutMode": "designer",
+  "dataAdapter": "clinical-01-hct-epo",
+  "requiresSignature": false,
+  "language": "th",
+  "ui": {
+    "profileLabel": "Designer",
+    "entryMode": "patientYear",
+    "menuGroup": "experimental",
+    "sortOrder": 11,
+    "visibleInMenu": false,
+    "parameters": [
+      {
+        "name": "year",
+        "source": "route",
+        "routeKey": "period",
+        "required": true
+      }
+    ]
+  }
+}

@@ -1,0 +1,42 @@
+{
+  "page": {
+    "size": "A4",
+    "orientation": "portrait",
+    "marginMm": 2
+  },
+  "elements": [
+    {
+      "id": "hdr",
+      "type": "header",
+      "preset": "thaiur-header-v1",
+      "box": { "xMm": 0, "yMm": 0, "wMm": 206, "hMm": 27 }
+    },
+    {
+      "id": "annual",
+      "type": "config-table",
+      "presetId": "hct-epo-annual-v1",
+      "box": { "xMm": 0, "yMm": 29, "wMm": 206, "hMm": 228 },
+      "bindings": [
+        { "path": "months[].monthLabel", "column": "month", "context": "group-label" },
+        { "path": "months[].entries[].dayLabel", "column": "day", "context": "entry" },
+        { "path": "months[].entries[].hb", "column": "hb", "context": "entry" },
+        { "path": "months[].entries[].hct", "column": "hct", "context": "entry" },
+        { "path": "months[].entries[].epoName", "column": "epoName", "context": "entry" },
+        { "path": "months[].entries[].frequencyText", "column": "frequencyText", "context": "entry" },
+        { "path": "months[].entries[].injectionDate", "column": "injectionDate", "context": "entry" },
+        { "path": "months[].entries[].remarks", "column": "remarks", "context": "entry" },
+        { "path": "months[].entries[].labIsHistorical", "column": "lab", "context": "lab-historical" }
+      ]
+    },
+    {
+      "id": "copay",
+      "type": "dense",
+      "widget": "clinical.hct-epo-copay",
+      "box": { "xMm": 0, "yMm": 259, "wMm": 206, "hMm": 34 },
+      "chrome": {
+        "headerFill": "$branding.sectionHeaderBackground",
+        "border": "thin"
+      }
+    }
+  ]
+}

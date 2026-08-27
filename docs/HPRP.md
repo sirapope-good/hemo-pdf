@@ -55,6 +55,43 @@ Composition clinical packs remain the production path. Absolute is for exploring
 
 **Dense widgets on absolute canvas (clinical-01 first):** use `type: "dense"` + `widget: "thaiur.header" | "clinical.hct-epo-annual-table" | "clinical.hct-epo-copay"`. Optional `chrome` / `columnPlan` match composition layout nodes. Annual table row height is budgeted from the placed `hMm` box so the same widget scales across layouts. Set `dataAdapter: "clinical-01-hct-epo"` (or place any clinical-01 dense widget) so preview binds real Hct/EPO sample data.
 
+### Designer: `layoutMode: designer` (configurable table)
+
+WYSIWYG path on branch `feat/hprp-table-designer` — **does not replace** composition packs until merge.
+
+| | Composition (default) | Designer |
+|--|--|--|
+| Manifest | omit `layoutMode` or `composition` | `layoutMode: "designer"` |
+| Layout | `body` / `sections` | `elements[]` with `box` mm + `type: config-table` |
+| Studio | tree + Page canvas + Preview pane | **3-column**: palette · HTML canvas · inspector (no preview pane) |
+| Table | fixed C# widget (`clinical.hct-epo-annual-table`) | preset `hct-epo-annual-v1` + bindings + column overrides |
+| PDF | section composers | shared `HprpTableLayoutEngine` → `ConfigurableTableComposer` |
+| Sample pack | `clinical-01-hct-epo` | `clinical-01-hct-epo-designer` |
+
+**Preset library:** `assets/templates/presets/tables/{id}.json` — reusable table chrome + columns + row mode (`freedom` | `monthly` | `annual`). Studio API: `GET/PUT /api/hprp/presets/tables/{id}`.
+
+**Adapter schema (field mapper):** `assets/templates/adapters/{dataAdapterId}.schema.json` — `GET /api/hprp/adapters/{dataAdapterId}/schema` drives the Studio “Map field…” picker.
+
+**config-table element:**
+
+```json
+{
+  "id": "annual",
+  "type": "config-table",
+  "presetId": "hct-epo-annual-v1",
+  "box": { "xMm": 0, "yMm": 29, "wMm": 206, "hMm": 228 },
+  "bindings": [
+    { "path": "months[].monthLabel", "column": "month", "context": "group-label" },
+    { "path": "months[].entries[].hb", "column": "hb", "context": "entry" }
+  ],
+  "columnOverrides": []
+}
+```
+
+Studio canvas renders HTML via `table-layout-engine.js` (same rules as C#). **Download PDF** calls `POST /api/hprp/preview` (QuestPDF verify only — no live preview iframe in designer mode).
+
+See also: [HPRP-TABLE-DESIGNER-BRANCH.md](./HPRP-TABLE-DESIGNER-BRANCH.md) for branch-isolated breaking changes.
+
 ### Visual Designer (MVP)
 
 Studio is still a **composition editor** (not freeform x/y). The **Page canvas** shows A4 flow cards for `layout.body` **and** `layout.sections` (hemosheet / SOAP / dense clinical). Dense widgets are opaque cards — reorder and edit chrome/labels only; inner pixels stay in C#.

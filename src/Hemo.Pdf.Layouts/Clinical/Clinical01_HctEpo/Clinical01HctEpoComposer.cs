@@ -1,9 +1,11 @@
+using System.Text.Json;
 using Hemo.Pdf.Core.Abstractions;
 using Hemo.Pdf.Core.Context;
 using Hemo.Pdf.Core.Hprp;
 using Hemo.Pdf.Core.Models;
 using Hemo.Pdf.Core.Models.Clinical;
 using Hemo.Pdf.Layouts.Absolute;
+using Hemo.Pdf.Layouts.Designer;
 using Hemo.Pdf.Layouts.Hprp;
 using Hemo.Pdf.Rendering;
 using Hemo.Pdf.Sections.ThaiUr;
@@ -33,10 +35,14 @@ public sealed class Clinical01HctEpoComposer : ILayoutComposer
     private readonly HctEpoAnnualTableSection _annualTable = new();
     private readonly HctEpoCoPayCriteriaSection _coPayCriteria = new();
     private readonly IHprpTemplateStore? _templates;
+    private readonly IHprpTablePresetCatalog? _presets;
 
-    public Clinical01HctEpoComposer(IHprpTemplateStore? templates = null)
+    public Clinical01HctEpoComposer(
+        IHprpTemplateStore? templates = null,
+        IHprpTablePresetCatalog? presets = null)
     {
         _templates = templates;
+        _presets = presets;
     }
 
     public object Compose(object dataModel, PdfReportContext context)
@@ -44,7 +50,19 @@ public sealed class Clinical01HctEpoComposer : ILayoutComposer
         var vm = (HctEpoReportViewModel)dataModel;
         var package = HprpLayoutPlan.TryGetPackage(_templates, context);
 
-        // Absolute clinical-01 packs reuse the same dense section composers via mm placement.
+        // Designer canvas: config-table + mm elements.
+        if (package is not null && HprpLayoutModes.IsDesigner(package.Manifest))
+        {
+            JsonElement? data = context.Data is System.Text.Json.JsonElement je ? je : null;
+            var designerVm = DesignerCanvasViewModel.FromPackage(
+                package,
+                data,
+                HprpLabelResolver.Resolve(_templates, context),
+                _presets?.LoadAll());
+            return DesignerPageComposer.Compose(designerVm, context);
+        }
+
+        // Absolute clinical-01 packs reuse dense section composers via mm placement.
         if (package is not null && HprpLayoutModes.IsAbsolute(package.Manifest))
         {
             var absolute = AbsoluteCanvasViewModel.FromPackage(

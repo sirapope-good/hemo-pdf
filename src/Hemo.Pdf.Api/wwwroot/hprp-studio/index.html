@@ -10,7 +10,7 @@
   <header class="top">
     <div>
       <h1>HPRP Studio</h1>
-      <p class="muted">Visual Designer — composition packages ใช้ต้นไม้/ลำดับ · absolute (experimental) ลากพิกัด mm · Preview/Download = QuestPDF</p>
+      <p class="muted">Designer mode — canvas = WYSIWYG HTML · Download PDF = QuestPDF verify</p>
     </div>
     <div class="top-right">
       <div class="mode-toggle" role="group" aria-label="Editor mode">
@@ -49,6 +49,24 @@
         </div>
       </div>
       <div id="denseFormHint" class="dense-hint hidden" role="note"></div>
+      <div class="designer-split designer-only hidden" id="designerStudioPane">
+        <div class="subpane">
+          <div class="subhead">Elements</div>
+          <div id="designerPalette" class="palette"></div>
+        </div>
+        <div class="subpane page-canvas-pane designer-canvas-pane">
+          <div class="subhead">Canvas (WYSIWYG)</div>
+          <div class="designer-canvas-toolbar-host">
+            <label class="preview-opt">Sample
+              <select id="designerSampleScenario" title="Mock payload scenario">
+                <option value="">default</option>
+              </select>
+            </label>
+            <button id="btnDesignerDownloadPdf" type="button" disabled title="QuestPDF verify">Download PDF</button>
+          </div>
+          <div id="designerCanvas" class="page-canvas-scroll" aria-label="Designer WYSIWYG canvas"></div>
+        </div>
+      </div>
       <div class="designer-split composition-only">
         <div class="subpane">
           <div class="subhead">Palette</div>
@@ -86,7 +104,7 @@
       <div id="inspector" class="inspector"><p class="muted">เลือกบล็อกในรายการหรือบน Page canvas</p></div>
     </section>
 
-    <section class="pane preview-col" id="previewPane">
+    <section class="pane preview-col composition-only" id="previewPane">
       <div class="pane-head">
         <strong>Preview</strong>
         <div class="actions preview-toolbar">
@@ -127,6 +145,8 @@
   <pre id="status" class="status" role="status"></pre>
 
   <script src="/hprp-studio/vendor/jszip.min.js"></script>
+  <script src="/hprp-studio/table-layout-engine.js"></script>
+  <script src="/hprp-studio/designer-studio.js"></script>
   <script src="/hprp-studio/studio.js"></script>
   <script src="/hprp-studio/absolute-designer.js"></script>
 </body>

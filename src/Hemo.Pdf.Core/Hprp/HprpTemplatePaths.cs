@@ -10,6 +10,9 @@ public static class HprpTemplatePaths
     public const string SharedFolder = "_shared";
     public const string TenantsFolder = "tenants";
     public const string PackagesFolder = "packages";
+    public const string PresetsFolder = "presets";
+    public const string TablePresetsFolder = "presets/tables";
+    public const string AdaptersFolder = "adapters";
     public const string DefaultVariant = "default";
     public const string SolutionFileName = "Hemo.Pdf.sln";
 
@@ -17,7 +20,9 @@ public static class HprpTemplatePaths
         string.Equals(name, SchemaFolder, StringComparison.OrdinalIgnoreCase)
         || string.Equals(name, SharedFolder, StringComparison.OrdinalIgnoreCase)
         || string.Equals(name, TenantsFolder, StringComparison.OrdinalIgnoreCase)
-        || string.Equals(name, ReportsFolder, StringComparison.OrdinalIgnoreCase);
+        || string.Equals(name, ReportsFolder, StringComparison.OrdinalIgnoreCase)
+        || string.Equals(name, PresetsFolder, StringComparison.OrdinalIgnoreCase)
+        || string.Equals(name, AdaptersFolder, StringComparison.OrdinalIgnoreCase);
 
     public static bool IsDefaultVariant(string? variant) =>
         string.IsNullOrWhiteSpace(variant)
@@ -39,6 +44,12 @@ public static class HprpTemplatePaths
 
     public static string ReportsRoot(string templatesRoot) =>
         Path.Combine(templatesRoot, ReportsFolder);
+
+    public static string TablePresetsRoot(string templatesRoot) =>
+        Path.Combine(templatesRoot, TablePresetsFolder);
+
+    public static string AdaptersRoot(string templatesRoot) =>
+        Path.Combine(templatesRoot, AdaptersFolder);
 
     /// <summary>
     /// Packed file name. Single-package reports use <c>{id}.hprp</c>;

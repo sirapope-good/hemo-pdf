@@ -96,6 +96,8 @@ function ensureLayout() {
     state.draft.layout.body = [];
   if (!Array.isArray(state.draft.layout.sections))
     state.draft.layout.sections = [];
+  if (!Array.isArray(state.draft.layout.elements))
+    state.draft.layout.elements = [];
   if (!state.draft.labels || typeof state.draft.labels !== "object")
     state.draft.labels = {};
 }
@@ -278,7 +280,8 @@ function setMode(mode) {
     showJsonTab();
   else {
     renderDesigner();
-    schedulePreview();
+    if (!(window.TableDesigner && TableDesigner.isDesignerMode()))
+      schedulePreview();
   }
 }
 
@@ -289,10 +292,16 @@ function selectPackage(item) {
   });
 }
 
+function sampleScenarioEl() {
+  if (window.TableDesigner && TableDesigner.isDesignerMode())
+    return document.getElementById("designerSampleScenario");
+  return els.sampleScenario;
+}
+
 function setButtonsEnabled(on) {
   [
     "btnValidate", "btnSave", "btnPackThis", "btnValidateJson", "btnSaveJson", "btnPackThisJson",
-    "btnPreview", "btnDownloadPdf", "btnExport", "btnLabels",
+    "btnPreview", "btnDownloadPdf", "btnDesignerDownloadPdf", "btnExport", "btnLabels",
   ].forEach((id) => {
     const el = document.getElementById(id);
     if (el) el.disabled = !on;
@@ -1587,6 +1596,11 @@ function renderDenseFormHint() {
 
 function renderDesigner() {
   if (state.mode !== "designer") return;
+  if (window.TableDesigner && TableDesigner.isDesignerMode()) {
+    TableDesigner.syncBodyClass();
+    TableDesigner.renderAll();
+    return;
+  }
   if (window.AbsoluteDesigner && AbsoluteDesigner.isAbsoluteMode()) {
     AbsoluteDesigner.syncBodyClass();
     AbsoluteDesigner.renderAbsoluteDesigner();
@@ -1612,7 +1626,7 @@ async function fetchPreviewBlob() {
   const item = state.selected;
   if (!item) throw new Error("Select a package first.");
   const entityId = els.previewEntityId && els.previewEntityId.value.trim();
-  const sampleScenario = els.sampleScenario ? els.sampleScenario.value : "";
+  const sampleScenario = sampleScenarioEl() ? sampleScenarioEl().value : "";
   state.sampleScenario = sampleScenario;
   const payload = {
     templateId: item.id,
@@ -1645,7 +1659,7 @@ async function preview() {
   const item = state.selected;
   if (!item) return null;
   const entityId = els.previewEntityId && els.previewEntityId.value.trim();
-  const sampleScenario = els.sampleScenario ? els.sampleScenario.value : "";
+  const sampleScenario = sampleScenarioEl() ? sampleScenarioEl().value : "";
   const blob = await fetchPreviewBlob();
   state.previewBlob = blob;
   if (state.previewUrl)
@@ -1785,29 +1799,36 @@ async function openPackage(item) {
   else renderDesigner();
   setStatus("Loaded " + item.id, "ok");
   await loadSampleScenarios(item.id);
-  schedulePreview();
+  if (window.TableDesigner && TableDesigner.isDesignerMode())
+    await TableDesigner.onPackageOpened();
+  else
+    schedulePreview();
 }
 
 async function loadSampleScenarios(templateId) {
-  if (!els.sampleScenario) return;
+  const targets = [els.sampleScenario, document.getElementById("designerSampleScenario")].filter(Boolean);
+  if (!targets.length) return;
   try {
     const rows = await api(`/api/hprp/packages/${encodeURIComponent(templateId)}/samples`);
-    els.sampleScenario.innerHTML = "";
-    for (const row of rows || []) {
-      const opt = document.createElement("option");
-      opt.value = row.scenario || "";
-      opt.textContent = row.label || row.id || "default";
-      els.sampleScenario.appendChild(opt);
+    for (const sel of targets) {
+      sel.innerHTML = "";
+      for (const row of rows || []) {
+        const opt = document.createElement("option");
+        opt.value = row.scenario || "";
+        opt.textContent = row.label || row.id || "default";
+        sel.appendChild(opt);
+      }
+      if (!sel.options.length) {
+        const opt = document.createElement("option");
+        opt.value = "";
+        opt.textContent = "Full HD mock";
+        sel.appendChild(opt);
+      }
+      sel.value = state.sampleScenario || "";
     }
-    if (!els.sampleScenario.options.length) {
-      const opt = document.createElement("option");
-      opt.value = "";
-      opt.textContent = "Full HD mock";
-      els.sampleScenario.appendChild(opt);
-    }
-    els.sampleScenario.value = state.sampleScenario || "";
   } catch {
-    els.sampleScenario.innerHTML = `<option value="">Full HD mock</option>`;
+    for (const sel of targets)
+      sel.innerHTML = `<option value="">Full HD mock</option>`;
   }
 }
 
@@ -1884,12 +1905,14 @@ async function packSelectedFromDisk() {
   );
 }
 
-function schedulePreview() {
+function schedulePreview(force) {
   if (!state.selected) return;
+  if (!force && window.TableDesigner && TableDesigner.isDesignerMode()) return;
   clearTimeout(state.previewTimer);
   state.previewTimer = setTimeout(() => {
-    preview().catch((err) => setStatus(err.message, "err"));
-  }, 700);
+    if (force) downloadPdf().catch((err) => setStatus(err.message, "err"));
+    else preview().catch((err) => setStatus(err.message, "err"));
+  }, force ? 0 : 700);
 }
 
 document.querySelectorAll(".tab").forEach((btn) => {
@@ -1920,6 +1943,7 @@ onClick("btnPackAll", () => packAll().catch((err) => setStatus(err.message, "err
 onClick("btnExport", () => exportHprp().catch((err) => setStatus(err.message, "err")));
 onClick("btnImport", () => els.fileImport && els.fileImport.click());
 onClick("btnDownloadPdf", () => downloadPdf().catch((err) => setStatus(err.message, "err")));
+onClick("btnDesignerDownloadPdf", () => downloadPdf().catch((err) => setStatus(err.message, "err")));
 if (els.fileImport) {
   els.fileImport.addEventListener("change", () => {
     const file = els.fileImport.files && els.fileImport.files[0];
@@ -1941,7 +1965,18 @@ if (els.fileImport) {
 if (els.btnPreview)
   els.btnPreview.addEventListener("click", () => preview().catch((err) => setStatus(err.message, "err")));
 if (els.sampleScenario)
-  els.sampleScenario.addEventListener("change", () => schedulePreview());
+  els.sampleScenario.addEventListener("change", async () => {
+    if (window.TableDesigner && TableDesigner.isDesignerMode())
+      await TableDesigner.onPackageOpened();
+    else
+      schedulePreview();
+  });
+const designerSampleScenario = document.getElementById("designerSampleScenario");
+if (designerSampleScenario)
+  designerSampleScenario.addEventListener("change", async () => {
+    if (window.TableDesigner && TableDesigner.isDesignerMode())
+      await TableDesigner.onPackageOpened();
+  });
 if (els.previewEntityId) {
   els.previewEntityId.addEventListener("change", () => schedulePreview());
   els.previewEntityId.addEventListener("keydown", (ev) => {
@@ -1954,3 +1989,7 @@ loadList().catch((err) => {
   setStatus(err.message, "err");
 });
 loadCatalog().catch((err) => setStatus(err.message, "err"));
+if (window.TableDesigner)
+  TableDesigner.init(state, els, api, setStatus, schedulePreview);
+if (window.AbsoluteDesigner && AbsoluteDesigner.init)
+  AbsoluteDesigner.init(state, els, api, setStatus, schedulePreview);
