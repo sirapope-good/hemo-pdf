@@ -196,7 +196,7 @@ public static class HprpValidator
 
             var type = el.Type?.Trim() ?? "";
             if (!Hprp.Table.HprpDesignerElementTypes.All.Contains(type))
-                errors.Add($"{path}.type must be header, config-table, box-text, or dense.");
+                errors.Add($"{path}.type must be header, config-table, box-text, page-of, or dense.");
 
             if (el.Box.WMm <= 0 || el.Box.HMm <= 0)
                 errors.Add($"{path}.box wMm/hMm must be > 0.");

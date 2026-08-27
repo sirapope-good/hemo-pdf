@@ -65,7 +65,15 @@ public class HprpDesignerSpacingTests
             },
         };
 
-        var flowed = HprpDesignerFlow.Reflow(page, els, contentWidthMm: 206);
+        var flow = HprpDesignerFlow.ReflowDetailed(
+            page,
+            els,
+            contentWidthMm: 206,
+            pageHeightMm: 297,
+            marginTopMm: 0,
+            marginBottomMm: 0,
+            marginLeftMm: 0);
+        var flowed = flow.Pages[0].Elements;
         Assert.Equal(0, flowed[0].Box.XMm);
         Assert.Equal(50 - HprpDesignerGaps.BorderCollapseMm, flowed[1].Box.XMm, 3);
         Assert.Equal(0, flowed[1].Box.YMm);
@@ -130,5 +138,43 @@ public class HprpDesignerSpacingTests
         Assert.Contains(flow.Pages[1].Elements, e => e.Id == "hdr");
         Assert.Contains(flow.Pages[0].Elements, e => e.Id == "a");
         Assert.Contains(flow.Pages[1].Elements, e => e.Id == "b");
+    }
+
+    [Fact]
+    public void Reflow_PageOf_SuperFooter_SitsOutsideMarginGuide()
+    {
+        var els = new List<HprpDesignerElement>
+        {
+            new()
+            {
+                Id = "body",
+                Type = HprpDesignerElementTypes.BoxText,
+                Band = HprpDesignerBands.Content,
+                Box = new HprpDesignerBox { WMm = 200, HMm = 40 },
+            },
+            new()
+            {
+                Id = "pg",
+                Type = HprpDesignerElementTypes.PageOf,
+                Band = HprpDesignerBands.SuperFooter,
+                Text = "{current} / {total}",
+                Box = new HprpDesignerBox { WMm = 200, HMm = 5 },
+            },
+        };
+
+        var flow = HprpDesignerFlow.ReflowDetailed(
+            new HprpPage { SpacingMm = 0, MarginMm = 2 },
+            els,
+            contentWidthMm: 206,
+            pageHeightMm: 297,
+            marginTopMm: 2,
+            marginBottomMm: 2,
+            marginLeftMm: 2);
+
+        Assert.Equal(5, flow.SuperFooterHeightMm);
+        Assert.Equal(Math.Max(2f, 5f), 297 - flow.GuideTopMm - flow.GuideHeightMm, 2);
+        var pageOf = Assert.Single(flow.Pages[0].Elements, e => e.Id == "pg");
+        Assert.Equal(flow.GuideTopMm + flow.GuideHeightMm, pageOf.Box.YMm, 2);
+        Assert.True(pageOf.Box.YMm >= flow.GuideTopMm + flow.GuideHeightMm - 0.01f);
     }
 }

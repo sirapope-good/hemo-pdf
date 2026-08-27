@@ -84,7 +84,10 @@ public sealed class HprpDesignerElement
     [JsonPropertyName("manualWidth")]
     public bool ManualWidth { get; init; }
 
-    /// <summary>Hardcoded text for <c>box-text</c> (used when <see cref="Bind"/> is empty or unresolved).</summary>
+    /// <summary>
+    /// Hardcoded text for <c>box-text</c>, or format for <c>page-of</c>
+    /// (tokens <c>{current}</c> / <c>{total}</c>).
+    /// </summary>
     [JsonPropertyName("text")]
     public string? Text { get; init; }
 

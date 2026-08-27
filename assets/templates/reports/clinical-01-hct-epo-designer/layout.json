@@ -70,6 +70,16 @@
       "manualWidth": true,
       "box": { "xMm": 80, "yMm": 266, "wMm": 126, "hMm": 27 },
       "chrome": { "border": "thin", "headerFill": "$branding.sectionHeaderBackground" }
+    },
+    {
+      "id": "page-of",
+      "type": "page-of",
+      "band": "super-footer",
+      "place": "below",
+      "box": { "xMm": 2, "yMm": 292, "wMm": 206, "hMm": 5 },
+      "text": "{current} / {total}",
+      "align": "center",
+      "chrome": { "border": "none", "fontSize": 8 }
     }
   ]
 }

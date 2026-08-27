@@ -2,7 +2,7 @@ using Hemo.Pdf.Core.Hprp.Table;
 
 namespace Hemo.Pdf.Core.Hprp;
 
-/// <summary>One physical page worth of placed designer elements (absolute coords from page top-left content origin = 0,0 inside margins).</summary>
+/// <summary>One physical page of placed designer elements (page-absolute mm from top-left of the sheet).</summary>
 public sealed class HprpDesignerPageSlice
 {
     public int PageIndex { get; init; }
@@ -11,7 +11,9 @@ public sealed class HprpDesignerPageSlice
 
 /// <summary>
 /// Band-aware reflow + page slicing (parity with Studio).
-/// Chrome bands (super-header/header/footer/super-footer) repeat; content flows across pages.
+/// Super-header / super-footer sit <b>outside</b> the margin guide (in the margin gutter).
+/// Header / content / footer flow inside the guide; content may span pages.
+/// Element boxes on pages are page-absolute (0,0 = sheet top-left).
 /// </summary>
 public static class HprpDesignerFlow
 {
@@ -25,7 +27,15 @@ public static class HprpDesignerFlow
         float contentWidthMm,
         float marginLeftMm = 2f,
         float fallbackSpacingMm = 2f) =>
-        ReflowDetailed(page, elements, contentWidthMm, pageHeightMm: 297f, marginTopMm: 2f, marginBottomMm: 2f, marginLeftMm, fallbackSpacingMm)
+        ReflowDetailed(
+                page,
+                elements,
+                contentWidthMm,
+                pageHeightMm: 297f,
+                marginTopMm: 2f,
+                marginBottomMm: 2f,
+                marginLeftMm,
+                fallbackSpacingMm)
             .FlatElements;
 
     public static HprpDesignerFlowResult ReflowDetailed(
@@ -45,6 +55,8 @@ public static class HprpDesignerFlow
                 FlatElements = elements,
                 Pages = [new HprpDesignerPageSlice { PageIndex = 0, Elements = [] }],
                 ContentFlowHeightMm = Math.Max(MinBlockH, pageHeightMm - marginTopMm - marginBottomMm),
+                GuideTopMm = marginTopMm,
+                GuideHeightMm = Math.Max(MinBlockH, pageHeightMm - marginTopMm - marginBottomMm),
                 PageCount = 1,
             };
         }
@@ -58,24 +70,31 @@ public static class HprpDesignerFlow
         var superFooter = PackBand(FilterBand(elements, HprpDesignerBands.SuperFooter), contentW, gaps);
         var contentSrc = FilterBand(elements, HprpDesignerBands.Content);
 
-        var chromeTop = BandHeight(superHeader) + BandHeight(header);
-        var chromeBottom = BandHeight(footer) + BandHeight(superFooter);
-        var contentFlowH = Math.Max(MinBlockH, pageHeightMm - marginTopMm - marginBottomMm - chromeTop - chromeBottom);
+        var sh = BandHeight(superHeader);
+        var sf = BandHeight(superFooter);
+        var headerH = BandHeight(header);
+        var footerH = BandHeight(footer);
+
+        // Supers live outside the margin guide; guide expands if super taller than margin.
+        var guideTop = Math.Max(marginTopMm, sh);
+        var guideBottomPad = Math.Max(marginBottomMm, sf);
+        var guideHeight = Math.Max(MinBlockH, pageHeightMm - guideTop - guideBottomPad);
+        var contentFlowH = Math.Max(MinBlockH, guideHeight - headerH - footerH);
 
         var contentPages = PackContentAcrossPages(contentSrc, contentW, gaps, contentFlowH);
-
         var pageCount = Math.Max(1, contentPages.Count);
         var pages = new List<HprpDesignerPageSlice>(pageCount);
 
         for (var p = 0; p < pageCount; p++)
         {
             var pageEls = new List<HprpDesignerElement>();
-            var yBase = 0f;
 
-            PlaceBand(superHeader, yBase, pageEls);
-            yBase += BandHeight(superHeader);
-            PlaceBand(header, yBase, pageEls);
-            yBase += BandHeight(header);
+            // Super-header: just above the margin guide (outside dashed box).
+            PlaceBandAbsolute(superHeader, marginLeftMm, guideTop - sh, pageEls);
+
+            var innerY = guideTop;
+            PlaceBandAbsolute(header, marginLeftMm, innerY, pageEls);
+            innerY += headerH;
 
             if (p < contentPages.Count)
             {
@@ -83,88 +102,56 @@ public static class HprpDesignerFlow
                 {
                     pageEls.Add(e.WithBox(new HprpDesignerBox
                     {
-                        XMm = e.Box.XMm,
-                        YMm = yBase + e.Box.YMm,
+                        XMm = marginLeftMm + e.Box.XMm,
+                        YMm = innerY + e.Box.YMm,
                         WMm = e.Box.WMm,
                         HMm = e.Box.HMm,
                     }));
                 }
             }
 
-            var footerY = pageHeightMm - marginTopMm - marginBottomMm - chromeBottom;
-            PlaceBand(footer, footerY, pageEls);
-            PlaceBand(superFooter, footerY + BandHeight(footer), pageEls);
+            var footerY = guideTop + guideHeight - footerH;
+            PlaceBandAbsolute(footer, marginLeftMm, footerY, pageEls);
+
+            // Super-footer: just below the margin guide (outside dashed box).
+            PlaceBandAbsolute(superFooter, marginLeftMm, guideTop + guideHeight, pageEls);
 
             pages.Add(new HprpDesignerPageSlice { PageIndex = p, Elements = pageEls });
         }
 
-        var flat = BuildFlatList(superHeader, header, contentPages, footer, superFooter, contentFlowH);
+        var flat = pages.Count > 0 ? pages[0].Elements : Array.Empty<HprpDesignerElement>();
 
         return new HprpDesignerFlowResult
         {
             FlatElements = flat,
             Pages = pages,
             ContentFlowHeightMm = contentFlowH,
-            SuperHeaderHeightMm = BandHeight(superHeader),
-            HeaderHeightMm = BandHeight(header),
-            FooterHeightMm = BandHeight(footer),
-            SuperFooterHeightMm = BandHeight(superFooter),
+            SuperHeaderHeightMm = sh,
+            HeaderHeightMm = headerH,
+            FooterHeightMm = footerH,
+            SuperFooterHeightMm = sf,
+            GuideTopMm = guideTop,
+            GuideHeightMm = guideHeight,
             PageCount = pageCount,
         };
     }
 
-    private static List<HprpDesignerElement> BuildFlatList(
-        List<HprpDesignerElement> superHeader,
-        List<HprpDesignerElement> header,
-        List<List<HprpDesignerElement>> contentPages,
-        List<HprpDesignerElement> footer,
-        List<HprpDesignerElement> superFooter,
-        float contentFlowH)
-    {
-        var flat = new List<HprpDesignerElement>();
-        var y = 0f;
-        foreach (var e in superHeader)
-            flat.Add(OffsetY(e, y));
-        y += BandHeight(superHeader);
-        foreach (var e in header)
-            flat.Add(OffsetY(e, y));
-        y += BandHeight(header);
-
-        for (var p = 0; p < contentPages.Count; p++)
-        {
-            var pageY = y + p * contentFlowH;
-            foreach (var e in contentPages[p])
-                flat.Add(OffsetY(e, pageY));
-        }
-
-        // Footer chrome kept at end of flat with y after last content page chrome zone
-        // (Studio uses Pages for multi-sheet; flat is for legacy single sheet / box persistence)
-        var afterContent = y + Math.Max(1, contentPages.Count) * contentFlowH;
-        foreach (var e in footer)
-            flat.Add(OffsetY(e, afterContent));
-        afterContent += BandHeight(footer);
-        foreach (var e in superFooter)
-            flat.Add(OffsetY(e, afterContent));
-
-        return flat;
-    }
-
-    private static HprpDesignerElement OffsetY(HprpDesignerElement e, float yBase) =>
-        e.WithBox(new HprpDesignerBox
-        {
-            XMm = e.Box.XMm,
-            YMm = yBase + e.Box.YMm,
-            WMm = e.Box.WMm,
-            HMm = e.Box.HMm,
-        });
-
-    private static void PlaceBand(
+    private static void PlaceBandAbsolute(
         List<HprpDesignerElement> band,
-        float yBase,
+        float originX,
+        float originY,
         List<HprpDesignerElement> pageEls)
     {
         foreach (var e in band)
-            pageEls.Add(OffsetY(e, yBase));
+        {
+            pageEls.Add(e.WithBox(new HprpDesignerBox
+            {
+                XMm = originX + e.Box.XMm,
+                YMm = originY + e.Box.YMm,
+                WMm = e.Box.WMm,
+                HMm = e.Box.HMm,
+            }));
+        }
     }
 
     private static List<HprpDesignerElement> FilterBand(
@@ -208,7 +195,6 @@ public static class HprpDesignerFlow
             var (rows, consumed) = PackRows(remaining, contentW, gaps, contentFlowH, startY: 0f);
             if (consumed == 0)
             {
-                // Single row taller than page — force place to avoid infinite loop
                 var forced = PackRows(remaining.Take(1).ToList(), contentW, gaps, float.MaxValue, 0f).rows;
                 pages.Add(forced);
                 remaining.RemoveAt(0);
@@ -294,10 +280,17 @@ public static class HprpDesignerFlow
         return (result, i);
     }
 
-    private static float MinHeightFor(HprpDesignerElement e) =>
-        string.Equals(e.Type, HprpDesignerElementTypes.BoxText, StringComparison.OrdinalIgnoreCase)
-            ? MinBoxTextH
-            : MinBlockH;
+    private static float MinHeightFor(HprpDesignerElement e)
+    {
+        var type = e.Type?.Trim() ?? "";
+        if (string.Equals(type, HprpDesignerElementTypes.BoxText, StringComparison.OrdinalIgnoreCase)
+            || string.Equals(type, HprpDesignerElementTypes.PageOf, StringComparison.OrdinalIgnoreCase))
+        {
+            return MinBoxTextH;
+        }
+
+        return MinBlockH;
+    }
 }
 
 public sealed class HprpDesignerFlowResult
@@ -309,5 +302,9 @@ public sealed class HprpDesignerFlowResult
     public float HeaderHeightMm { get; init; }
     public float FooterHeightMm { get; init; }
     public float SuperFooterHeightMm { get; init; }
+    /// <summary>Top of the margin guide (page-absolute).</summary>
+    public float GuideTopMm { get; init; }
+    /// <summary>Height of the margin guide (inner header/content/footer).</summary>
+    public float GuideHeightMm { get; init; }
     public int PageCount { get; init; } = 1;
 }

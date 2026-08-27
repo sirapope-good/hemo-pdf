@@ -13,8 +13,18 @@
   const MIN_BOX_TEXT_H = 4;
   const MIN_COL_WEIGHT = 0.25;
 
+  function resolveBand(el) {
+    const b = String(el.band || "").toLowerCase().trim();
+    if (BANDS.indexOf(b) >= 0) return b;
+    const t = String(el.type || "").toLowerCase();
+    if (t === "header") return "header";
+    if (t === "page-of") return "super-footer";
+    return "content";
+  }
+
   function minHeightForElement(el) {
-    return String(el && el.type || "").toLowerCase() === "box-text" ? MIN_BOX_TEXT_H : MIN_BLOCK_H;
+    const t = String(el && el.type || "").toLowerCase();
+    return t === "box-text" || t === "page-of" ? MIN_BOX_TEXT_H : MIN_BLOCK_H;
   }
 
   const CLINICAL01_ANNUAL_BINDINGS = [
@@ -45,13 +55,6 @@
   let lastFlow = null;
 
   const BANDS = ["super-header", "header", "content", "footer", "super-footer"];
-
-  function resolveBand(el) {
-    const b = String(el.band || "").toLowerCase().trim();
-    if (BANDS.indexOf(b) >= 0) return b;
-    if (String(el.type || "").toLowerCase() === "header") return "header";
-    return "content";
-  }
 
   function isStudioCanvas() {
     return !stateRef || stateRef.mode !== "json";
@@ -190,9 +193,16 @@
     const superFooter = packRows(filterBand("super-footer"), 1e9).rows;
     const contentSrc = filterBand("content");
 
-    const chromeTop = bandHeight(superHeader) + bandHeight(header);
-    const chromeBottom = bandHeight(footer) + bandHeight(superFooter);
-    const contentFlowH = Math.max(MIN_BLOCK_H, contentH - chromeTop - chromeBottom);
+    const sh = bandHeight(superHeader);
+    const sf = bandHeight(superFooter);
+    const headerH = bandHeight(header);
+    const footerH = bandHeight(footer);
+
+    // Supers sit outside the margin guide (in the margin gutter / beyond dashed box).
+    const guideTop = Math.max(margins.top, sh);
+    const guideBottomPad = Math.max(margins.bottom, sf);
+    const guideHeight = Math.max(MIN_BLOCK_H, pageH - guideTop - guideBottomPad);
+    const contentFlowH = Math.max(MIN_BLOCK_H, guideHeight - headerH - footerH);
 
     const contentPages = [];
     let remaining = contentSrc.slice();
@@ -213,69 +223,59 @@
     const pages = [];
     for (let p = 0; p < pageCount; p++) {
       const pageEls = [];
-      let yBase = 0;
-      function placeBand(band) {
+      function placeBandAbs(band, originX, originY) {
         band.forEach((e) => {
           pageEls.push({
             el: e,
-            xMm: e.box.xMm,
-            yMm: yBase + e.box.yMm,
+            xMm: originX + e.box.xMm,
+            yMm: originY + e.box.yMm,
             wMm: e.box.wMm,
             hMm: e.box.hMm,
+            outsideMargin: originY < guideTop - 0.01 || originY >= guideTop + guideHeight - 0.01,
           });
         });
       }
-      placeBand(superHeader);
-      yBase += bandHeight(superHeader);
-      placeBand(header);
-      yBase += bandHeight(header);
+
+      placeBandAbs(superHeader, margins.left, guideTop - sh);
+      let innerY = guideTop;
+      placeBandAbs(header, margins.left, innerY);
+      innerY += headerH;
       (contentPages[p] || []).forEach((e) => {
         pageEls.push({
           el: e,
-          xMm: e.box.xMm,
-          yMm: yBase + e.box.yMm,
+          xMm: margins.left + e.box.xMm,
+          yMm: innerY + e.box.yMm,
           wMm: e.box.wMm,
           hMm: e.box.hMm,
+          outsideMargin: false,
         });
       });
-      const footerY = contentH - chromeBottom;
-      yBase = footerY;
-      placeBand(footer);
-      yBase += bandHeight(footer);
-      placeBand(superFooter);
+      placeBandAbs(footer, margins.left, guideTop + guideHeight - footerH);
+      placeBandAbs(superFooter, margins.left, guideTop + guideHeight);
       pages.push(pageEls);
     }
 
-    // Persist boxes from page 0 absolute coords for save/PDF flat list
-    pages[0].forEach((p) => {
-      p.el.box.xMm = p.xMm;
-      p.el.box.yMm = p.yMm;
-      p.el.box.wMm = p.wMm;
-      p.el.box.hMm = p.hMm;
+    // Persist page-absolute boxes from page 0 (PDF / save parity).
+    pages[0].forEach((item) => {
+      item.el.box.xMm = item.xMm;
+      item.el.box.yMm = item.yMm;
+      item.el.box.wMm = item.wMm;
+      item.el.box.hMm = item.hMm;
     });
-    // Content on later pages: store continuous Y for flat persistence
-    for (let p = 1; p < pages.length; p++) {
-      pages[p].forEach((item) => {
-        if (resolveBand(item.el) !== "content") return;
-        item.el.box.xMm = item.xMm;
-        item.el.box.yMm = item.yMm + p * 0; // page-local already includes chrome; keep page-local for PDF slices
-        item.el.box.wMm = item.wMm;
-        item.el.box.hMm = item.hMm;
-      });
-    }
 
     lastFlow = {
       pages,
       pageCount,
       contentFlowH,
-      chromeTop,
-      chromeBottom,
-      superHeaderH: bandHeight(superHeader),
-      headerH: bandHeight(header),
-      footerH: bandHeight(footer),
-      superFooterH: bandHeight(superFooter),
+      guideTop,
+      guideHeight,
+      superHeaderH: sh,
+      headerH,
+      footerH,
+      superFooterH: sf,
       pageH,
       margins,
+      contentW,
       contentH,
     };
   }
@@ -511,15 +511,25 @@
     host.innerHTML = "";
 
     const m = pageMetrics();
-    const { page, pageH, margins, contentW, contentH, scale, landscape, sheetW } = m;
-    const flow = lastFlow || { pages: [[]], pageCount: 1, chromeTop: 0, chromeBottom: 0, headerH: 0, superHeaderH: 0, footerH: 0, superFooterH: 0 };
+    const { page, pageH, margins, contentW, scale, landscape, sheetW } = m;
+    const flow = lastFlow || {
+      pages: [[]],
+      pageCount: 1,
+      guideTop: margins.top,
+      guideHeight: pageH - margins.top - margins.bottom,
+      headerH: 0,
+      superHeaderH: 0,
+      footerH: 0,
+      superFooterH: 0,
+      contentFlowH: 0,
+    };
 
     const banner = document.getElementById("designerOverflowBanner");
     if (banner) {
       if (flow.pageCount > 1) {
         banner.classList.remove("hidden");
         banner.textContent =
-          "เนื้อหาเกิน 1 หน้า — แสดง " + flow.pageCount + " หน้าอัตโนมัติ (Header/Footer ซ้ำทุกหน้า · Content ไหลต่อ)";
+          "เนื้อหาเกิน 1 หน้า — แสดง " + flow.pageCount + " หน้าอัตโนมัติ (Header/Footer ซ้ำทุกหน้า · Content ไหลต่อ · Super อยู่นอกเส้น margin)";
       } else {
         banner.classList.add("hidden");
         banner.textContent = "";
@@ -545,33 +555,56 @@
       pageLabel.textContent = "หน้า " + (p + 1) + " / " + flow.pageCount;
       sheet.appendChild(pageLabel);
 
+      const guideTop = flow.guideTop != null ? flow.guideTop : margins.top;
+      const guideHeight = flow.guideHeight != null
+        ? flow.guideHeight
+        : Math.max(MIN_BLOCK_H, pageH - margins.top - margins.bottom);
+
       const guide = document.createElement("div");
       guide.className = "designer-margin-guide";
       guide.style.left = margins.left * scale + "px";
-      guide.style.top = margins.top * scale + "px";
+      guide.style.top = guideTop * scale + "px";
       guide.style.width = contentW * scale + "px";
-      guide.style.height = contentH * scale + "px";
+      guide.style.height = guideHeight * scale + "px";
       sheet.appendChild(guide);
 
-      // Band guides inside margin box
+      // Inner band guides (inside margin box only — supers are outside)
       let bandY = 0;
       function addBandGuide(label, hMm, cls) {
         if (hMm <= 0) return;
         const g = document.createElement("div");
         g.className = "designer-band-guide " + (cls || "");
         g.style.left = margins.left * scale + "px";
-        g.style.top = (margins.top + bandY) * scale + "px";
+        g.style.top = (guideTop + bandY) * scale + "px";
         g.style.width = contentW * scale + "px";
         g.style.height = Math.max(1, hMm * scale) + "px";
         g.textContent = label;
         sheet.appendChild(g);
         bandY += hMm;
       }
-      addBandGuide("super-header", flow.superHeaderH || 0);
+      if (flow.superHeaderH > 0) {
+        const g = document.createElement("div");
+        g.className = "designer-band-guide band-super";
+        g.style.left = margins.left * scale + "px";
+        g.style.top = (guideTop - flow.superHeaderH) * scale + "px";
+        g.style.width = contentW * scale + "px";
+        g.style.height = Math.max(1, flow.superHeaderH * scale) + "px";
+        g.textContent = "super-header (นอก margin)";
+        sheet.appendChild(g);
+      }
       addBandGuide("header", flow.headerH || 0);
       addBandGuide("content", flow.contentFlowH || 0, "band-content");
       addBandGuide("footer", flow.footerH || 0);
-      addBandGuide("super-footer", flow.superFooterH || 0);
+      if (flow.superFooterH > 0) {
+        const g = document.createElement("div");
+        g.className = "designer-band-guide band-super";
+        g.style.left = margins.left * scale + "px";
+        g.style.top = (guideTop + guideHeight) * scale + "px";
+        g.style.width = contentW * scale + "px";
+        g.style.height = Math.max(1, flow.superFooterH * scale) + "px";
+        g.textContent = "super-footer (นอก margin)";
+        sheet.appendChild(g);
+      }
 
       if (p === 0) {
         const dropHint = document.createElement("div");
@@ -592,9 +625,13 @@
         const el = item.el;
         const wrap = document.createElement("div");
         wrap.className = "designer-element" + (el.id === selectedElementId ? " selected" : "");
+        if (item.outsideMargin || resolveBand(el) === "super-header" || resolveBand(el) === "super-footer") {
+          wrap.classList.add("outside-margin");
+        }
         if (!borderOn(el.chrome)) wrap.classList.add("no-border");
-        wrap.style.left = (margins.left + item.xMm) * scale + "px";
-        wrap.style.top = (margins.top + item.yMm) * scale + "px";
+        // Page-absolute coordinates
+        wrap.style.left = item.xMm * scale + "px";
+        wrap.style.top = item.yMm * scale + "px";
         wrap.style.width = item.wMm * scale + "px";
         wrap.style.height = item.hMm * scale + "px";
         wrap.dataset.elementId = el.id;
@@ -650,6 +687,8 @@
           }
         } else if (el.type === "box-text") {
           body.appendChild(renderBoxTextHtml(el, sampleData, scale));
+        } else if (el.type === "page-of") {
+          body.appendChild(renderPageOfHtml(el, p + 1, flow.pageCount, scale));
         } else if (el.type === "header") {
           const catalogOrInline = resolveHeaderPreset(el);
           if (catalogOrInline && global.HeaderLayoutEngine) {
@@ -1347,6 +1386,9 @@
     if (el.type === "box-text") {
       renderBoxTextInspector(insp, el);
     }
+    if (el.type === "page-of") {
+      renderPageOfInspector(insp, el);
+    }
 
     renderBoxFields(insp, el);
   }
@@ -1371,6 +1413,63 @@
     root.style.height = "100%";
     root.textContent = resolveBoxText(el, data) || "\u00A0";
     return root;
+  }
+
+  function formatPageOf(el, current, total) {
+    const fmt = el.text || "{current} / {total}";
+    return String(fmt)
+      .replace(/\{current\}/gi, String(current))
+      .replace(/\{total\}/gi, String(total));
+  }
+
+  function renderPageOfHtml(el, current, total, scale) {
+    const root = document.createElement("div");
+    root.className = "cfg-page-of" + (borderOn(el.chrome) ? "" : " cfg-no-border");
+    const fs = (el.chrome && el.chrome.fontSize) || 8;
+    root.style.fontSize = (fs * (scale / 2.5)).toFixed(1) + "px";
+    root.style.textAlign = el.align || "center";
+    root.style.height = "100%";
+    root.textContent = formatPageOf(el, current, total);
+    return root;
+  }
+
+  function renderPageOfInspector(insp, el) {
+    const tip = document.createElement("p");
+    tip.className = "muted";
+    tip.textContent = "Page of — วางที่ Super footer (นอกเส้น margin) · ใช้ {current} และ {total}";
+    insp.appendChild(tip);
+
+    if (!el.band) el.band = "super-footer";
+
+    const textLab = document.createElement("label");
+    textLab.textContent = "format";
+    const textIn = document.createElement("input");
+    textIn.type = "text";
+    textIn.value = el.text || "{current} / {total}";
+    textIn.addEventListener("change", () => {
+      if (canvasTools) canvasTools.pushHistory();
+      el.text = textIn.value || "{current} / {total}";
+      renderAll();
+    });
+    textLab.appendChild(textIn);
+    insp.appendChild(textLab);
+
+    const alignLab = document.createElement("label");
+    alignLab.textContent = "align";
+    const alignSel = document.createElement("select");
+    ["left", "center", "right"].forEach((v) => {
+      const o = document.createElement("option");
+      o.value = v;
+      o.textContent = v;
+      if (String(el.align || "center") === v) o.selected = true;
+      alignSel.appendChild(o);
+    });
+    alignSel.addEventListener("change", () => {
+      el.align = alignSel.value;
+      renderAll();
+    });
+    alignLab.appendChild(alignSel);
+    insp.appendChild(alignLab);
   }
 
   function renderBoxTextInspector(insp, el) {
@@ -1980,10 +2079,16 @@
       const input = document.createElement("input");
       input.type = "number";
       input.step = "0.5";
+      if (key === "hMm") input.min = String(minHeightForElement(el));
+      if (key === "wMm") input.min = String(MIN_BLOCK_W);
       input.value = String((el.box && el.box[key]) || 0);
       input.addEventListener("change", () => {
+        if (canvasTools) canvasTools.pushHistory();
         el.box = el.box || {};
-        el.box[key] = Number(input.value);
+        let v = Number(input.value);
+        if (key === "hMm") v = Math.max(minHeightForElement(el), v);
+        if (key === "wMm") v = Math.max(MIN_BLOCK_W, v);
+        el.box[key] = v;
         if (key === "wMm") el.manualWidth = true;
         reflowElements();
         renderAll();
@@ -2029,6 +2134,28 @@
       text: "หัวข้อ",
       align: "center",
       chrome: { border: "thin", headerFill: "$branding.sectionHeaderBackground", fontSize: 7.5 },
+    });
+    stateRef.draft.manifest.layoutMode = "designer";
+    selectedElementId = id;
+    stateRef.selectedKey = null;
+    reflowElements();
+    renderAll();
+  }
+
+  function addPageOf() {
+    ensureElements();
+    promoteToDesignerIfNeeded();
+    if (canvasTools) canvasTools.pushHistory();
+    const id = "pageof_" + Math.random().toString(36).slice(2, 7);
+    stateRef.draft.layout.elements.push({
+      id,
+      type: "page-of",
+      band: "super-footer",
+      place: "below",
+      box: { xMm: 0, yMm: 0, wMm: 206, hMm: 5 },
+      text: "{current} / {total}",
+      align: "center",
+      chrome: { border: "none", fontSize: 8 },
     });
     stateRef.draft.manifest.layoutMode = "designer";
     selectedElementId = id;
@@ -2104,6 +2231,7 @@
     reflowElements,
     addConfigTable,
     addBoxText,
+    addPageOf,
     deleteElement,
     getSelectedElementId: () => selectedElementId,
   };
@@ -2142,5 +2270,7 @@
     if (addBtn) addBtn.addEventListener("click", () => addConfigTable());
     const boxBtn = document.getElementById("btnAddBoxText");
     if (boxBtn) boxBtn.addEventListener("click", () => addBoxText());
+    const pageOfBtn = document.getElementById("btnAddPageOf");
+    if (pageOfBtn) pageOfBtn.addEventListener("click", () => addPageOf());
   };
 })(window);

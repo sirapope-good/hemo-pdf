@@ -31,6 +31,9 @@ public static class HprpDesignerBands
         if (string.Equals(element.Type, Hprp.Table.HprpDesignerElementTypes.Header, StringComparison.OrdinalIgnoreCase))
             return Header;
 
+        if (string.Equals(element.Type, Hprp.Table.HprpDesignerElementTypes.PageOf, StringComparison.OrdinalIgnoreCase))
+            return SuperFooter;
+
         return Content;
     }
 

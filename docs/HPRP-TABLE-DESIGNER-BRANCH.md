@@ -47,6 +47,12 @@ When **content** exceeds the content band height, Studio shows page 2+ automatic
 | `content` | Flows; may create extra pages |
 | `footer` / `super-footer` | Bottom chrome, repeats (e.g. page of) |
 
+**Super bands** always render **outside** the dashed margin guide (in the margin gutter). Inner header/content/footer stay inside.
+
+### Page of
+
+Element type `page-of` (default band `super-footer`): format `{current} / {total}` — Studio button **+ Page of**. PDF uses QuestPDF page numbers.
+
 ## Assets
 
 - Table presets: `assets/templates/presets/tables/hct-epo-annual-v1.json`, `copay-nhso-v1.json`, `copay-sso-v1.json`

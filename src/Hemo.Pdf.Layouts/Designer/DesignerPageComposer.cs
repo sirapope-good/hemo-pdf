@@ -21,8 +21,6 @@ public static class DesignerPageComposer
     {
         _ = context;
         var landscape = vm.Landscape;
-        var originX = vm.Page.Left;
-        var originY = vm.Page.Top;
         var slices = vm.Pages.Count > 0
             ? vm.Pages
             : new[]
@@ -53,14 +51,15 @@ public static class DesignerPageComposer
                                 e.Background(Colors.White);
                         });
 
+                        // Boxes are page-absolute (0,0 = sheet top-left); supers sit outside the margin guide.
                         foreach (var element in slice.Elements)
                         {
                             var box = element.Box;
                             layers.Layer()
                                 .Width(Math.Max(1f, box.WMm), Unit.Millimetre)
                                 .Height(Math.Max(1f, box.HMm), Unit.Millimetre)
-                                .TranslateX(Math.Max(0, originX + box.XMm), Unit.Millimetre)
-                                .TranslateY(Math.Max(0, originY + box.YMm), Unit.Millimetre)
+                                .TranslateX(Math.Max(0, box.XMm), Unit.Millimetre)
+                                .TranslateY(Math.Max(0, box.YMm), Unit.Millimetre)
                                 .Element(inner => DrawElement(inner, element, vm));
                         }
                     }));
@@ -88,6 +87,10 @@ public static class DesignerPageComposer
 
             case HprpDesignerElementTypes.BoxText:
                 ConfigurableBoxTextComposer.Compose(container, element, vm.Data);
+                break;
+
+            case HprpDesignerElementTypes.PageOf:
+                ConfigurablePageOfComposer.Compose(container, element);
                 break;
 
             case HprpDesignerElementTypes.Dense:
