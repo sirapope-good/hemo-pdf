@@ -80,6 +80,44 @@ public class HprpDesignerSpacingTests
     }
 
     [Fact]
+    public void Reflow_Beside_KeepsIndependentHeights()
+    {
+        var els = new List<HprpDesignerElement>
+        {
+            new()
+            {
+                Id = "short",
+                Type = HprpDesignerElementTypes.ConfigTable,
+                Place = "below",
+                ManualWidth = true,
+                Box = new HprpDesignerBox { WMm = 80, HMm = 20 },
+            },
+            new()
+            {
+                Id = "tall",
+                Type = HprpDesignerElementTypes.ConfigTable,
+                Place = "beside",
+                ManualWidth = true,
+                Box = new HprpDesignerBox { WMm = 120, HMm = 40 },
+            },
+        };
+
+        var flow = HprpDesignerFlow.ReflowDetailed(
+            new HprpPage { SpacingMm = 2 },
+            els,
+            contentWidthMm: 206,
+            pageHeightMm: 297,
+            marginTopMm: 0,
+            marginBottomMm: 0,
+            marginLeftMm: 0);
+        var flowed = flow.Pages[0].Elements;
+        Assert.Equal(20, flowed[0].Box.HMm);
+        Assert.Equal(40, flowed[1].Box.HMm);
+        Assert.Equal(0, flowed[0].Box.YMm);
+        Assert.Equal(0, flowed[1].Box.YMm);
+    }
+
+    [Fact]
     public void Resolve_Page_ExposesBesideAndBelow()
     {
         var resolved = HprpPageLayout.Resolve(

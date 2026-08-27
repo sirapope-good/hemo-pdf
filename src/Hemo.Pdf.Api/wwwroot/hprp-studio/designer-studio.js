@@ -169,7 +169,7 @@
         let x = 0;
         row.forEach((e) => {
           if (!e.manualWidth) e.box.wMm = Math.max(MIN_BLOCK_W, autoW);
-          e.box.hMm = maxRowH;
+          // Keep each block's own height — only maxRowH drives vertical row advance.
           e.box.xMm = x;
           e.box.yMm = cursorY;
           x += gapStep(e.box.wMm, gaps.beside);

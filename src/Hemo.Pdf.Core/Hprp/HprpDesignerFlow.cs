@@ -263,12 +263,16 @@ public static class HprpDesignerFlow
                 var w = e.ManualWidth
                     ? Math.Clamp(e.Box.WMm > 0 ? e.Box.WMm : MinBlockW, MinBlockW, contentW)
                     : Math.Max(MinBlockW, autoW);
+                var h = Math.Max(
+                    MinHeightFor(e),
+                    e.Box.HMm > 0 ? e.Box.HMm : MinHeightFor(e));
                 result.Add(e.WithBox(new HprpDesignerBox
                 {
                     XMm = x,
                     YMm = cursorY,
                     WMm = w,
-                    HMm = maxH,
+                    // Own height — maxH only advances the next row.
+                    HMm = h,
                 }));
                 x += gaps.StepX(w);
             }
