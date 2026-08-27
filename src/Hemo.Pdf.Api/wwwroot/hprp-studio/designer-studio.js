@@ -1,11 +1,15 @@
 /**
- * HPRP Studio — WYSIWYG page canvas (no tree, no PDF preview pane).
- * Canvas HTML is the primary editor; Download PDF verifies QuestPDF only.
+ * HPRP Studio — WYSIWYG page canvas.
+ * Flow layout (no overlap), page margins/border, delete, drag beside/below,
+ * resize block edges + column dividers.
  */
 (function (global) {
   const DISPLAY_W = 520;
   const A4_W = 210;
   const A4_H = 297;
+  const MIN_BLOCK_W = 20;
+  const MIN_BLOCK_H = 12;
+  const MIN_COL_WEIGHT = 0.25;
 
   const CLINICAL01_ANNUAL_BINDINGS = [
     { path: "months[].monthLabel", column: "month", context: "group-label" },
@@ -28,13 +32,13 @@
   let tablePresets = {};
   let adapterSchema = null;
   let sampleData = null;
+  let dragState = null;
+  let suppressClick = false;
 
-  /** Studio Canvas mode (not JSON) — always WYSIWYG on this branch. */
   function isStudioCanvas() {
     return !stateRef || stateRef.mode !== "json";
   }
 
-  /** Package uses designer layout elements (or was auto-promoted). */
   function isDesignerPackage() {
     return String((stateRef.draft.manifest && stateRef.draft.manifest.layoutMode) || "").toLowerCase() === "designer";
   }
@@ -42,58 +46,134 @@
   function ensureElements() {
     if (!stateRef.draft.layout) stateRef.draft.layout = {};
     if (!stateRef.draft.layout.elements) stateRef.draft.layout.elements = [];
-    if (!stateRef.draft.layout.page) stateRef.draft.layout.page = { size: "A4", marginMm: 2 };
+    if (!stateRef.draft.layout.page) {
+      stateRef.draft.layout.page = { size: "A4", marginMm: 2, spacingMm: 2, border: "none" };
+    }
+    const page = stateRef.draft.layout.page;
+    if (page.marginMm == null) page.marginMm = 2;
+    if (page.spacingMm == null) page.spacingMm = 2;
+    if (page.border == null) page.border = "none";
+  }
+
+  function pageMetrics() {
+    ensureElements();
+    const page = stateRef.draft.layout.page;
+    const landscape = String(page.orientation || "").toLowerCase() === "landscape";
+    const pageW = landscape ? A4_H : A4_W;
+    const pageH = landscape ? A4_W : A4_H;
+    const u = Number(page.marginMm != null ? page.marginMm : 2);
+    const m = page.margin || {};
+    const margins = {
+      top: m.top != null ? Number(m.top) : u,
+      right: m.right != null ? Number(m.right) : u,
+      bottom: m.bottom != null ? Number(m.bottom) : u,
+      left: m.left != null ? Number(m.left) : u,
+    };
+    const contentW = Math.max(MIN_BLOCK_W, pageW - margins.left - margins.right);
+    const contentH = Math.max(MIN_BLOCK_H, pageH - margins.top - margins.bottom);
+    const spacing = Number(page.spacingMm != null ? page.spacingMm : 2);
+    const scale = DISPLAY_W / pageW;
+    return { page, pageW, pageH, margins, contentW, contentH, spacing, scale, landscape };
   }
 
   /**
-   * On this branch Studio is WYSIWYG-first: promote composition packs to designer
-   * elements so opening clinical-01 never falls back to tree + PDF preview.
+   * Pack elements into content box without overlap.
+   * place: "beside" → same row to the right of previous; else stack below.
    */
+  function reflowElements() {
+    ensureElements();
+    const { contentW, spacing } = pageMetrics();
+    const els = stateRef.draft.layout.elements;
+    let cursorY = 0;
+    let rowStart = 0;
+    let i = 0;
+    while (i < els.length) {
+      const row = [els[i]];
+      let j = i + 1;
+      while (j < els.length && String(els[j].place || "below").toLowerCase() === "beside") {
+        row.push(els[j]);
+        j++;
+      }
+
+      const gapTotal = spacing * Math.max(0, row.length - 1);
+      const autoCount = row.filter((e) => !e.manualWidth).length;
+      let fixedW = 0;
+      row.forEach((e) => {
+        e.box = e.box || { xMm: 0, yMm: 0, wMm: contentW, hMm: 40 };
+        if (e.manualWidth) {
+          e.box.wMm = Math.max(MIN_BLOCK_W, Math.min(Number(e.box.wMm) || MIN_BLOCK_W, contentW));
+          fixedW += e.box.wMm;
+        }
+      });
+      const remain = Math.max(MIN_BLOCK_W * autoCount, contentW - fixedW - gapTotal);
+      const autoW = autoCount > 0 ? remain / autoCount : 0;
+
+      let maxH = 0;
+      let x = 0;
+      row.forEach((e) => {
+        if (!e.manualWidth) e.box.wMm = Math.max(MIN_BLOCK_W, autoW);
+        e.box.hMm = Math.max(MIN_BLOCK_H, Number(e.box.hMm) || MIN_BLOCK_H);
+        e.box.xMm = x;
+        e.box.yMm = cursorY;
+        x += e.box.wMm + spacing;
+        maxH = Math.max(maxH, e.box.hMm);
+      });
+      // Equalize row height for beside siblings
+      row.forEach((e) => { e.box.hMm = maxH; });
+
+      cursorY += maxH + spacing;
+      i = j;
+      rowStart = i;
+    }
+  }
+
   function promoteToDesignerIfNeeded() {
     ensureElements();
     const manifest = stateRef.draft.manifest || (stateRef.draft.manifest = {});
     const layout = stateRef.draft.layout;
 
-    if (isDesignerPackage() && layout.elements.length > 0)
+    if (isDesignerPackage() && layout.elements.length > 0) {
+      reflowElements();
       return false;
+    }
 
     const body = layout.body || [];
     const hasAnnual = body.some((n) => n && n.widget === "clinical.hct-epo-annual-table");
     const hasCopay = body.some((n) => n && n.widget === "clinical.hct-epo-copay");
-    const hasThaiHeader = layout.header && layout.header.widget === "thaiur.header";
     const isClinical01 =
       String(manifest.id || "").indexOf("clinical-01-hct-epo") === 0
       || String(manifest.dataAdapter || "") === "clinical-01-hct-epo"
       || hasAnnual;
 
     if (isClinical01 && layout.elements.length === 0) {
-      layout.elements = [];
-      if (hasThaiHeader || isClinical01) {
-        layout.elements.push({
+      layout.elements = [
+        {
           id: "hdr",
           type: "header",
           preset: "thaiur-header-v1",
+          place: "below",
           box: { xMm: 0, yMm: 0, wMm: 206, hMm: 27 },
-        });
-      }
-      layout.elements.push({
-        id: "annual",
-        type: "config-table",
-        presetId: "hct-epo-annual-v1",
-        box: { xMm: 0, yMm: 29, wMm: 206, hMm: hasCopay || isClinical01 ? 228 : 250 },
-        bindings: CLINICAL01_ANNUAL_BINDINGS.slice(),
-      });
+        },
+        {
+          id: "annual",
+          type: "config-table",
+          presetId: "hct-epo-annual-v1",
+          place: "below",
+          box: { xMm: 0, yMm: 0, wMm: 206, hMm: 228 },
+          bindings: CLINICAL01_ANNUAL_BINDINGS.slice(),
+          chrome: { border: "thin", headerFill: "$branding.sectionHeaderBackground" },
+        },
+      ];
       if (hasCopay || isClinical01) {
         layout.elements.push({
           id: "copay",
           type: "dense",
           widget: "clinical.hct-epo-copay",
-          box: { xMm: 0, yMm: 259, wMm: 206, hMm: 34 },
+          place: "below",
+          box: { xMm: 0, yMm: 0, wMm: 206, hMm: 34 },
           chrome: { headerFill: "$branding.sectionHeaderBackground", border: "thin" },
         });
       }
-      layout.page = layout.page || { size: "A4", orientation: "portrait", marginMm: 2 };
-      if (layout.page.marginMm == null) layout.page.marginMm = 2;
     }
 
     if (layout.elements.length === 0) {
@@ -101,21 +181,16 @@
         id: "tbl_main",
         type: "config-table",
         presetId: "hct-epo-annual-v1",
-        box: { xMm: 0, yMm: 10, wMm: 206, hMm: 250 },
+        place: "below",
+        box: { xMm: 0, yMm: 0, wMm: 206, hMm: 200 },
         bindings: [],
+        chrome: { border: "thin" },
       });
     }
 
     manifest.layoutMode = "designer";
-    // Keep body/header for JSON reference but Studio edits elements only.
+    reflowElements();
     return true;
-  }
-
-  function mmScale(page) {
-    const landscape = String((page && page.orientation) || "").toLowerCase() === "landscape";
-    const w = landscape ? A4_H : A4_W;
-    const h = landscape ? A4_W : A4_H;
-    return { w, h, scale: DISPLAY_W / w, landscape };
   }
 
   function selectedElement() {
@@ -154,82 +229,18 @@
     const qs = new URLSearchParams();
     if (item.variant) qs.set("variant", item.variant);
     if (scenario) qs.set("scenario", scenario);
-    // Prefer clinical-01 sample when designer pack has no sample.
-    const sampleId = item.id;
     const q = qs.toString() ? "?" + qs.toString() : "";
     try {
-      sampleData = await apiRef(`/api/hprp/packages/${encodeURIComponent(sampleId)}/sample-data${q}`);
+      sampleData = await apiRef(`/api/hprp/packages/${encodeURIComponent(item.id)}/sample-data${q}`);
     } catch (_) {
-      if (String(sampleId).indexOf("clinical-01") === 0 && sampleId !== "clinical-01-hct-epo") {
+      if (String(item.id).indexOf("clinical-01") === 0 && item.id !== "clinical-01-hct-epo") {
         try {
           sampleData = await apiRef(`/api/hprp/packages/clinical-01-hct-epo/sample-data${q}`);
         } catch (__) {
           sampleData = null;
         }
-      } else {
-        sampleData = null;
-      }
+      } else sampleData = null;
     }
-  }
-
-  function renderCanvas() {
-    const host = document.getElementById("designerCanvas");
-    if (!host || !isStudioCanvas()) return;
-    ensureElements();
-    host.innerHTML = "";
-    const page = stateRef.draft.layout.page || { size: "A4" };
-    const { h, scale, landscape } = mmScale(page);
-    const sheet = document.createElement("div");
-    sheet.className = "designer-sheet" + (landscape ? " landscape" : "");
-    sheet.style.width = DISPLAY_W + "px";
-    sheet.style.height = h * scale + "px";
-    sheet.addEventListener("click", () => {
-      selectedElementId = null;
-      renderInspector();
-      renderCanvas();
-    });
-
-    const lang = Object.keys(stateRef.draft.labels || {})[0] || "th";
-    const labels = (stateRef.draft.labels && stateRef.draft.labels[lang]) || {};
-
-    stateRef.draft.layout.elements.forEach((el) => {
-      const box = el.box || { xMm: 0, yMm: 0, wMm: 100, hMm: 40 };
-      const wrap = document.createElement("div");
-      wrap.className = "designer-element" + (el.id === selectedElementId ? " selected" : "");
-      wrap.style.left = box.xMm * scale + "px";
-      wrap.style.top = box.yMm * scale + "px";
-      wrap.style.width = box.wMm * scale + "px";
-      wrap.style.height = box.hMm * scale + "px";
-      wrap.dataset.elementId = el.id;
-      wrap.addEventListener("click", (e) => {
-        e.stopPropagation();
-        selectedElementId = el.id;
-        renderAll();
-      });
-
-      if (el.type === "config-table") {
-        const preset = resolveTablePreset(el);
-        if (preset && global.TableLayoutEngine) {
-          const model = global.TableLayoutEngine.buildLayout(preset, el, labels, sampleData, box.hMm);
-          wrap.appendChild(renderTableHtml(model));
-        } else {
-          wrap.innerHTML = `<div class="ph-dense">config-table · โหลด preset…</div>`;
-        }
-      } else if (el.type === "header") {
-        const patient = sampleData && sampleData.header && sampleData.header.patient;
-        const title = (sampleData && sampleData.title) || "Header";
-        wrap.classList.add("designer-header-placeholder");
-        wrap.innerHTML =
-          `<div class="ph-title">${escapeHtml(title)}</div>` +
-          `<div class="ph-meta">${escapeHtml((patient && patient.name) || "Patient")} · HN ${escapeHtml((patient && patient.hn) || "—")}</div>`;
-      } else {
-        wrap.innerHTML = `<div class="ph-dense">${escapeHtml(el.type)}: ${escapeHtml(el.widget || el.id)}</div>`;
-      }
-
-      sheet.appendChild(wrap);
-    });
-
-    host.appendChild(sheet);
   }
 
   function escapeHtml(s) {
@@ -240,24 +251,175 @@
       .replace(/"/g, "&quot;");
   }
 
-  function renderTableHtml(model) {
+  function borderOn(chrome) {
+    const b = String((chrome && chrome.border) || "thin").toLowerCase();
+    return b !== "none" && b !== "off" && b !== "false";
+  }
+
+  function renderCanvas() {
+    const host = document.getElementById("designerCanvas");
+    if (!host || !isStudioCanvas()) return;
+    ensureElements();
+    reflowElements();
+    host.innerHTML = "";
+
+    const m = pageMetrics();
+    const { page, pageW, pageH, margins, contentW, contentH, scale, landscape } = m;
+
+    const sheet = document.createElement("div");
+    sheet.className = "designer-sheet" + (landscape ? " landscape" : "");
+    sheet.style.width = DISPLAY_W + "px";
+    sheet.style.height = pageH * scale + "px";
+    if (String(page.border || "none").toLowerCase() === "thin")
+      sheet.classList.add("has-page-border");
+
+    // Margin guides
+    const guide = document.createElement("div");
+    guide.className = "designer-margin-guide";
+    guide.style.left = margins.left * scale + "px";
+    guide.style.top = margins.top * scale + "px";
+    guide.style.width = contentW * scale + "px";
+    guide.style.height = contentH * scale + "px";
+    sheet.appendChild(guide);
+
+    const dropHint = document.createElement("div");
+    dropHint.className = "designer-drop-hint hidden";
+    dropHint.id = "designerDropHint";
+    sheet.appendChild(dropHint);
+
+    sheet.addEventListener("click", () => {
+      if (suppressClick) return;
+      selectedElementId = null;
+      stateRef.selectedKey = null;
+      renderInspector();
+      document.querySelectorAll(".designer-element.selected").forEach((n) => n.classList.remove("selected"));
+    });
+
+    const lang = Object.keys(stateRef.draft.labels || {})[0] || "th";
+    const labels = (stateRef.draft.labels && stateRef.draft.labels[lang]) || {};
+
+    stateRef.draft.layout.elements.forEach((el, index) => {
+      const box = el.box;
+      const wrap = document.createElement("div");
+      wrap.className = "designer-element" + (el.id === selectedElementId ? " selected" : "");
+      if (!borderOn(el.chrome)) wrap.classList.add("no-border");
+      wrap.style.left = (margins.left + box.xMm) * scale + "px";
+      wrap.style.top = (margins.top + box.yMm) * scale + "px";
+      wrap.style.width = box.wMm * scale + "px";
+      wrap.style.height = box.hMm * scale + "px";
+      wrap.dataset.elementId = el.id;
+      wrap.dataset.index = String(index);
+
+      wrap.addEventListener("click", (e) => {
+        e.stopPropagation();
+        if (suppressClick) return;
+        selectedElementId = el.id;
+        stateRef.selectedKey = null;
+        renderAll();
+      });
+
+      // Drag move (not from handles)
+      wrap.addEventListener("pointerdown", (e) => {
+        if (e.target.closest(".resize-handle") || e.target.closest(".col-resize") || e.target.closest(".el-toolbar"))
+          return;
+        if (e.button !== 0) return;
+        e.preventDefault();
+        e.stopPropagation();
+        selectedElementId = el.id;
+        startMoveDrag(e, el, wrap, sheet, m);
+      });
+
+      const toolbar = document.createElement("div");
+      toolbar.className = "el-toolbar";
+      toolbar.innerHTML = `<span class="el-tag">${escapeHtml(el.type)}</span>`;
+      const delBtn = document.createElement("button");
+      delBtn.type = "button";
+      delBtn.className = "el-del";
+      delBtn.title = "ลบ widget";
+      delBtn.textContent = "×";
+      delBtn.addEventListener("pointerdown", (e) => e.stopPropagation());
+      delBtn.addEventListener("click", (e) => {
+        e.stopPropagation();
+        deleteElement(el.id);
+      });
+      toolbar.appendChild(delBtn);
+      wrap.appendChild(toolbar);
+
+      const body = document.createElement("div");
+      body.className = "el-body";
+      if (el.type === "config-table") {
+        const preset = resolveTablePreset(el);
+        if (preset && global.TableLayoutEngine) {
+          const model = global.TableLayoutEngine.buildLayout(preset, el, labels, sampleData, box.hMm);
+          body.appendChild(renderTableHtml(model, el));
+        } else {
+          body.innerHTML = `<div class="ph-dense">config-table</div>`;
+        }
+      } else if (el.type === "header") {
+        const patient = sampleData && sampleData.header && sampleData.header.patient;
+        const title = (sampleData && sampleData.title) || "Header";
+        body.classList.add("designer-header-placeholder");
+        body.innerHTML =
+          `<div class="ph-title">${escapeHtml(title)}</div>` +
+          `<div class="ph-meta">${escapeHtml((patient && patient.name) || "Patient")} · HN ${escapeHtml((patient && patient.hn) || "—")}</div>`;
+      } else {
+        body.innerHTML = `<div class="ph-dense">${escapeHtml(el.type)}: ${escapeHtml(el.widget || el.id)}</div>`;
+      }
+      wrap.appendChild(body);
+
+      // Resize handles
+      ["e", "s", "se"].forEach((dir) => {
+        const h = document.createElement("div");
+        h.className = "resize-handle rh-" + dir;
+        h.dataset.dir = dir;
+        h.addEventListener("pointerdown", (e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          startResizeDrag(e, el, dir, m);
+        });
+        wrap.appendChild(h);
+      });
+
+      sheet.appendChild(wrap);
+    });
+
+    host.appendChild(sheet);
+  }
+
+  function renderTableHtml(model, el) {
     const root = document.createElement("div");
-    root.className = "cfg-table";
+    root.className = "cfg-table" + (borderOn(el.chrome) ? "" : " cfg-no-border");
     const p = model.preset;
     const table = document.createElement("table");
-    table.cellSpacing = 0;
-    table.cellPadding = 0;
+
+    // Column width from weights
+    const dateW = (p.dateColumns && (p.dateColumns.monthWeight + p.dateColumns.dayWeight)) || 1.8;
+    const cols = p.columns || [];
+    const weights = [];
+    if (p.rowMode !== "freedom") {
+      weights.push(p.dateColumns ? p.dateColumns.monthWeight : 0.45);
+      weights.push(p.dateColumns ? p.dateColumns.dayWeight : 1.35);
+    }
+    cols.forEach((c) => weights.push(Number(c.weight) || 1));
+    const sum = weights.reduce((a, b) => a + b, 0) || 1;
+
+    const colgroup = document.createElement("colgroup");
+    weights.forEach((w) => {
+      const col = document.createElement("col");
+      col.style.width = ((w / sum) * 100).toFixed(2) + "%";
+      colgroup.appendChild(col);
+    });
+    table.appendChild(colgroup);
 
     const thead = document.createElement("thead");
     const hr = document.createElement("tr");
-    model.headerLabels.forEach((text) => {
+    model.headerLabels.forEach((text, hi) => {
       const th = document.createElement("th");
       th.textContent = text;
-      th.addEventListener("click", (e) => {
-        e.stopPropagation();
-        // keep parent element selected; inspector shows columns
-      });
       hr.appendChild(th);
+      if (hi < model.headerLabels.length - 1) {
+        // resizer after each header cell except last — attached via absolute on table wrap
+      }
     });
     thead.appendChild(hr);
     table.appendChild(thead);
@@ -298,10 +460,233 @@
         tbody.appendChild(tr);
       });
     }
-
     table.appendChild(tbody);
     root.appendChild(table);
+
+    // Column resize handles (between data columns in header)
+    attachColumnResizers(root, table, el, p, weights, sum);
     return root;
+  }
+
+  function attachColumnResizers(root, table, el, preset, weights, sum) {
+    const working = ensureWorkingPreset(el, preset);
+    // weights: [month?, day?, ...cols] for annual; freedom = cols only
+    const isGrouped = preset.rowMode !== "freedom";
+    const dataOffset = isGrouped ? 2 : 0;
+
+    requestAnimationFrame(() => {
+      const ths = table.querySelectorAll("thead th");
+      if (!ths.length) return;
+      const overlay = document.createElement("div");
+      overlay.className = "col-resize-layer";
+      root.appendChild(overlay);
+      const rootRect = root.getBoundingClientRect();
+      ths.forEach((th, hi) => {
+        if (hi >= ths.length - 1) return;
+        const rect = th.getBoundingClientRect();
+        const handle = document.createElement("div");
+        handle.className = "col-resize";
+        handle.style.left = (rect.right - rootRect.left - 3) + "px";
+        handle.addEventListener("pointerdown", (e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          startColumnResize(e, el, working, hi, dataOffset, isGrouped, weights.slice());
+        });
+        overlay.appendChild(handle);
+      });
+    });
+  }
+
+  function startColumnResize(e, el, working, headerIndex, dataOffset, isGrouped, weights) {
+    const startX = e.clientX;
+    const leftW = weights[headerIndex];
+    const rightW = weights[headerIndex + 1];
+    const pair = leftW + rightW;
+    const metrics = pageMetrics();
+
+    function onMove(ev) {
+      const dxPx = ev.clientX - startX;
+      const dxMm = dxPx / metrics.scale;
+      // Approximate: convert mm delta into weight share of table width
+      const tableW = el.box.wMm;
+      const dWeight = (dxMm / tableW) * weights.reduce((a, b) => a + b, 0);
+      let newLeft = Math.max(MIN_COL_WEIGHT, leftW + dWeight);
+      let newRight = Math.max(MIN_COL_WEIGHT, pair - newLeft);
+      if (newLeft + newRight > pair) {
+        newRight = Math.max(MIN_COL_WEIGHT, pair - newLeft);
+      }
+      weights[headerIndex] = newLeft;
+      weights[headerIndex + 1] = newRight;
+      applyWeightsToPreset(working, weights, isGrouped, dataOffset);
+      commitWorking(el, working);
+      // live update without full reflow cost — still re-render
+      renderCanvas();
+      // keep selection
+      selectedElementId = el.id;
+    }
+    function onUp() {
+      document.removeEventListener("pointermove", onMove);
+      document.removeEventListener("pointerup", onUp);
+      suppressClick = true;
+      setTimeout(() => { suppressClick = false; }, 0);
+      renderAll();
+    }
+    document.addEventListener("pointermove", onMove);
+    document.addEventListener("pointerup", onUp);
+  }
+
+  function applyWeightsToPreset(working, weights, isGrouped, dataOffset) {
+    if (isGrouped) {
+      working.dateColumns = working.dateColumns || {};
+      working.dateColumns.monthWeight = weights[0];
+      working.dateColumns.dayWeight = weights[1];
+    }
+    (working.columns || []).forEach((c, i) => {
+      c.weight = weights[dataOffset + i] || c.weight || 1;
+    });
+  }
+
+  function startMoveDrag(e, el, wrap, sheet, metrics) {
+    const els = stateRef.draft.layout.elements;
+    const fromIndex = els.indexOf(el);
+    dragState = { type: "move", el, fromIndex, startX: e.clientX, startY: e.clientY };
+    wrap.classList.add("dragging");
+    const hint = document.getElementById("designerDropHint");
+
+    function onMove(ev) {
+      const dx = Math.abs(ev.clientX - dragState.startX);
+      const dy = Math.abs(ev.clientY - dragState.startY);
+      if (dx + dy < 4) return;
+      dragState.moved = true;
+      const target = hitTestElement(ev.clientX, ev.clientY, el.id);
+      if (hint) {
+        hint.classList.remove("hidden");
+        if (!target) {
+          hint.textContent = "วางต่อล่าง (ท้ายรายการ)";
+          hint.dataset.mode = "end";
+        } else {
+          const tRect = target.getBoundingClientRect();
+          const beside = ev.clientX > tRect.left + tRect.width * 0.55;
+          hint.textContent = beside ? "วางข้าง →" : "วางต่อล่าง ↓";
+          hint.dataset.mode = beside ? "beside" : "below";
+          hint.dataset.targetId = target.dataset.elementId;
+          hint.style.left = (tRect.left - sheet.getBoundingClientRect().left) + "px";
+          hint.style.top = (tRect.top - sheet.getBoundingClientRect().top - 22) + "px";
+        }
+      }
+    }
+
+    function onUp(ev) {
+      document.removeEventListener("pointermove", onMove);
+      document.removeEventListener("pointerup", onUp);
+      wrap.classList.remove("dragging");
+      if (hint) hint.classList.add("hidden");
+      if (!dragState.moved) {
+        dragState = null;
+        return;
+      }
+      suppressClick = true;
+      setTimeout(() => { suppressClick = false; }, 0);
+
+      const target = hitTestElement(ev.clientX, ev.clientY, el.id);
+      reorderElement(el, target, hint && hint.dataset.mode);
+      dragState = null;
+      renderAll();
+    }
+
+    document.addEventListener("pointermove", onMove);
+    document.addEventListener("pointerup", onUp);
+  }
+
+  function hitTestElement(clientX, clientY, excludeId) {
+    const nodes = document.querySelectorAll(".designer-element");
+    for (const n of nodes) {
+      if (n.dataset.elementId === excludeId) continue;
+      const r = n.getBoundingClientRect();
+      if (clientX >= r.left && clientX <= r.right && clientY >= r.top && clientY <= r.bottom)
+        return n;
+    }
+    return null;
+  }
+
+  function reorderElement(el, targetNode, mode) {
+    const els = stateRef.draft.layout.elements;
+    const from = els.indexOf(el);
+    if (from < 0) return;
+    els.splice(from, 1);
+
+    if (!targetNode || mode === "end") {
+      el.place = "below";
+      els.push(el);
+      reflowElements();
+      return;
+    }
+
+    const targetId = targetNode.dataset.elementId;
+    let to = els.findIndex((e) => e.id === targetId);
+    if (to < 0) {
+      els.push(el);
+      reflowElements();
+      return;
+    }
+
+    if (mode === "beside") {
+      el.place = "beside";
+      els.splice(to + 1, 0, el);
+    } else {
+      el.place = "below";
+      // clear beside on element that was after target if we insert between rows
+      els.splice(to + 1, 0, el);
+    }
+    reflowElements();
+  }
+
+  function startResizeDrag(e, el, dir, metrics) {
+    const startX = e.clientX;
+    const startY = e.clientY;
+    const startW = el.box.wMm;
+    const startH = el.box.hMm;
+    const { contentW } = metrics;
+
+    function onMove(ev) {
+      const dx = (ev.clientX - startX) / metrics.scale;
+      const dy = (ev.clientY - startY) / metrics.scale;
+      if (dir === "e" || dir === "se") {
+        el.box.wMm = Math.max(MIN_BLOCK_W, Math.min(contentW - el.box.xMm, startW + dx));
+        el.manualWidth = true;
+      }
+      if (dir === "s" || dir === "se") {
+        el.box.hMm = Math.max(MIN_BLOCK_H, startH + dy);
+      }
+      reflowElements();
+      renderCanvas();
+      selectedElementId = el.id;
+    }
+    function onUp() {
+      document.removeEventListener("pointermove", onMove);
+      document.removeEventListener("pointerup", onUp);
+      suppressClick = true;
+      setTimeout(() => { suppressClick = false; }, 0);
+      renderAll();
+    }
+    document.addEventListener("pointermove", onMove);
+    document.addEventListener("pointerup", onUp);
+  }
+
+  function deleteElement(id) {
+    ensureElements();
+    const els = stateRef.draft.layout.elements;
+    const idx = els.findIndex((e) => e.id === id);
+    if (idx < 0) return;
+    els.splice(idx, 1);
+    if (els[idx] && String(els[idx].place).toLowerCase() === "beside") {
+      // first of a row after delete should be below
+      els[idx].place = "below";
+    }
+    if (selectedElementId === id) selectedElementId = null;
+    reflowElements();
+    renderAll();
+    if (setStatusRef) setStatusRef("ลบ widget แล้ว", "ok");
   }
 
   function renderInspector() {
@@ -314,29 +699,78 @@
       return;
     }
     if (stateRef.selectedKey === "labels") {
-      insp.innerHTML = "<p class=\"muted\">ใช้แท็บ JSON → labels สำหรับแก้ข้อความคอลัมน์แบบละเอียด หรือแก้ labelKey ในคอลัมน์ด้านล่าง</p>";
+      insp.innerHTML = "<p class=\"muted\">ใช้แท็บ JSON → labels สำหรับข้อความละเอียด</p>";
       return;
     }
 
     const el = selectedElement();
     if (!el) {
-      insp.innerHTML = "<p class=\"muted\">คลิก element บน canvas (ตาราง / header) เพื่อแก้</p>";
-      const hint = document.createElement("p");
-      hint.className = "muted";
-      hint.textContent = "หรือกด + Table เพื่อเพิ่มตารางใหม่";
-      insp.appendChild(hint);
+      insp.innerHTML = "<p class=\"muted\">คลิก block บน canvas · ลากวางข้าง/ล่าง · ลากขอบขวา/ล่างเพื่อย่อขยาย</p>";
       return;
     }
 
-    insp.appendChild(Object.assign(document.createElement("p"), {
-      innerHTML: `<strong>${escapeHtml(el.type)}</strong> <span class="muted">${escapeHtml(el.id)}</span>`,
-    }));
+    const head = document.createElement("div");
+    head.className = "insp-head";
+    head.innerHTML = `<strong>${escapeHtml(el.type)}</strong> <span class="muted">${escapeHtml(el.id)}</span>`;
+    insp.appendChild(head);
 
-    if (el.type !== "config-table") {
-      renderBoxFields(insp, el);
-      return;
+    const del = document.createElement("button");
+    del.type = "button";
+    del.className = "danger-btn";
+    del.textContent = "ลบ widget";
+    del.addEventListener("click", () => deleteElement(el.id));
+    insp.appendChild(del);
+
+    const placeLab = document.createElement("label");
+    placeLab.textContent = "วาง (place)";
+    const placeSel = document.createElement("select");
+    [["below", "ต่อล่าง"], ["beside", "ต่อข้าง"]].forEach(([v, t]) => {
+      const o = document.createElement("option");
+      o.value = v;
+      o.textContent = t;
+      if (String(el.place || "below") === v) o.selected = true;
+      placeSel.appendChild(o);
+    });
+    placeSel.addEventListener("change", () => {
+      el.place = placeSel.value;
+      reflowElements();
+      renderAll();
+    });
+    placeLab.appendChild(placeSel);
+    insp.appendChild(placeLab);
+
+    const borderLab = document.createElement("label");
+    borderLab.className = "check-lab";
+    const borderCb = document.createElement("input");
+    borderCb.type = "checkbox";
+    borderCb.checked = borderOn(el.chrome);
+    borderCb.addEventListener("change", () => {
+      el.chrome = el.chrome || {};
+      el.chrome.border = borderCb.checked ? "thin" : "none";
+      renderAll();
+    });
+    borderLab.appendChild(borderCb);
+    borderLab.appendChild(document.createTextNode(" เส้นขอบ block"));
+    insp.appendChild(borderLab);
+
+    const fitBtn = document.createElement("button");
+    fitBtn.type = "button";
+    fitBtn.textContent = "กว้างพอดีขอบ (auto width)";
+    fitBtn.addEventListener("click", () => {
+      el.manualWidth = false;
+      reflowElements();
+      renderAll();
+    });
+    insp.appendChild(fitBtn);
+
+    if (el.type === "config-table") {
+      renderTableInspector(insp, el);
     }
 
+    renderBoxFields(insp, el);
+  }
+
+  function renderTableInspector(insp, el) {
     const preset = resolveTablePreset(el) || { rowMode: "annual", groupCount: 12, slotsPerGroup: 3, columns: [] };
     if (!el.tablePreset && el.presetId) {
       const detach = document.createElement("button");
@@ -349,7 +783,6 @@
       });
       insp.appendChild(detach);
     }
-
     const working = ensureWorkingPreset(el, preset);
 
     const rowModeLabel = document.createElement("label");
@@ -372,7 +805,7 @@
     insp.appendChild(rowModeLabel);
 
     const slotsLabel = document.createElement("label");
-    slotsLabel.textContent = "Slots per group (แถวต่อเดือน)";
+    slotsLabel.textContent = "Slots per group";
     const slotsInput = document.createElement("input");
     slotsInput.type = "number";
     slotsInput.min = "1";
@@ -387,7 +820,7 @@
     insp.appendChild(slotsLabel);
 
     const colHead = document.createElement("p");
-    colHead.innerHTML = "<strong>Columns</strong> <span class=\"muted\">+/− อัปเดต canvas ทันที</span>";
+    colHead.innerHTML = "<strong>Columns</strong> <span class=\"muted\">ลากเส้นคอลัมน์บน canvas ได้</span>";
     insp.appendChild(colHead);
 
     (working.columns || []).forEach((col, idx) => {
@@ -396,7 +829,6 @@
       const name = document.createElement("input");
       name.type = "text";
       name.value = col.id;
-      name.title = "column id";
       name.addEventListener("change", () => {
         col.id = name.value.trim() || col.id;
         commitWorking(el, working);
@@ -405,7 +837,6 @@
       const del = document.createElement("button");
       del.type = "button";
       del.textContent = "−";
-      del.title = "Remove column";
       del.addEventListener("click", () => {
         working.columns.splice(idx, 1);
         commitWorking(el, working);
@@ -430,12 +861,10 @@
 
     renderBindings(insp, el);
     renderPresetActions(insp, el, working);
-    renderBoxFields(insp, el);
   }
 
   function ensureWorkingPreset(el, preset) {
     if (el.tablePreset) return el.tablePreset;
-    // Clone so +/- mutates a local copy then detaches automatically.
     el.tablePreset = JSON.parse(JSON.stringify(preset));
     if (!el.tablePreset.id) el.tablePreset.id = el.presetId || "inline-table";
     delete el.presetId;
@@ -451,30 +880,94 @@
   function renderPageInspector(insp) {
     ensureElements();
     const page = stateRef.draft.layout.page;
-    ["size", "orientation"].forEach((key) => {
+    const tip = document.createElement("p");
+    tip.className = "muted";
+    tip.textContent = "ขอบหน้า (margin) · ช่องว่างระหว่าง block · เส้นกรอบหน้า";
+    insp.appendChild(tip);
+
+    const mLab = document.createElement("label");
+    mLab.textContent = "marginMm (รอบด้าน)";
+    const mi = document.createElement("input");
+    mi.type = "number";
+    mi.min = "0";
+    mi.max = "40";
+    mi.step = "0.5";
+    mi.value = String(page.marginMm != null ? page.marginMm : 2);
+    mi.addEventListener("change", () => {
+      page.marginMm = Number(mi.value);
+      page.margin = undefined;
+      reflowElements();
+      renderAll();
+    });
+    mLab.appendChild(mi);
+    insp.appendChild(mLab);
+
+    ["top", "right", "bottom", "left"].forEach((side) => {
       const lab = document.createElement("label");
-      lab.textContent = key;
+      lab.textContent = "margin." + side;
       const input = document.createElement("input");
-      input.type = "text";
-      input.value = String(page[key] || (key === "size" ? "A4" : "portrait"));
+      input.type = "number";
+      input.min = "0";
+      input.step = "0.5";
+      const cur = (page.margin && page.margin[side] != null)
+        ? page.margin[side]
+        : (page.marginMm != null ? page.marginMm : 2);
+      input.value = String(cur);
       input.addEventListener("change", () => {
-        page[key] = input.value;
+        page.margin = page.margin || {};
+        page.margin[side] = Number(input.value);
+        reflowElements();
         renderAll();
       });
       lab.appendChild(input);
       insp.appendChild(lab);
     });
-    const m = document.createElement("label");
-    m.textContent = "marginMm";
-    const mi = document.createElement("input");
-    mi.type = "number";
-    mi.value = String(page.marginMm != null ? page.marginMm : 2);
-    mi.addEventListener("change", () => {
-      page.marginMm = Number(mi.value);
+
+    const sp = document.createElement("label");
+    sp.textContent = "spacingMm (ระหว่าง block)";
+    const spi = document.createElement("input");
+    spi.type = "number";
+    spi.min = "0";
+    spi.step = "0.5";
+    spi.value = String(page.spacingMm != null ? page.spacingMm : 2);
+    spi.addEventListener("change", () => {
+      page.spacingMm = Number(spi.value);
+      reflowElements();
       renderAll();
     });
-    m.appendChild(mi);
-    insp.appendChild(m);
+    sp.appendChild(spi);
+    insp.appendChild(sp);
+
+    const borderLab = document.createElement("label");
+    borderLab.className = "check-lab";
+    const borderCb = document.createElement("input");
+    borderCb.type = "checkbox";
+    borderCb.checked = String(page.border || "none").toLowerCase() === "thin";
+    borderCb.addEventListener("change", () => {
+      page.border = borderCb.checked ? "thin" : "none";
+      renderAll();
+    });
+    borderLab.appendChild(borderCb);
+    borderLab.appendChild(document.createTextNode(" เส้นขอบหน้า (page border)"));
+    insp.appendChild(borderLab);
+
+    const orient = document.createElement("label");
+    orient.textContent = "orientation";
+    const os = document.createElement("select");
+    ["portrait", "landscape"].forEach((v) => {
+      const o = document.createElement("option");
+      o.value = v;
+      o.textContent = v;
+      if (String(page.orientation || "portrait") === v) o.selected = true;
+      os.appendChild(o);
+    });
+    os.addEventListener("change", () => {
+      page.orientation = os.value;
+      reflowElements();
+      renderAll();
+    });
+    orient.appendChild(os);
+    insp.appendChild(orient);
   }
 
   function renderBindings(insp, el) {
@@ -518,11 +1011,6 @@
         renderAll();
       });
       insp.appendChild(pick);
-    } else {
-      const note = document.createElement("p");
-      note.className = "muted";
-      note.textContent = "ไม่มี adapter schema — ตั้ง dataAdapter ใน manifest";
-      insp.appendChild(note);
     }
   }
 
@@ -539,8 +1027,7 @@
     if (path.includes("monthLabel")) return "month";
     if (path.includes("dayLabel")) return "day";
     if (path.includes("labIsHistorical")) return "lab";
-    const leaf = path.split(".").pop().replace("[]", "");
-    return leaf;
+    return path.split(".").pop().replace("[]", "");
   }
 
   function renderPresetActions(insp, el, working) {
@@ -578,16 +1065,22 @@
   }
 
   function renderBoxFields(insp, el) {
+    const note = document.createElement("p");
+    note.className = "muted";
+    note.textContent = "ขนาด (mm) — ลากขอบบน canvas หรือแก้ตรงนี้";
+    insp.appendChild(note);
     ["xMm", "yMm", "wMm", "hMm"].forEach((key) => {
       const lab = document.createElement("label");
       lab.textContent = "box." + key;
       const input = document.createElement("input");
       input.type = "number";
-      input.step = "1";
+      input.step = "0.5";
       input.value = String((el.box && el.box[key]) || 0);
       input.addEventListener("change", () => {
         el.box = el.box || {};
         el.box[key] = Number(input.value);
+        if (key === "wMm") el.manualWidth = true;
+        reflowElements();
         renderAll();
       });
       lab.appendChild(input);
@@ -603,12 +1096,15 @@
       id,
       type: "config-table",
       presetId: "hct-epo-annual-v1",
-      box: { xMm: 0, yMm: 30, wMm: 206, hMm: 200 },
+      place: "below",
+      box: { xMm: 0, yMm: 0, wMm: 100, hMm: 80 },
       bindings: [],
+      chrome: { border: "thin" },
     });
     stateRef.draft.manifest.layoutMode = "designer";
     selectedElementId = id;
     stateRef.selectedKey = null;
+    reflowElements();
     renderAll();
   }
 
@@ -636,11 +1132,10 @@
     await loadSampleData();
     renderAll();
     if (setStatusRef) {
-      setStatusRef("Canvas WYSIWYG — คลิกตารางเพื่อแก้คอลัมน์ / row mode / mapping", "ok");
+      setStatusRef("ลาก block วางข้าง/ล่าง · ลากขอบย่อขยาย · Page สำหรับ margin/ขอบ", "ok");
     }
   }
 
-  // Compatibility alias: older studio.js checks TableDesigner.isDesignerMode()
   function isDesignerMode() {
     return isStudioCanvas();
   }
@@ -653,7 +1148,9 @@
     onPackageOpened,
     ensureElements,
     promoteToDesignerIfNeeded,
+    reflowElements,
     addConfigTable,
+    deleteElement,
     getSelectedElementId: () => selectedElementId,
   };
 

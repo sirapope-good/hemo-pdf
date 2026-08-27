@@ -37,7 +37,7 @@ public sealed class HprpPage
     [JsonPropertyName("size")]
     public string Size { get; init; } = "A4";
 
-    /// <summary>Uniform margin (mm) when <see cref="Margin"/> sides are omitted.</summary>
+    /// <summary>Uniform margin (mm) when <see cref="Margin"/> sides are omitted. Includes 0.</summary>
     [JsonPropertyName("marginMm")]
     public float? MarginMm { get; init; }
 
@@ -53,6 +53,10 @@ public sealed class HprpPage
     /// <summary><c>portrait</c> (default) or <c>landscape</c>.</summary>
     [JsonPropertyName("orientation")]
     public string? Orientation { get; init; }
+
+    /// <summary>Page frame border: <c>none</c> or <c>thin</c>.</summary>
+    [JsonPropertyName("border")]
+    public string? Border { get; init; }
 }
 
 public sealed class HprpLayoutNode

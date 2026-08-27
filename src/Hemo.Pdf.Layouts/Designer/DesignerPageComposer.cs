@@ -37,7 +37,13 @@ public static class DesignerPageComposer
             Footer = _ => { },
             Content = c => c.Layers(layers =>
             {
-                layers.PrimaryLayer().Element(e => e.Background(Colors.White));
+                layers.PrimaryLayer().Element(e =>
+                {
+                    if (string.Equals(vm.PageBorder, "thin", StringComparison.OrdinalIgnoreCase))
+                        e.Background(Colors.White).Border(0.5f).BorderColor(Colors.Grey.Darken2);
+                    else
+                        e.Background(Colors.White);
+                });
                 foreach (var element in vm.Elements)
                 {
                     var box = element.Box;

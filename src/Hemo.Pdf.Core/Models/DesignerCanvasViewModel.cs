@@ -15,6 +15,8 @@ public sealed class DesignerCanvasViewModel
     public string Title { get; init; } = "";
     public bool Landscape { get; init; }
     public HprpResolvedPage Page { get; init; }
+    /// <summary><c>none</c> / <c>thin</c> — page frame for PDF (optional).</summary>
+    public string? PageBorder { get; init; }
     public IReadOnlyList<HprpDesignerElement> Elements { get; init; } = [];
     public JsonElement? Data { get; init; }
     public IReadOnlyDictionary<string, string> Labels { get; init; } =
@@ -39,6 +41,7 @@ public sealed class DesignerCanvasViewModel
             Title = package.Manifest.DisplayName,
             Landscape = landscape,
             Page = page,
+            PageBorder = package.Layout.Page.Border,
             Elements = package.Layout.Elements,
             Data = data,
             Labels = labels ?? package.GetLabels(package.Manifest.Language),

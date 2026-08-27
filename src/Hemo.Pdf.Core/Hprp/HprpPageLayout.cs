@@ -39,7 +39,7 @@ public static class HprpPageLayout
     public static HprpResolvedPage Resolve(HprpPage? page, in HprpPageFallback fallback)
     {
         var sides = page?.Margin;
-        var shorthand = page?.MarginMm is > 0 and < HprpBox.MaxMm ? page.MarginMm : null;
+        var shorthand = page?.MarginMm is >= 0 and < HprpBox.MaxMm ? page.MarginMm : null;
 
         float Side(float? named, float fallbackValue) =>
             named ?? shorthand ?? fallbackValue;

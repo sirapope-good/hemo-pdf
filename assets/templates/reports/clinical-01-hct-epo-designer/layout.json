@@ -2,20 +2,25 @@
   "page": {
     "size": "A4",
     "orientation": "portrait",
-    "marginMm": 2
+    "marginMm": 2,
+    "spacingMm": 2,
+    "border": "none"
   },
   "elements": [
     {
       "id": "hdr",
       "type": "header",
       "preset": "thaiur-header-v1",
+      "place": "below",
       "box": { "xMm": 0, "yMm": 0, "wMm": 206, "hMm": 27 }
     },
     {
       "id": "annual",
       "type": "config-table",
       "presetId": "hct-epo-annual-v1",
+      "place": "below",
       "box": { "xMm": 0, "yMm": 29, "wMm": 206, "hMm": 228 },
+      "chrome": { "border": "thin", "headerFill": "$branding.sectionHeaderBackground" },
       "bindings": [
         { "path": "months[].monthLabel", "column": "month", "context": "group-label" },
         { "path": "months[].entries[].dayLabel", "column": "day", "context": "entry" },
@@ -32,6 +37,7 @@
       "id": "copay",
       "type": "dense",
       "widget": "clinical.hct-epo-copay",
+      "place": "below",
       "box": { "xMm": 0, "yMm": 259, "wMm": 206, "hMm": 34 },
       "chrome": {
         "headerFill": "$branding.sectionHeaderBackground",

@@ -68,4 +68,14 @@ public sealed class HprpDesignerElement
 
     [JsonPropertyName("chrome")]
     public HprpChrome? Chrome { get; init; }
+
+    /// <summary>
+    /// Studio flow: <c>below</c> (default) stacks under previous; <c>beside</c> places to the right.
+    /// </summary>
+    [JsonPropertyName("place")]
+    public string? Place { get; init; }
+
+    /// <summary>When true, width is user-resized and reflow will not stretch to full content width.</summary>
+    [JsonPropertyName("manualWidth")]
+    public bool ManualWidth { get; init; }
 }
