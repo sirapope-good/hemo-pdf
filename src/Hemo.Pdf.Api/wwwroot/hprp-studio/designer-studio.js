@@ -56,6 +56,26 @@
     if (page.border == null) page.border = "none";
   }
 
+  /** Overlap when gap is 0 so adjacent borders read as one line (parity with C#). */
+  const BORDER_COLLAPSE_MM = 0.2;
+
+  function resolveDesignerGaps(page, margins) {
+    const mode = String(page.spacingMode || "custom").toLowerCase();
+    if (mode === "none") return { below: 0, beside: 0 };
+    if (mode === "margin") {
+      const m = page.marginMm != null ? Number(page.marginMm) : Number(margins.left);
+      return { below: m, beside: m };
+    }
+    const shared = page.spacingMm != null ? Number(page.spacingMm) : 2;
+    const below = page.spacingBelowMm != null ? Number(page.spacingBelowMm) : shared;
+    const beside = page.spacingBesideMm != null ? Number(page.spacingBesideMm) : shared;
+    return { below, beside };
+  }
+
+  function gapStep(sizeMm, gapMm) {
+    return sizeMm + (gapMm > 0 ? gapMm : -BORDER_COLLAPSE_MM);
+  }
+
   function pageMetrics() {
     ensureElements();
     const page = stateRef.draft.layout.page;
@@ -72,21 +92,21 @@
     };
     const contentW = Math.max(MIN_BLOCK_W, pageW - margins.left - margins.right);
     const contentH = Math.max(MIN_BLOCK_H, pageH - margins.top - margins.bottom);
-    const spacing = Number(page.spacingMm != null ? page.spacingMm : 2);
+    const gaps = resolveDesignerGaps(page, margins);
+    const spacing = gaps.below; // legacy alias
     const scale = DISPLAY_W / pageW;
-    return { page, pageW, pageH, margins, contentW, contentH, spacing, scale, landscape };
+    return { page, pageW, pageH, margins, contentW, contentH, spacing, gaps, scale, landscape };
   }
 
   /**
-   * Pack elements into content box without overlap.
+   * Pack elements into content box without overlap (unless collapse when gap=0).
    * place: "beside" → same row to the right of previous; else stack below.
    */
   function reflowElements() {
     ensureElements();
-    const { contentW, spacing } = pageMetrics();
+    const { contentW, gaps } = pageMetrics();
     const els = stateRef.draft.layout.elements;
     let cursorY = 0;
-    let rowStart = 0;
     let i = 0;
     while (i < els.length) {
       const row = [els[i]];
@@ -96,7 +116,10 @@
         j++;
       }
 
-      const gapTotal = spacing * Math.max(0, row.length - 1);
+      let gapTotal = gaps.beside * Math.max(0, row.length - 1);
+      if (gaps.beside <= 0 && row.length > 1) {
+        gapTotal = -BORDER_COLLAPSE_MM * (row.length - 1);
+      }
       const autoCount = row.filter((e) => !e.manualWidth).length;
       let fixedW = 0;
       row.forEach((e) => {
@@ -116,15 +139,14 @@
         e.box.hMm = Math.max(MIN_BLOCK_H, Number(e.box.hMm) || MIN_BLOCK_H);
         e.box.xMm = x;
         e.box.yMm = cursorY;
-        x += e.box.wMm + spacing;
+        x += gapStep(e.box.wMm, gaps.beside);
         maxH = Math.max(maxH, e.box.hMm);
       });
       // Equalize row height for beside siblings
       row.forEach((e) => { e.box.hMm = maxH; });
 
-      cursorY += maxH + spacing;
+      cursorY += gapStep(maxH, gaps.below);
       i = j;
-      rowStart = i;
     }
   }
 
@@ -1478,20 +1500,90 @@
       insp.appendChild(lab);
     });
 
-    const sp = document.createElement("label");
-    sp.textContent = "spacingMm (ระหว่าง block)";
-    const spi = document.createElement("input");
-    spi.type = "number";
-    spi.min = "0";
-    spi.step = "0.5";
-    spi.value = String(page.spacingMm != null ? page.spacingMm : 2);
-    spi.addEventListener("change", () => {
-      page.spacingMm = Number(spi.value);
+    const modeLab = document.createElement("label");
+    modeLab.textContent = "spacing ระหว่าง block";
+    const modeSel = document.createElement("select");
+    [
+      ["custom", "กำหนดเอง (custom)"],
+      ["margin", "เท่า margin ขอบ"],
+      ["none", "ไม่เว้น (ขอบติดกัน)"],
+    ].forEach(([v, t]) => {
+      const o = document.createElement("option");
+      o.value = v;
+      o.textContent = t;
+      if (String(page.spacingMode || "custom").toLowerCase() === v) o.selected = true;
+      modeSel.appendChild(o);
+    });
+    modeSel.addEventListener("change", () => {
+      page.spacingMode = modeSel.value;
       reflowElements();
       renderAll();
     });
-    sp.appendChild(spi);
-    insp.appendChild(sp);
+    modeLab.appendChild(modeSel);
+    insp.appendChild(modeLab);
+
+    const modeHint = document.createElement("p");
+    modeHint.className = "muted";
+    const modeNow = String(page.spacingMode || "custom").toLowerCase();
+    if (modeNow === "none") {
+      modeHint.textContent = "ชิดกันและทับขอบเล็กน้อยให้เส้นดูเป็นเส้นเดียว (canvas ↔ PDF)";
+    } else if (modeNow === "margin") {
+      modeHint.textContent = "ใช้ค่า marginMm เดียวกันทั้งข้างและล่าง";
+    } else {
+      modeHint.textContent = "ตั้ง below / beside แยกได้ หรือใช้ spacingMm รวมทั้งคู่";
+    }
+    insp.appendChild(modeHint);
+
+    if (modeNow === "custom") {
+      const sharedLab = document.createElement("label");
+      sharedLab.textContent = "spacingMm (ทั้งคู่ ถ้าไม่แยก)";
+      const sharedIn = document.createElement("input");
+      sharedIn.type = "number";
+      sharedIn.min = "0";
+      sharedIn.step = "0.5";
+      sharedIn.value = String(page.spacingMm != null ? page.spacingMm : 2);
+      sharedIn.addEventListener("change", () => {
+        page.spacingMm = Number(sharedIn.value);
+        reflowElements();
+        renderAll();
+      });
+      sharedLab.appendChild(sharedIn);
+      insp.appendChild(sharedLab);
+
+      const belowLab = document.createElement("label");
+      belowLab.textContent = "spacingBelowMm (block ล่าง)";
+      const belowIn = document.createElement("input");
+      belowIn.type = "number";
+      belowIn.min = "0";
+      belowIn.step = "0.5";
+      belowIn.placeholder = "ใช้ spacingMm";
+      belowIn.value = page.spacingBelowMm != null ? String(page.spacingBelowMm) : "";
+      belowIn.addEventListener("change", () => {
+        if (belowIn.value === "") delete page.spacingBelowMm;
+        else page.spacingBelowMm = Number(belowIn.value);
+        reflowElements();
+        renderAll();
+      });
+      belowLab.appendChild(belowIn);
+      insp.appendChild(belowLab);
+
+      const besideLab = document.createElement("label");
+      besideLab.textContent = "spacingBesideMm (block ข้าง)";
+      const besideIn = document.createElement("input");
+      besideIn.type = "number";
+      besideIn.min = "0";
+      besideIn.step = "0.5";
+      besideIn.placeholder = "ใช้ spacingMm";
+      besideIn.value = page.spacingBesideMm != null ? String(page.spacingBesideMm) : "";
+      besideIn.addEventListener("change", () => {
+        if (besideIn.value === "") delete page.spacingBesideMm;
+        else page.spacingBesideMm = Number(besideIn.value);
+        reflowElements();
+        renderAll();
+      });
+      besideLab.appendChild(besideIn);
+      insp.appendChild(besideLab);
+    }
 
     const borderLab = document.createElement("label");
     borderLab.className = "check-lab";

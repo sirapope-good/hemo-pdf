@@ -44,8 +44,27 @@ public sealed class HprpPage
     [JsonPropertyName("margin")]
     public HprpSides? Margin { get; init; }
 
+    /// <summary>
+    /// Block gap mode: <see cref="HprpSpacingModes"/> —
+    /// <c>margin</c> / <c>custom</c> (default) / <c>none</c>.
+    /// </summary>
+    [JsonPropertyName("spacingMode")]
+    public string? SpacingMode { get; init; }
+
+    /// <summary>
+    /// Custom gap (mm) for both directions when side overrides are omitted.
+    /// Used when <see cref="SpacingMode"/> is <c>custom</c> or omitted.
+    /// </summary>
     [JsonPropertyName("spacingMm")]
     public float? SpacingMm { get; init; }
+
+    /// <summary>Custom vertical gap between stacked rows (overrides <see cref="SpacingMm"/>).</summary>
+    [JsonPropertyName("spacingBelowMm")]
+    public float? SpacingBelowMm { get; init; }
+
+    /// <summary>Custom horizontal gap between beside blocks (overrides <see cref="SpacingMm"/>).</summary>
+    [JsonPropertyName("spacingBesideMm")]
+    public float? SpacingBesideMm { get; init; }
 
     [JsonPropertyName("fontSize")]
     public float? FontSize { get; init; }

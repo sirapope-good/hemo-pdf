@@ -3,6 +3,7 @@
     "size": "A4",
     "orientation": "portrait",
     "marginMm": 2,
+    "spacingMode": "custom",
     "spacingMm": 2,
     "border": "none"
   },

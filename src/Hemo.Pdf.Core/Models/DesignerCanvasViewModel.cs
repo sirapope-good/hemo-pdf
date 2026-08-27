@@ -40,13 +40,24 @@ public sealed class DesignerCanvasViewModel
             "landscape",
             StringComparison.OrdinalIgnoreCase);
 
+        const float a4W = 210f;
+        const float a4H = 297f;
+        var pageW = landscape ? a4H : a4W;
+        var contentW = Math.Max(10f, pageW - page.Left - page.Right);
+        var elements = HprpDesignerFlow.Reflow(
+            package.Layout.Page,
+            package.Layout.Elements,
+            contentW,
+            page.Left,
+            fallbackSpacingMm: 2f);
+
         return new DesignerCanvasViewModel
         {
             Title = package.Manifest.DisplayName,
             Landscape = landscape,
             Page = page,
             PageBorder = package.Layout.Page.Border,
-            Elements = package.Layout.Elements,
+            Elements = elements,
             Data = data,
             Labels = labels ?? package.GetLabels(package.Manifest.Language),
             Presets = presets ?? new Dictionary<string, HprpTablePreset>(StringComparer.OrdinalIgnoreCase),

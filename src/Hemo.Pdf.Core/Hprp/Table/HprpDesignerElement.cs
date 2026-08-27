@@ -95,4 +95,24 @@ public sealed class HprpDesignerElement
     /// <summary><c>left</c> / <c>center</c> / <c>right</c> for <c>box-text</c>.</summary>
     [JsonPropertyName("align")]
     public string? Align { get; init; }
+
+    public HprpDesignerElement WithBox(HprpDesignerBox box) => new()
+    {
+        Id = Id,
+        Type = Type,
+        Box = box,
+        Preset = Preset,
+        HeaderPreset = HeaderPreset,
+        PresetId = PresetId,
+        TablePreset = TablePreset,
+        ColumnOverrides = ColumnOverrides,
+        Bindings = Bindings,
+        Widget = Widget,
+        Chrome = Chrome,
+        Place = Place,
+        ManualWidth = ManualWidth,
+        Text = Text,
+        Bind = Bind,
+        Align = Align,
+    };
 }

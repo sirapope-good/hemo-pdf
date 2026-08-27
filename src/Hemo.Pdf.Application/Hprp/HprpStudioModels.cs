@@ -95,7 +95,10 @@ public static class HprpStudioCatalog
         {
             marginMm = "uniform mm (omitted = engine default)",
             margin = "{ top, right, bottom, left }",
-            spacingMm = "number",
+            spacingMode = "margin | custom | none",
+            spacingMm = "custom gap both directions (fallback)",
+            spacingBelowMm = "custom vertical gap (optional)",
+            spacingBesideMm = "custom horizontal gap (optional)",
             fontSize = "default body font",
         },
     };
