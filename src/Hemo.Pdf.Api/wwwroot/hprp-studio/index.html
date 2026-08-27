@@ -3,18 +3,18 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>HPRP Studio — Visual Designer</title>
+  <title>HPRP Studio — Table Designer</title>
   <link rel="stylesheet" href="/hprp-studio/studio.css" />
 </head>
-<body class="mode-designer">
+<body class="mode-designer mode-wysiwyg">
   <header class="top">
     <div>
       <h1>HPRP Studio</h1>
-      <p class="muted">Designer mode — canvas = WYSIWYG HTML · Download PDF = QuestPDF verify</p>
+      <p class="muted">Canvas = หน้ากระดาษจริง (HTML) · คลิกตาราง/คอลัมน์เพื่อแก้ · Download PDF = QuestPDF verify</p>
     </div>
     <div class="top-right">
       <div class="mode-toggle" role="group" aria-label="Editor mode">
-        <button type="button" id="btnModeDesigner" class="active">Designer</button>
+        <button type="button" id="btnModeDesigner" class="active">Canvas</button>
         <button type="button" id="btnModeJson">JSON</button>
       </div>
       <div class="auth">
@@ -49,47 +49,33 @@
         </div>
       </div>
       <div id="denseFormHint" class="dense-hint hidden" role="note"></div>
-      <div class="designer-split designer-only hidden" id="designerStudioPane">
-        <div class="subpane">
-          <div class="subhead">Elements</div>
-          <div id="designerPalette" class="palette"></div>
-        </div>
+      <div class="designer-split designer-only" id="designerStudioPane">
         <div class="subpane page-canvas-pane designer-canvas-pane">
-          <div class="subhead">Canvas (WYSIWYG)</div>
+          <div class="subhead">Page canvas (WYSIWYG)</div>
           <div class="designer-canvas-toolbar-host">
             <label class="preview-opt">Sample
               <select id="designerSampleScenario" title="Mock payload scenario">
                 <option value="">default</option>
               </select>
             </label>
+            <button id="btnAddConfigTable" type="button" title="Add configurable table">+ Table</button>
             <button id="btnDesignerDownloadPdf" type="button" disabled title="QuestPDF verify">Download PDF</button>
           </div>
           <div id="designerCanvas" class="page-canvas-scroll" aria-label="Designer WYSIWYG canvas"></div>
         </div>
       </div>
-      <div class="designer-split composition-only">
-        <div class="subpane">
-          <div class="subhead">Palette</div>
-          <div id="palette" class="palette"></div>
-        </div>
-        <div class="subpane">
-          <div class="subhead" id="orderListTitle">Body order</div>
-          <ul id="bodyList" class="node-list"></ul>
-        </div>
-        <div class="subpane page-canvas-pane">
-          <div class="subhead">Page canvas</div>
-          <div id="pageCanvas" class="page-canvas-scroll" aria-label="Visual page canvas"></div>
-        </div>
-      </div>
-      <div class="designer-split absolute-only hidden" id="absoluteDesignerPane">
-        <div class="subpane">
-          <div class="subhead">Absolute palette</div>
-          <div id="absolutePalette" class="palette"></div>
-        </div>
-        <div class="subpane page-canvas-pane abs-canvas-pane">
-          <div class="subhead">Absolute canvas (mm → QuestPDF)</div>
-          <div id="absoluteSheet" class="page-canvas-scroll" aria-label="Absolute mm canvas"></div>
-        </div>
+      <!-- Legacy DOM hooks kept hidden so studio.js does not throw; not shown in Canvas mode -->
+      <div class="hidden" aria-hidden="true">
+        <div id="palette"></div>
+        <ul id="bodyList"></ul>
+        <div id="pageCanvas"></div>
+        <div id="absolutePalette"></div>
+        <div id="absoluteSheet"></div>
+        <select id="sampleScenario"><option value="">default</option></select>
+        <input id="previewEntityId" type="text" />
+        <button id="btnPreview" type="button"></button>
+        <button id="btnDownloadPdf" type="button"></button>
+        <iframe id="previewFrame" src="about:blank" title="unused"></iframe>
       </div>
     </section>
 
@@ -101,27 +87,7 @@
           <button id="btnLabels" type="button" disabled title="Edit labels dictionary for current language">Labels</button>
         </div>
       </div>
-      <div id="inspector" class="inspector"><p class="muted">เลือกบล็อกในรายการหรือบน Page canvas</p></div>
-    </section>
-
-    <section class="pane preview-col composition-only" id="previewPane">
-      <div class="pane-head">
-        <strong>Preview</strong>
-        <div class="actions preview-toolbar">
-          <label class="preview-opt">Sample
-            <select id="sampleScenario" title="Mock payload scenario">
-              <option value="">Full HD mock</option>
-            </select>
-          </label>
-          <label class="preview-opt">EntityId
-            <input id="previewEntityId" type="text" placeholder="hemosheet GUID" autocomplete="off" title="ถ้าใส่ จะดึง report-data จริงเหมือน /api/pdf/generate" />
-          </label>
-          <button id="btnPreview" type="button" disabled>Refresh PDF</button>
-          <button id="btnDownloadPdf" type="button" disabled title="Same QuestPDF bytes as the preview iframe">Download PDF</button>
-        </div>
-      </div>
-      <p id="previewParityHint" class="muted preview-parity-hint">พรีวิวและ Download ใช้ renderer เดียวกับพิมพ์จริง — Sample = mock / EntityId = ข้อมูลจริงจาก Web.Api</p>
-      <iframe id="previewFrame" src="about:blank" title="PDF preview"></iframe>
+      <div id="inspector" class="inspector"><p class="muted">เปิด package แล้วคลิกตารางบน canvas เพื่อแก้คอลัมน์ / row mode / field map</p></div>
     </section>
 
     <section class="pane editor json-col" id="jsonPane">
@@ -148,6 +114,5 @@
   <script src="/hprp-studio/table-layout-engine.js"></script>
   <script src="/hprp-studio/designer-studio.js"></script>
   <script src="/hprp-studio/studio.js"></script>
-  <script src="/hprp-studio/absolute-designer.js"></script>
 </body>
 </html>

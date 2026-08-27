@@ -1,24 +1,36 @@
-# HPRP Table Designer branch (`feat/hprp-table-designer`)
+# HPRP Table Designer branch notes
 
-Experimental branch — **does not affect `main` until merged.**
+Branch: `feat/hprp-table-designer` (isolated from `main` until merge).
 
-## Breaking changes on this branch only
+## Studio UX (this branch)
 
-| Removed / deprecated | Replacement |
-|---------------------|-------------|
-| Separate Preview panel in Studio | HTML WYSIWYG `#designerCanvas` |
-| Composition schematic Page canvas (designer mode) | Canvas renders config-table via client engine |
-| Absolute dense widget clone for clinical-01 | `layoutMode: designer` + `config-table` + presets |
-| `experimental-absolute-clinical-01` (superseded) | `clinical-01-hct-epo-designer` |
+**Canvas is the editor** — not a tree + separate PDF preview.
 
-## Runtime compatibility
+| Removed / hidden | Replacement |
+|--|--|
+| Structure tree / Body order | Click elements on the A4 HTML canvas |
+| Schematic page cards | Real HTML table from shared layout engine |
+| Preview pane (iframe PDF) | **Download PDF** only (QuestPDF verify) |
+| Dense widget palette as primary | `config-table` + preset `hct-epo-annual-v1` |
 
-- **`layoutMode` omitted / `composition`:** unchanged — existing `.hprp` and C# dense composers still work.
-- **`layoutMode: designer`:** new `DesignerPageComposer` + `ConfigurableTableComposer`.
-- **`layoutMode: absolute`:** still supported (legacy spike); Studio defaults to designer when manifest says so.
+Layout: **Packages | Page canvas (WYSIWYG) | Inspector**
+
+Opening `clinical-01-hct-epo` loads `layoutMode: designer` with config-table. Column +/−, row mode, slots, and field mapping update the canvas immediately.
+
+## Breaking vs production packs
+
+| Ofเดิม | On this branch |
+|--|--|
+| Composition `layout.body[]` Studio tree | Studio does not use it; clinical-01 source is designer |
+| Dense `clinical.hct-epo-annual-table` in clinical-01 | Replaced by `config-table` + preset |
+| Absolute dense clone | Superseded for Studio editing |
+| `experimental-absolute-*` | Optional demos; designer path is preferred |
+
+Packed `.hprp` on `main` is unchanged until this branch merges.
 
 ## Assets
 
-- Table presets: `assets/templates/presets/tables/*.json`
-- Adapter field trees: `assets/templates/adapters/*.schema.json`
-- Sample designer pack: `assets/templates/reports/clinical-01-hct-epo-designer/`
+- Preset: `assets/templates/presets/tables/hct-epo-annual-v1.json`
+- Adapter schema: `assets/templates/adapters/clinical-01-hct-epo.schema.json`
+- Sample designer pack (alias): `assets/templates/reports/clinical-01-hct-epo-designer/`
+- Production clinical-01 on this branch: `layoutMode: designer` + same elements

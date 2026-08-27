@@ -93,9 +93,14 @@ public class StudioSamplePayloadsSmokeTests
 
         if (string.Equals(engine, ClinicalReportCatalog.HctEpo, StringComparison.OrdinalIgnoreCase))
         {
+            var presets = new HprpTablePresetCatalog(new HprpTablePresetStore(Options.Create(new HprpTemplateOptions
+            {
+                RootPath = HprpTestAssets.TemplatesRoot(),
+                PackagesRootPath = Path.Combine(HprpTestAssets.TemplatesRoot(), "_no-packages"),
+            })));
             return new Clinical01HctEpoReportRenderer(
                 new Clinical01HctEpoDataProvider(),
-                new Clinical01HctEpoComposer(store),
+                new Clinical01HctEpoComposer(store, presets),
                 quest).RenderReportAsync(context, CancellationToken.None);
         }
 

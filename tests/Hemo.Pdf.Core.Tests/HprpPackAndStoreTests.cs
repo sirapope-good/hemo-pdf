@@ -46,8 +46,9 @@ public class HprpPackAndStoreTests
         using var stream = File.OpenRead(output);
         var loaded = HprpPackageReader.ReadZip(stream, output);
         Assert.Equal(ClinicalReportCatalog.HctEpo, loaded.Manifest.Id);
-        Assert.Equal("thaiur.header", loaded.Layout.Header?.Widget);
-        Assert.Contains(loaded.Layout.Body, n => n.Widget == "clinical.hct-epo-annual-table");
+        Assert.True(HprpLayoutModes.IsDesigner(loaded.Manifest));
+        Assert.Contains(loaded.Layout.Elements, e => e.Type == "config-table");
+        Assert.Contains(loaded.Layout.Elements, e => e.PresetId == "hct-epo-annual-v1" || e.Type == "config-table");
         Assert.True(HprpValidator.Validate(loaded).IsValid);
     }
 

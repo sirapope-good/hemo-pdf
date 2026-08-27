@@ -1596,18 +1596,12 @@ function renderDenseFormHint() {
 
 function renderDesigner() {
   if (state.mode !== "designer") return;
-  if (window.TableDesigner && TableDesigner.isDesignerMode()) {
+  // Branch: Studio Canvas is always WYSIWYG (no tree / no PDF preview pane).
+  if (window.TableDesigner) {
     TableDesigner.syncBodyClass();
     TableDesigner.renderAll();
     return;
   }
-  if (window.AbsoluteDesigner && AbsoluteDesigner.isAbsoluteMode()) {
-    AbsoluteDesigner.syncBodyClass();
-    AbsoluteDesigner.renderAbsoluteDesigner();
-    return;
-  }
-  if (window.AbsoluteDesigner)
-    AbsoluteDesigner.syncBodyClass();
   renderDenseFormHint();
   renderPalette();
   renderBodyList();
@@ -1665,12 +1659,14 @@ async function preview() {
   if (state.previewUrl)
     URL.revokeObjectURL(state.previewUrl);
   state.previewUrl = URL.createObjectURL(blob);
-  els.preview.classList.add("has-pdf");
-  els.preview.src = state.previewUrl;
+  if (els.preview) {
+    els.preview.classList.add("has-pdf");
+    els.preview.src = state.previewUrl;
+  }
   setStatus(
     entityId
       ? `Preview from entity ${entityId} (same fetch path as print).`
-      : `Preview from sample${sampleScenario ? "." + sampleScenario : ""} (print renderer + draft package).`,
+      : `PDF ready from sample${sampleScenario ? "." + sampleScenario : ""} (QuestPDF verify).`,
     "ok"
   );
   return blob;
@@ -1991,5 +1987,3 @@ loadList().catch((err) => {
 loadCatalog().catch((err) => setStatus(err.message, "err"));
 if (window.TableDesigner)
   TableDesigner.init(state, els, api, setStatus, schedulePreview);
-if (window.AbsoluteDesigner && AbsoluteDesigner.init)
-  AbsoluteDesigner.init(state, els, api, setStatus, schedulePreview);

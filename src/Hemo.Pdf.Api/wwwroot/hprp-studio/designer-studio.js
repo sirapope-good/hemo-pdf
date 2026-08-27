@@ -1,10 +1,23 @@
 /**
- * Designer layoutMode: WYSIWYG HTML canvas (no separate preview pane).
+ * HPRP Studio — WYSIWYG page canvas (no tree, no PDF preview pane).
+ * Canvas HTML is the primary editor; Download PDF verifies QuestPDF only.
  */
 (function (global) {
-  const DISPLAY_W = 420;
+  const DISPLAY_W = 520;
   const A4_W = 210;
   const A4_H = 297;
+
+  const CLINICAL01_ANNUAL_BINDINGS = [
+    { path: "months[].monthLabel", column: "month", context: "group-label" },
+    { path: "months[].entries[].dayLabel", column: "day", context: "entry" },
+    { path: "months[].entries[].hb", column: "hb", context: "entry" },
+    { path: "months[].entries[].hct", column: "hct", context: "entry" },
+    { path: "months[].entries[].epoName", column: "epoName", context: "entry" },
+    { path: "months[].entries[].frequencyText", column: "frequencyText", context: "entry" },
+    { path: "months[].entries[].injectionDate", column: "injectionDate", context: "entry" },
+    { path: "months[].entries[].remarks", column: "remarks", context: "entry" },
+    { path: "months[].entries[].labIsHistorical", column: "lab", context: "lab-historical" },
+  ];
 
   let stateRef;
   let elsRef;
@@ -16,17 +29,90 @@
   let adapterSchema = null;
   let sampleData = null;
 
-  function isDesignerMode() {
+  /** Studio Canvas mode (not JSON) — always WYSIWYG on this branch. */
+  function isStudioCanvas() {
+    return !stateRef || stateRef.mode !== "json";
+  }
+
+  /** Package uses designer layout elements (or was auto-promoted). */
+  function isDesignerPackage() {
     return String((stateRef.draft.manifest && stateRef.draft.manifest.layoutMode) || "").toLowerCase() === "designer";
   }
 
   function ensureElements() {
+    if (!stateRef.draft.layout) stateRef.draft.layout = {};
     if (!stateRef.draft.layout.elements) stateRef.draft.layout.elements = [];
     if (!stateRef.draft.layout.page) stateRef.draft.layout.page = { size: "A4", marginMm: 2 };
   }
 
+  /**
+   * On this branch Studio is WYSIWYG-first: promote composition packs to designer
+   * elements so opening clinical-01 never falls back to tree + PDF preview.
+   */
+  function promoteToDesignerIfNeeded() {
+    ensureElements();
+    const manifest = stateRef.draft.manifest || (stateRef.draft.manifest = {});
+    const layout = stateRef.draft.layout;
+
+    if (isDesignerPackage() && layout.elements.length > 0)
+      return false;
+
+    const body = layout.body || [];
+    const hasAnnual = body.some((n) => n && n.widget === "clinical.hct-epo-annual-table");
+    const hasCopay = body.some((n) => n && n.widget === "clinical.hct-epo-copay");
+    const hasThaiHeader = layout.header && layout.header.widget === "thaiur.header";
+    const isClinical01 =
+      String(manifest.id || "").indexOf("clinical-01-hct-epo") === 0
+      || String(manifest.dataAdapter || "") === "clinical-01-hct-epo"
+      || hasAnnual;
+
+    if (isClinical01 && layout.elements.length === 0) {
+      layout.elements = [];
+      if (hasThaiHeader || isClinical01) {
+        layout.elements.push({
+          id: "hdr",
+          type: "header",
+          preset: "thaiur-header-v1",
+          box: { xMm: 0, yMm: 0, wMm: 206, hMm: 27 },
+        });
+      }
+      layout.elements.push({
+        id: "annual",
+        type: "config-table",
+        presetId: "hct-epo-annual-v1",
+        box: { xMm: 0, yMm: 29, wMm: 206, hMm: hasCopay || isClinical01 ? 228 : 250 },
+        bindings: CLINICAL01_ANNUAL_BINDINGS.slice(),
+      });
+      if (hasCopay || isClinical01) {
+        layout.elements.push({
+          id: "copay",
+          type: "dense",
+          widget: "clinical.hct-epo-copay",
+          box: { xMm: 0, yMm: 259, wMm: 206, hMm: 34 },
+          chrome: { headerFill: "$branding.sectionHeaderBackground", border: "thin" },
+        });
+      }
+      layout.page = layout.page || { size: "A4", orientation: "portrait", marginMm: 2 };
+      if (layout.page.marginMm == null) layout.page.marginMm = 2;
+    }
+
+    if (layout.elements.length === 0) {
+      layout.elements.push({
+        id: "tbl_main",
+        type: "config-table",
+        presetId: "hct-epo-annual-v1",
+        box: { xMm: 0, yMm: 10, wMm: 206, hMm: 250 },
+        bindings: [],
+      });
+    }
+
+    manifest.layoutMode = "designer";
+    // Keep body/header for JSON reference but Studio edits elements only.
+    return true;
+  }
+
   function mmScale(page) {
-    const landscape = String(page.orientation || "").toLowerCase() === "landscape";
+    const landscape = String((page && page.orientation) || "").toLowerCase() === "landscape";
     const w = landscape ? A4_H : A4_W;
     const h = landscape ? A4_W : A4_H;
     return { w, h, scale: DISPLAY_W / w, landscape };
@@ -68,36 +154,40 @@
     const qs = new URLSearchParams();
     if (item.variant) qs.set("variant", item.variant);
     if (scenario) qs.set("scenario", scenario);
+    // Prefer clinical-01 sample when designer pack has no sample.
+    const sampleId = item.id;
     const q = qs.toString() ? "?" + qs.toString() : "";
     try {
-      sampleData = await apiRef(
-        `/api/hprp/packages/${encodeURIComponent(item.id)}/sample-data${q}`);
+      sampleData = await apiRef(`/api/hprp/packages/${encodeURIComponent(sampleId)}/sample-data${q}`);
     } catch (_) {
-      sampleData = null;
+      if (String(sampleId).indexOf("clinical-01") === 0 && sampleId !== "clinical-01-hct-epo") {
+        try {
+          sampleData = await apiRef(`/api/hprp/packages/clinical-01-hct-epo/sample-data${q}`);
+        } catch (__) {
+          sampleData = null;
+        }
+      } else {
+        sampleData = null;
+      }
     }
   }
 
   function renderCanvas() {
     const host = document.getElementById("designerCanvas");
-    if (!host || !isDesignerMode()) return;
+    if (!host || !isStudioCanvas()) return;
     ensureElements();
     host.innerHTML = "";
-    const page = stateRef.draft.layout.page;
-    const { w, h, scale, landscape } = mmScale(page);
+    const page = stateRef.draft.layout.page || { size: "A4" };
+    const { h, scale, landscape } = mmScale(page);
     const sheet = document.createElement("div");
     sheet.className = "designer-sheet" + (landscape ? " landscape" : "");
     sheet.style.width = DISPLAY_W + "px";
     sheet.style.height = h * scale + "px";
-
-    const toolbar = document.createElement("div");
-    toolbar.className = "designer-canvas-toolbar";
-    toolbar.innerHTML = `<span class="muted">A4 ${landscape ? "landscape" : "portrait"} · HTML WYSIWYG</span>`;
-    const btnPdf = document.createElement("button");
-    btnPdf.type = "button";
-    btnPdf.textContent = "Download PDF";
-    btnPdf.addEventListener("click", () => schedulePreviewRef && schedulePreviewRef(true));
-    toolbar.appendChild(btnPdf);
-    sheet.appendChild(toolbar);
+    sheet.addEventListener("click", () => {
+      selectedElementId = null;
+      renderInspector();
+      renderCanvas();
+    });
 
     const lang = Object.keys(stateRef.draft.labels || {})[0] || "th";
     const labels = (stateRef.draft.labels && stateRef.draft.labels[lang]) || {};
@@ -121,15 +211,19 @@
         const preset = resolveTablePreset(el);
         if (preset && global.TableLayoutEngine) {
           const model = global.TableLayoutEngine.buildLayout(preset, el, labels, sampleData, box.hMm);
-          wrap.appendChild(renderTableHtml(model, scale));
+          wrap.appendChild(renderTableHtml(model));
         } else {
-          wrap.textContent = "config-table (missing preset)";
+          wrap.innerHTML = `<div class="ph-dense">config-table · โหลด preset…</div>`;
         }
       } else if (el.type === "header") {
+        const patient = sampleData && sampleData.header && sampleData.header.patient;
+        const title = (sampleData && sampleData.title) || "Header";
         wrap.classList.add("designer-header-placeholder");
-        wrap.innerHTML = `<div class="ph-title">${(sampleData && sampleData.title) || "Header"}</div><div class="ph-meta">ThaiUR header · ${el.preset || "default"}</div>`;
+        wrap.innerHTML =
+          `<div class="ph-title">${escapeHtml(title)}</div>` +
+          `<div class="ph-meta">${escapeHtml((patient && patient.name) || "Patient")} · HN ${escapeHtml((patient && patient.hn) || "—")}</div>`;
       } else {
-        wrap.innerHTML = `<div class="ph-dense">${el.type}: ${el.widget || el.id}</div>`;
+        wrap.innerHTML = `<div class="ph-dense">${escapeHtml(el.type)}: ${escapeHtml(el.widget || el.id)}</div>`;
       }
 
       sheet.appendChild(wrap);
@@ -138,22 +232,31 @@
     host.appendChild(sheet);
   }
 
-  function renderTableHtml(model, scale) {
+  function escapeHtml(s) {
+    return String(s == null ? "" : s)
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;");
+  }
+
+  function renderTableHtml(model) {
     const root = document.createElement("div");
     root.className = "cfg-table";
     const p = model.preset;
-    const dateW = (p.dateColumns.monthWeight + p.dateColumns.dayWeight) / (p.dateColumns.monthWeight + p.dateColumns.dayWeight + p.columns.reduce((s, c) => s + c.weight, 0));
-
     const table = document.createElement("table");
     table.cellSpacing = 0;
     table.cellPadding = 0;
 
     const thead = document.createElement("thead");
     const hr = document.createElement("tr");
-    model.headerLabels.forEach((text, i) => {
+    model.headerLabels.forEach((text) => {
       const th = document.createElement("th");
       th.textContent = text;
-      if (i === 0) th.colSpan = 1;
+      th.addEventListener("click", (e) => {
+        e.stopPropagation();
+        // keep parent element selected; inspector shows columns
+      });
       hr.appendChild(th);
     });
     thead.appendChild(hr);
@@ -203,17 +306,30 @@
 
   function renderInspector() {
     const insp = elsRef.inspector;
-    if (!insp || !isDesignerMode()) return;
+    if (!insp || !isStudioCanvas()) return;
     insp.innerHTML = "";
+
+    if (stateRef.selectedKey === "page") {
+      renderPageInspector(insp);
+      return;
+    }
+    if (stateRef.selectedKey === "labels") {
+      insp.innerHTML = "<p class=\"muted\">ใช้แท็บ JSON → labels สำหรับแก้ข้อความคอลัมน์แบบละเอียด หรือแก้ labelKey ในคอลัมน์ด้านล่าง</p>";
+      return;
+    }
+
     const el = selectedElement();
     if (!el) {
-      insp.innerHTML = "<p class=\"muted\">คลิก element บน canvas หรือเพิ่ม config-table จาก palette</p>";
-      renderPaletteButtons(insp);
+      insp.innerHTML = "<p class=\"muted\">คลิก element บน canvas (ตาราง / header) เพื่อแก้</p>";
+      const hint = document.createElement("p");
+      hint.className = "muted";
+      hint.textContent = "หรือกด + Table เพื่อเพิ่มตารางใหม่";
+      insp.appendChild(hint);
       return;
     }
 
     insp.appendChild(Object.assign(document.createElement("p"), {
-      innerHTML: `<strong>${el.type}</strong> <span class="muted">${el.id}</span>`,
+      innerHTML: `<strong>${escapeHtml(el.type)}</strong> <span class="muted">${escapeHtml(el.id)}</span>`,
     }));
 
     if (el.type !== "config-table") {
@@ -234,7 +350,7 @@
       insp.appendChild(detach);
     }
 
-    const working = el.tablePreset || preset;
+    const working = ensureWorkingPreset(el, preset);
 
     const rowModeLabel = document.createElement("label");
     rowModeLabel.textContent = "Row mode";
@@ -248,14 +364,15 @@
     });
     rowModeSel.addEventListener("change", () => {
       working.rowMode = rowModeSel.value;
-      if (el.tablePreset) el.tablePreset = working;
+      if (working.rowMode === "annual") working.groupCount = 12;
+      commitWorking(el, working);
       renderAll();
     });
     rowModeLabel.appendChild(rowModeSel);
     insp.appendChild(rowModeLabel);
 
     const slotsLabel = document.createElement("label");
-    slotsLabel.textContent = "Slots per group";
+    slotsLabel.textContent = "Slots per group (แถวต่อเดือน)";
     const slotsInput = document.createElement("input");
     slotsInput.type = "number";
     slotsInput.min = "1";
@@ -263,28 +380,38 @@
     slotsInput.value = String(working.slotsPerGroup || 3);
     slotsInput.addEventListener("change", () => {
       working.slotsPerGroup = Number(slotsInput.value) || 3;
-      if (el.tablePreset) el.tablePreset = working;
+      commitWorking(el, working);
       renderAll();
     });
     slotsLabel.appendChild(slotsInput);
     insp.appendChild(slotsLabel);
 
     const colHead = document.createElement("p");
-    colHead.innerHTML = "<strong>Columns</strong>";
+    colHead.innerHTML = "<strong>Columns</strong> <span class=\"muted\">+/− อัปเดต canvas ทันที</span>";
     insp.appendChild(colHead);
 
     (working.columns || []).forEach((col, idx) => {
       const row = document.createElement("div");
       row.className = "col-row";
-      row.innerHTML = `<span>${col.id}</span>`;
+      const name = document.createElement("input");
+      name.type = "text";
+      name.value = col.id;
+      name.title = "column id";
+      name.addEventListener("change", () => {
+        col.id = name.value.trim() || col.id;
+        commitWorking(el, working);
+        renderAll();
+      });
       const del = document.createElement("button");
       del.type = "button";
       del.textContent = "−";
+      del.title = "Remove column";
       del.addEventListener("click", () => {
         working.columns.splice(idx, 1);
-        if (el.tablePreset) el.tablePreset = working;
+        commitWorking(el, working);
         renderAll();
       });
+      row.appendChild(name);
       row.appendChild(del);
       insp.appendChild(row);
     });
@@ -296,10 +423,7 @@
       const id = "col_" + Math.random().toString(36).slice(2, 6);
       working.columns = working.columns || [];
       working.columns.push({ id, labelKey: id, title: id, weight: 1, center: false, isLab: false });
-      if (el.tablePreset) {
-        el.tablePreset = working;
-        el.presetId = undefined;
-      }
+      commitWorking(el, working);
       renderAll();
     });
     insp.appendChild(addCol);
@@ -309,14 +433,66 @@
     renderBoxFields(insp, el);
   }
 
+  function ensureWorkingPreset(el, preset) {
+    if (el.tablePreset) return el.tablePreset;
+    // Clone so +/- mutates a local copy then detaches automatically.
+    el.tablePreset = JSON.parse(JSON.stringify(preset));
+    if (!el.tablePreset.id) el.tablePreset.id = el.presetId || "inline-table";
+    delete el.presetId;
+    return el.tablePreset;
+  }
+
+  function commitWorking(el, working) {
+    el.tablePreset = working;
+    delete el.presetId;
+    stateRef.draft.manifest.layoutMode = "designer";
+  }
+
+  function renderPageInspector(insp) {
+    ensureElements();
+    const page = stateRef.draft.layout.page;
+    ["size", "orientation"].forEach((key) => {
+      const lab = document.createElement("label");
+      lab.textContent = key;
+      const input = document.createElement("input");
+      input.type = "text";
+      input.value = String(page[key] || (key === "size" ? "A4" : "portrait"));
+      input.addEventListener("change", () => {
+        page[key] = input.value;
+        renderAll();
+      });
+      lab.appendChild(input);
+      insp.appendChild(lab);
+    });
+    const m = document.createElement("label");
+    m.textContent = "marginMm";
+    const mi = document.createElement("input");
+    mi.type = "number";
+    mi.value = String(page.marginMm != null ? page.marginMm : 2);
+    mi.addEventListener("change", () => {
+      page.marginMm = Number(mi.value);
+      renderAll();
+    });
+    m.appendChild(mi);
+    insp.appendChild(m);
+  }
+
   function renderBindings(insp, el) {
     const head = document.createElement("p");
-    head.innerHTML = "<strong>Bindings</strong>";
+    head.innerHTML = "<strong>Field mapping</strong>";
     insp.appendChild(head);
     (el.bindings || []).forEach((b, i) => {
       const row = document.createElement("div");
-      row.className = "bind-row muted";
-      row.textContent = `${b.column} ← ${b.path} (${b.context})`;
+      row.className = "bind-row";
+      row.innerHTML = `<span class="muted">${escapeHtml(b.column)} ← ${escapeHtml(b.path)}</span>`;
+      const del = document.createElement("button");
+      del.type = "button";
+      del.textContent = "×";
+      del.addEventListener("click", () => {
+        el.bindings.splice(i, 1);
+        renderAll();
+      });
+      row.appendChild(del);
       insp.appendChild(row);
     });
 
@@ -342,6 +518,11 @@
         renderAll();
       });
       insp.appendChild(pick);
+    } else {
+      const note = document.createElement("p");
+      note.className = "muted";
+      note.textContent = "ไม่มี adapter schema — ตั้ง dataAdapter ใน manifest";
+      insp.appendChild(note);
     }
   }
 
@@ -369,7 +550,7 @@
     save.addEventListener("click", async () => {
       const id = prompt("Preset id", working.id || "my-table-preset");
       if (!id) return;
-      const body = { ...working, id, displayName: working.displayName || id };
+      const body = Object.assign({}, working, { id, displayName: working.displayName || id });
       await apiRef(`/api/hprp/presets/tables/${encodeURIComponent(id)}`, {
         method: "PUT",
         body: JSON.stringify(body),
@@ -386,7 +567,8 @@
     load.type = "button";
     load.textContent = "Load preset";
     load.addEventListener("click", () => {
-      const id = prompt("Preset id", el.presetId || "");
+      const ids = Object.keys(tablePresets);
+      const id = prompt("Preset id\n" + ids.join(", "), el.presetId || ids[0] || "");
       if (!id || !tablePresets[id]) return;
       el.presetId = id;
       el.tablePreset = undefined;
@@ -413,62 +595,65 @@
     });
   }
 
-  function renderPaletteButtons(host) {
-    const add = document.createElement("button");
-    add.type = "button";
-    add.textContent = "+ Config table (annual preset)";
-    add.addEventListener("click", () => {
-      ensureElements();
-      const id = "tbl_" + Math.random().toString(36).slice(2, 7);
-      stateRef.draft.layout.elements.push({
-        id,
-        type: "config-table",
-        presetId: "hct-epo-annual-v1",
-        box: { xMm: 0, yMm: 30, wMm: 206, hMm: 200 },
-        bindings: [],
-      });
-      selectedElementId = id;
-      renderAll();
+  function addConfigTable() {
+    ensureElements();
+    promoteToDesignerIfNeeded();
+    const id = "tbl_" + Math.random().toString(36).slice(2, 7);
+    stateRef.draft.layout.elements.push({
+      id,
+      type: "config-table",
+      presetId: "hct-epo-annual-v1",
+      box: { xMm: 0, yMm: 30, wMm: 206, hMm: 200 },
+      bindings: [],
     });
-    host.appendChild(add);
-  }
-
-  function renderPalette() {
-    const host = document.getElementById("designerPalette");
-    if (!host) return;
-    host.innerHTML = "";
-    renderPaletteButtons(host);
+    stateRef.draft.manifest.layoutMode = "designer";
+    selectedElementId = id;
+    stateRef.selectedKey = null;
+    renderAll();
   }
 
   function syncBodyClass() {
-    document.body.classList.toggle("mode-designer-layout", isDesignerMode());
-    document.body.classList.toggle("mode-composition", !isDesignerMode() && stateRef.mode === "designer");
+    document.body.classList.toggle("mode-wysiwyg", isStudioCanvas());
+    document.body.classList.toggle("mode-designer-layout", isStudioCanvas());
+    document.body.classList.remove("mode-composition");
     const pane = document.getElementById("designerStudioPane");
-    if (pane) pane.classList.toggle("hidden", !isDesignerMode());
+    if (pane) pane.classList.remove("hidden");
   }
 
   function renderAll() {
-    if (!isDesignerMode()) return;
+    if (!isStudioCanvas()) return;
+    promoteToDesignerIfNeeded();
     syncBodyClass();
-    renderPalette();
     renderCanvas();
     renderInspector();
   }
 
   async function onPackageOpened() {
-    if (!isDesignerMode()) return;
     selectedElementId = null;
+    stateRef.selectedKey = null;
+    promoteToDesignerIfNeeded();
     await loadCatalogExtras();
     await loadSampleData();
     renderAll();
+    if (setStatusRef) {
+      setStatusRef("Canvas WYSIWYG — คลิกตารางเพื่อแก้คอลัมน์ / row mode / mapping", "ok");
+    }
+  }
+
+  // Compatibility alias: older studio.js checks TableDesigner.isDesignerMode()
+  function isDesignerMode() {
+    return isStudioCanvas();
   }
 
   global.TableDesigner = {
     isDesignerMode,
+    isStudioCanvas,
     syncBodyClass,
     renderAll,
     onPackageOpened,
     ensureElements,
+    promoteToDesignerIfNeeded,
+    addConfigTable,
     getSelectedElementId: () => selectedElementId,
   };
 
@@ -478,5 +663,8 @@
     apiRef = api;
     setStatusRef = setStatus;
     schedulePreviewRef = schedulePreview;
+
+    const addBtn = document.getElementById("btnAddConfigTable");
+    if (addBtn) addBtn.addEventListener("click", () => addConfigTable());
   };
 })(window);
