@@ -3,13 +3,10 @@ using Hemo.Pdf.Core.Hprp;
 using Hemo.Pdf.Core.Hprp.Header;
 using Hemo.Pdf.Core.Hprp.Table;
 using Hemo.Pdf.Core.Models;
-using Hemo.Pdf.Core.Models.Clinical;
 using Hemo.Pdf.Core.Models.Hemosheet;
 using Hemo.Pdf.Layouts.Absolute;
-using Hemo.Pdf.Layouts.Clinical.Clinical01_HctEpo;
 using Hemo.Pdf.Layouts.Header;
 using Hemo.Pdf.Layouts.Table;
-using Hemo.Pdf.Rendering;
 using Hemo.Pdf.Sections.ThaiUr;
 using QuestPDF.Fluent;
 using QuestPDF.Helpers;
@@ -17,47 +14,59 @@ using QuestPDF.Infrastructure;
 
 namespace Hemo.Pdf.Layouts.Designer;
 
-/// <summary>Composes designer-mode packages: mm-placed elements + config-table engine.</summary>
+/// <summary>Composes designer-mode packages: mm-placed elements + config-table engine (multi-page).</summary>
 public static class DesignerPageComposer
 {
-    public static QuestLayout Compose(DesignerCanvasViewModel vm, PdfReportContext context)
+    public static object Compose(DesignerCanvasViewModel vm, PdfReportContext context)
     {
         _ = context;
         var landscape = vm.Landscape;
         var originX = vm.Page.Left;
         var originY = vm.Page.Top;
-
-        return new QuestLayout
-        {
-            Landscape = landscape,
-            MarginTop = 0,
-            MarginBottom = 0,
-            MarginLeft = 0,
-            MarginRight = 0,
-            MarginMillimeters = 0,
-            Header = null,
-            Footer = _ => { },
-            Content = c => c.Layers(layers =>
+        var slices = vm.Pages.Count > 0
+            ? vm.Pages
+            : new[]
             {
-                layers.PrimaryLayer().Element(e =>
+                new HprpDesignerPageSlice { PageIndex = 0, Elements = vm.Elements },
+            };
+
+        return (Action<IDocumentContainer>)(container =>
+        {
+            foreach (var slice in slices)
+            {
+                container.Page(page =>
                 {
-                    if (string.Equals(vm.PageBorder, "thin", StringComparison.OrdinalIgnoreCase))
-                        e.Background(Colors.White).Border(0.5f).BorderColor(Colors.Grey.Darken2);
+                    if (landscape)
+                        page.Size(PageSizes.A4.Landscape());
                     else
-                        e.Background(Colors.White);
+                        page.Size(PageSizes.A4);
+
+                    page.Margin(0);
+                    page.DefaultTextStyle(t => t.FontFamily(Hemo.Pdf.Core.Constants.PdfStyleDefaults.Fonts.PrimaryFamily));
+                    page.Content().Element(c => c.Layers(layers =>
+                    {
+                        layers.PrimaryLayer().Element(e =>
+                        {
+                            if (string.Equals(vm.PageBorder, "thin", StringComparison.OrdinalIgnoreCase))
+                                e.Background(Colors.White).Border(0.5f).BorderColor(Colors.Grey.Darken2);
+                            else
+                                e.Background(Colors.White);
+                        });
+
+                        foreach (var element in slice.Elements)
+                        {
+                            var box = element.Box;
+                            layers.Layer()
+                                .Width(Math.Max(1f, box.WMm), Unit.Millimetre)
+                                .Height(Math.Max(1f, box.HMm), Unit.Millimetre)
+                                .TranslateX(Math.Max(0, originX + box.XMm), Unit.Millimetre)
+                                .TranslateY(Math.Max(0, originY + box.YMm), Unit.Millimetre)
+                                .Element(inner => DrawElement(inner, element, vm));
+                        }
+                    }));
                 });
-                foreach (var element in vm.Elements)
-                {
-                    var box = element.Box;
-                    layers.Layer()
-                        .Width(Math.Max(1f, box.WMm), Unit.Millimetre)
-                        .Height(Math.Max(1f, box.HMm), Unit.Millimetre)
-                        .TranslateX(Math.Max(0, originX + box.XMm), Unit.Millimetre)
-                        .TranslateY(Math.Max(0, originY + box.YMm), Unit.Millimetre)
-                        .Element(inner => DrawElement(inner, element, vm));
-                }
-            }),
-        };
+            }
+        });
     }
 
     private static void DrawElement(
@@ -186,7 +195,6 @@ public static class DesignerPageComposer
         HprpDesignerElement element,
         DesignerCanvasViewModel vm)
     {
-        // Inline tablePreset always wins (Studio column drag writes weights here).
         if (element.TablePreset is not null
             && (!string.IsNullOrWhiteSpace(element.TablePreset.Id)
                 || element.TablePreset.Columns is { Count: > 0 }))

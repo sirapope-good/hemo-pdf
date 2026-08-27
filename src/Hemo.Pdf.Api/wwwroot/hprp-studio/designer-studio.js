@@ -35,6 +35,17 @@
   let sampleData = null;
   let dragState = null;
   let suppressClick = false;
+  let canvasTools = null;
+  let lastFlow = null;
+
+  const BANDS = ["super-header", "header", "content", "footer", "super-footer"];
+
+  function resolveBand(el) {
+    const b = String(el.band || "").toLowerCase().trim();
+    if (BANDS.indexOf(b) >= 0) return b;
+    if (String(el.type || "").toLowerCase() === "header") return "header";
+    return "content";
+  }
 
   function isStudioCanvas() {
     return !stateRef || stateRef.mode !== "json";
@@ -94,60 +105,172 @@
     const contentH = Math.max(MIN_BLOCK_H, pageH - margins.top - margins.bottom);
     const gaps = resolveDesignerGaps(page, margins);
     const spacing = gaps.below; // legacy alias
-    const scale = DISPLAY_W / pageW;
-    return { page, pageW, pageH, margins, contentW, contentH, spacing, gaps, scale, landscape };
+    const zoom = canvasTools ? canvasTools.getZoom() : 1;
+    const scale = (DISPLAY_W * zoom) / pageW;
+    const sheetW = DISPLAY_W * zoom;
+    return { page, pageW, pageH, margins, contentW, contentH, spacing, gaps, scale, landscape, sheetW, zoom };
   }
 
   /**
-   * Pack elements into content box without overlap (unless collapse when gap=0).
-   * place: "beside" → same row to the right of previous; else stack below.
+   * Band-aware pack (parity with HprpDesignerFlow):
+   * chrome bands repeat; content flows and may create extra pages.
    */
   function reflowElements() {
     ensureElements();
-    const { contentW, gaps } = pageMetrics();
+    const { contentW, contentH, gaps, pageH, margins } = pageMetrics();
     const els = stateRef.draft.layout.elements;
-    let cursorY = 0;
-    let i = 0;
-    while (i < els.length) {
-      const row = [els[i]];
-      let j = i + 1;
-      while (j < els.length && String(els[j].place || "below").toLowerCase() === "beside") {
-        row.push(els[j]);
-        j++;
-      }
 
-      let gapTotal = gaps.beside * Math.max(0, row.length - 1);
-      if (gaps.beside <= 0 && row.length > 1) {
-        gapTotal = -BORDER_COLLAPSE_MM * (row.length - 1);
-      }
-      const autoCount = row.filter((e) => !e.manualWidth).length;
-      let fixedW = 0;
-      row.forEach((e) => {
-        e.box = e.box || { xMm: 0, yMm: 0, wMm: contentW, hMm: 40 };
-        if (e.manualWidth) {
-          e.box.wMm = Math.max(MIN_BLOCK_W, Math.min(Number(e.box.wMm) || MIN_BLOCK_W, contentW));
-          fixedW += e.box.wMm;
-        }
-      });
-      const remain = Math.max(MIN_BLOCK_W * autoCount, contentW - fixedW - gapTotal);
-      const autoW = autoCount > 0 ? remain / autoCount : 0;
-
-      let maxH = 0;
-      let x = 0;
-      row.forEach((e) => {
-        if (!e.manualWidth) e.box.wMm = Math.max(MIN_BLOCK_W, autoW);
-        e.box.hMm = Math.max(MIN_BLOCK_H, Number(e.box.hMm) || MIN_BLOCK_H);
-        e.box.xMm = x;
-        e.box.yMm = cursorY;
-        x += gapStep(e.box.wMm, gaps.beside);
-        maxH = Math.max(maxH, e.box.hMm);
-      });
-      // Equalize row height for beside siblings
-      row.forEach((e) => { e.box.hMm = maxH; });
-
-      cursorY += gapStep(maxH, gaps.below);
-      i = j;
+    function filterBand(name) {
+      return els.filter((e) => resolveBand(e) === name);
     }
+
+    function packRows(source, maxH) {
+      const result = [];
+      let cursorY = 0;
+      let i = 0;
+      let consumed = 0;
+      while (i < source.length) {
+        const row = [source[i]];
+        let j = i + 1;
+        while (j < source.length && String(source[j].place || "below").toLowerCase() === "beside") {
+          row.push(source[j]);
+          j++;
+        }
+        let gapTotal = gaps.beside * Math.max(0, row.length - 1);
+        if (gaps.beside <= 0 && row.length > 1) gapTotal = -BORDER_COLLAPSE_MM * (row.length - 1);
+        const autoCount = row.filter((e) => !e.manualWidth).length;
+        let fixedW = 0;
+        row.forEach((e) => {
+          e.box = e.box || { xMm: 0, yMm: 0, wMm: contentW, hMm: 40 };
+          if (e.manualWidth) {
+            e.box.wMm = Math.max(MIN_BLOCK_W, Math.min(Number(e.box.wMm) || MIN_BLOCK_W, contentW));
+            fixedW += e.box.wMm;
+          }
+        });
+        let maxRowH = 0;
+        row.forEach((e) => {
+          e.box.hMm = Math.max(MIN_BLOCK_H, Number(e.box.hMm) || MIN_BLOCK_H);
+          maxRowH = Math.max(maxRowH, e.box.hMm);
+        });
+        if (cursorY + maxRowH > maxH + 0.01 && result.length > 0) break;
+
+        const remain = Math.max(MIN_BLOCK_W * autoCount, contentW - fixedW - gapTotal);
+        const autoW = autoCount > 0 ? remain / autoCount : 0;
+        let x = 0;
+        row.forEach((e) => {
+          if (!e.manualWidth) e.box.wMm = Math.max(MIN_BLOCK_W, autoW);
+          e.box.hMm = maxRowH;
+          e.box.xMm = x;
+          e.box.yMm = cursorY;
+          x += gapStep(e.box.wMm, gaps.beside);
+          result.push(e);
+        });
+        cursorY += gapStep(maxRowH, gaps.below);
+        i = j;
+        consumed = i;
+      }
+      return { rows: result, consumed, height: cursorY > 0 ? cursorY - (gaps.below > 0 ? gaps.below : -BORDER_COLLAPSE_MM) : 0 };
+    }
+
+    function bandHeight(packed) {
+      if (!packed.length) return 0;
+      return Math.max.apply(null, packed.map((e) => e.box.yMm + e.box.hMm));
+    }
+
+    const superHeader = packRows(filterBand("super-header"), 1e9).rows;
+    const header = packRows(filterBand("header"), 1e9).rows;
+    const footer = packRows(filterBand("footer"), 1e9).rows;
+    const superFooter = packRows(filterBand("super-footer"), 1e9).rows;
+    const contentSrc = filterBand("content");
+
+    const chromeTop = bandHeight(superHeader) + bandHeight(header);
+    const chromeBottom = bandHeight(footer) + bandHeight(superFooter);
+    const contentFlowH = Math.max(MIN_BLOCK_H, contentH - chromeTop - chromeBottom);
+
+    const contentPages = [];
+    let remaining = contentSrc.slice();
+    while (remaining.length > 0) {
+      const packed = packRows(remaining, contentFlowH);
+      if (packed.consumed === 0) {
+        const forced = packRows(remaining.slice(0, 1), 1e9).rows;
+        contentPages.push(forced);
+        remaining = remaining.slice(1);
+        continue;
+      }
+      contentPages.push(packed.rows);
+      remaining = remaining.slice(packed.consumed);
+    }
+    if (contentPages.length === 0) contentPages.push([]);
+
+    const pageCount = Math.max(1, contentPages.length);
+    const pages = [];
+    for (let p = 0; p < pageCount; p++) {
+      const pageEls = [];
+      let yBase = 0;
+      function placeBand(band) {
+        band.forEach((e) => {
+          pageEls.push({
+            el: e,
+            xMm: e.box.xMm,
+            yMm: yBase + e.box.yMm,
+            wMm: e.box.wMm,
+            hMm: e.box.hMm,
+          });
+        });
+      }
+      placeBand(superHeader);
+      yBase += bandHeight(superHeader);
+      placeBand(header);
+      yBase += bandHeight(header);
+      (contentPages[p] || []).forEach((e) => {
+        pageEls.push({
+          el: e,
+          xMm: e.box.xMm,
+          yMm: yBase + e.box.yMm,
+          wMm: e.box.wMm,
+          hMm: e.box.hMm,
+        });
+      });
+      const footerY = contentH - chromeBottom;
+      yBase = footerY;
+      placeBand(footer);
+      yBase += bandHeight(footer);
+      placeBand(superFooter);
+      pages.push(pageEls);
+    }
+
+    // Persist boxes from page 0 absolute coords for save/PDF flat list
+    pages[0].forEach((p) => {
+      p.el.box.xMm = p.xMm;
+      p.el.box.yMm = p.yMm;
+      p.el.box.wMm = p.wMm;
+      p.el.box.hMm = p.hMm;
+    });
+    // Content on later pages: store continuous Y for flat persistence
+    for (let p = 1; p < pages.length; p++) {
+      pages[p].forEach((item) => {
+        if (resolveBand(item.el) !== "content") return;
+        item.el.box.xMm = item.xMm;
+        item.el.box.yMm = item.yMm + p * 0; // page-local already includes chrome; keep page-local for PDF slices
+        item.el.box.wMm = item.wMm;
+        item.el.box.hMm = item.hMm;
+      });
+    }
+
+    lastFlow = {
+      pages,
+      pageCount,
+      contentFlowH,
+      chromeTop,
+      chromeBottom,
+      superHeaderH: bandHeight(superHeader),
+      headerH: bandHeight(header),
+      footerH: bandHeight(footer),
+      superFooterH: bandHeight(superFooter),
+      pageH,
+      margins,
+      contentH,
+    };
   }
 
   function promoteToDesignerIfNeeded() {
@@ -172,6 +295,7 @@
         {
           id: "hdr",
           type: "header",
+          band: "header",
           preset: "thaiur-header-v1",
           place: "below",
           box: { xMm: 0, yMm: 0, wMm: 206, hMm: 27 },
@@ -179,6 +303,7 @@
         {
           id: "annual",
           type: "config-table",
+          band: "content",
           presetId: "hct-epo-annual-v1",
           place: "below",
           box: { xMm: 0, yMm: 0, wMm: 206, hMm: 228 },
@@ -188,6 +313,7 @@
         {
           id: "copay-banner",
           type: "box-text",
+          band: "content",
           place: "below",
           box: { xMm: 0, yMm: 0, wMm: 206, hMm: 5 },
           text: "ปริมาณยาที่มีสิทธิได้รับโดยไม่ต้องร่วมจ่าย",
@@ -198,6 +324,7 @@
         {
           id: "copay-nhso",
           type: "config-table",
+          band: "content",
           presetId: "copay-nhso-v1",
           place: "below",
           manualWidth: true,
@@ -207,6 +334,7 @@
         {
           id: "copay-sso",
           type: "config-table",
+          band: "content",
           presetId: "copay-sso-v1",
           place: "beside",
           manualWidth: true,
@@ -220,6 +348,7 @@
       layout.elements.push({
         id: "tbl_main",
         type: "config-table",
+        band: "content",
         presetId: "hct-epo-annual-v1",
         place: "below",
         box: { xMm: 0, yMm: 0, wMm: 206, hMm: 200 },
@@ -332,138 +461,184 @@
     host.innerHTML = "";
 
     const m = pageMetrics();
-    const { page, pageW, pageH, margins, contentW, contentH, scale, landscape } = m;
+    const { page, pageH, margins, contentW, contentH, scale, landscape, sheetW } = m;
+    const flow = lastFlow || { pages: [[]], pageCount: 1, chromeTop: 0, chromeBottom: 0, headerH: 0, superHeaderH: 0, footerH: 0, superFooterH: 0 };
 
-    const sheet = document.createElement("div");
-    sheet.className = "designer-sheet" + (landscape ? " landscape" : "");
-    sheet.style.width = DISPLAY_W + "px";
-    sheet.style.height = pageH * scale + "px";
-    if (String(page.border || "none").toLowerCase() === "thin")
-      sheet.classList.add("has-page-border");
+    const banner = document.getElementById("designerOverflowBanner");
+    if (banner) {
+      if (flow.pageCount > 1) {
+        banner.classList.remove("hidden");
+        banner.textContent =
+          "เนื้อหาเกิน 1 หน้า — แสดง " + flow.pageCount + " หน้าอัตโนมัติ (Header/Footer ซ้ำทุกหน้า · Content ไหลต่อ)";
+      } else {
+        banner.classList.add("hidden");
+        banner.textContent = "";
+      }
+    }
 
-    // Margin guides
-    const guide = document.createElement("div");
-    guide.className = "designer-margin-guide";
-    guide.style.left = margins.left * scale + "px";
-    guide.style.top = margins.top * scale + "px";
-    guide.style.width = contentW * scale + "px";
-    guide.style.height = contentH * scale + "px";
-    sheet.appendChild(guide);
-
-    const dropHint = document.createElement("div");
-    dropHint.className = "designer-drop-hint hidden";
-    dropHint.id = "designerDropHint";
-    sheet.appendChild(dropHint);
-
-    sheet.addEventListener("click", () => {
-      if (suppressClick) return;
-      selectedElementId = null;
-      stateRef.selectedKey = null;
-      renderInspector();
-      document.querySelectorAll(".designer-element.selected").forEach((n) => n.classList.remove("selected"));
-    });
+    const stack = document.createElement("div");
+    stack.className = "designer-sheet-stack";
 
     const lang = Object.keys(stateRef.draft.labels || {})[0] || "th";
     const labels = (stateRef.draft.labels && stateRef.draft.labels[lang]) || {};
 
-    stateRef.draft.layout.elements.forEach((el, index) => {
-      const box = el.box;
-      const wrap = document.createElement("div");
-      wrap.className = "designer-element" + (el.id === selectedElementId ? " selected" : "");
-      if (!borderOn(el.chrome)) wrap.classList.add("no-border");
-      wrap.style.left = (margins.left + box.xMm) * scale + "px";
-      wrap.style.top = (margins.top + box.yMm) * scale + "px";
-      wrap.style.width = box.wMm * scale + "px";
-      wrap.style.height = box.hMm * scale + "px";
-      wrap.dataset.elementId = el.id;
-      wrap.dataset.index = String(index);
+    for (let p = 0; p < flow.pageCount; p++) {
+      const sheet = document.createElement("div");
+      sheet.className = "designer-sheet" + (landscape ? " landscape" : "") + (p > 0 ? " overflow-page" : "");
+      sheet.style.width = sheetW + "px";
+      sheet.style.height = pageH * scale + "px";
+      if (String(page.border || "none").toLowerCase() === "thin")
+        sheet.classList.add("has-page-border");
 
-      wrap.addEventListener("click", (e) => {
-        e.stopPropagation();
-        if (suppressClick) return;
-        selectedElementId = el.id;
-        stateRef.selectedKey = null;
-        renderAll();
-      });
+      const pageLabel = document.createElement("div");
+      pageLabel.className = "designer-sheet-label";
+      pageLabel.textContent = "หน้า " + (p + 1) + " / " + flow.pageCount;
+      sheet.appendChild(pageLabel);
 
-      // Drag move (not from handles)
-      wrap.addEventListener("pointerdown", (e) => {
-        if (e.target.closest(".resize-handle") || e.target.closest(".col-resize") || e.target.closest(".el-toolbar"))
-          return;
-        if (e.button !== 0) return;
-        e.preventDefault();
-        e.stopPropagation();
-        selectedElementId = el.id;
-        startMoveDrag(e, el, wrap, sheet, m);
-      });
+      const guide = document.createElement("div");
+      guide.className = "designer-margin-guide";
+      guide.style.left = margins.left * scale + "px";
+      guide.style.top = margins.top * scale + "px";
+      guide.style.width = contentW * scale + "px";
+      guide.style.height = contentH * scale + "px";
+      sheet.appendChild(guide);
 
-      const toolbar = document.createElement("div");
-      toolbar.className = "el-toolbar";
-      toolbar.innerHTML = `<span class="el-tag">${escapeHtml(el.type)}</span>`;
-      const delBtn = document.createElement("button");
-      delBtn.type = "button";
-      delBtn.className = "el-del";
-      delBtn.title = "ลบ widget";
-      delBtn.textContent = "×";
-      delBtn.addEventListener("pointerdown", (e) => e.stopPropagation());
-      delBtn.addEventListener("click", (e) => {
-        e.stopPropagation();
-        deleteElement(el.id);
-      });
-      toolbar.appendChild(delBtn);
-      wrap.appendChild(toolbar);
-
-      const body = document.createElement("div");
-      body.className = "el-body";
-      if (el.type === "config-table") {
-        const catalogOrInline = resolveTablePreset(el);
-        if (catalogOrInline && global.TableLayoutEngine) {
-          // Always detach inline so Download PDF uses the same weights as canvas.
-          const preset = ensureWorkingPreset(el, catalogOrInline);
-          const model = global.TableLayoutEngine.buildLayout(preset, el, labels, sampleData, box.hMm);
-          body.appendChild(renderTableHtml(model, el, scale));
-        } else {
-          body.innerHTML = `<div class="ph-dense">config-table</div>`;
-        }
-      } else if (el.type === "box-text") {
-        body.appendChild(renderBoxTextHtml(el, sampleData, scale));
-      } else if (el.type === "header") {
-        const catalogOrInline = resolveHeaderPreset(el);
-        if (catalogOrInline && global.HeaderLayoutEngine) {
-          const preset = ensureWorkingHeaderPreset(el, catalogOrInline);
-          const titleFallback = (sampleData && sampleData.title) || "Header";
-          const model = global.HeaderLayoutEngine.buildLayout(preset, sampleData, titleFallback);
-          body.appendChild(renderHeaderHtml(model, el, scale));
-        } else {
-          const patient = sampleData && sampleData.header && sampleData.header.patient;
-          const title = (sampleData && sampleData.title) || "Header";
-          body.classList.add("designer-header-placeholder");
-          body.innerHTML =
-            `<div class="ph-title">${escapeHtml(title)}</div>` +
-            `<div class="ph-meta">${escapeHtml((patient && patient.name) || "Patient")} · HN ${escapeHtml((patient && patient.hn) || "—")}</div>`;
-        }
-      } else {
-        body.innerHTML = `<div class="ph-dense">${escapeHtml(el.type)}: ${escapeHtml(el.widget || el.id)}</div>`;
+      // Band guides inside margin box
+      let bandY = 0;
+      function addBandGuide(label, hMm, cls) {
+        if (hMm <= 0) return;
+        const g = document.createElement("div");
+        g.className = "designer-band-guide " + (cls || "");
+        g.style.left = margins.left * scale + "px";
+        g.style.top = (margins.top + bandY) * scale + "px";
+        g.style.width = contentW * scale + "px";
+        g.style.height = Math.max(1, hMm * scale) + "px";
+        g.textContent = label;
+        sheet.appendChild(g);
+        bandY += hMm;
       }
-      wrap.appendChild(body);
+      addBandGuide("super-header", flow.superHeaderH || 0);
+      addBandGuide("header", flow.headerH || 0);
+      addBandGuide("content", flow.contentFlowH || 0, "band-content");
+      addBandGuide("footer", flow.footerH || 0);
+      addBandGuide("super-footer", flow.superFooterH || 0);
 
-      // Resize handles
-      ["e", "s", "se"].forEach((dir) => {
-        const h = document.createElement("div");
-        h.className = "resize-handle rh-" + dir;
-        h.dataset.dir = dir;
-        h.addEventListener("pointerdown", (e) => {
+      if (p === 0) {
+        const dropHint = document.createElement("div");
+        dropHint.className = "designer-drop-hint hidden";
+        dropHint.id = "designerDropHint";
+        sheet.appendChild(dropHint);
+      }
+
+      sheet.addEventListener("click", () => {
+        if (suppressClick) return;
+        selectedElementId = null;
+        stateRef.selectedKey = null;
+        renderInspector();
+        document.querySelectorAll(".designer-element.selected").forEach((n) => n.classList.remove("selected"));
+      });
+
+      (flow.pages[p] || []).forEach((item, index) => {
+        const el = item.el;
+        const wrap = document.createElement("div");
+        wrap.className = "designer-element" + (el.id === selectedElementId ? " selected" : "");
+        if (!borderOn(el.chrome)) wrap.classList.add("no-border");
+        wrap.style.left = (margins.left + item.xMm) * scale + "px";
+        wrap.style.top = (margins.top + item.yMm) * scale + "px";
+        wrap.style.width = item.wMm * scale + "px";
+        wrap.style.height = item.hMm * scale + "px";
+        wrap.dataset.elementId = el.id;
+        wrap.dataset.index = String(index);
+        wrap.dataset.band = resolveBand(el);
+
+        wrap.addEventListener("click", (e) => {
+          e.stopPropagation();
+          if (suppressClick) return;
+          selectedElementId = el.id;
+          stateRef.selectedKey = null;
+          renderAll();
+        });
+
+        wrap.addEventListener("pointerdown", (e) => {
+          if (e.target.closest(".resize-handle") || e.target.closest(".col-resize") || e.target.closest(".el-toolbar"))
+            return;
+          if (e.button !== 0) return;
+          if (host.classList.contains("is-panning")) return;
           e.preventDefault();
           e.stopPropagation();
-          startResizeDrag(e, el, dir, m);
+          selectedElementId = el.id;
+          startMoveDrag(e, el, wrap, sheet, m);
         });
-        wrap.appendChild(h);
+
+        const toolbar = document.createElement("div");
+        toolbar.className = "el-toolbar";
+        toolbar.innerHTML =
+          `<span class="el-tag">${escapeHtml(el.type)} · ${escapeHtml(resolveBand(el))}</span>`;
+        const delBtn = document.createElement("button");
+        delBtn.type = "button";
+        delBtn.className = "el-del";
+        delBtn.title = "ลบ widget";
+        delBtn.textContent = "×";
+        delBtn.addEventListener("pointerdown", (e) => e.stopPropagation());
+        delBtn.addEventListener("click", (e) => {
+          e.stopPropagation();
+          deleteElement(el.id);
+        });
+        toolbar.appendChild(delBtn);
+        wrap.appendChild(toolbar);
+
+        const body = document.createElement("div");
+        body.className = "el-body";
+        if (el.type === "config-table") {
+          const catalogOrInline = resolveTablePreset(el);
+          if (catalogOrInline && global.TableLayoutEngine) {
+            const preset = ensureWorkingPreset(el, catalogOrInline);
+            const model = global.TableLayoutEngine.buildLayout(preset, el, labels, sampleData, item.hMm);
+            body.appendChild(renderTableHtml(model, el, scale));
+          } else {
+            body.innerHTML = `<div class="ph-dense">config-table</div>`;
+          }
+        } else if (el.type === "box-text") {
+          body.appendChild(renderBoxTextHtml(el, sampleData, scale));
+        } else if (el.type === "header") {
+          const catalogOrInline = resolveHeaderPreset(el);
+          if (catalogOrInline && global.HeaderLayoutEngine) {
+            const preset = ensureWorkingHeaderPreset(el, catalogOrInline);
+            const titleFallback = (sampleData && sampleData.title) || "Header";
+            const model = global.HeaderLayoutEngine.buildLayout(preset, sampleData, titleFallback);
+            body.appendChild(renderHeaderHtml(model, el, scale));
+          } else {
+            const patient = sampleData && sampleData.header && sampleData.header.patient;
+            const title = (sampleData && sampleData.title) || "Header";
+            body.classList.add("designer-header-placeholder");
+            body.innerHTML =
+              `<div class="ph-title">${escapeHtml(title)}</div>` +
+              `<div class="ph-meta">${escapeHtml((patient && patient.name) || "Patient")} · HN ${escapeHtml((patient && patient.hn) || "—")}</div>`;
+          }
+        } else {
+          body.innerHTML = `<div class="ph-dense">${escapeHtml(el.type)}: ${escapeHtml(el.widget || el.id)}</div>`;
+        }
+        wrap.appendChild(body);
+
+        ["e", "s", "se"].forEach((dir) => {
+          const h = document.createElement("div");
+          h.className = "resize-handle rh-" + dir;
+          h.dataset.dir = dir;
+          h.addEventListener("pointerdown", (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            startResizeDrag(e, el, dir, m);
+          });
+          wrap.appendChild(h);
+        });
+
+        sheet.appendChild(wrap);
       });
 
-      sheet.appendChild(wrap);
-    });
+      stack.appendChild(sheet);
+    }
 
-    host.appendChild(sheet);
+    host.appendChild(stack);
   }
 
   /**
@@ -927,6 +1102,7 @@
   }
 
   function reorderElement(el, targetNode, mode) {
+    if (canvasTools) canvasTools.pushHistory();
     const els = stateRef.draft.layout.elements;
     const from = els.indexOf(el);
     if (from < 0) return;
@@ -959,6 +1135,7 @@
   }
 
   function startResizeDrag(e, el, dir, metrics) {
+    if (canvasTools) canvasTools.pushHistory();
     const startX = e.clientX;
     const startY = e.clientY;
     const startW = el.box.wMm;
@@ -992,6 +1169,7 @@
 
   function deleteElement(id) {
     ensureElements();
+    if (canvasTools) canvasTools.pushHistory();
     const els = stateRef.draft.layout.elements;
     const idx = els.findIndex((e) => e.id === id);
     if (idx < 0) return;
@@ -1049,12 +1227,42 @@
       placeSel.appendChild(o);
     });
     placeSel.addEventListener("change", () => {
+      if (canvasTools) canvasTools.pushHistory();
       el.place = placeSel.value;
       reflowElements();
       renderAll();
     });
     placeLab.appendChild(placeSel);
     insp.appendChild(placeLab);
+
+    const bandLab = document.createElement("label");
+    bandLab.textContent = "โซนหน้า (band)";
+    const bandSel = document.createElement("select");
+    [
+      ["content", "Content (ไหลหลายหน้า)"],
+      ["header", "Header (ซ้ำทุกหน้า)"],
+      ["super-header", "Super header (ชื่อรายงาน ฯลฯ)"],
+      ["footer", "Footer (ซ้ำทุกหน้า)"],
+      ["super-footer", "Super footer (Page of ฯลฯ)"],
+    ].forEach(([v, t]) => {
+      const o = document.createElement("option");
+      o.value = v;
+      o.textContent = t;
+      if (resolveBand(el) === v) o.selected = true;
+      bandSel.appendChild(o);
+    });
+    bandSel.addEventListener("change", () => {
+      if (canvasTools) canvasTools.pushHistory();
+      el.band = bandSel.value;
+      reflowElements();
+      renderAll();
+    });
+    bandLab.appendChild(bandSel);
+    insp.appendChild(bandLab);
+    const bandHint = document.createElement("p");
+    bandHint.className = "muted";
+    bandHint.textContent = "Header/Footer ซ้ำทุกหน้า · Content เกินสูงสุดจะเปิดหน้าถัดไปอัตโนมัติ";
+    insp.appendChild(bandHint);
 
     const borderLab = document.createElement("label");
     borderLab.className = "check-lab";
@@ -1738,10 +1946,12 @@
   function addConfigTable() {
     ensureElements();
     promoteToDesignerIfNeeded();
+    if (canvasTools) canvasTools.pushHistory();
     const id = "tbl_" + Math.random().toString(36).slice(2, 7);
     stateRef.draft.layout.elements.push({
       id,
       type: "config-table",
+      band: "content",
       presetId: "hct-epo-annual-v1",
       place: "below",
       box: { xMm: 0, yMm: 0, wMm: 100, hMm: 80 },
@@ -1758,10 +1968,12 @@
   function addBoxText() {
     ensureElements();
     promoteToDesignerIfNeeded();
+    if (canvasTools) canvasTools.pushHistory();
     const id = "box_" + Math.random().toString(36).slice(2, 7);
     stateRef.draft.layout.elements.push({
       id,
       type: "box-text",
+      band: "content",
       place: "below",
       box: { xMm: 0, yMm: 0, wMm: 206, hMm: 5 },
       text: "หัวข้อ",
@@ -1798,6 +2010,7 @@
     await loadCatalogExtras();
     await loadSampleData();
     renderAll();
+    if (canvasTools) canvasTools.resetHistory();
     if (setStatusRef) {
       setStatusRef("ลาก block วางข้าง/ล่าง · ลากขอบย่อขยาย · Page สำหรับ margin/ขอบ", "ok");
     }
@@ -1851,6 +2064,29 @@
     apiRef = api;
     setStatusRef = setStatus;
     schedulePreviewRef = schedulePreview;
+
+    if (global.DesignerCanvasTools) {
+      canvasTools = global.DesignerCanvasTools.create({
+        getHost: () => document.getElementById("designerCanvas"),
+        isActive: () => isStudioCanvas() && isDesignerPackage(),
+        getSnapshot: () => {
+          ensureElements();
+          return {
+            page: stateRef.draft.layout.page,
+            elements: stateRef.draft.layout.elements,
+            selectedElementId,
+          };
+        },
+        applySnapshot: (snap) => {
+          ensureElements();
+          if (snap.page) stateRef.draft.layout.page = snap.page;
+          if (snap.elements) stateRef.draft.layout.elements = snap.elements;
+          selectedElementId = snap.selectedElementId || null;
+        },
+        onViewChanged: () => renderAll(),
+      });
+      canvasTools.wire();
+    }
 
     const addBtn = document.getElementById("btnAddConfigTable");
     if (addBtn) addBtn.addEventListener("click", () => addConfigTable());

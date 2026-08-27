@@ -92,6 +92,14 @@ public sealed class HprpDesignerElement
     [JsonPropertyName("bind")]
     public string? Bind { get; init; }
 
+    /// <summary>
+    /// Page band: <see cref="HprpDesignerBands"/> —
+    /// <c>super-header</c> / <c>header</c> / <c>content</c> (default) / <c>footer</c> / <c>super-footer</c>.
+    /// Chrome bands repeat on each page; content flows and may create extra pages.
+    /// </summary>
+    [JsonPropertyName("band")]
+    public string? Band { get; init; }
+
     /// <summary><c>left</c> / <c>center</c> / <c>right</c> for <c>box-text</c>.</summary>
     [JsonPropertyName("align")]
     public string? Align { get; init; }
@@ -114,5 +122,6 @@ public sealed class HprpDesignerElement
         Text = Text,
         Bind = Bind,
         Align = Align,
+        Band = Band,
     };
 }

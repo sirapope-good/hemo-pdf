@@ -201,6 +201,12 @@ public static class HprpValidator
             if (el.Box.WMm <= 0 || el.Box.HMm <= 0)
                 errors.Add($"{path}.box wMm/hMm must be > 0.");
 
+            if (!string.IsNullOrWhiteSpace(el.Band)
+                && !HprpDesignerBands.All.Contains(el.Band.Trim()))
+            {
+                errors.Add($"{path}.band must be super-header, header, content, footer, or super-footer.");
+            }
+
             HprpChrome.Validate(el.Chrome, path + ".chrome", errors);
 
             if (string.Equals(type, Hprp.Table.HprpDesignerElementTypes.ConfigTable, StringComparison.OrdinalIgnoreCase))

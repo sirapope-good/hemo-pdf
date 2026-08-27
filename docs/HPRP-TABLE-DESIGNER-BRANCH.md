@@ -30,6 +30,23 @@ Opening `clinical-01-hct-epo` loads `layoutMode: designer` with:
 
 Studio reflow and PDF (`HprpDesignerFlow.Reflow`) share the same rules.
 
+## Canvas tools
+
+- **Undo / Redo** — toolbar + `Ctrl+Z` / `Ctrl+Y`
+- **Pan** — hold **Space** + drag
+- **Zoom** — mouse wheel (or ± / Fit)
+
+## Multi-page + bands
+
+When **content** exceeds the content band height, Studio shows page 2+ automatically (orange outline) and PDF emits matching pages. Assign each block a **band** in the inspector:
+
+| Band | Behavior |
+|--|--|
+| `super-header` | Top chrome (e.g. report name), repeats |
+| `header` | Header chrome, repeats (default for `type: header`) |
+| `content` | Flows; may create extra pages |
+| `footer` / `super-footer` | Bottom chrome, repeats (e.g. page of) |
+
 ## Assets
 
 - Table presets: `assets/templates/presets/tables/hct-epo-annual-v1.json`, `copay-nhso-v1.json`, `copay-sso-v1.json`

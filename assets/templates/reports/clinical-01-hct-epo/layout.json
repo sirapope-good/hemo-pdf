@@ -11,6 +11,7 @@
     {
       "id": "hdr",
       "type": "header",
+      "band": "header",
       "preset": "thaiur-header-v1",
       "place": "below",
       "box": { "xMm": 0, "yMm": 0, "wMm": 206, "hMm": 27 }
@@ -18,6 +19,7 @@
     {
       "id": "annual",
       "type": "config-table",
+      "band": "content",
       "presetId": "hct-epo-annual-v1",
       "place": "below",
       "box": { "xMm": 0, "yMm": 29, "wMm": 206, "hMm": 228 },
@@ -37,6 +39,7 @@
     {
       "id": "copay-banner",
       "type": "box-text",
+      "band": "content",
       "place": "below",
       "box": { "xMm": 0, "yMm": 259, "wMm": 206, "hMm": 5 },
       "text": "ปริมาณยาที่มีสิทธิได้รับโดยไม่ต้องร่วมจ่าย",
@@ -51,6 +54,7 @@
     {
       "id": "copay-nhso",
       "type": "config-table",
+      "band": "content",
       "presetId": "copay-nhso-v1",
       "place": "below",
       "manualWidth": true,
@@ -60,6 +64,7 @@
     {
       "id": "copay-sso",
       "type": "config-table",
+      "band": "content",
       "presetId": "copay-sso-v1",
       "place": "beside",
       "manualWidth": true,

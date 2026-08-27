@@ -53,6 +53,16 @@
         <div class="subpane page-canvas-pane designer-canvas-pane">
           <div class="subhead">Page canvas (WYSIWYG)</div>
           <div class="designer-canvas-toolbar-host">
+            <div class="canvas-tools" role="toolbar" aria-label="Canvas tools">
+              <button id="btnCanvasUndo" type="button" title="Undo (Ctrl+Z)" disabled>↶</button>
+              <button id="btnCanvasRedo" type="button" title="Redo (Ctrl+Y)" disabled>↷</button>
+              <span class="canvas-tools-sep"></span>
+              <button id="btnCanvasZoomOut" type="button" title="Zoom out">−</button>
+              <span id="canvasZoomLabel" class="canvas-zoom-label">100%</span>
+              <button id="btnCanvasZoomIn" type="button" title="Zoom in">+</button>
+              <button id="btnCanvasZoomFit" type="button" title="Zoom 100%">Fit</button>
+              <span class="canvas-tools-hint muted">Space+drag = pan · scroll = zoom</span>
+            </div>
             <label class="preview-opt">Sample
               <select id="designerSampleScenario" title="Mock payload scenario">
                 <option value="">default</option>
@@ -62,7 +72,8 @@
             <button id="btnAddBoxText" type="button" title="Add box text banner">+ Box text</button>
             <button id="btnDesignerDownloadPdf" type="button" disabled title="QuestPDF verify">Download PDF</button>
           </div>
-          <div id="designerCanvas" class="page-canvas-scroll" aria-label="Designer WYSIWYG canvas"></div>
+          <div id="designerOverflowBanner" class="designer-overflow-banner hidden" role="status"></div>
+          <div id="designerCanvas" class="page-canvas-scroll" tabindex="0" aria-label="Designer WYSIWYG canvas"></div>
         </div>
       </div>
       <!-- Legacy DOM hooks kept hidden so studio.js does not throw; not shown in Canvas mode -->
@@ -114,6 +125,7 @@
   <script src="/hprp-studio/vendor/jszip.min.js"></script>
   <script src="/hprp-studio/table-layout-engine.js"></script>
   <script src="/hprp-studio/header-layout-engine.js"></script>
+  <script src="/hprp-studio/designer-canvas-tools.js"></script>
   <script src="/hprp-studio/designer-studio.js"></script>
   <script src="/hprp-studio/studio.js"></script>
 </body>

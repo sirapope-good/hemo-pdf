@@ -87,4 +87,48 @@ public class HprpDesignerSpacingTests
         Assert.Equal(5, resolved.SpacingBesideMm);
         Assert.Equal(1, resolved.SpacingMm);
     }
+
+    [Fact]
+    public void Reflow_TallContent_CreatesSecondPage_WithRepeatingHeader()
+    {
+        var els = new List<HprpDesignerElement>
+        {
+            new()
+            {
+                Id = "hdr",
+                Type = HprpDesignerElementTypes.Header,
+                Band = HprpDesignerBands.Header,
+                Box = new HprpDesignerBox { WMm = 200, HMm = 20 },
+            },
+            new()
+            {
+                Id = "a",
+                Type = HprpDesignerElementTypes.BoxText,
+                Band = HprpDesignerBands.Content,
+                Box = new HprpDesignerBox { WMm = 200, HMm = 200 },
+            },
+            new()
+            {
+                Id = "b",
+                Type = HprpDesignerElementTypes.BoxText,
+                Band = HprpDesignerBands.Content,
+                Box = new HprpDesignerBox { WMm = 200, HMm = 200 },
+            },
+        };
+
+        var flow = HprpDesignerFlow.ReflowDetailed(
+            new HprpPage { SpacingMm = 2 },
+            els,
+            contentWidthMm: 206,
+            pageHeightMm: 297,
+            marginTopMm: 2,
+            marginBottomMm: 2);
+
+        Assert.True(flow.PageCount >= 2);
+        Assert.Equal(20, flow.HeaderHeightMm);
+        Assert.Contains(flow.Pages[0].Elements, e => e.Id == "hdr");
+        Assert.Contains(flow.Pages[1].Elements, e => e.Id == "hdr");
+        Assert.Contains(flow.Pages[0].Elements, e => e.Id == "a");
+        Assert.Contains(flow.Pages[1].Elements, e => e.Id == "b");
+    }
 }

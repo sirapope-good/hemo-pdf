@@ -1,10 +1,7 @@
 using System.Text.Json;
-using Hemo.Pdf.Core.Constants;
-using Hemo.Pdf.Core.Context;
 using Hemo.Pdf.Core.Hprp;
 using Hemo.Pdf.Core.Hprp.Header;
 using Hemo.Pdf.Core.Hprp.Table;
-using Hemo.Pdf.Core.Models;
 using Hemo.Pdf.Core.Models.Clinical;
 using Hemo.Pdf.Core.Models.Hemosheet;
 
@@ -19,6 +16,9 @@ public sealed class DesignerCanvasViewModel
     /// <summary><c>none</c> / <c>thin</c> — page frame for PDF (optional).</summary>
     public string? PageBorder { get; init; }
     public IReadOnlyList<HprpDesignerElement> Elements { get; init; } = [];
+    public IReadOnlyList<HprpDesignerPageSlice> Pages { get; init; } = [];
+    public int PageCount { get; init; } = 1;
+    public float ContentFlowHeightMm { get; init; }
     public JsonElement? Data { get; init; }
     public IReadOnlyDictionary<string, string> Labels { get; init; } =
         new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
@@ -43,11 +43,15 @@ public sealed class DesignerCanvasViewModel
         const float a4W = 210f;
         const float a4H = 297f;
         var pageW = landscape ? a4H : a4W;
+        var pageH = landscape ? a4W : a4H;
         var contentW = Math.Max(10f, pageW - page.Left - page.Right);
-        var elements = HprpDesignerFlow.Reflow(
+        var flow = HprpDesignerFlow.ReflowDetailed(
             package.Layout.Page,
             package.Layout.Elements,
             contentW,
+            pageH,
+            page.Top,
+            page.Bottom,
             page.Left,
             fallbackSpacingMm: 2f);
 
@@ -57,7 +61,10 @@ public sealed class DesignerCanvasViewModel
             Landscape = landscape,
             Page = page,
             PageBorder = package.Layout.Page.Border,
-            Elements = elements,
+            Elements = flow.FlatElements,
+            Pages = flow.Pages,
+            PageCount = flow.PageCount,
+            ContentFlowHeightMm = flow.ContentFlowHeightMm,
             Data = data,
             Labels = labels ?? package.GetLabels(package.Manifest.Language),
             Presets = presets ?? new Dictionary<string, HprpTablePreset>(StringComparer.OrdinalIgnoreCase),
