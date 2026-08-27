@@ -1,7 +1,9 @@
 using Hemo.Pdf.Core.Abstractions;
 using Hemo.Pdf.Core.Context;
 using Hemo.Pdf.Core.Hprp;
+using Hemo.Pdf.Core.Models;
 using Hemo.Pdf.Core.Models.Clinical;
+using Hemo.Pdf.Layouts.Absolute;
 using Hemo.Pdf.Layouts.Hprp;
 using Hemo.Pdf.Rendering;
 using Hemo.Pdf.Sections.ThaiUr;
@@ -41,6 +43,17 @@ public sealed class Clinical01HctEpoComposer : ILayoutComposer
     {
         var vm = (HctEpoReportViewModel)dataModel;
         var package = HprpLayoutPlan.TryGetPackage(_templates, context);
+
+        // Absolute clinical-01 packs reuse the same dense section composers via mm placement.
+        if (package is not null && HprpLayoutModes.IsAbsolute(package.Manifest))
+        {
+            var absolute = AbsoluteCanvasViewModel.FromPackage(
+                package,
+                vm,
+                HprpLabelResolver.Resolve(_templates, context));
+            return AbsoluteCanvasComposer.Compose(absolute, context);
+        }
+
         var page = HprpPageLayout.FromPackage(
             package,
             HprpPageFallback.Uniform(HemosheetThaiUrStyle.PageMarginMm, SectionSpacingMm));

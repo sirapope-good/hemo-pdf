@@ -61,6 +61,13 @@ public sealed class HprpWidgetRecipe
     [JsonPropertyName("labelKeys")]
     public IReadOnlyList<string> LabelKeys { get; init; } = [];
 
+    /// <summary>
+    /// When true, Studio absolute palette can place this dense widget as
+    /// <c>type: dense</c> + <c>widget</c> id (mm box; pixels stay in C#).
+    /// </summary>
+    [JsonPropertyName("absoluteCapable")]
+    public bool AbsoluteCapable { get; init; }
+
     public bool AllowsBind(string? bind)
     {
         if (string.IsNullOrWhiteSpace(bind))
@@ -111,6 +118,7 @@ public static class HprpWidgetRecipes
             Kind = HprpWidgetRecipe.KindDense,
             Slot = HprpWidgetRecipe.SlotBody,
             AllowedOn = [ClinicalReportCatalog.HctEpo],
+            AbsoluteCapable = true,
             BindFields = binds,
             DefaultColumnPlan =
             [
@@ -137,6 +145,7 @@ public static class HprpWidgetRecipes
         Kind = HprpWidgetRecipe.KindDense,
         Slot = HprpWidgetRecipe.SlotBody,
         AllowedOn = [ClinicalReportCatalog.HctEpo, ClinicalReportCatalog.EpoDrug],
+        AbsoluteCapable = true,
         ChromeDefaults = new HprpChrome
         {
             HeaderFill = HprpChrome.BrandingHeaderFill,
@@ -185,6 +194,7 @@ public static class HprpWidgetRecipes
                 Id = HprpWidgetIds.ThaiUrHeader,
                 Kind = HprpWidgetRecipe.KindDense,
                 Slot = HprpWidgetRecipe.SlotBody,
+                AbsoluteCapable = true,
                 AllowedOn =
                 [
                     ClinicalReportCatalog.HctEpo,

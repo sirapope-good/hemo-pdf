@@ -111,11 +111,6 @@ public static class HprpValidator
             ValidateSection(layout.Sections[i], $"sections[{i}]", errors);
     }
 
-    private static readonly HashSet<string> AbsoluteWidgetTypes = new(StringComparer.OrdinalIgnoreCase)
-    {
-        "text", "frame", "table",
-    };
-
     private static void ValidateAbsoluteLayout(HprpLayout layout, List<string> errors)
     {
         if (layout.Widgets.Count == 0)
@@ -127,14 +122,59 @@ public static class HprpValidator
             var path = $"layout.widgets[{i}]";
             if (string.IsNullOrWhiteSpace(w.Id))
                 errors.Add($"{path}.id is required.");
-            if (string.IsNullOrWhiteSpace(w.Type) || !AbsoluteWidgetTypes.Contains(w.Type))
-                errors.Add($"{path}.type must be one of: text, frame, table.");
+
+            ValidateAbsoluteWidgetType(w, path, errors);
+            HprpChrome.Validate(w.Chrome, path + ".chrome", errors);
+            ValidateAbsoluteColumnPlan(w, path, errors);
+
             if (w.WMm <= 0 || w.HMm <= 0)
                 errors.Add($"{path} wMm/hMm must be > 0.");
             if (w.XMm < 0 || w.YMm < 0 || w.XMm > 400 || w.YMm > 400)
                 errors.Add($"{path} xMm/yMm out of range.");
             if (w.WMm > 400 || w.HMm > 400)
                 errors.Add($"{path} wMm/hMm out of range.");
+        }
+    }
+
+    private static void ValidateAbsoluteWidgetType(HprpAbsoluteWidget w, string path, List<string> errors)
+    {
+        var type = w.Type?.Trim() ?? "";
+        if (HprpAbsoluteWidget.PrimitiveTypes.Contains(type))
+            return;
+
+        if (string.Equals(type, HprpAbsoluteWidget.TypeDense, StringComparison.OrdinalIgnoreCase))
+        {
+            if (string.IsNullOrWhiteSpace(w.Widget) || !HprpWidgetIds.All.Contains(w.Widget))
+                errors.Add($"{path}.widget must be a known dense widget id when type is dense.");
+            return;
+        }
+
+        // Compact form: type = known dense widget id (optional .widget mirror).
+        if (HprpWidgetIds.All.Contains(type))
+        {
+            if (!string.IsNullOrWhiteSpace(w.Widget)
+                && !string.Equals(w.Widget, type, StringComparison.OrdinalIgnoreCase))
+            {
+                errors.Add($"{path}.widget must match type when type is a dense widget id.");
+            }
+
+            return;
+        }
+
+        errors.Add($"{path}.type must be text, frame, table, dense, or a known widget id.");
+    }
+
+    private static void ValidateAbsoluteColumnPlan(HprpAbsoluteWidget w, string path, List<string> errors)
+    {
+        if (w.ColumnPlan is null || w.ColumnPlan.Count == 0)
+            return;
+
+        for (var i = 0; i < w.ColumnPlan.Count; i++)
+        {
+            var item = w.ColumnPlan[i];
+            var itemPath = $"{path}.columnPlan[{i}]";
+            if (string.IsNullOrWhiteSpace(item.Bind))
+                errors.Add($"{itemPath}.bind is required.");
         }
     }
 

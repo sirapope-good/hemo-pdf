@@ -1,0 +1,25 @@
+{
+  "id": "experimental-absolute-clinical-01",
+  "version": "0.1.0",
+  "displayName": "Absolute clinical-01 Hct/EPO (experimental)",
+  "engineVersion": 1,
+  "layoutMode": "absolute",
+  "dataAdapter": "clinical-01-hct-epo",
+  "requiresSignature": false,
+  "language": "th",
+  "ui": {
+    "profileLabel": "Experimental",
+    "entryMode": "patientYear",
+    "menuGroup": "experimental",
+    "sortOrder": 901,
+    "visibleInMenu": false,
+    "parameters": [
+      {
+        "name": "year",
+        "source": "route",
+        "routeKey": "period",
+        "required": true
+      }
+    ]
+  }
+}

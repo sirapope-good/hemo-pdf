@@ -11,13 +11,27 @@ public sealed class AbsoluteCanvasViewModel
     public HprpResolvedPage Page { get; init; }
     public IReadOnlyList<HprpAbsoluteWidget> Widgets { get; init; } = [];
 
-    public static AbsoluteCanvasViewModel FromPackage(HprpPackage package)
+    /// <summary>
+    /// Bound report DTO for dense widgets (e.g. <c>HctEpoReportViewModel</c> when
+    /// <c>dataAdapter</c> is clinical-01). Primitive text/frame/table ignore this.
+    /// </summary>
+    public object? BoundModel { get; init; }
+
+    public IReadOnlyDictionary<string, string> Labels { get; init; } =
+        new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+
+    public static AbsoluteCanvasViewModel FromPackage(
+        HprpPackage package,
+        object? boundModel = null,
+        IReadOnlyDictionary<string, string>? labels = null)
     {
         var page = HprpPageLayout.FromPackage(package, HprpPageFallback.Uniform(8f, 0f));
         var landscape = string.Equals(
             package.Layout.Page.Orientation,
             "landscape",
             StringComparison.OrdinalIgnoreCase);
+
+        var resolvedLabels = labels ?? package.GetLabels(package.Manifest.Language);
 
         return new AbsoluteCanvasViewModel
         {
@@ -28,6 +42,8 @@ public sealed class AbsoluteCanvasViewModel
                 .OrderBy(w => w.ZIndex)
                 .ThenBy(w => w.Id, StringComparer.Ordinal)
                 .ToList(),
+            BoundModel = boundModel,
+            Labels = resolvedLabels,
         };
     }
 

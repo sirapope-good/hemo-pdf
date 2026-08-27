@@ -55,9 +55,10 @@
     document.body.classList.toggle("mode-composition", !isAbsoluteMode() && state.mode === "designer");
   }
 
-  function createWidget(type) {
+  function createWidget(type, options) {
     ensureWidgets();
     const id = "w_" + Math.random().toString(36).slice(2, 9);
+    const opts = options || {};
     const base = {
       id,
       type,
@@ -88,12 +89,36 @@
         headers: ["A", "B", "C"],
         rows: [["1", "2", "3"], ["4", "5", "6"]],
       };
+    } else if (type === "dense" && opts.widget) {
+      base.widget = opts.widget;
+      base.wMm = opts.wMm || 190;
+      base.hMm = opts.hMm || 40;
+      base.style = { backgroundColor: "transparent", borderWidth: 0 };
+      if (opts.chrome) base.chrome = opts.chrome;
     }
     widgets().push(base);
     selectedId = id;
     renderAbsoluteDesigner();
     schedulePreview();
   }
+
+  const CLINICAL_01_DENSE = [
+    { widget: "thaiur.header", label: "ThaiUR header", wMm: 206, hMm: 27 },
+    {
+      widget: "clinical.hct-epo-annual-table",
+      label: "Hct/EPO annual table",
+      wMm: 206,
+      hMm: 180,
+      chrome: { headerFill: "$branding.sectionHeaderBackground", border: "thin" },
+    },
+    {
+      widget: "clinical.hct-epo-copay",
+      label: "Hct/EPO co-pay",
+      wMm: 206,
+      hMm: 34,
+      chrome: { headerFill: "$branding.sectionHeaderBackground", border: "thin" },
+    },
+  ];
 
   function renderAbsolutePalette() {
     const host = document.getElementById("absolutePalette");
@@ -108,6 +133,24 @@
       btn.type = "button";
       btn.innerHTML = `<strong>${label}</strong><span class="pid">${type}</span>`;
       btn.addEventListener("click", () => createWidget(type));
+      host.appendChild(btn);
+    });
+
+    const denseGroup = document.createElement("div");
+    denseGroup.className = "group";
+    denseGroup.textContent = "Clinical-01 dense (reusable)";
+    host.appendChild(denseGroup);
+    CLINICAL_01_DENSE.forEach((item) => {
+      const btn = document.createElement("button");
+      btn.type = "button";
+      btn.innerHTML = `<strong>${item.label}</strong><span class="pid">${item.widget}</span>`;
+      btn.addEventListener("click", () =>
+        createWidget("dense", {
+          widget: item.widget,
+          wMm: item.wMm,
+          hMm: item.hMm,
+          chrome: item.chrome,
+        }));
       host.appendChild(btn);
     });
   }
@@ -136,7 +179,7 @@
       el.style.width = (w.wMm * scale) + "px";
       el.style.height = (w.hMm * scale) + "px";
       el.style.zIndex = String(w.zIndex || 1);
-      el.innerHTML = `<div class="abs-widget-title">${w.type}</div><div class="abs-widget-meta">${w.xMm},${w.yMm} · ${w.wMm}×${w.hMm} mm</div>`;
+      el.innerHTML = `<div class="abs-widget-title">${w.type === "dense" ? (w.widget || "dense") : w.type}</div><div class="abs-widget-meta">${w.xMm},${w.yMm} · ${w.wMm}×${w.hMm} mm</div>`;
       const handle = document.createElement("div");
       handle.className = "abs-resize";
       el.appendChild(handle);
@@ -187,12 +230,14 @@
       return;
     }
     const head = document.createElement("p");
-    head.innerHTML = `<strong>${w.type}</strong> <span class="muted">${w.id}</span>`;
+    head.innerHTML = `<strong>${w.type === "dense" ? (w.widget || "dense") : w.type}</strong> <span class="muted">${w.id}</span>`;
     insp.appendChild(head);
 
     const note = document.createElement("p");
     note.className = "inspector-dense-note";
-    note.textContent = "พิกัด mm ส่งตรงเข้า QuestPDF Layers — Preview/Download คือ PDF จริงของโหมด absolute";
+    note.textContent = w.type === "dense"
+      ? "Dense C# widget ในกล่อง mm — ปรับขนาดกล่องได้; ภายในยังเป็น section composer เดิม (chrome/columnPlan override ได้ใน JSON)"
+      : "พิกัด mm ส่งตรงเข้า QuestPDF Layers — Preview/Download คือ PDF จริงของโหมด absolute";
     insp.appendChild(note);
 
     function numField(label, value, apply) {

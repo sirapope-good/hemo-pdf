@@ -12,7 +12,7 @@ namespace Hemo.Pdf.Layouts.Absolute;
 
 /// <summary>
 /// Experimental freeform composer: widgets at absolute mm via QuestPDF Layers.
-/// Composition path is untouched.
+/// Composition path is untouched. Dense widgets reuse clinical section composers.
 /// </summary>
 public static class AbsoluteCanvasComposer
 {
@@ -60,13 +60,31 @@ public static class AbsoluteCanvasComposer
                     .Height(h, Unit.Millimetre)
                     .TranslateX(x, Unit.Millimetre)
                     .TranslateY(y, Unit.Millimetre)
-                    .Element(box => DrawWidget(box, widget));
+                    .Element(box => DrawWidget(box, widget, vm));
             }
         });
     }
 
-    private static void DrawWidget(IContainer container, HprpAbsoluteWidget widget)
+    private static void DrawWidget(IContainer container, HprpAbsoluteWidget widget, AbsoluteCanvasViewModel canvas)
     {
+        if (widget.IsDense || widget.ResolveDenseWidgetId() is not null)
+        {
+            // Dense sections own borders/padding — do not wrap in absolute chrome.
+            if (AbsoluteDenseWidgetHost.TryCompose(container, widget, canvas))
+                return;
+
+            container.Border(0.4f)
+                .BorderColor(Colors.Red.Medium)
+                .Padding(2)
+                .AlignMiddle()
+                .AlignCenter()
+                .Text($"Unknown dense widget: {widget.ResolveDenseWidgetId()}")
+                .FontSize(8)
+                .FontColor(Colors.Red.Medium)
+                .FontFamily(PdfStyleDefaults.Fonts.PrimaryFamily);
+            return;
+        }
+
         var boxed = ApplyChrome(container, widget.Style);
         var type = widget.Type?.Trim().ToLowerInvariant() ?? "text";
 

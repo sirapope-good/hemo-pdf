@@ -49,9 +49,11 @@ Spike path (QuestPDF freeform mm) — **does not replace** composition packs.
 | Layout | `body` / `sections` | `widgets[]` with `xMm` `yMm` `wMm` `hMm` |
 | Studio | tree + Page canvas (reorder) | Absolute canvas drag/resize in mm |
 | PDF | existing composers | `AbsoluteCanvasComposer` (QuestPDF Layers) |
-| Sample | clinical-* packs | `experimental-absolute-demo` |
+| Sample | clinical-* packs | `experimental-absolute-demo`, `experimental-absolute-clinical-01` |
 
 Composition clinical packs remain the production path. Absolute is for exploring a true page designer; delete the branch / ignore the demo package if the spike is abandoned.
+
+**Dense widgets on absolute canvas (clinical-01 first):** use `type: "dense"` + `widget: "thaiur.header" | "clinical.hct-epo-annual-table" | "clinical.hct-epo-copay"`. Optional `chrome` / `columnPlan` match composition layout nodes. Annual table row height is budgeted from the placed `hMm` box so the same widget scales across layouts. Set `dataAdapter: "clinical-01-hct-epo"` (or place any clinical-01 dense widget) so preview binds real Hct/EPO sample data.
 
 ### Visual Designer (MVP)
 
