@@ -650,7 +650,6 @@
           if (e.target.closest(".resize-handle") || e.target.closest(".col-resize") || e.target.closest(".el-toolbar"))
             return;
           if (e.button !== 0) return;
-          if (host.classList.contains("is-panning")) return;
           e.preventDefault();
           e.stopPropagation();
           selectedElementId = el.id;
@@ -909,6 +908,7 @@
   }
 
   function startColumnResize(e, el, working, headerIndex, headerWeights, isGrouped, monthW, dayW, table, handle, root) {
+    if (canvasTools) canvasTools.pushHistory();
     const startX = e.clientX;
     const leftW = headerWeights[headerIndex];
     const rightW = headerWeights[headerIndex + 1];
@@ -1086,6 +1086,7 @@
   }
 
   function startHeaderBandResize(e, el, working, index, fracs, wMm) {
+    if (canvasTools) canvasTools.pushHistory();
     const startX = e.clientX;
     const leftF = fracs[index];
     const rightF = fracs[index + 1];
@@ -1359,6 +1360,7 @@
     borderCb.type = "checkbox";
     borderCb.checked = borderOn(el.chrome);
     borderCb.addEventListener("change", () => {
+      if (canvasTools) canvasTools.pushHistory();
       el.chrome = el.chrome || {};
       el.chrome.border = borderCb.checked ? "thin" : "none";
       renderAll();
@@ -1371,6 +1373,7 @@
     fitBtn.type = "button";
     fitBtn.textContent = "กว้างพอดีขอบ (auto width)";
     fitBtn.addEventListener("click", () => {
+      if (canvasTools) canvasTools.pushHistory();
       el.manualWidth = false;
       reflowElements();
       renderAll();
@@ -1465,6 +1468,7 @@
       alignSel.appendChild(o);
     });
     alignSel.addEventListener("change", () => {
+      if (canvasTools) canvasTools.pushHistory();
       el.align = alignSel.value;
       renderAll();
     });
@@ -1484,6 +1488,7 @@
     textIn.type = "text";
     textIn.value = el.text || "";
     textIn.addEventListener("change", () => {
+      if (canvasTools) canvasTools.pushHistory();
       el.text = textIn.value;
       renderAll();
     });
@@ -1497,6 +1502,7 @@
     bindIn.value = el.bind || "";
     bindIn.placeholder = "$.coPayCriteria.title";
     bindIn.addEventListener("change", () => {
+      if (canvasTools) canvasTools.pushHistory();
       el.bind = bindIn.value.trim() || undefined;
       renderAll();
     });
@@ -1514,6 +1520,7 @@
       alignSel.appendChild(o);
     });
     alignSel.addEventListener("change", () => {
+      if (canvasTools) canvasTools.pushHistory();
       el.align = alignSel.value;
       renderAll();
     });
@@ -1527,6 +1534,7 @@
     fsIn.step = "0.5";
     fsIn.value = String((el.chrome && el.chrome.fontSize) || 7.5);
     fsIn.addEventListener("change", () => {
+      if (canvasTools) canvasTools.pushHistory();
       el.chrome = el.chrome || {};
       el.chrome.fontSize = Number(fsIn.value) || 7.5;
       renderAll();
@@ -1872,6 +1880,7 @@
       modeSel.appendChild(o);
     });
     modeSel.addEventListener("change", () => {
+      if (canvasTools) canvasTools.pushHistory();
       page.spacingMode = modeSel.value;
       reflowElements();
       renderAll();
@@ -1900,6 +1909,7 @@
       sharedIn.step = "0.5";
       sharedIn.value = String(page.spacingMm != null ? page.spacingMm : 2);
       sharedIn.addEventListener("change", () => {
+        if (canvasTools) canvasTools.pushHistory();
         page.spacingMm = Number(sharedIn.value);
         reflowElements();
         renderAll();
@@ -1916,6 +1926,7 @@
       belowIn.placeholder = "ใช้ spacingMm";
       belowIn.value = page.spacingBelowMm != null ? String(page.spacingBelowMm) : "";
       belowIn.addEventListener("change", () => {
+        if (canvasTools) canvasTools.pushHistory();
         if (belowIn.value === "") delete page.spacingBelowMm;
         else page.spacingBelowMm = Number(belowIn.value);
         reflowElements();
@@ -1933,6 +1944,7 @@
       besideIn.placeholder = "ใช้ spacingMm";
       besideIn.value = page.spacingBesideMm != null ? String(page.spacingBesideMm) : "";
       besideIn.addEventListener("change", () => {
+        if (canvasTools) canvasTools.pushHistory();
         if (besideIn.value === "") delete page.spacingBesideMm;
         else page.spacingBesideMm = Number(besideIn.value);
         reflowElements();
@@ -1948,6 +1960,7 @@
     borderCb.type = "checkbox";
     borderCb.checked = String(page.border || "none").toLowerCase() === "thin";
     borderCb.addEventListener("change", () => {
+      if (canvasTools) canvasTools.pushHistory();
       page.border = borderCb.checked ? "thin" : "none";
       renderAll();
     });
@@ -1966,6 +1979,7 @@
       os.appendChild(o);
     });
     os.addEventListener("change", () => {
+      if (canvasTools) canvasTools.pushHistory();
       page.orientation = os.value;
       reflowElements();
       renderAll();
@@ -2257,9 +2271,15 @@
         },
         applySnapshot: (snap) => {
           ensureElements();
-          if (snap.page) stateRef.draft.layout.page = snap.page;
-          if (snap.elements) stateRef.draft.layout.elements = snap.elements;
+          // Fresh deep clone — never share refs with history stack strings' parse trees across edits.
+          const page = snap.page ? JSON.parse(JSON.stringify(snap.page)) : stateRef.draft.layout.page;
+          const elements = Array.isArray(snap.elements)
+            ? JSON.parse(JSON.stringify(snap.elements))
+            : stateRef.draft.layout.elements;
+          stateRef.draft.layout.page = page;
+          stateRef.draft.layout.elements = elements;
           selectedElementId = snap.selectedElementId || null;
+          lastFlow = null;
         },
         onViewChanged: () => renderAll(),
       });

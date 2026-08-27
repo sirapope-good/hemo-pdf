@@ -234,16 +234,6 @@ body.mode-designer-layout .designer-only {
   border: none;
 }
 
-.page-canvas-scroll.is-panning,
-.page-canvas-scroll.is-panning * {
-  cursor: grab !important;
-}
-
-.page-canvas-scroll.is-panning:active,
-.page-canvas-scroll.is-panning:active * {
-  cursor: grabbing !important;
-}
-
 .designer-sheet {
   position: relative;
   margin: 0;

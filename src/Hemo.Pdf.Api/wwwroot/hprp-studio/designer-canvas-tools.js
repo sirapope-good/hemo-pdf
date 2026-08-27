@@ -1,10 +1,11 @@
 /**
- * HPRP Studio — canvas viewport tools: undo/redo, space-pan, scroll-zoom.
+ * HPRP Studio — canvas viewport tools: undo/redo, button / Ctrl± zoom.
+ * (No space-pan, no scroll-zoom — scroll pans the host natively.)
  */
 (function (global) {
   const ZOOM_MIN = 0.35;
   const ZOOM_MAX = 2.5;
-  const ZOOM_STEP = 0.08;
+  const ZOOM_STEP = 0.1;
   const HISTORY_MAX = 80;
 
   function createCanvasTools(opts) {
@@ -18,66 +19,117 @@
     let undoStack = [];
     let redoStack = [];
     let applying = false;
-    let spaceHeld = false;
-    let panning = false;
-    let panStart = null;
     let wired = false;
 
     function clampZoom(z) {
       return Math.max(ZOOM_MIN, Math.min(ZOOM_MAX, z));
     }
 
+    function captureJson() {
+      const snap = getSnapshot();
+      if (!snap) return null;
+      return JSON.stringify(snap);
+    }
+
+    function applyJson(json) {
+      applying = true;
+      try {
+        applySnapshot(JSON.parse(json));
+      } finally {
+        applying = false;
+      }
+    }
+
+    function trimUndo() {
+      while (undoStack.length > HISTORY_MAX) undoStack.shift();
+    }
+
+    /**
+     * Call BEFORE a mutating edit. Stores the current canvas state so Undo can return here.
+     */
     function pushHistory() {
       if (applying || !isActive()) return;
       try {
-        const snap = getSnapshot();
-        if (!snap) return;
-        const json = JSON.stringify(snap);
+        const json = captureJson();
+        if (!json) return;
         if (undoStack.length && undoStack[undoStack.length - 1] === json) return;
         undoStack.push(json);
-        if (undoStack.length > HISTORY_MAX) undoStack.shift();
+        trimUndo();
         redoStack = [];
         updateButtons();
       } catch (_) { /* ignore */ }
     }
 
-    function undo() {
-      if (undoStack.length < 2) return;
-      const current = undoStack.pop();
-      redoStack.push(current);
-      const prev = undoStack[undoStack.length - 1];
-      applying = true;
-      try {
-        applySnapshot(JSON.parse(prev));
-      } finally {
-        applying = false;
+    /**
+     * Live state may be ahead of the stack top (edits after last checkpoint).
+     * Sync live onto the stack before stepping undo/redo. Divergent live = new branch → drop redo.
+     */
+    function syncLiveOntoStack() {
+      const live = captureJson();
+      if (!live) return null;
+      if (!undoStack.length || undoStack[undoStack.length - 1] !== live) {
+        undoStack.push(live);
+        trimUndo();
+        redoStack = [];
       }
-      updateButtons();
-      onViewChanged();
+      return live;
+    }
+
+    function undo() {
+      if (applying || !isActive()) return;
+      try {
+        syncLiveOntoStack();
+        if (undoStack.length < 2) {
+          updateButtons();
+          return;
+        }
+        const current = undoStack.pop();
+        redoStack.push(current);
+        applyJson(undoStack[undoStack.length - 1]);
+        updateButtons();
+        onViewChanged();
+      } catch (_) {
+        updateButtons();
+      }
     }
 
     function redo() {
-      if (!redoStack.length) return;
-      const next = redoStack.pop();
-      undoStack.push(next);
-      applying = true;
+      if (applying || !isActive()) return;
       try {
-        applySnapshot(JSON.parse(next));
-      } finally {
-        applying = false;
+        const live = captureJson();
+        // Branched after undo — discard redo future instead of stomping live edits.
+        if (live && undoStack.length && live !== undoStack[undoStack.length - 1]) {
+          undoStack.push(live);
+          trimUndo();
+          redoStack = [];
+          updateButtons();
+          return;
+        }
+        if (!redoStack.length) {
+          updateButtons();
+          return;
+        }
+        const next = redoStack.pop();
+        undoStack.push(next);
+        trimUndo();
+        applyJson(next);
+        updateButtons();
+        onViewChanged();
+      } catch (_) {
+        updateButtons();
       }
-      updateButtons();
-      onViewChanged();
     }
 
     function resetHistory() {
       undoStack = [];
       redoStack = [];
-      pushHistory();
+      applying = false;
+      const json = captureJson();
+      if (json) undoStack.push(json);
       updateButtons();
     }
 
-    function setZoom(z, anchorClient) {
+    function setZoom(z) {
       const host = getHost();
       const prev = viewZoom;
       viewZoom = clampZoom(z);
@@ -86,9 +138,8 @@
         onViewChanged();
         return;
       }
-      const rect = host.getBoundingClientRect();
-      const cx = anchorClient ? anchorClient.x - rect.left : host.clientWidth / 2;
-      const cy = anchorClient ? anchorClient.y - rect.top : host.clientHeight / 2;
+      const cx = host.clientWidth / 2;
+      const cy = host.clientHeight / 2;
       const contentX = (host.scrollLeft + cx) / prev;
       const contentY = (host.scrollTop + cy) / prev;
       onViewChanged();
@@ -97,24 +148,25 @@
       updateButtons();
     }
 
-    function zoomBy(delta, anchor) {
-      setZoom(viewZoom + delta, anchor);
+    function zoomBy(delta) {
+      setZoom(viewZoom + delta);
     }
 
     function updateButtons() {
       const u = document.getElementById("btnCanvasUndo");
       const r = document.getElementById("btnCanvasRedo");
       const z = document.getElementById("canvasZoomLabel");
-      if (u) u.disabled = undoStack.length < 2;
+      try {
+        const live = captureJson();
+        const canUndo =
+          undoStack.length >= 2
+          || (undoStack.length === 1 && live && live !== undoStack[0]);
+        if (u) u.disabled = !canUndo;
+      } catch (_) {
+        if (u) u.disabled = undoStack.length < 2;
+      }
       if (r) r.disabled = redoStack.length === 0;
       if (z) z.textContent = Math.round(viewZoom * 100) + "%";
-    }
-
-    function setSpaceCursor(on) {
-      const host = getHost();
-      if (!host) return;
-      host.classList.toggle("is-panning", !!on);
-      host.style.cursor = on ? (panning ? "grabbing" : "grab") : "";
     }
 
     function onKeyDown(e) {
@@ -123,78 +175,44 @@
       if (tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT" || e.target.isContentEditable)
         return;
 
-      if (e.code === "Space" && !e.repeat) {
-        spaceHeld = true;
-        setSpaceCursor(true);
-        e.preventDefault();
-        return;
-      }
-
       const mod = e.ctrlKey || e.metaKey;
-      if (mod && e.key.toLowerCase() === "z" && !e.shiftKey) {
+      if (!mod) return;
+
+      const key = e.key;
+      const code = e.code;
+
+      if (key.toLowerCase() === "z" && !e.shiftKey) {
         e.preventDefault();
         undo();
         return;
       }
-      if (mod && (e.key.toLowerCase() === "y" || (e.key.toLowerCase() === "z" && e.shiftKey))) {
+      if (key.toLowerCase() === "y" || (key.toLowerCase() === "z" && e.shiftKey)) {
         e.preventDefault();
         redo();
+        return;
       }
-    }
-
-    function onKeyUp(e) {
-      if (e.code === "Space") {
-        spaceHeld = false;
-        panning = false;
-        setSpaceCursor(false);
+      // Ctrl + + / =  and Ctrl + -
+      if (key === "+" || key === "=" || code === "Equal" || code === "NumpadAdd") {
+        e.preventDefault();
+        zoomBy(ZOOM_STEP);
+        return;
       }
-    }
-
-    function onPointerDown(e) {
-      if (!isActive() || !spaceHeld || e.button !== 0) return;
-      const host = getHost();
-      if (!host || !host.contains(e.target)) return;
-      panning = true;
-      panStart = { x: e.clientX, y: e.clientY, sl: host.scrollLeft, st: host.scrollTop };
-      setSpaceCursor(true);
-      e.preventDefault();
-    }
-
-    function onPointerMove(e) {
-      if (!panning || !panStart) return;
-      const host = getHost();
-      if (!host) return;
-      host.scrollLeft = panStart.sl - (e.clientX - panStart.x);
-      host.scrollTop = panStart.st - (e.clientY - panStart.y);
-    }
-
-    function onPointerUp() {
-      if (!panning) return;
-      panning = false;
-      panStart = null;
-      setSpaceCursor(spaceHeld);
-    }
-
-    function onWheel(e) {
-      if (!isActive()) return;
-      const host = getHost();
-      if (!host || !host.contains(e.target)) return;
-      // Scroll wheel zooms (design-tool style); space+drag pans.
-      e.preventDefault();
-      const dir = e.deltaY > 0 ? -ZOOM_STEP : ZOOM_STEP;
-      zoomBy(dir, { x: e.clientX, y: e.clientY });
+      if (key === "-" || code === "Minus" || code === "NumpadSubtract") {
+        e.preventDefault();
+        zoomBy(-ZOOM_STEP);
+        return;
+      }
+      // Ctrl + 0 → 100%
+      if (key === "0" || code === "Digit0" || code === "Numpad0") {
+        e.preventDefault();
+        setZoom(1);
+      }
     }
 
     function wire() {
       if (wired) return;
       wired = true;
       window.addEventListener("keydown", onKeyDown, true);
-      window.addEventListener("keyup", onKeyUp, true);
-      document.addEventListener("pointerdown", onPointerDown, true);
-      document.addEventListener("pointermove", onPointerMove, true);
-      document.addEventListener("pointerup", onPointerUp, true);
-      const host = getHost();
-      if (host) host.addEventListener("wheel", onWheel, { passive: false });
 
       const undoBtn = document.getElementById("btnCanvasUndo");
       const redoBtn = document.getElementById("btnCanvasRedo");
