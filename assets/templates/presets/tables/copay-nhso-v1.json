@@ -1,0 +1,20 @@
+{
+  "id": "copay-nhso-v1",
+  "displayName": "Co-pay NHSO (hardcoded)",
+  "rowMode": "freedom",
+  "freedomRowCount": 3,
+  "slotsPerGroup": 3,
+  "columns": [
+    { "id": "condition", "title": "สปสช", "weight": 1.6, "center": true },
+    { "id": "injections", "title": "จำนวนเข็ม/สัปดาห์", "weight": 1.4, "center": true }
+  ],
+  "staticRows": [
+    ["Hb < 10", "2"],
+    ["Hb 10-11.9", "1"],
+    ["Hb ≥ 12", "0"]
+  ],
+  "chrome": {
+    "headerFill": "$branding.sectionHeaderBackground",
+    "border": "thin"
+  }
+}

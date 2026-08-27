@@ -189,8 +189,10 @@ public static class ConfigurableTableComposer
         {
             foreach (var col in model.Preset.Columns)
             {
-                var label = model.HeaderLabels.ElementAtOrDefault(model.Preset.Columns.ToList().IndexOf(col) + 1)
-                    ?? col.Title ?? col.Id;
+                var idx = model.Preset.Columns.ToList().IndexOf(col);
+                var label = idx >= 0 && idx < model.HeaderLabels.Count
+                    ? model.HeaderLabels[idx]
+                    : col.Title ?? col.Id;
                 row.RelativeItem(Math.Max(0.1f, col.Weight))
                     .Border(bw)
                     .Background(fill)

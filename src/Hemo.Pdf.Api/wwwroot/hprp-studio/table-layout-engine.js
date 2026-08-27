@@ -33,6 +33,7 @@
       freedomRowCount: preset.freedomRowCount || 10,
       dateColumns: date,
       columns: mergeColumns(preset.columns, element && element.columnOverrides),
+      staticRows: preset.staticRows || null,
       chrome: (element && element.chrome) || preset.chrome || {},
     };
   }
@@ -72,10 +73,19 @@
     return labels[key] || fallback || key;
   }
 
-  function budgetSlotHeight(boxHeightMm, rowMode, groupCount, slotsPerGroup) {
+  function freedomRowCount(p) {
+    if (p.staticRows && p.staticRows.length) return p.staticRows.length;
+    return Math.max(1, p.freedomRowCount || 1);
+  }
+
+  function budgetSlotHeight(boxHeightMm, rowMode, groupCount, slotsPerGroup, freeRows) {
     const headerMm = 5;
-    const groups = rowMode === ROW_FREEDOM ? 1 : Math.max(1, groupCount);
     const available = Math.max(0, boxHeightMm - headerMm);
+    if (rowMode === ROW_FREEDOM) {
+      const rows = Math.max(1, freeRows || slotsPerGroup || 1);
+      return Math.max(available / rows, 4);
+    }
+    const groups = Math.max(1, groupCount);
     const perBlock = available / groups;
     return Math.max(perBlock / Math.max(1, slotsPerGroup), 4);
   }
@@ -94,21 +104,35 @@
     const p = resolvePreset(preset, element);
     const bindings = (element && element.bindings) || [];
     const rowMode = (p.rowMode || ROW_ANNUAL).toLowerCase();
-    const slots = Math.max(1, p.slotsPerGroup);
-    const slotHeight = budgetSlotHeight(boxHeightMm, rowMode, p.groupCount, slots);
-    const headerLabels = [
-      label(labels, p.dateColumns.dateHeaderLabelKey || "colDate", "วัน/เดือน/ปี"),
-    ].concat(p.columns.map((c) => label(labels, c.labelKey, c.title || c.id)));
+    const freeRows = freedomRowCount(p);
+    const slots = rowMode === ROW_FREEDOM ? freeRows : Math.max(1, p.slotsPerGroup);
+    const slotHeight = budgetSlotHeight(boxHeightMm, rowMode, p.groupCount, slots, freeRows);
+
+    const headerLabels = rowMode === ROW_FREEDOM
+      ? p.columns.map((c) => label(labels, c.labelKey, c.title || c.id))
+      : [label(labels, p.dateColumns.dateHeaderLabelKey || "colDate", "วัน/เดือน/ปี")]
+          .concat(p.columns.map((c) => label(labels, c.labelKey, c.title || c.id)));
 
     const rows = [];
     if (rowMode === ROW_FREEDOM) {
-      for (let r = 0; r < Math.max(1, p.freedomRowCount); r++) {
-        const cells = p.columns.map((col) => ({
-          text: resolveBinding(bindings, data, r, 0, col.id, CTX_FREEDOM) || " ",
-          historical: false,
-          center: !!col.center,
-        }));
-        rows.push({ kind: "freedom", groupIndex: 0, slotIndex: r, groupLabel: null, cells });
+      if (p.staticRows && p.staticRows.length) {
+        p.staticRows.forEach((src, r) => {
+          const cells = p.columns.map((col, ci) => ({
+            text: (src && src[ci] != null && String(src[ci]) !== "") ? String(src[ci]) : " ",
+            historical: false,
+            center: !!col.center,
+          }));
+          rows.push({ kind: "freedom", groupIndex: 0, slotIndex: r, groupLabel: null, cells });
+        });
+      } else {
+        for (let r = 0; r < freeRows; r++) {
+          const cells = p.columns.map((col) => ({
+            text: resolveBinding(bindings, data, r, 0, col.id, CTX_FREEDOM) || " ",
+            historical: false,
+            center: !!col.center,
+          }));
+          rows.push({ kind: "freedom", groupIndex: 0, slotIndex: r, groupLabel: null, cells });
+        }
       }
     } else {
       const groups = Math.max(1, p.groupCount);
@@ -116,7 +140,7 @@
         const groupLabel =
           resolveBinding(bindings, data, g, 0, "month", CTX_GROUP)
           || (g < THAI_MONTHS.length ? THAI_MONTHS[g] : String(g + 1));
-        for (let s = 0; s < slots; s++) {
+        for (let s = 0; s < Math.max(1, p.slotsPerGroup); s++) {
           const historical = bindings.some((b) => b.context === CTX_LAB && readBool(data, b.path, g, s))
             || readBool(data, "months[].entries[].labIsHistorical", g, s);
           const cells = [{
@@ -146,7 +170,7 @@
       preset: p,
       headerHeightMm: 5,
       slotHeightMm: slotHeight,
-      blockHeightMm: slotHeight * slots,
+      blockHeightMm: slotHeight * (rowMode === ROW_FREEDOM ? freeRows : Math.max(1, p.slotsPerGroup)),
       headerLabels,
       rows,
     };

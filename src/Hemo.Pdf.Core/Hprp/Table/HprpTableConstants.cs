@@ -36,12 +36,14 @@ public static class HprpDesignerElementTypes
 {
     public const string Header = "header";
     public const string ConfigTable = "config-table";
+    public const string BoxText = "box-text";
     public const string Dense = "dense";
 
     public static readonly IReadOnlySet<string> All = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
     {
         Header,
         ConfigTable,
+        BoxText,
         Dense,
     };
 }

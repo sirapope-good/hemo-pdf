@@ -196,7 +196,7 @@ public static class HprpValidator
 
             var type = el.Type?.Trim() ?? "";
             if (!Hprp.Table.HprpDesignerElementTypes.All.Contains(type))
-                errors.Add($"{path}.type must be header, config-table, or dense.");
+                errors.Add($"{path}.type must be header, config-table, box-text, or dense.");
 
             if (el.Box.WMm <= 0 || el.Box.HMm <= 0)
                 errors.Add($"{path}.box wMm/hMm must be > 0.");
@@ -210,6 +210,12 @@ public static class HprpValidator
 
                 ValidateTableBindings(el.Bindings, path, errors);
                 ValidateTableColumnOverrides(el.ColumnOverrides, path, errors);
+            }
+
+            if (string.Equals(type, Hprp.Table.HprpDesignerElementTypes.BoxText, StringComparison.OrdinalIgnoreCase))
+            {
+                if (string.IsNullOrWhiteSpace(el.Text) && string.IsNullOrWhiteSpace(el.Bind))
+                    errors.Add($"{path} text or bind is required for box-text.");
             }
 
             if (string.Equals(type, Hprp.Table.HprpDesignerElementTypes.Dense, StringComparison.OrdinalIgnoreCase)

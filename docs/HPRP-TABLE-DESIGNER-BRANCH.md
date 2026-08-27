@@ -15,11 +15,14 @@ Branch: `feat/hprp-table-designer` (isolated from `main` until merge).
 
 Layout: **Packages | Page canvas (WYSIWYG) | Inspector**
 
-Opening `clinical-01-hct-epo` loads `layoutMode: designer` with config-table **and** config-header (`thaiur-header-v1`). Column +/−, row mode, slots, header band resize, and field mapping update the canvas immediately.
+Opening `clinical-01-hct-epo` loads `layoutMode: designer` with:
+- config-header (`thaiur-header-v1`)
+- config-table annual (`hct-epo-annual-v1`)
+- **box-text** co-pay banner + **two freedom tables** (`copay-nhso-v1`, `copay-sso-v1`, beside) — replaces dense `clinical.hct-epo-copay`
 
 ## Assets
 
-- Table preset: `assets/templates/presets/tables/hct-epo-annual-v1.json`
+- Table presets: `assets/templates/presets/tables/hct-epo-annual-v1.json`, `copay-nhso-v1.json`, `copay-sso-v1.json`
 - Header preset: `assets/templates/presets/headers/thaiur-header-v1.json`
 - Adapter schema: `assets/templates/adapters/clinical-01-hct-epo.schema.json`
 - Sample designer pack (alias): `assets/templates/reports/clinical-01-hct-epo-designer/`

@@ -30,6 +30,13 @@ public sealed class HprpTablePreset
     [JsonPropertyName("columns")]
     public IReadOnlyList<HprpTableColumnDef> Columns { get; init; } = [];
 
+    /// <summary>
+    /// Hardcoded body rows for <c>freedom</c> mode (e.g. co-pay reference tables).
+    /// Each inner list matches <see cref="Columns"/> order. When set, overrides bindings.
+    /// </summary>
+    [JsonPropertyName("staticRows")]
+    public IReadOnlyList<IReadOnlyList<string>>? StaticRows { get; init; }
+
     [JsonPropertyName("chrome")]
     public HprpChrome? Chrome { get; init; }
 }

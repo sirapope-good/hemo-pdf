@@ -51,16 +51,19 @@ public static class HprpTableLayoutEngine
         float boxHeightMm)
     {
         var rowMode = preset.RowMode.Trim().ToLowerInvariant();
-        var slots = Math.Max(1, preset.SlotsPerGroup);
-        var slotHeight = BudgetSlotHeight(boxHeightMm, rowMode, preset.GroupCount, slots);
-        var blockHeight = slotHeight * slots;
+        var freedomRows = ResolveFreedomRowCount(preset);
+        var slots = rowMode == HprpTableRowModes.Freedom
+            ? freedomRows
+            : Math.Max(1, preset.SlotsPerGroup);
+        var slotHeight = BudgetSlotHeight(boxHeightMm, rowMode, preset.GroupCount, slots, freedomRows);
+        var blockHeight = slotHeight * (rowMode == HprpTableRowModes.Freedom ? freedomRows : slots);
 
-        var headerLabels = BuildHeaderLabels(preset, labels);
+        var headerLabels = BuildHeaderLabels(preset, labels, rowMode);
         var rows = rowMode switch
         {
             HprpTableRowModes.Freedom => BuildFreedomRows(preset, bindings, data, labels),
-            HprpTableRowModes.Monthly => BuildGroupedRows(preset, bindings, data, labels, preset.GroupCount, slots),
-            _ => BuildGroupedRows(preset, bindings, data, labels, Math.Max(1, preset.GroupCount), slots),
+            HprpTableRowModes.Monthly => BuildGroupedRows(preset, bindings, data, labels, preset.GroupCount, Math.Max(1, preset.SlotsPerGroup)),
+            _ => BuildGroupedRows(preset, bindings, data, labels, Math.Max(1, preset.GroupCount), Math.Max(1, preset.SlotsPerGroup)),
         };
 
         return new HprpTableLayoutModel
@@ -74,25 +77,43 @@ public static class HprpTableLayoutEngine
         };
     }
 
-    public static float BudgetSlotHeight(float boxHeightMm, string rowMode, int groupCount, int slotsPerGroup)
+    public static float BudgetSlotHeight(
+        float boxHeightMm,
+        string rowMode,
+        int groupCount,
+        int slotsPerGroup,
+        int freedomRowCount = 0)
     {
-        var groups = rowMode == HprpTableRowModes.Freedom
-            ? 1
-            : Math.Max(1, groupCount);
-        // Fill the element box exactly (header + body) so canvas HTML and QuestPDF match.
         var available = Math.Max(0f, boxHeightMm - HeaderBarHeightMm);
+        if (rowMode == HprpTableRowModes.Freedom)
+        {
+            var rows = Math.Max(1, freedomRowCount > 0 ? freedomRowCount : slotsPerGroup);
+            return Math.Max(available / rows, MinSlotHeightMm);
+        }
+
+        var groups = Math.Max(1, groupCount);
         var perBlock = available / groups;
         return Math.Max(perBlock / Math.Max(1, slotsPerGroup), MinSlotHeightMm);
     }
 
+    private static int ResolveFreedomRowCount(ResolvedTablePreset preset)
+    {
+        if (preset.StaticRows is { Count: > 0 })
+            return preset.StaticRows.Count;
+        return Math.Max(1, preset.FreedomRowCount);
+    }
+
     private static IReadOnlyList<string> BuildHeaderLabels(
         ResolvedTablePreset preset,
-        IReadOnlyDictionary<string, string> labels)
+        IReadOnlyDictionary<string, string> labels,
+        string rowMode)
     {
-        var list = new List<string>
+        var list = new List<string>();
+        if (rowMode != HprpTableRowModes.Freedom)
         {
-            HprpLabels.Get(labels, preset.DateColumns.DateHeaderLabelKey ?? "colDate", "วัน/เดือน/ปี"),
-        };
+            list.Add(HprpLabels.Get(labels, preset.DateColumns.DateHeaderLabelKey ?? "colDate", "วัน/เดือน/ปี"));
+        }
+
         foreach (var col in preset.Columns)
         {
             list.Add(HprpLabels.Get(labels, col.LabelKey ?? col.Id, col.Title ?? col.Id));
@@ -109,7 +130,35 @@ public static class HprpTableLayoutEngine
     {
         _ = labels;
         var rows = new List<HprpTableRowModel>();
-        var count = Math.Max(1, preset.FreedomRowCount);
+        if (preset.StaticRows is { Count: > 0 } staticRows)
+        {
+            for (var r = 0; r < staticRows.Count; r++)
+            {
+                var cells = new List<HprpTableCellModel>();
+                var src = staticRows[r];
+                for (var c = 0; c < preset.Columns.Count; c++)
+                {
+                    var text = c < src.Count ? src[c] : " ";
+                    cells.Add(new HprpTableCellModel
+                    {
+                        Text = string.IsNullOrWhiteSpace(text) ? " " : text,
+                        Center = preset.Columns[c].Center,
+                    });
+                }
+
+                rows.Add(new HprpTableRowModel
+                {
+                    Kind = "freedom",
+                    GroupIndex = 0,
+                    SlotIndex = r,
+                    Cells = cells,
+                });
+            }
+
+            return rows;
+        }
+
+        var count = ResolveFreedomRowCount(preset);
         for (var r = 0; r < count; r++)
         {
             rows.Add(new HprpTableRowModel

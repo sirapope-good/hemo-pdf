@@ -140,7 +140,6 @@
 
     const body = layout.body || [];
     const hasAnnual = body.some((n) => n && n.widget === "clinical.hct-epo-annual-table");
-    const hasCopay = body.some((n) => n && n.widget === "clinical.hct-epo-copay");
     const isClinical01 =
       String(manifest.id || "").indexOf("clinical-01-hct-epo") === 0
       || String(manifest.dataAdapter || "") === "clinical-01-hct-epo"
@@ -164,17 +163,35 @@
           bindings: CLINICAL01_ANNUAL_BINDINGS.slice(),
           chrome: { border: "thin", headerFill: "$branding.sectionHeaderBackground" },
         },
-      ];
-      if (hasCopay || isClinical01) {
-        layout.elements.push({
-          id: "copay",
-          type: "dense",
-          widget: "clinical.hct-epo-copay",
+        {
+          id: "copay-banner",
+          type: "box-text",
           place: "below",
-          box: { xMm: 0, yMm: 0, wMm: 206, hMm: 34 },
-          chrome: { headerFill: "$branding.sectionHeaderBackground", border: "thin" },
-        });
-      }
+          box: { xMm: 0, yMm: 0, wMm: 206, hMm: 5 },
+          text: "ปริมาณยาที่มีสิทธิได้รับโดยไม่ต้องร่วมจ่าย",
+          bind: "$.coPayCriteria.title",
+          align: "center",
+          chrome: { headerFill: "$branding.sectionHeaderBackground", border: "thin", fontSize: 7.5 },
+        },
+        {
+          id: "copay-nhso",
+          type: "config-table",
+          presetId: "copay-nhso-v1",
+          place: "below",
+          manualWidth: true,
+          box: { xMm: 0, yMm: 0, wMm: 78, hMm: 27 },
+          chrome: { border: "thin", headerFill: "$branding.sectionHeaderBackground" },
+        },
+        {
+          id: "copay-sso",
+          type: "config-table",
+          presetId: "copay-sso-v1",
+          place: "beside",
+          manualWidth: true,
+          box: { xMm: 0, yMm: 0, wMm: 126, hMm: 27 },
+          chrome: { border: "thin", headerFill: "$branding.sectionHeaderBackground" },
+        },
+      ];
     }
 
     if (layout.elements.length === 0) {
@@ -386,6 +403,8 @@
         } else {
           body.innerHTML = `<div class="ph-dense">config-table</div>`;
         }
+      } else if (el.type === "box-text") {
+        body.appendChild(renderBoxTextHtml(el, sampleData, scale));
       } else if (el.type === "header") {
         const catalogOrInline = resolveHeaderPreset(el);
         if (catalogOrInline && global.HeaderLayoutEngine) {
@@ -1045,8 +1064,96 @@
     if (el.type === "header") {
       renderHeaderInspector(insp, el);
     }
+    if (el.type === "box-text") {
+      renderBoxTextInspector(insp, el);
+    }
 
     renderBoxFields(insp, el);
+  }
+
+  function resolveBoxText(el, data) {
+    if (el.bind && data && global.HeaderLayoutEngine) {
+      const v = global.HeaderLayoutEngine.readAt(data, el.bind);
+      if (v != null && String(v).trim() !== "") return String(v);
+    }
+    return el.text || "";
+  }
+
+  function renderBoxTextHtml(el, data, scale) {
+    const root = document.createElement("div");
+    root.className = "cfg-box-text" + (borderOn(el.chrome) ? "" : " cfg-no-border");
+    const fill = (el.chrome && el.chrome.headerFill) || "#c8b8e8";
+    if (String(fill).indexOf("$") !== 0) root.style.background = fill;
+    else root.style.background = "#c8b8e8";
+    const fs = (el.chrome && el.chrome.fontSize) || 7.5;
+    root.style.fontSize = (fs * (scale / 2.5)).toFixed(1) + "px";
+    root.style.textAlign = el.align || "center";
+    root.style.height = "100%";
+    root.textContent = resolveBoxText(el, data) || "\u00A0";
+    return root;
+  }
+
+  function renderBoxTextInspector(insp, el) {
+    const tip = document.createElement("p");
+    tip.className = "muted";
+    tip.textContent = "Box text — hardcode หรือ bind จาก data";
+    insp.appendChild(tip);
+
+    const textLab = document.createElement("label");
+    textLab.textContent = "text (hardcode)";
+    const textIn = document.createElement("input");
+    textIn.type = "text";
+    textIn.value = el.text || "";
+    textIn.addEventListener("change", () => {
+      el.text = textIn.value;
+      renderAll();
+    });
+    textLab.appendChild(textIn);
+    insp.appendChild(textLab);
+
+    const bindLab = document.createElement("label");
+    bindLab.textContent = "bind (optional)";
+    const bindIn = document.createElement("input");
+    bindIn.type = "text";
+    bindIn.value = el.bind || "";
+    bindIn.placeholder = "$.coPayCriteria.title";
+    bindIn.addEventListener("change", () => {
+      el.bind = bindIn.value.trim() || undefined;
+      renderAll();
+    });
+    bindLab.appendChild(bindIn);
+    insp.appendChild(bindLab);
+
+    const alignLab = document.createElement("label");
+    alignLab.textContent = "align";
+    const alignSel = document.createElement("select");
+    ["left", "center", "right"].forEach((a) => {
+      const o = document.createElement("option");
+      o.value = a;
+      o.textContent = a;
+      if ((el.align || "center") === a) o.selected = true;
+      alignSel.appendChild(o);
+    });
+    alignSel.addEventListener("change", () => {
+      el.align = alignSel.value;
+      renderAll();
+    });
+    alignLab.appendChild(alignSel);
+    insp.appendChild(alignLab);
+
+    const fsLab = document.createElement("label");
+    fsLab.textContent = "fontSize";
+    const fsIn = document.createElement("input");
+    fsIn.type = "number";
+    fsIn.step = "0.5";
+    fsIn.value = String((el.chrome && el.chrome.fontSize) || 7.5);
+    fsIn.addEventListener("change", () => {
+      el.chrome = el.chrome || {};
+      el.chrome.fontSize = Number(fsIn.value) || 7.5;
+      renderAll();
+    });
+    fsLab.appendChild(fsIn);
+    insp.appendChild(fsLab);
   }
 
   function renderHeaderInspector(insp, el) {
@@ -1556,6 +1663,26 @@
     renderAll();
   }
 
+  function addBoxText() {
+    ensureElements();
+    promoteToDesignerIfNeeded();
+    const id = "box_" + Math.random().toString(36).slice(2, 7);
+    stateRef.draft.layout.elements.push({
+      id,
+      type: "box-text",
+      place: "below",
+      box: { xMm: 0, yMm: 0, wMm: 206, hMm: 5 },
+      text: "หัวข้อ",
+      align: "center",
+      chrome: { border: "thin", headerFill: "$branding.sectionHeaderBackground", fontSize: 7.5 },
+    });
+    stateRef.draft.manifest.layoutMode = "designer";
+    selectedElementId = id;
+    stateRef.selectedKey = null;
+    reflowElements();
+    renderAll();
+  }
+
   function syncBodyClass() {
     document.body.classList.toggle("mode-wysiwyg", isStudioCanvas());
     document.body.classList.toggle("mode-designer-layout", isStudioCanvas());
@@ -1621,6 +1748,7 @@
     promoteToDesignerIfNeeded,
     reflowElements,
     addConfigTable,
+    addBoxText,
     deleteElement,
     getSelectedElementId: () => selectedElementId,
   };
@@ -1634,5 +1762,7 @@
 
     const addBtn = document.getElementById("btnAddConfigTable");
     if (addBtn) addBtn.addEventListener("click", () => addConfigTable());
+    const boxBtn = document.getElementById("btnAddBoxText");
+    if (boxBtn) boxBtn.addEventListener("click", () => addBoxText());
   };
 })(window);

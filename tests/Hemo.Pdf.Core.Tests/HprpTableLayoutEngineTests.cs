@@ -139,6 +139,42 @@ public class HprpTableLayoutEngineTests
     }
 
     [Fact]
+    public void FreedomStaticRows_UsesHardcodedCells()
+    {
+        var preset = new HprpTablePreset
+        {
+            Id = "nhso",
+            RowMode = HprpTableRowModes.Freedom,
+            FreedomRowCount = 3,
+            Columns =
+            [
+                new HprpTableColumnDef { Id = "a", Title = "สปสช", Weight = 1.6f, Center = true },
+                new HprpTableColumnDef { Id = "b", Title = "เข็ม", Weight = 1.4f, Center = true },
+            ],
+            StaticRows =
+            [
+                ["Hb < 10", "2"],
+                ["Hb 10-11.9", "1"],
+                ["Hb ≥ 12", "0"],
+            ],
+        };
+        var resolved = HprpTablePresetResolver.Resolve(preset);
+        var model = HprpTableLayoutEngine.Build(
+            resolved,
+            [],
+            new Dictionary<string, string>(),
+            null,
+            22f);
+
+        Assert.Equal(3, model.Rows.Count);
+        Assert.Equal("Hb < 10", model.Rows[0].Cells[0].Text);
+        Assert.Equal("2", model.Rows[0].Cells[1].Text);
+        Assert.Equal(2, model.HeaderLabels.Count);
+        Assert.DoesNotContain(model.HeaderLabels, h => h.Contains("วัน"));
+        Assert.InRange(model.HeaderHeightMm + model.SlotHeightMm * 3, 21.9f, 22.1f);
+    }
+
+    [Fact]
     public void StudioPreviewJson_InlineTablePreset_DeserializesWeights()
     {
         var json = """

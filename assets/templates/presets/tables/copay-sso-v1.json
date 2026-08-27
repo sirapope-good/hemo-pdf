@@ -1,0 +1,22 @@
+{
+  "id": "copay-sso-v1",
+  "displayName": "Co-pay SSO (hardcoded)",
+  "rowMode": "freedom",
+  "freedomRowCount": 3,
+  "slotsPerGroup": 3,
+  "columns": [
+    { "id": "medicine", "title": "ประกันสังคม", "weight": 1.8, "center": false },
+    { "id": "hctLe36", "title": "Hct ≤ 36", "weight": 1.0, "center": true },
+    { "id": "hctGt36", "title": "Hct > 36", "weight": 1.0, "center": true },
+    { "id": "hctGe39", "title": "Hct ≥ 39", "weight": 1.0, "center": true }
+  ],
+  "staticRows": [
+    ["Espogen 4000 U", "3", "2", "0"],
+    ["Hemax 4000 U", "2", "1", "0"],
+    ["", "", "", ""]
+  ],
+  "chrome": {
+    "headerFill": "$branding.sectionHeaderBackground",
+    "border": "thin"
+  }
+}

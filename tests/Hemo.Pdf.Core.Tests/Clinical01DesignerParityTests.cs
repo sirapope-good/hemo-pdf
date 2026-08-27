@@ -34,6 +34,8 @@ public class Clinical01DesignerParityTests
         var store = new FileHprpTemplateStore(options);
         var presetStore = new HprpTablePresetStore(options);
         var presets = new HprpTablePresetCatalog(presetStore);
+        var headerStore = new HprpHeaderPresetStore(options);
+        var headers = new HprpHeaderPresetCatalog(headerStore);
         var pack = new HprpPackService(options, store);
         var package = LoadDesignerPackage(templatesRoot);
 
@@ -43,7 +45,7 @@ public class Clinical01DesignerParityTests
         var sample = HprpStudioSamplePayloads.TryLoad(templatesRoot, "clinical-01-hct-epo-designer");
         Assert.NotNull(sample);
 
-        var renderer = CreateDesignerRenderer(store, presets);
+        var renderer = CreateDesignerRenderer(store, presets, headers);
         var context = new PdfReportContext
         {
             ReportTemplateId = "clinical-01-hct-epo-designer",
@@ -70,6 +72,8 @@ public class Clinical01DesignerParityTests
         var store = new FileHprpTemplateStore(options);
         var presetStore = new HprpTablePresetStore(options);
         var presets = new HprpTablePresetCatalog(presetStore);
+        var headerStore = new HprpHeaderPresetStore(options);
+        var headers = new HprpHeaderPresetCatalog(headerStore);
 
         var sample = HprpStudioSamplePayloads.TryLoad(templatesRoot, ClinicalReportCatalog.HctEpo);
         Assert.NotNull(sample);
@@ -77,7 +81,7 @@ public class Clinical01DesignerParityTests
 
         var compositionRenderer = new Clinical01HctEpoReportRenderer(
             new Clinical01HctEpoDataProvider(),
-            new Clinical01HctEpoComposer(store, presets),
+            new Clinical01HctEpoComposer(store, presets, headers),
             new QuestPdfRenderer());
 
         var compositionBytes = await compositionRenderer.RenderReportAsync(
@@ -90,7 +94,7 @@ public class Clinical01DesignerParityTests
             },
             CancellationToken.None);
 
-        var designerRenderer = CreateDesignerRenderer(store, presets);
+        var designerRenderer = CreateDesignerRenderer(store, presets, headers);
         var designerBytes = await designerRenderer.RenderReportAsync(
             new PdfReportContext
             {
@@ -149,14 +153,15 @@ public class Clinical01DesignerParityTests
 
     private static ClinicalDefaultReportRenderer CreateDesignerRenderer(
         FileHprpTemplateStore store,
-        HprpTablePresetCatalog presets)
+        HprpTablePresetCatalog presets,
+        HprpHeaderPresetCatalog headers)
     {
         var composer = new ClinicalDefaultComposer(
             new FixedSectionResolver<IReportHeaderSection>(new EmptyHeaderSection()),
             new FixedSectionResolver<IReportFooterSection>(new EmptyFooterSection()));
 
         return new ClinicalDefaultReportRenderer(
-            new ClinicalDefaultDataProvider(store, new Clinical01HctEpoDataProvider(), presets),
+            new ClinicalDefaultDataProvider(store, new Clinical01HctEpoDataProvider(), presets, headers),
             composer,
             new QuestPdfRenderer());
     }

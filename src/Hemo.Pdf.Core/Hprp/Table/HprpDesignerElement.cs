@@ -83,4 +83,16 @@ public sealed class HprpDesignerElement
     /// <summary>When true, width is user-resized and reflow will not stretch to full content width.</summary>
     [JsonPropertyName("manualWidth")]
     public bool ManualWidth { get; init; }
+
+    /// <summary>Hardcoded text for <c>box-text</c> (used when <see cref="Bind"/> is empty or unresolved).</summary>
+    [JsonPropertyName("text")]
+    public string? Text { get; init; }
+
+    /// <summary>Optional JSON path for <c>box-text</c> e.g. <c>$.coPayCriteria.title</c>.</summary>
+    [JsonPropertyName("bind")]
+    public string? Bind { get; init; }
+
+    /// <summary><c>left</c> / <c>center</c> / <c>right</c> for <c>box-text</c>.</summary>
+    [JsonPropertyName("align")]
+    public string? Align { get; init; }
 }

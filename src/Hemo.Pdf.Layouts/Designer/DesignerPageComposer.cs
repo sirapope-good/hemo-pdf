@@ -77,6 +77,10 @@ public static class DesignerPageComposer
                 DrawConfigTable(container, element, vm);
                 break;
 
+            case HprpDesignerElementTypes.BoxText:
+                ConfigurableBoxTextComposer.Compose(container, element, vm.Data);
+                break;
+
             case HprpDesignerElementTypes.Dense:
                 DrawDense(container, element, vm);
                 break;

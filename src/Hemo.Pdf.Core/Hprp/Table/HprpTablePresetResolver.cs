@@ -20,6 +20,7 @@ public static class HprpTablePresetResolver
             FreedomRowCount = basePreset.FreedomRowCount,
             DateColumns = basePreset.DateColumns ?? new HprpTableDateColumns(),
             Columns = columns,
+            StaticRows = basePreset.StaticRows,
             Chrome = chrome,
         };
     }
@@ -62,5 +63,6 @@ public sealed class ResolvedTablePreset
     public int FreedomRowCount { get; init; }
     public required HprpTableDateColumns DateColumns { get; init; }
     public required IReadOnlyList<HprpTableColumnDef> Columns { get; init; }
+    public IReadOnlyList<IReadOnlyList<string>>? StaticRows { get; init; }
     public HprpChrome? Chrome { get; init; }
 }

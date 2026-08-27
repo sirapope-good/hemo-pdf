@@ -34,15 +34,36 @@
       ]
     },
     {
-      "id": "copay",
-      "type": "dense",
-      "widget": "clinical.hct-epo-copay",
+      "id": "copay-banner",
+      "type": "box-text",
       "place": "below",
-      "box": { "xMm": 0, "yMm": 259, "wMm": 206, "hMm": 34 },
+      "box": { "xMm": 0, "yMm": 259, "wMm": 206, "hMm": 5 },
+      "text": "ปริมาณยาที่มีสิทธิได้รับโดยไม่ต้องร่วมจ่าย",
+      "bind": "$.coPayCriteria.title",
+      "align": "center",
       "chrome": {
         "headerFill": "$branding.sectionHeaderBackground",
-        "border": "thin"
+        "border": "thin",
+        "fontSize": 7.5
       }
+    },
+    {
+      "id": "copay-nhso",
+      "type": "config-table",
+      "presetId": "copay-nhso-v1",
+      "place": "below",
+      "manualWidth": true,
+      "box": { "xMm": 0, "yMm": 266, "wMm": 78, "hMm": 27 },
+      "chrome": { "border": "thin", "headerFill": "$branding.sectionHeaderBackground" }
+    },
+    {
+      "id": "copay-sso",
+      "type": "config-table",
+      "presetId": "copay-sso-v1",
+      "place": "beside",
+      "manualWidth": true,
+      "box": { "xMm": 80, "yMm": 266, "wMm": 126, "hMm": 27 },
+      "chrome": { "border": "thin", "headerFill": "$branding.sectionHeaderBackground" }
     }
   ]
 }

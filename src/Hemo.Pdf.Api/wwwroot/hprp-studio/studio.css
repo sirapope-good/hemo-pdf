@@ -373,6 +373,26 @@ body.mode-designer-layout .designer-only {
   text-align: center;
 }
 
+.cfg-box-text {
+  width: 100%;
+  height: 100%;
+  box-sizing: border-box;
+  border: 0.5px solid #555;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  padding: 0 4px;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  background: #c8b8e8;
+}
+
+.cfg-box-text.cfg-no-border {
+  border-color: transparent;
+}
+
 .designer-header-placeholder {
   font-size: 9px;
   padding: 4px 6px;
