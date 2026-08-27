@@ -2,6 +2,7 @@ using System.Text.Json;
 using Hemo.Pdf.Core.Constants;
 using Hemo.Pdf.Core.Context;
 using Hemo.Pdf.Core.Hprp;
+using Hemo.Pdf.Core.Hprp.Header;
 using Hemo.Pdf.Core.Hprp.Table;
 using Hemo.Pdf.Core.Models;
 using Hemo.Pdf.Core.Models.Clinical;
@@ -23,12 +24,15 @@ public sealed class DesignerCanvasViewModel
         new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
     public IReadOnlyDictionary<string, HprpTablePreset> Presets { get; init; } =
         new Dictionary<string, HprpTablePreset>(StringComparer.OrdinalIgnoreCase);
+    public IReadOnlyDictionary<string, HprpHeaderPreset> HeaderPresets { get; init; } =
+        new Dictionary<string, HprpHeaderPreset>(StringComparer.OrdinalIgnoreCase);
 
     public static DesignerCanvasViewModel FromPackage(
         HprpPackage package,
         JsonElement? data = null,
         IReadOnlyDictionary<string, string>? labels = null,
-        IReadOnlyDictionary<string, HprpTablePreset>? presets = null)
+        IReadOnlyDictionary<string, HprpTablePreset>? presets = null,
+        IReadOnlyDictionary<string, HprpHeaderPreset>? headerPresets = null)
     {
         var page = HprpPageLayout.FromPackage(package, HprpPageFallback.Uniform(2f, 0f));
         var landscape = string.Equals(
@@ -46,6 +50,8 @@ public sealed class DesignerCanvasViewModel
             Data = data,
             Labels = labels ?? package.GetLabels(package.Manifest.Language),
             Presets = presets ?? new Dictionary<string, HprpTablePreset>(StringComparer.OrdinalIgnoreCase),
+            HeaderPresets = headerPresets
+                ?? new Dictionary<string, HprpHeaderPreset>(StringComparer.OrdinalIgnoreCase),
         };
     }
 

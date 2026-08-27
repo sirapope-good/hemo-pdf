@@ -375,8 +375,86 @@ body.mode-designer-layout .designer-only {
 
 .designer-header-placeholder {
   font-size: 9px;
-  padding: 4px;
+  padding: 4px 6px;
   background: #f8fafc;
+}
+
+.cfg-header {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  box-sizing: border-box;
+  font-size: 7px;
+  line-height: 1.15;
+  position: relative;
+  overflow: hidden;
+}
+
+.cfg-header.cfg-no-border .cfg-header-band,
+.cfg-header.cfg-no-border .cfg-header-bottom {
+  border-color: transparent;
+}
+
+.cfg-header-top {
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.cfg-header-band {
+  border: 0.5px solid #555;
+  box-sizing: border-box;
+  overflow: hidden;
+  padding: 1px 2px;
+  min-width: 0;
+}
+
+.cfg-header-title {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  font-size: 11px;
+  text-align: center;
+}
+
+.cfg-header-meta {
+  width: 100%;
+  height: 100%;
+}
+
+.cfg-header-meta-line {
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  display: flex;
+  align-items: center;
+  gap: 2px;
+}
+
+.cfg-header-bottom {
+  border: 0.5px solid #555;
+  border-top: none;
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  padding: 0 3px;
+  overflow: hidden;
+}
+
+.cfg-header-bottom-fields {
+  display: flex;
+  flex-wrap: nowrap;
+  gap: 6px;
+  width: 100%;
+  overflow: hidden;
+}
+
+.cfg-header-field {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  min-width: 0;
 }
 
 .ph-title { font-weight: 700; font-size: 11px; text-align: center; }

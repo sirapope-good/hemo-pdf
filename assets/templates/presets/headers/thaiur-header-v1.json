@@ -1,0 +1,26 @@
+{
+  "id": "thaiur-header-v1",
+  "displayName": "ThaiUr clinical header",
+  "titleRowHeightMm": 21.6,
+  "bottomRowHeightMm": 5.4,
+  "showDateAndHdNo": false,
+  "showHdPerWeek": true,
+  "columns": [
+    { "id": "logo", "kind": "logo", "widthMm": 48, "bind": "$.header.logoBase64" },
+    { "id": "title", "kind": "title", "weight": 2, "bind": "$.title" },
+    { "id": "meta", "kind": "meta", "widthMm": 70 }
+  ],
+  "metaLines": [
+    { "id": "name", "label": "Name", "bind": "$.header.patient.name" },
+    { "id": "cn", "label": "CN", "bind": "$.header.patient.hn", "label2": "Age", "bind2": "$.header.patient.age" },
+    { "id": "coverage", "label": "Coverage", "bind": "$.header.patient.coverage" },
+    { "id": "id", "label": "ID Card NO.", "bind": "$.header.patient.identityNumber" }
+  ],
+  "bottomFields": [
+    { "id": "diagnosis", "label": "Diagnosis", "bind": "$.header.patient.diagnosis", "weight": 1.8 },
+    { "id": "allergy", "label": "Drug Allergy", "bind": "$.header.patient.allergies", "weight": 1.1 },
+    { "id": "hd", "label": "HD", "bind": "$.header.patient.hdPerWeek", "weight": 0.55, "whenHdPerWeek": true },
+    { "id": "twk", "label": "T/Wk", "bind": "", "weight": 0.01, "whenHdPerWeek": true }
+  ],
+  "chrome": { "border": "thin" }
+}

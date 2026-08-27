@@ -1,11 +1,13 @@
 using Hemo.Pdf.Core.Context;
 using Hemo.Pdf.Core.Hprp;
+using Hemo.Pdf.Core.Hprp.Header;
 using Hemo.Pdf.Core.Hprp.Table;
 using Hemo.Pdf.Core.Models;
 using Hemo.Pdf.Core.Models.Clinical;
 using Hemo.Pdf.Core.Models.Hemosheet;
 using Hemo.Pdf.Layouts.Absolute;
 using Hemo.Pdf.Layouts.Clinical.Clinical01_HctEpo;
+using Hemo.Pdf.Layouts.Header;
 using Hemo.Pdf.Layouts.Table;
 using Hemo.Pdf.Rendering;
 using Hemo.Pdf.Sections.ThaiUr;
@@ -86,9 +88,40 @@ public static class DesignerPageComposer
         HprpDesignerElement element,
         DesignerCanvasViewModel vm)
     {
+        var preset = ResolveHeaderPreset(element, vm);
+        if (preset is not null)
+        {
+            var model = HprpHeaderLayoutEngine.Build(
+                preset,
+                vm.Data,
+                vm.ReadHctEpo()?.Title ?? vm.Title);
+            ConfigurableHeaderComposer.Compose(container, model);
+            return;
+        }
+
         var header = vm.ReadHeader() ?? new HemosheetReportViewModel();
         var title = vm.ReadHctEpo()?.Title ?? vm.Title;
         ThaiUrReportHeader.Compose(container, header, title);
+    }
+
+    private static HprpHeaderPreset? ResolveHeaderPreset(
+        HprpDesignerElement element,
+        DesignerCanvasViewModel vm)
+    {
+        if (element.HeaderPreset is not null
+            && (!string.IsNullOrWhiteSpace(element.HeaderPreset.Id)
+                || element.HeaderPreset.Columns.Count > 0))
+        {
+            return element.HeaderPreset;
+        }
+
+        if (!string.IsNullOrWhiteSpace(element.Preset)
+            && vm.HeaderPresets.TryGetValue(element.Preset, out var loaded))
+        {
+            return loaded;
+        }
+
+        return element.HeaderPreset;
     }
 
     private static void DrawConfigTable(

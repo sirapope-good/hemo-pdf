@@ -24,6 +24,7 @@ public sealed class ClinicalDefaultDataProvider : IReportDataProvider
     private readonly IHprpTemplateStore? _templates;
     private readonly Clinical01HctEpoDataProvider _clinical01;
     private readonly IHprpTablePresetCatalog? _presets;
+    private readonly IHprpHeaderPresetCatalog? _headerPresets;
 
     public ClinicalDefaultDataProvider()
         : this(null)
@@ -31,18 +32,20 @@ public sealed class ClinicalDefaultDataProvider : IReportDataProvider
     }
 
     public ClinicalDefaultDataProvider(IHprpTemplateStore? templates)
-        : this(templates, new Clinical01HctEpoDataProvider(), null)
+        : this(templates, new Clinical01HctEpoDataProvider(), null, null)
     {
     }
 
     public ClinicalDefaultDataProvider(
         IHprpTemplateStore? templates,
         Clinical01HctEpoDataProvider clinical01,
-        IHprpTablePresetCatalog? presets = null)
+        IHprpTablePresetCatalog? presets = null,
+        IHprpHeaderPresetCatalog? headerPresets = null)
     {
         _templates = templates;
         _clinical01 = clinical01;
         _presets = presets;
+        _headerPresets = headerPresets;
     }
 
     public async Task<object> GetDataAsync(PdfReportContext context, CancellationToken cancellationToken)
@@ -90,7 +93,8 @@ public sealed class ClinicalDefaultDataProvider : IReportDataProvider
             package,
             data,
             package.GetLabels(package.Manifest.Language),
-            _presets?.LoadAll());
+            _presets?.LoadAll(),
+            _headerPresets?.LoadAll());
     }
 
     private async Task<object> BuildAbsoluteAsync(

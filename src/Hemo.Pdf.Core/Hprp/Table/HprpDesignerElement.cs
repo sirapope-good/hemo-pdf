@@ -1,4 +1,5 @@
 using System.Text.Json.Serialization;
+using Hemo.Pdf.Core.Hprp.Header;
 
 namespace Hemo.Pdf.Core.Hprp.Table;
 
@@ -47,6 +48,10 @@ public sealed class HprpDesignerElement
     /// <summary>Header preset id (e.g. <c>thaiur-header-v1</c>).</summary>
     [JsonPropertyName("preset")]
     public string? Preset { get; init; }
+
+    /// <summary>Inline header preset (Studio column drag / field edits).</summary>
+    [JsonPropertyName("headerPreset")]
+    public HprpHeaderPreset? HeaderPreset { get; init; }
 
     /// <summary>Table preset id for <c>config-table</c>.</summary>
     [JsonPropertyName("presetId")]

@@ -21,6 +21,7 @@ public sealed class HprpStudioController : ControllerBase
     private readonly HprpTemplateOptions _options;
     private readonly HprpStudioPreviewService _preview;
     private readonly HprpTablePresetStore _presets;
+    private readonly HprpHeaderPresetStore _headerPresets;
     private readonly HprpAdapterSchemaStore _adapterSchemas;
 
     public HprpStudioController(
@@ -30,6 +31,7 @@ public sealed class HprpStudioController : ControllerBase
         IOptions<HprpTemplateOptions> options,
         HprpStudioPreviewService preview,
         HprpTablePresetStore presets,
+        HprpHeaderPresetStore headerPresets,
         HprpAdapterSchemaStore adapterSchemas)
     {
         _pack = pack;
@@ -38,11 +40,12 @@ public sealed class HprpStudioController : ControllerBase
         _options = options.Value;
         _preview = preview;
         _presets = presets;
+        _headerPresets = headerPresets;
         _adapterSchemas = adapterSchemas;
     }
 
     [HttpGet("catalog")]
-    public IActionResult Catalog() => Ok(HprpStudioCatalog.Describe(_presets, _adapterSchemas));
+    public IActionResult Catalog() => Ok(HprpStudioCatalog.Describe(_presets, _headerPresets, _adapterSchemas));
 
     [HttpGet("presets/tables")]
     public IActionResult ListTablePresets() => Ok(_presets.ListAll());
@@ -65,6 +68,30 @@ public sealed class HprpStudioController : ControllerBase
         if (!string.Equals(body.Id, presetId, StringComparison.OrdinalIgnoreCase))
             throw new PdfGenerationBadRequestException("preset id must match URL.");
         await _presets.SaveAsync(body, cancellationToken);
+        return Ok(body);
+    }
+
+    [HttpGet("presets/headers")]
+    public IActionResult ListHeaderPresets() => Ok(_headerPresets.ListAll());
+
+    [HttpGet("presets/headers/{presetId}")]
+    public IActionResult GetHeaderPreset(string presetId)
+    {
+        var preset = _headerPresets.TryGet(presetId);
+        return preset is null ? NotFound() : Ok(preset);
+    }
+
+    [HttpPut("presets/headers/{presetId}")]
+    [EnableRateLimiting("PdfGeneration")]
+    public async Task<IActionResult> SaveHeaderPreset(
+        string presetId,
+        [FromBody] Hemo.Pdf.Core.Hprp.Header.HprpHeaderPreset body,
+        CancellationToken cancellationToken)
+    {
+        EnsureWritesEnabled();
+        if (!string.Equals(body.Id, presetId, StringComparison.OrdinalIgnoreCase))
+            throw new PdfGenerationBadRequestException("preset id must match URL.");
+        await _headerPresets.SaveAsync(body, cancellationToken);
         return Ok(body);
     }
 

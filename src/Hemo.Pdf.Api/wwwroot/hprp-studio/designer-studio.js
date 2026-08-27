@@ -30,6 +30,7 @@
   let schedulePreviewRef;
   let selectedElementId = null;
   let tablePresets = {};
+  let headerPresets = {};
   let adapterSchema = null;
   let sampleData = null;
   let dragState = null;
@@ -212,6 +213,12 @@
       (presets || []).forEach((p) => { tablePresets[p.id] = p; });
     } catch (_) { /* optional */ }
 
+    try {
+      const headers = await apiRef("/api/hprp/presets/headers");
+      headerPresets = {};
+      (headers || []).forEach((p) => { headerPresets[p.id] = p; });
+    } catch (_) { /* optional */ }
+
     const adapter = stateRef.draft.manifest && stateRef.draft.manifest.dataAdapter;
     if (adapter) {
       try {
@@ -220,6 +227,27 @@
         adapterSchema = null;
       }
     }
+  }
+
+  function resolveHeaderPreset(el) {
+    if (el.headerPreset && (el.headerPreset.id || (el.headerPreset.columns && el.headerPreset.columns.length)))
+      return el.headerPreset;
+    if (el.preset && headerPresets[el.preset]) return headerPresets[el.preset];
+    return el.headerPreset || null;
+  }
+
+  function ensureWorkingHeaderPreset(el, preset) {
+    if (el.headerPreset) return el.headerPreset;
+    el.headerPreset = JSON.parse(JSON.stringify(preset));
+    if (!el.headerPreset.id) el.headerPreset.id = el.preset || "inline-header";
+    delete el.preset;
+    return el.headerPreset;
+  }
+
+  function commitHeaderWorking(el, working) {
+    el.headerPreset = working;
+    delete el.preset;
+    stateRef.draft.manifest.layoutMode = "designer";
   }
 
   async function loadSampleData() {
@@ -359,12 +387,20 @@
           body.innerHTML = `<div class="ph-dense">config-table</div>`;
         }
       } else if (el.type === "header") {
-        const patient = sampleData && sampleData.header && sampleData.header.patient;
-        const title = (sampleData && sampleData.title) || "Header";
-        body.classList.add("designer-header-placeholder");
-        body.innerHTML =
-          `<div class="ph-title">${escapeHtml(title)}</div>` +
-          `<div class="ph-meta">${escapeHtml((patient && patient.name) || "Patient")} · HN ${escapeHtml((patient && patient.hn) || "—")}</div>`;
+        const catalogOrInline = resolveHeaderPreset(el);
+        if (catalogOrInline && global.HeaderLayoutEngine) {
+          const preset = ensureWorkingHeaderPreset(el, catalogOrInline);
+          const titleFallback = (sampleData && sampleData.title) || "Header";
+          const model = global.HeaderLayoutEngine.buildLayout(preset, sampleData, titleFallback);
+          body.appendChild(renderHeaderHtml(model, el, scale));
+        } else {
+          const patient = sampleData && sampleData.header && sampleData.header.patient;
+          const title = (sampleData && sampleData.title) || "Header";
+          body.classList.add("designer-header-placeholder");
+          body.innerHTML =
+            `<div class="ph-title">${escapeHtml(title)}</div>` +
+            `<div class="ph-meta">${escapeHtml((patient && patient.name) || "Patient")} · HN ${escapeHtml((patient && patient.hn) || "—")}</div>`;
+        }
       } else {
         body.innerHTML = `<div class="ph-dense">${escapeHtml(el.type)}: ${escapeHtml(el.widget || el.id)}</div>`;
       }
@@ -636,6 +672,156 @@
     });
   }
 
+  function nbspOr(text) {
+    if (text == null || text === "") return "\u00A0";
+    return String(text);
+  }
+
+  function renderHeaderHtml(model, el, scale) {
+    const root = document.createElement("div");
+    root.className = "cfg-header" + (borderOn(el.chrome) || borderOn(model.preset.chrome) ? "" : " cfg-no-border");
+    const preset = model.preset;
+    const cols = preset.columns || [];
+    const wMm = Math.max(1, el.box.wMm);
+    const fracs = global.HeaderLayoutEngine.bandFractions(cols, wMm);
+    const titlePx = Math.max(8, model.titleRowHeightMm * scale);
+    const bottomPx = Math.max(6, model.bottomRowHeightMm * scale);
+    root.style.height = "100%";
+
+    const top = document.createElement("div");
+    top.className = "cfg-header-top";
+    top.style.height = titlePx.toFixed(2) + "px";
+    top.style.display = "grid";
+    top.style.gridTemplateColumns = fracs.map((f) => (f * 100).toFixed(3) + "%").join(" ");
+
+    cols.forEach((band, bi) => {
+      const cell = document.createElement("div");
+      cell.className = "cfg-header-band kind-" + String(band.kind || "title").toLowerCase();
+      const kind = String(band.kind || "").toLowerCase();
+      if (kind === "logo") {
+        cell.textContent = model.logoFallbackText || "Logo";
+      } else if (kind === "title") {
+        cell.classList.add("cfg-header-title");
+        cell.textContent = nbspOr(model.titleText);
+      } else if (kind === "meta") {
+        const meta = document.createElement("div");
+        meta.className = "cfg-header-meta";
+        const lineH = titlePx / Math.max(1, model.metaLines.length);
+        model.metaLines.forEach((line) => {
+          const row = document.createElement("div");
+          row.className = "cfg-header-meta-line";
+          row.style.height = lineH.toFixed(2) + "px";
+          let html = `<strong>${escapeHtml(line.label)}</strong> ${escapeHtml(nbspOr(line.value))}`;
+          if (line.label2) {
+            html += ` <strong>${escapeHtml(line.label2)}</strong> ${escapeHtml(nbspOr(line.value2))}`;
+          }
+          row.innerHTML = html;
+          meta.appendChild(row);
+        });
+        cell.appendChild(meta);
+      } else {
+        cell.textContent = band.id;
+      }
+      top.appendChild(cell);
+      if (bi < cols.length - 1) {
+        // resizer attached after layout
+      }
+    });
+    root.appendChild(top);
+
+    const bottom = document.createElement("div");
+    bottom.className = "cfg-header-bottom";
+    bottom.style.height = bottomPx.toFixed(2) + "px";
+    const fieldsWrap = document.createElement("div");
+    fieldsWrap.className = "cfg-header-bottom-fields";
+    model.bottomFields.forEach((f) => {
+      const span = document.createElement("span");
+      span.className = "cfg-header-field";
+      span.innerHTML = `<strong>${escapeHtml(f.label)}</strong> ${escapeHtml(nbspOr(f.value))}`;
+      fieldsWrap.appendChild(span);
+    });
+    if (model.showDateAndHdNo) {
+      const date = document.createElement("span");
+      date.className = "cfg-header-field";
+      date.innerHTML = `<strong>Date</strong> ${escapeHtml(nbspOr(model.dateText))} <strong>HD NO.</strong> ${escapeHtml(nbspOr(model.hdNoText))}`;
+      fieldsWrap.appendChild(date);
+    }
+    bottom.appendChild(fieldsWrap);
+    root.appendChild(bottom);
+
+    attachHeaderBandResizers(root, top, el, preset, fracs, wMm);
+    return root;
+  }
+
+  function attachHeaderBandResizers(root, topRow, el, preset, fracs, wMm) {
+    const working = ensureWorkingHeaderPreset(el, preset);
+    requestAnimationFrame(() => {
+      const bands = topRow.querySelectorAll(".cfg-header-band");
+      if (bands.length < 2) return;
+      const overlay = document.createElement("div");
+      overlay.className = "col-resize-layer";
+      root.appendChild(overlay);
+      const rootRect = root.getBoundingClientRect();
+      bands.forEach((band, hi) => {
+        if (hi >= bands.length - 1) return;
+        const rect = band.getBoundingClientRect();
+        const handle = document.createElement("div");
+        handle.className = "col-resize";
+        handle.style.left = (rect.right - rootRect.left - 3) + "px";
+        handle.style.height = topRow.style.height;
+        handle.title = "ลากปรับความกว้างแถบ header (ส่งผลต่อ PDF)";
+        handle.addEventListener("pointerdown", (e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          startHeaderBandResize(e, el, working, hi, fracs.slice(), wMm);
+        });
+        overlay.appendChild(handle);
+      });
+    });
+  }
+
+  function startHeaderBandResize(e, el, working, index, fracs, wMm) {
+    const startX = e.clientX;
+    const leftF = fracs[index];
+    const rightF = fracs[index + 1];
+    const pair = leftF + rightF;
+    const metrics = pageMetrics();
+
+    function onMove(ev) {
+      const dxMm = (ev.clientX - startX) / metrics.scale;
+      const dFrac = dxMm / Math.max(1, wMm);
+      let newLeft = Math.max(0.05, leftF + dFrac);
+      let newRight = Math.max(0.05, pair - newLeft);
+      fracs[index] = newLeft;
+      fracs[index + 1] = newRight;
+      applyBandFractionsToPreset(working, fracs, wMm);
+      commitHeaderWorking(el, working);
+      selectedElementId = el.id;
+      const top = document.querySelector('.designer-element[data-element-id="' + el.id + '"] .cfg-header-top');
+      if (top) {
+        top.style.gridTemplateColumns = fracs.map((f) => (f * 100).toFixed(3) + "%").join(" ");
+      }
+    }
+    function onUp() {
+      document.removeEventListener("pointermove", onMove);
+      document.removeEventListener("pointerup", onUp);
+      suppressClick = true;
+      setTimeout(() => { suppressClick = false; }, 0);
+      renderAll();
+      if (setStatusRef) setStatusRef("Header columns อัปเดต — Download PDF จะใช้ความกว้างชุดนี้", "ok");
+    }
+    document.addEventListener("pointermove", onMove);
+    document.addEventListener("pointerup", onUp);
+  }
+
+  /** Persist fractions as absolute mm widths (QuestPDF ConstantItem) for PDF parity. */
+  function applyBandFractionsToPreset(working, fracs, wMm) {
+    (working.columns || []).forEach((c, i) => {
+      c.widthMm = Math.round(fracs[i] * wMm * 10) / 10;
+      c.weight = 1;
+    });
+  }
+
   function startMoveDrag(e, el, wrap, sheet, metrics) {
     const els = stateRef.draft.layout.elements;
     const fromIndex = els.indexOf(el);
@@ -856,8 +1042,164 @@
     if (el.type === "config-table") {
       renderTableInspector(insp, el);
     }
+    if (el.type === "header") {
+      renderHeaderInspector(insp, el);
+    }
 
     renderBoxFields(insp, el);
+  }
+
+  function renderHeaderInspector(insp, el) {
+    const preset = resolveHeaderPreset(el) || {
+      columns: [],
+      metaLines: [],
+      bottomFields: [],
+      showHdPerWeek: true,
+    };
+    const working = ensureWorkingHeaderPreset(el, preset);
+
+    const tip = document.createElement("p");
+    tip.className = "muted";
+    tip.textContent = "ลากเส้นแบ่งบน canvas · แก้ field / bind ด้านล่าง";
+    insp.appendChild(tip);
+
+    const tog = document.createElement("label");
+    tog.className = "check-lab";
+    const hdCb = document.createElement("input");
+    hdCb.type = "checkbox";
+    hdCb.checked = !!working.showHdPerWeek;
+    hdCb.addEventListener("change", () => {
+      working.showHdPerWeek = hdCb.checked;
+      commitHeaderWorking(el, working);
+      renderAll();
+    });
+    tog.appendChild(hdCb);
+    tog.appendChild(document.createTextNode(" showHdPerWeek"));
+    insp.appendChild(tog);
+
+    const dateTog = document.createElement("label");
+    dateTog.className = "check-lab";
+    const dateCb = document.createElement("input");
+    dateCb.type = "checkbox";
+    dateCb.checked = !!working.showDateAndHdNo;
+    dateCb.addEventListener("change", () => {
+      working.showDateAndHdNo = dateCb.checked;
+      commitHeaderWorking(el, working);
+      renderAll();
+    });
+    dateTog.appendChild(dateCb);
+    dateTog.appendChild(document.createTextNode(" showDateAndHdNo"));
+    insp.appendChild(dateTog);
+
+    const colHead = document.createElement("p");
+    colHead.innerHTML = "<strong>Band columns</strong>";
+    insp.appendChild(colHead);
+    (working.columns || []).forEach((col, idx) => {
+      const row = document.createElement("div");
+      row.className = "col-row";
+      const kind = document.createElement("input");
+      kind.type = "text";
+      kind.value = col.kind || "";
+      kind.title = "kind: logo | title | meta";
+      kind.addEventListener("change", () => {
+        col.kind = kind.value.trim() || col.kind;
+        commitHeaderWorking(el, working);
+        renderAll();
+      });
+      const w = document.createElement("input");
+      w.type = "number";
+      w.step = "0.1";
+      w.value = col.widthMm != null ? String(col.widthMm) : "";
+      w.placeholder = "mm";
+      w.title = "widthMm";
+      w.addEventListener("change", () => {
+        const n = Number(w.value);
+        if (n > 0) { col.widthMm = n; col.weight = 1; }
+        else { delete col.widthMm; }
+        commitHeaderWorking(el, working);
+        renderAll();
+      });
+      row.appendChild(kind);
+      row.appendChild(w);
+      insp.appendChild(row);
+    });
+
+    const metaHead = document.createElement("p");
+    metaHead.innerHTML = "<strong>Meta lines</strong>";
+    insp.appendChild(metaHead);
+    (working.metaLines || []).forEach((line) => {
+      const row = document.createElement("div");
+      row.className = "col-row";
+      const lab = document.createElement("input");
+      lab.type = "text";
+      lab.value = line.label || "";
+      lab.addEventListener("change", () => {
+        line.label = lab.value;
+        commitHeaderWorking(el, working);
+        renderAll();
+      });
+      const bind = document.createElement("input");
+      bind.type = "text";
+      bind.value = line.bind || "";
+      bind.placeholder = "$.header.patient.name";
+      bind.addEventListener("change", () => {
+        line.bind = bind.value.trim();
+        commitHeaderWorking(el, working);
+        renderAll();
+      });
+      row.appendChild(lab);
+      row.appendChild(bind);
+      insp.appendChild(row);
+    });
+
+    const addMeta = document.createElement("button");
+    addMeta.type = "button";
+    addMeta.textContent = "+ Meta line";
+    addMeta.addEventListener("click", () => {
+      working.metaLines = working.metaLines || [];
+      working.metaLines.push({ id: "m" + Math.random().toString(36).slice(2, 5), label: "Label", bind: "" });
+      commitHeaderWorking(el, working);
+      renderAll();
+    });
+    insp.appendChild(addMeta);
+
+    const botHead = document.createElement("p");
+    botHead.innerHTML = "<strong>Bottom fields</strong>";
+    insp.appendChild(botHead);
+    (working.bottomFields || []).forEach((line) => {
+      const row = document.createElement("div");
+      row.className = "col-row";
+      const lab = document.createElement("input");
+      lab.type = "text";
+      lab.value = line.label || "";
+      lab.addEventListener("change", () => {
+        line.label = lab.value;
+        commitHeaderWorking(el, working);
+        renderAll();
+      });
+      const bind = document.createElement("input");
+      bind.type = "text";
+      bind.value = line.bind || "";
+      bind.addEventListener("change", () => {
+        line.bind = bind.value.trim();
+        commitHeaderWorking(el, working);
+        renderAll();
+      });
+      row.appendChild(lab);
+      row.appendChild(bind);
+      insp.appendChild(row);
+    });
+
+    const addBot = document.createElement("button");
+    addBot.type = "button";
+    addBot.textContent = "+ Bottom field";
+    addBot.addEventListener("click", () => {
+      working.bottomFields = working.bottomFields || [];
+      working.bottomFields.push({ id: "b" + Math.random().toString(36).slice(2, 5), label: "Field", bind: "", weight: 1 });
+      commitHeaderWorking(el, working);
+      renderAll();
+    });
+    insp.appendChild(addBot);
   }
 
   function renderTableInspector(insp, el) {
@@ -1245,11 +1587,19 @@
   function prepareForPreview() {
     ensureElements();
     (stateRef.draft.layout.elements || []).forEach((el) => {
-      if (el.type !== "config-table") return;
-      const preset = resolveTablePreset(el);
-      if (preset) {
-        ensureWorkingPreset(el, preset);
-        commitWorking(el, el.tablePreset);
+      if (el.type === "config-table") {
+        const preset = resolveTablePreset(el);
+        if (preset) {
+          ensureWorkingPreset(el, preset);
+          commitWorking(el, el.tablePreset);
+        }
+      }
+      if (el.type === "header") {
+        const preset = resolveHeaderPreset(el);
+        if (preset) {
+          ensureWorkingHeaderPreset(el, preset);
+          commitHeaderWorking(el, el.headerPreset);
+        }
       }
     });
     if (!stateRef.draft.manifest) stateRef.draft.manifest = {};

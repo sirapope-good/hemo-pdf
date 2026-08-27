@@ -59,6 +59,7 @@ public static class HprpStudioCatalog
 {
     public static object Describe(
         HprpTablePresetStore? presets = null,
+        HprpHeaderPresetStore? headerPresets = null,
         HprpAdapterSchemaStore? adapters = null) => new
     {
         engineVersion = HprpEngine.CurrentVersion,
@@ -68,6 +69,7 @@ public static class HprpStudioCatalog
         bindingContexts = HprpTableBindingContexts.All.OrderBy(x => x, StringComparer.OrdinalIgnoreCase),
         designerElementTypes = HprpDesignerElementTypes.All.OrderBy(x => x, StringComparer.OrdinalIgnoreCase),
         tablePresets = presets?.ListAll().Select(p => new { p.Id, p.DisplayName, p.RowMode }) ?? [],
+        headerPresets = headerPresets?.ListAll().Select(p => new { p.Id, p.DisplayName }) ?? [],
         adapterSchemas = adapters?.ListAdapterIds() ?? [],
         widgets = HprpWidgetRecipes.Dense,
         blockTypes = HprpWidgetRecipes.Blocks,

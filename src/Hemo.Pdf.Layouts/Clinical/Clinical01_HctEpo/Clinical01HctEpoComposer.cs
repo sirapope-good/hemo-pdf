@@ -36,13 +36,16 @@ public sealed class Clinical01HctEpoComposer : ILayoutComposer
     private readonly HctEpoCoPayCriteriaSection _coPayCriteria = new();
     private readonly IHprpTemplateStore? _templates;
     private readonly IHprpTablePresetCatalog? _presets;
+    private readonly IHprpHeaderPresetCatalog? _headerPresets;
 
     public Clinical01HctEpoComposer(
         IHprpTemplateStore? templates = null,
-        IHprpTablePresetCatalog? presets = null)
+        IHprpTablePresetCatalog? presets = null,
+        IHprpHeaderPresetCatalog? headerPresets = null)
     {
         _templates = templates;
         _presets = presets;
+        _headerPresets = headerPresets;
     }
 
     public object Compose(object dataModel, PdfReportContext context)
@@ -58,7 +61,8 @@ public sealed class Clinical01HctEpoComposer : ILayoutComposer
                 package,
                 data,
                 HprpLabelResolver.Resolve(_templates, context),
-                _presets?.LoadAll());
+                _presets?.LoadAll(),
+                _headerPresets?.LoadAll());
             return DesignerPageComposer.Compose(designerVm, context);
         }
 
