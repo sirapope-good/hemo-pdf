@@ -3,14 +3,14 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>HPRP Studio</title>
+  <title>HPRP Studio — Visual Designer</title>
   <link rel="stylesheet" href="/hprp-studio/studio.css" />
 </head>
 <body class="mode-designer">
   <header class="top">
     <div>
       <h1>HPRP Studio</h1>
-      <p class="muted">เรียงบล็อกเป็นต้นไม้ (แถว/เซลล์) แก้หน้ากระดาษ / chrome / คอลัมน์ใน inspector — พรีวิว PDF คือความถูกต้อง</p>
+      <p class="muted">Visual Designer — จัดลำดับ widget บนหน้ากระดาษ · Preview/Download คือ PDF จาก QuestPDF ชุดเดียวกัน · Import/Export .hprp</p>
     </div>
     <div class="top-right">
       <div class="mode-toggle" role="group" aria-label="Editor mode">
@@ -30,8 +30,11 @@
         <strong>Packages</strong>
         <button id="btnReload" type="button">Reload</button>
       </div>
-      <div class="actions">
+      <div class="actions package-actions">
         <button id="btnPackAll" type="button" title="Read every report folder and write packages/*.hprp">Pack all from disk</button>
+        <input type="file" id="fileImportHprp" accept=".hprp,.zip" class="hidden" />
+        <button id="btnImport" type="button" title="Load a .hprp into the editor (validate first)">Import .hprp</button>
+        <button id="btnExport" type="button" disabled title="Download draft as .hprp after validate">Export .hprp</button>
       </div>
       <ul id="packageList" class="list"></ul>
     </aside>
@@ -55,9 +58,9 @@
           <div class="subhead" id="orderListTitle">Body order</div>
           <ul id="bodyList" class="node-list"></ul>
         </div>
-        <div class="subpane schematic-pane">
-          <div class="subhead">Schematic</div>
-          <div id="schematic" class="schematic"></div>
+        <div class="subpane page-canvas-pane">
+          <div class="subhead">Page canvas</div>
+          <div id="pageCanvas" class="page-canvas-scroll" aria-label="Visual page canvas"></div>
         </div>
       </div>
     </section>
@@ -65,9 +68,12 @@
     <section class="pane inspector-col" id="inspectorPane">
       <div class="pane-head">
         <strong>Inspector</strong>
-        <button id="btnPage" type="button">Page</button>
+        <div class="actions">
+          <button id="btnPage" type="button">Page</button>
+          <button id="btnLabels" type="button" disabled title="Edit labels dictionary for current language">Labels</button>
+        </div>
       </div>
-      <div id="inspector" class="inspector"><p class="muted">เลือกบล็อกในรายการ</p></div>
+      <div id="inspector" class="inspector"><p class="muted">เลือกบล็อกในรายการหรือบน Page canvas</p></div>
     </section>
 
     <section class="pane preview-col" id="previewPane">
@@ -83,9 +89,10 @@
             <input id="previewEntityId" type="text" placeholder="hemosheet GUID" autocomplete="off" title="ถ้าใส่ จะดึง report-data จริงเหมือน /api/pdf/generate" />
           </label>
           <button id="btnPreview" type="button" disabled>Refresh PDF</button>
+          <button id="btnDownloadPdf" type="button" disabled title="Same QuestPDF bytes as the preview iframe">Download PDF</button>
         </div>
       </div>
-      <p id="previewParityHint" class="muted preview-parity-hint">พรีวิวใช้ renderer เดียวกับพิมพ์จริง — Sample = mock ครบเคส / EntityId = ข้อมูลจริงจาก Web.Api</p>
+      <p id="previewParityHint" class="muted preview-parity-hint">พรีวิวและ Download ใช้ renderer เดียวกับพิมพ์จริง — Sample = mock / EntityId = ข้อมูลจริงจาก Web.Api</p>
       <iframe id="previewFrame" src="about:blank" title="PDF preview"></iframe>
     </section>
 
@@ -109,6 +116,7 @@
 
   <pre id="status" class="status" role="status"></pre>
 
+  <script src="/hprp-studio/vendor/jszip.min.js"></script>
   <script src="/hprp-studio/studio.js"></script>
 </body>
 </html>

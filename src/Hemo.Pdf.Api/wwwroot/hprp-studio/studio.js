@@ -7,6 +7,7 @@ const state = {
   catalog: { widgets: [], blockTypes: [], sampleTemplateIds: [] },
   selectedKey: null,
   previewUrl: null,
+  previewBlob: null,
   previewTimer: null,
   sampleScenario: "",
 };
@@ -24,12 +25,35 @@ const els = {
   palette: document.getElementById("palette"),
   bodyList: document.getElementById("bodyList"),
   inspector: document.getElementById("inspector"),
-  schematic: document.getElementById("schematic"),
+  pageCanvas: document.getElementById("pageCanvas"),
   preview: document.getElementById("previewFrame"),
   btnPreview: document.getElementById("btnPreview"),
+  btnDownloadPdf: document.getElementById("btnDownloadPdf"),
+  btnExport: document.getElementById("btnExport"),
+  btnImport: document.getElementById("btnImport"),
+  btnLabels: document.getElementById("btnLabels"),
+  fileImport: document.getElementById("fileImportHprp"),
   sampleScenario: document.getElementById("sampleScenario"),
   previewEntityId: document.getElementById("previewEntityId"),
 };
+
+function humanizeId(id) {
+  if (!id) return "(empty)";
+  const raw = String(id);
+  const leaf = raw.includes(".") ? raw.split(".").pop() : raw;
+  return leaf.replace(/[-_]/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
+}
+
+function recipeTitle(recipe) {
+  if (!recipe) return "";
+  return recipe.title || recipe.displayName || humanizeId(recipe.id);
+}
+
+function nodeKind(node) {
+  if (!node) return "block";
+  if (node.widget) return "dense";
+  return "block";
+}
 
 function headers() {
   const token = els.token.value.trim() || "dev";
@@ -266,11 +290,13 @@ function selectPackage(item) {
 }
 
 function setButtonsEnabled(on) {
-  ["btnValidate", "btnSave", "btnPackThis", "btnValidateJson", "btnSaveJson", "btnPackThisJson", "btnPreview"]
-    .forEach((id) => {
-      const el = document.getElementById(id);
-      if (el) el.disabled = !on;
-    });
+  [
+    "btnValidate", "btnSave", "btnPackThis", "btnValidateJson", "btnSaveJson", "btnPackThisJson",
+    "btnPreview", "btnDownloadPdf", "btnExport", "btnLabels",
+  ].forEach((id) => {
+    const el = document.getElementById(id);
+    if (el) el.disabled = !on;
+  });
   els.editor.disabled = !on;
 }
 
@@ -312,24 +338,25 @@ function renderPalette() {
     g.textContent = title;
     els.palette.appendChild(g);
   };
-  addGroup("Widgets");
-  for (const recipe of widgets) {
+  const addRecipeButton = (recipe, onClick) => {
     const btn = document.createElement("button");
     btn.type = "button";
-    btn.textContent = recipe.id;
-    btn.title = recipe.kind + (recipe.allowedOn && recipe.allowedOn.length ? " · " + recipe.allowedOn.join(", ") : "");
-    btn.addEventListener("click", () => addNode(newWidgetNode(recipe)));
+    const title = recipeTitle(recipe);
+    btn.innerHTML = `<strong>${title}</strong><span class="pid">${recipe.id}</span>`;
+    btn.title = (recipe.kind || "") + (recipe.allowedOn && recipe.allowedOn.length ? " · " + recipe.allowedOn.join(", ") : "");
+    btn.addEventListener("click", onClick);
     els.palette.appendChild(btn);
-  }
+  };
+  if (slot === "sections")
+    addGroup("Hemosheet sections");
+  else
+    addGroup("Clinical widgets");
+  for (const recipe of widgets)
+    addRecipeButton(recipe, () => addNode(newWidgetNode(recipe)));
   if (slot === "body") {
-    addGroup("Blocks");
-    for (const recipe of state.catalog.blockTypes || []) {
-      const btn = document.createElement("button");
-      btn.type = "button";
-      btn.textContent = recipe.id;
-      btn.addEventListener("click", () => addNode(newBlock(recipe.id)));
-      els.palette.appendChild(btn);
-    }
+    addGroup("Body blocks");
+    for (const recipe of state.catalog.blockTypes || [])
+      addRecipeButton(recipe, () => addNode(newBlock(recipe.id)));
   }
 }
 
@@ -449,6 +476,12 @@ function renderBodyList() {
   pageLi.addEventListener("click", () => { state.selectedKey = "page"; renderDesigner(); });
   els.bodyList.appendChild(pageLi);
 
+  const labelsLi = document.createElement("li");
+  labelsLi.className = state.selectedKey === "labels" ? "active" : "";
+  labelsLi.innerHTML = `<span class="id">Labels</span><span class="meta">labels.${labelLang()}</span>`;
+  labelsLi.addEventListener("click", () => { state.selectedKey = "labels"; renderDesigner(); });
+  els.bodyList.appendChild(labelsLi);
+
   if (slot === "body") {
     const header = state.draft.layout.header;
     if (header)
@@ -460,7 +493,7 @@ function renderBodyList() {
     count: list.length,
     slot,
   }));
-  renderSchematic();
+  renderPageCanvas();
 }
 
 function appendTree(ul, key, node, opts) {
@@ -626,52 +659,124 @@ function breakRow(key) {
 }
 
 function renderSchematic() {
-  if (!els.schematic) return;
-  els.schematic.innerHTML = "";
-  if (usesSectionsMode()) {
-    els.schematic.innerHTML = `<p class="muted">Hemosheet sections stay stacked. Use Page inspector for margin.</p>`;
-    return;
-  }
-  ensureLayout();
-  (state.draft.layout.body || []).forEach((node, i) => {
-    els.schematic.appendChild(schematicNode("body:" + i, node));
-  });
+  /* Schematic pane replaced by Page canvas; kept as no-op for callers. */
 }
 
-function schematicNode(key, node) {
+function pageOrientation() {
+  const page = pageObject();
+  return String(page.orientation || "").toLowerCase() === "landscape" ? "landscape" : "portrait";
+}
+
+function selectCanvasKey(key) {
+  state.selectedKey = key;
+  renderDesigner();
+}
+
+function pageCardMeta(node, key) {
+  const bits = [key];
+  if (node && node.when) bits.push("when: " + node.when);
+  if (node && node.widget) bits.push("dense C#");
+  return bits.join(" · ");
+}
+
+function buildPageCard(key, node) {
   if (node && node.type === "row" && Array.isArray(node.cells)) {
-    const row = document.createElement("div");
-    row.className = "schematic-row";
+    const wrap = document.createElement("div");
+    wrap.className = "page-card-row";
     node.cells.forEach((cell, i) => {
       const cellKey = key + "/cells:" + i;
       const cellEl = document.createElement("div");
-      cellEl.className = "schematic-cell" + (state.selectedKey === cellKey ? " active" : "");
-      cellEl.style.flex = cell.width && cell.width.endsWith("%") ? cell.width.slice(0, -1) : "1";
+      cellEl.className = "page-card-cell" + (state.selectedKey === cellKey ? " active" : "");
+      cellEl.style.flex = cell.width && String(cell.width).endsWith("%")
+        ? String(cell.width).slice(0, -1)
+        : "1";
       cellEl.addEventListener("click", (e) => {
         e.stopPropagation();
-        state.selectedKey = cellKey;
-        renderDesigner();
+        selectCanvasKey(cellKey);
       });
       (cell.nodes || []).forEach((child, n) => {
-        cellEl.appendChild(schematicBlock(cellKey + "/nodes:" + n, child));
+        cellEl.appendChild(buildPageCard(cellKey + "/nodes:" + n, child));
       });
-      row.appendChild(cellEl);
+      wrap.appendChild(cellEl);
     });
-    return row;
+    return wrap;
   }
-  return schematicBlock(key, node);
-}
 
-function schematicBlock(key, node) {
+  if (node && node.type === "column-stack" && Array.isArray(node.nodes)) {
+    const stack = document.createElement("div");
+    stack.className = "page-card block" + (key === state.selectedKey ? " active" : "");
+    stack.innerHTML = `<div>${nodeTitle(node)}</div><div class="meta">${pageCardMeta(node, key)}</div>`;
+    stack.addEventListener("click", (e) => {
+      e.stopPropagation();
+      selectCanvasKey(key);
+    });
+    node.nodes.forEach((child, n) => {
+      stack.appendChild(buildPageCard(key + "/nodes:" + n, child));
+    });
+    return stack;
+  }
+
   const el = document.createElement("div");
-  el.className = "schematic-block" + (key === state.selectedKey ? " active" : "");
-  el.innerHTML = `<div>${nodeTitle(node)}</div><div class="meta">${key}</div>`;
+  const kind = nodeKind(node);
+  el.className = "page-card " + kind + (key === state.selectedKey ? " active" : "");
+  el.innerHTML = `<div>${nodeTitle(node)}</div><div class="meta">${pageCardMeta(node, key)}</div>`;
+  el.draggable = true;
   el.addEventListener("click", (e) => {
     e.stopPropagation();
-    state.selectedKey = key;
-    renderDesigner();
+    selectCanvasKey(key);
+  });
+  el.addEventListener("dragstart", (e) => {
+    e.dataTransfer.setData("text/plain", key);
+    e.dataTransfer.effectAllowed = "move";
+  });
+  el.addEventListener("dragover", (e) => {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = "move";
+  });
+  el.addEventListener("drop", (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    const from = e.dataTransfer.getData("text/plain");
+    if (from) dropOnto(from, key);
   });
   return el;
+}
+
+function renderPageCanvas() {
+  if (!els.pageCanvas) return;
+  els.pageCanvas.innerHTML = "";
+  if (!state.selected) {
+    els.pageCanvas.innerHTML = `<p class="muted">Select a package</p>`;
+    return;
+  }
+  ensureLayout();
+  const sheet = document.createElement("div");
+  sheet.className = "page-sheet " + pageOrientation();
+  const label = document.createElement("div");
+  label.className = "page-sheet-label";
+  label.textContent = "A4 " + pageOrientation() + " · " + (usesSectionsMode() ? "sections" : "body");
+  sheet.appendChild(label);
+
+  if (!usesSectionsMode() && state.draft.layout.header) {
+    sheet.appendChild(buildPageCard("header", state.draft.layout.header));
+  }
+
+  const nodes = usesSectionsMode()
+    ? (state.draft.layout.sections || [])
+    : (state.draft.layout.body || []);
+  const prefix = usesSectionsMode() ? "sections:" : "body:";
+  if (!nodes.length) {
+    const empty = document.createElement("p");
+    empty.className = "muted";
+    empty.textContent = usesSectionsMode()
+      ? "No sections — add from palette (stacked order only; Place beside is off)."
+      : "No body nodes — add from palette.";
+    sheet.appendChild(empty);
+  } else {
+    nodes.forEach((node, i) => sheet.appendChild(buildPageCard(prefix + i, node)));
+  }
+
+  els.pageCanvas.appendChild(sheet);
 }
 
 function field(label, input) {
@@ -932,16 +1037,81 @@ function renderFieldGridFields(node) {
   els.inspector.appendChild(add);
 }
 
+function renderLabelsInspector() {
+  ensureLayout();
+  const lang = labelLang();
+  const map = labelMap();
+  const wrap = document.createElement("div");
+  wrap.className = "labels-editor";
+  const head = document.createElement("p");
+  head.innerHTML = `<strong>Labels · ${lang}</strong>`;
+  wrap.appendChild(head);
+  const hint = document.createElement("p");
+  hint.className = "muted";
+  hint.textContent = "แก้ข้อความที่ใช้ผ่าน $label โดยไม่ต้องเปิด JSON mode";
+  wrap.appendChild(hint);
+
+  const keys = Object.keys(map).sort((a, b) => a.localeCompare(b));
+  if (!keys.length) {
+    const empty = document.createElement("p");
+    empty.className = "muted";
+    empty.textContent = "ยังไม่มีคีย์ — เพิ่มด้านล่าง หรือเลือก dense widget ที่มี labelKeys";
+    wrap.appendChild(empty);
+  }
+  for (const key of keys) {
+    const row = document.createElement("div");
+    row.className = "label-row";
+    const keyEl = document.createElement("code");
+    keyEl.textContent = key;
+    const input = textInput(map[key] || "", (v) => {
+      if (!state.draft.labels[lang]) state.draft.labels[lang] = {};
+      if (v.trim()) state.draft.labels[lang][key] = v;
+      else delete state.draft.labels[lang][key];
+      schedulePreview();
+    });
+    row.append(keyEl, input);
+    wrap.appendChild(row);
+  }
+
+  const addRow = document.createElement("div");
+  addRow.className = "label-row";
+  const newKey = document.createElement("input");
+  newKey.type = "text";
+  newKey.placeholder = "newKey";
+  const newVal = document.createElement("input");
+  newVal.type = "text";
+  newVal.placeholder = "value";
+  const addBtn = document.createElement("button");
+  addBtn.type = "button";
+  addBtn.textContent = "Add";
+  addBtn.addEventListener("click", () => {
+    const k = newKey.value.trim();
+    if (!k) return;
+    if (!state.draft.labels[lang]) state.draft.labels[lang] = {};
+    state.draft.labels[lang][k] = newVal.value;
+    renderDesigner();
+    schedulePreview();
+  });
+  addRow.append(newKey, newVal);
+  wrap.appendChild(addRow);
+  wrap.appendChild(addBtn);
+  els.inspector.appendChild(wrap);
+}
+
 function renderInspector() {
   const key = state.selectedKey;
   els.inspector.innerHTML = "";
+  if (key === "labels") {
+    renderLabelsInspector();
+    return;
+  }
   if (!key || key === "page") {
     renderPageInspector();
     return;
   }
   const node = nodeAt(key);
   if (!node) {
-    els.inspector.innerHTML = `<p class="muted">เลือกบล็อกในรายการ หรือกด Page</p>`;
+    els.inspector.innerHTML = `<p class="muted">เลือกบล็อกในรายการ Page canvas หรือกด Page / Labels</p>`;
     return;
   }
   if (String(key).includes("/cells:") && Array.isArray(node.nodes) && !node.type && !node.widget) {
@@ -950,8 +1120,16 @@ function renderInspector() {
   }
   const recipe = recipeFor(node);
   const head = document.createElement("p");
-  head.innerHTML = `<strong>${nodeTitle(node)}</strong><br/><span class="muted">${recipe ? recipe.kind : "custom"}</span>`;
+  head.innerHTML = `<strong>${nodeTitle(node)}</strong><br/><span class="muted">${recipe ? recipe.kind : "custom"} · ${humanizeId(node.widget || node.type || "")}</span>`;
   els.inspector.appendChild(head);
+
+  if (node.widget) {
+    const dense = document.createElement("p");
+    dense.className = "inspector-dense-note";
+    dense.textContent = "กล่องนี้วาดใน C# (dense widget) — ปรับ chrome / labels / ลำดับเท่านั้น ไม่วาดพิกเซลภายในที่นี่";
+    els.inspector.appendChild(dense);
+  }
+
   renderCapabilityStrip(node, recipe);
 
   if (isDenseHemosheetForm() && node.widget !== DIALYSIS_WIDGET) {
@@ -1415,6 +1593,161 @@ function renderDesigner() {
   renderInspector();
 }
 
+function triggerDownload(blob, filename) {
+  const link = document.createElement("a");
+  link.href = URL.createObjectURL(blob);
+  link.download = filename;
+  link.click();
+  setTimeout(() => URL.revokeObjectURL(link.href), 2000);
+}
+
+async function fetchPreviewBlob() {
+  const item = state.selected;
+  if (!item) throw new Error("Select a package first.");
+  const entityId = els.previewEntityId && els.previewEntityId.value.trim();
+  const sampleScenario = els.sampleScenario ? els.sampleScenario.value : "";
+  state.sampleScenario = sampleScenario;
+  const payload = {
+    templateId: item.id,
+    variant: item.variant || undefined,
+    package: currentBody(),
+  };
+  if (entityId)
+    payload.entityId = entityId;
+  else if (sampleScenario)
+    payload.sampleScenario = sampleScenario;
+
+  const res = await fetch("/api/hprp/preview", {
+    method: "POST",
+    headers: headers(),
+    body: JSON.stringify(payload),
+  });
+  if (!res.ok) {
+    const text = await res.text();
+    let msg = text;
+    try {
+      const body = JSON.parse(text);
+      msg = (body && body.errors && body.errors.join("\n")) || body.detail || body.title || text;
+    } catch { /* keep text */ }
+    throw new Error(msg || res.statusText);
+  }
+  return res.blob();
+}
+
+async function preview() {
+  const item = state.selected;
+  if (!item) return null;
+  const entityId = els.previewEntityId && els.previewEntityId.value.trim();
+  const sampleScenario = els.sampleScenario ? els.sampleScenario.value : "";
+  const blob = await fetchPreviewBlob();
+  state.previewBlob = blob;
+  if (state.previewUrl)
+    URL.revokeObjectURL(state.previewUrl);
+  state.previewUrl = URL.createObjectURL(blob);
+  els.preview.classList.add("has-pdf");
+  els.preview.src = state.previewUrl;
+  setStatus(
+    entityId
+      ? `Preview from entity ${entityId} (same fetch path as print).`
+      : `Preview from sample${sampleScenario ? "." + sampleScenario : ""} (print renderer + draft package).`,
+    "ok"
+  );
+  return blob;
+}
+
+async function downloadPdf() {
+  const item = state.selected;
+  if (!item) return;
+  const blob = await preview();
+  if (!blob) return;
+  const name = `${item.id}${item.variant ? "." + item.variant : ""}.pdf`;
+  triggerDownload(blob, name);
+  setStatus("Downloaded " + name + " (same bytes as preview).", "ok");
+}
+
+async function exportHprp() {
+  if (typeof JSZip === "undefined")
+    throw new Error("JSZip failed to load.");
+  const body = currentBody();
+  await api("/api/hprp/validate", { method: "POST", body: JSON.stringify(body) });
+  const zip = new JSZip();
+  zip.file("manifest.json", JSON.stringify(body.manifest || {}, null, 2));
+  zip.file("layout.json", JSON.stringify(body.layout || {}, null, 2));
+  const labels = body.labels || {};
+  for (const [lang, map] of Object.entries(labels)) {
+    if (!map || typeof map !== "object") continue;
+    zip.file(`labels.${lang}.json`, JSON.stringify(map, null, 2));
+  }
+  const blob = await zip.generateAsync({ type: "blob", compression: "DEFLATE" });
+  const id = (body.manifest && body.manifest.id) || (state.selected && state.selected.id) || "package";
+  const variant = (body.manifest && body.manifest.variant) || (state.selected && state.selected.variant);
+  const filename = variant && String(variant).toLowerCase() !== "default"
+    ? `${id}.${variant}.hprp`
+    : `${id}.hprp`;
+  triggerDownload(blob, filename);
+  setStatus("Exported " + filename + " (validated).", "ok");
+}
+
+async function importHprpFile(file) {
+  if (typeof JSZip === "undefined")
+    throw new Error("JSZip failed to load.");
+  const zip = await JSZip.loadAsync(file);
+  const manifestStr = await zip.file("manifest.json")?.async("string");
+  const layoutStr = await zip.file("layout.json")?.async("string");
+  if (!manifestStr || !layoutStr)
+    throw new Error("Invalid .hprp: need manifest.json and layout.json");
+  const manifest = JSON.parse(manifestStr);
+  const layout = JSON.parse(layoutStr);
+  const labels = {};
+  for (const [path, entry] of Object.entries(zip.files)) {
+    if (entry.dir) continue;
+    const name = path.split("/").pop();
+    const m = /^labels\.([^.]+)\.json$/i.exec(name);
+    if (!m) continue;
+    labels[m[1]] = JSON.parse(await entry.async("string"));
+  }
+  const body = { manifest, layout, labels };
+  try {
+    await api("/api/hprp/validate", { method: "POST", body: JSON.stringify(body) });
+  } catch (err) {
+    throw new Error("Import failed validation:\n" + err.message);
+  }
+  state.draft = {
+    manifest: manifest || {},
+    layout: layout || { body: [] },
+    labels: labels || {},
+  };
+  ensureLayout();
+  const id = manifest.id;
+  const variant = manifest.variant || null;
+  let item = (state.list || []).find((p) =>
+    p.id === id && (p.variant || null) === (variant || null));
+  if (!item) {
+    item = {
+      id,
+      variant,
+      displayName: manifest.displayName || id,
+      layoutKind: manifest.layoutKind,
+      layoutProfile: manifest.layoutProfile,
+      profileLabel: manifest.ui && manifest.ui.profileLabel,
+      packed: false,
+      sourcePath: file.name,
+    };
+  }
+  state.selected = item;
+  state.selectedKey = "page";
+  selectPackage(item);
+  const label = profileLabel(item);
+  const kind = item.layoutKind || state.draft.manifest.layoutKind || "";
+  els.title.textContent = `${item.id} · ${label}${kind ? " (" + kind + ")" : ""} (imported)`;
+  setButtonsEnabled(true);
+  if (state.mode === "json") showJsonTab();
+  else renderDesigner();
+  await loadSampleScenarios(item.id);
+  schedulePreview();
+  setStatus("Imported " + file.name + " (validated). Use Save and pack to write packages/.", "ok");
+}
+
 function currentBody() {
   if (state.mode === "json")
     flushJsonEditor();
@@ -1552,50 +1885,6 @@ function schedulePreview() {
   }, 700);
 }
 
-async function preview() {
-  const item = state.selected;
-  if (!item) return;
-  const entityId = els.previewEntityId && els.previewEntityId.value.trim();
-  const sampleScenario = els.sampleScenario ? els.sampleScenario.value : "";
-  state.sampleScenario = sampleScenario;
-  const payload = {
-    templateId: item.id,
-    variant: item.variant || undefined,
-    package: currentBody(),
-  };
-  if (entityId) {
-    payload.entityId = entityId;
-  } else if (sampleScenario) {
-    payload.sampleScenario = sampleScenario;
-  }
-  const res = await fetch("/api/hprp/preview", {
-    method: "POST",
-    headers: headers(),
-    body: JSON.stringify(payload),
-  });
-  if (!res.ok) {
-    const text = await res.text();
-    let msg = text;
-    try {
-      const body = JSON.parse(text);
-      msg = (body && body.errors && body.errors.join("\n")) || body.detail || body.title || text;
-    } catch { /* keep text */ }
-    throw new Error(msg || res.statusText);
-  }
-  const blob = await res.blob();
-  if (state.previewUrl)
-    URL.revokeObjectURL(state.previewUrl);
-  state.previewUrl = URL.createObjectURL(blob);
-  els.preview.classList.add("has-pdf");
-  els.preview.src = state.previewUrl;
-  setStatus(
-    entityId
-      ? `Preview from entity ${entityId} (same fetch path as print).`
-      : `Preview from sample${sampleScenario ? "." + sampleScenario : ""} (print renderer + draft package).`,
-    "ok"
-  );
-}
-
 document.querySelectorAll(".tab").forEach((btn) => {
   btn.addEventListener("click", () => {
     if (!state.selected) return;
@@ -1616,10 +1905,23 @@ function onClick(id, handler) {
 }
 
 onClick("btnPage", () => { state.selectedKey = "page"; renderDesigner(); });
+onClick("btnLabels", () => { state.selectedKey = "labels"; renderDesigner(); });
 onClick("btnModeDesigner", () => setMode("designer"));
 onClick("btnModeJson", () => setMode("json"));
 onClick("btnReload", () => loadList().catch((err) => setStatus(err.message, "err")));
 onClick("btnPackAll", () => packAll().catch((err) => setStatus(err.message, "err")));
+onClick("btnExport", () => exportHprp().catch((err) => setStatus(err.message, "err")));
+onClick("btnImport", () => els.fileImport && els.fileImport.click());
+onClick("btnDownloadPdf", () => downloadPdf().catch((err) => setStatus(err.message, "err")));
+if (els.fileImport) {
+  els.fileImport.addEventListener("change", () => {
+    const file = els.fileImport.files && els.fileImport.files[0];
+    if (!file) return;
+    importHprpFile(file)
+      .catch((err) => setStatus(err.message, "err"))
+      .finally(() => { els.fileImport.value = ""; });
+  });
+}
 ["btnValidate", "btnValidateJson"].forEach((id) => {
   onClick(id, () => validate().catch((err) => setStatus(err.message, "err")));
 });

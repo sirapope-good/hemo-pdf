@@ -51,6 +51,50 @@ public class HprpPackAndStoreTests
         Assert.True(HprpValidator.Validate(loaded).IsValid);
     }
 
+    /// <summary>
+    /// Studio Export/Import uses the same ZIP shape (manifest + layout + labels.*) —
+    /// body form and hemosheet sections must both round-trip.
+    /// </summary>
+    [Theory]
+    [InlineData("clinical-04-prescription", null, false)]
+    [InlineData("clinical-05-progress-note", null, false)]
+    [InlineData("clinical-03-hemodialysis-record", "default", true)]
+    public async Task StudioExportShape_RoundTripsBodyAndSections(
+        string templateId,
+        string? variant,
+        bool expectSections)
+    {
+        var temp = NewTemp("studio-export");
+        var includeVariant = !string.IsNullOrWhiteSpace(variant);
+        var fileName = HprpTemplatePaths.PackageFileName(templateId, variant, includeVariant);
+        var output = Path.Combine(temp, fileName);
+        var (pack, _) = CreatePack(temp);
+
+        var sourceDir = includeVariant
+            ? Path.Combine(HprpTestAssets.TemplatesRoot(), "reports", templateId, "variants", variant!)
+            : HprpTestAssets.PackageDir(templateId);
+        await pack.PackDirectoryAsync(sourceDir, output);
+
+        using var stream = File.OpenRead(output);
+        var loaded = HprpPackageReader.ReadZip(stream, output);
+        Assert.Equal(templateId, loaded.Manifest.Id);
+        Assert.True(HprpValidator.Validate(loaded).IsValid);
+
+        await using var rewritten = new MemoryStream();
+        await HprpPackageReader.WriteZipAsync(loaded, rewritten, CancellationToken.None);
+        rewritten.Position = 0;
+        var again = HprpPackageReader.ReadZip(rewritten, "studio-roundtrip.hprp");
+        Assert.Equal(loaded.Manifest.Id, again.Manifest.Id);
+        Assert.True(HprpValidator.Validate(again).IsValid);
+
+        if (expectSections)
+            Assert.NotEmpty(again.Layout.Sections);
+        else
+            Assert.True(
+                (again.Layout.Body?.Count ?? 0) > 0 || again.Layout.Header is not null,
+                "expected body and/or header nodes");
+    }
+
     [Fact]
     public async Task PackAll_CreatesSingleReportsAndHemosheetVariants()
     {

@@ -37,13 +37,40 @@ assets/templates/
 
 Changing `layout.json` / labels in the unpacked folder does **not** require a C# rebuild, but **does not affect runtime** until you pack again (packed files win). Rebuild C# only when adding a widget id or a new `layoutKind`.
 
-Open **HPRP Studio** at `http://localhost:5090/` or `http://localhost:5090/hprp-studio/` (Development). Use Bearer `dev` with mock auth. Writes require `HemoPdf:EnableHprpStudioWrite=true`.
+Open **HPRP Studio** (Visual Designer) at `http://localhost:5090/` or `http://localhost:5090/hprp-studio/` (Development). Use Bearer `dev` with mock auth. Writes require `HemoPdf:EnableHprpStudioWrite=true`.
 
-| Studio button | Writes |
-|---------------|--------|
-| **Save and pack** | JSON in the editor → `packages/{id}.hprp` |
+### Visual Designer (MVP)
+
+Studio is still a **composition editor** (not freeform x/y). The **Page canvas** shows A4 flow cards for `layout.body` **and** `layout.sections` (hemosheet / SOAP / dense clinical). Dense widgets are opaque cards — reorder and edit chrome/labels only; inner pixels stay in C#.
+
+| Surface | Role |
+|---------|------|
+| **Palette** | Human-readable titles + widget id; groups Clinical widgets / Hemosheet sections / Body blocks |
+| **Structure tree** | Page → Labels → nodes; Up/Down/Remove; Place beside (body only) |
+| **Page canvas** | Visual A4 sheet; click to select; drag to reorder siblings |
+| **Inspector** | Page / Labels / node chrome; dense note when a C# widget is selected |
+| **Preview / Download PDF** | Same `POST /api/hprp/preview` QuestPDF bytes (fidelity 100%) |
+| **Import / Export .hprp** | Client ZIP (`manifest.json` + `layout.json` + `labels.*.json`); validate via API before apply/download |
+
+Hemosheet **Place beside stays off** — sections remain a vertical stack.
+
+| Studio button | Writes / action |
+|---------------|-----------------|
+| **Save and pack** | Editor draft → `packages/{id}.hprp` |
 | **Pack this from disk** | `assets/templates/reports/{id}/` → that `.hprp`, then reloads the editor |
 | **Pack all from disk** | every unpacked report folder → `packages/` |
+| **Export .hprp** | Download validated draft ZIP (does not write server disk) |
+| **Import .hprp** | Load ZIP into editor after validate; use Save and pack to persist |
+| **Download PDF** | Same bytes as the Preview iframe |
+
+#### Manual smoke checklist (Designer)
+
+1. Open a **body** package (e.g. `clinical-04-prescription`) and a **sections** package (e.g. `clinical-03-hemodialysis-record` / `clinical-05-progress-note`).
+2. Confirm Page canvas lists the same nodes as the structure tree; reorder → Preview PDF updates.
+3. **Download PDF** — file opens and matches the Preview iframe.
+4. **Export .hprp** → **Import .hprp** the same file → draft restores; Validate OK.
+5. Open **Labels** in Designer, change a string → Preview updates (no JSON mode).
+6. Select a dense widget (SOAP / hemosheet section) — inspector shows the C# dense note; Place beside is absent on sections.
 
 Pixels still live in C# (`HctEpoAnnualTableSection`, hemosheet section renderers, `ReportBlock` types). `.hprp` controls **which** widgets run, **order**, **labels**, extra form **blocks**, and catalog `ui` — not QuestPDF drawing code inside a dense widget.
 
@@ -165,7 +192,7 @@ Per-node `box.marginMm` / `box.paddingMm`: number, `[v,h]`, `[t,r,b,l]`, or name
 
 Dense widgets (SOAP, consent narrative, most hemosheet sections) still own inner pixels in C#. Chrome / recipe knobs only.
 
-Studio is a **constraint editor** (`Page → Flow → Row/Cell → Block`), not a free canvas. Do not promise extra SOAP/consent columns in the UI unless the recipe already has `columnPlan`.
+Studio is a **constraint / flow editor** with a visual **Page canvas** (`Page → Flow → Row/Cell → Block`), not a free absolute canvas. Do not promise extra SOAP/consent columns in the UI unless the recipe already has `columnPlan`.
 
 ### File knobs vs C# rebuild
 
