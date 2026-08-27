@@ -3,6 +3,7 @@ using Hemo.Pdf.Core.Context;
 using Hemo.Pdf.Core.Hprp;
 using Hemo.Pdf.Core.Models;
 using Hemo.Pdf.Core.Models.Preview;
+using Hemo.Pdf.Layouts.Absolute;
 using Hemo.Pdf.Layouts.Base;
 using Hemo.Pdf.Layouts.Hprp;
 using Hemo.Pdf.Rendering;
@@ -30,6 +31,9 @@ public sealed class ClinicalDefaultComposer : BaseReportComposer<HprpBoundViewMo
 
     public override object Compose(object dataModel, PdfReportContext context)
     {
+        if (dataModel is AbsoluteCanvasViewModel absolute)
+            return AbsoluteCanvasComposer.Compose(absolute, context);
+
         var viewModel = (HprpBoundViewModel)dataModel;
         if (!viewModel.UseThaiUrHeader)
             return base.Compose(dataModel, context);

@@ -13,7 +13,10 @@ public static class HprpValidator
     {
         var errors = new List<string>();
         ValidateManifest(package.Manifest, errors);
-        ValidateLayout(package.Layout, errors);
+        if (HprpLayoutModes.IsAbsolute(package.Manifest))
+            ValidateAbsoluteLayout(package.Layout, errors);
+        else
+            ValidateLayout(package.Layout, errors);
         HprpPageLayout.Validate(package.Layout.Page, errors);
         return new HprpValidationResult { Errors = errors };
     }
@@ -22,7 +25,10 @@ public static class HprpValidator
     {
         var errors = new List<string>();
         ValidateManifest(manifest, errors);
-        ValidateLayout(layout, errors);
+        if (HprpLayoutModes.IsAbsolute(manifest))
+            ValidateAbsoluteLayout(layout, errors);
+        else
+            ValidateLayout(layout, errors);
         HprpPageLayout.Validate(layout.Page, errors);
         return new HprpValidationResult { Errors = errors };
     }
@@ -48,6 +54,12 @@ public static class HprpValidator
             && !HprpLayoutKinds.All.Contains(manifest.LayoutKind))
         {
             errors.Add($"Unknown layoutKind '{manifest.LayoutKind}'.");
+        }
+
+        if (!string.IsNullOrWhiteSpace(manifest.LayoutMode)
+            && !HprpLayoutModes.All.Contains(manifest.LayoutMode))
+        {
+            errors.Add($"Unknown layoutMode '{manifest.LayoutMode}'.");
         }
 
         if (manifest.Ui is not null)
@@ -97,6 +109,33 @@ public static class HprpValidator
 
         for (var i = 0; i < layout.Sections.Count; i++)
             ValidateSection(layout.Sections[i], $"sections[{i}]", errors);
+    }
+
+    private static readonly HashSet<string> AbsoluteWidgetTypes = new(StringComparer.OrdinalIgnoreCase)
+    {
+        "text", "frame", "table",
+    };
+
+    private static void ValidateAbsoluteLayout(HprpLayout layout, List<string> errors)
+    {
+        if (layout.Widgets.Count == 0)
+            errors.Add("layout.widgets must contain at least one widget when layoutMode is absolute.");
+
+        for (var i = 0; i < layout.Widgets.Count; i++)
+        {
+            var w = layout.Widgets[i];
+            var path = $"layout.widgets[{i}]";
+            if (string.IsNullOrWhiteSpace(w.Id))
+                errors.Add($"{path}.id is required.");
+            if (string.IsNullOrWhiteSpace(w.Type) || !AbsoluteWidgetTypes.Contains(w.Type))
+                errors.Add($"{path}.type must be one of: text, frame, table.");
+            if (w.WMm <= 0 || w.HMm <= 0)
+                errors.Add($"{path} wMm/hMm must be > 0.");
+            if (w.XMm < 0 || w.YMm < 0 || w.XMm > 400 || w.YMm > 400)
+                errors.Add($"{path} xMm/yMm out of range.");
+            if (w.WMm > 400 || w.HMm > 400)
+                errors.Add($"{path} wMm/hMm out of range.");
+        }
     }
 
     private static void ValidateNode(HprpLayoutNode node, string path, List<string> errors)

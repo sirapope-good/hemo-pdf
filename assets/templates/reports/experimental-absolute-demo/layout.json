@@ -1,0 +1,83 @@
+{
+  "page": {
+    "size": "A4",
+    "orientation": "portrait",
+    "marginMm": 8
+  },
+  "widgets": [
+    {
+      "id": "w_title",
+      "type": "text",
+      "xMm": 10,
+      "yMm": 8,
+      "wMm": 180,
+      "hMm": 18,
+      "zIndex": 2,
+      "style": {
+        "backgroundColor": "transparent",
+        "borderWidth": 0
+      },
+      "data": {
+        "title": "Absolute canvas demo",
+        "content": "Drag widgets in Studio — PDF is QuestPDF at these mm coordinates.",
+        "style": "title"
+      }
+    },
+    {
+      "id": "w_frame",
+      "type": "frame",
+      "xMm": 10,
+      "yMm": 35,
+      "wMm": 190,
+      "hMm": 40,
+      "zIndex": 1,
+      "style": {
+        "backgroundColor": "transparent",
+        "borderColor": "#94a3b8",
+        "borderWidth": 0.6
+      },
+      "data": {
+        "label": "Clinical zone"
+      }
+    },
+    {
+      "id": "w_table",
+      "type": "table",
+      "xMm": 10,
+      "yMm": 85,
+      "wMm": 190,
+      "hMm": 50,
+      "zIndex": 3,
+      "style": {
+        "backgroundColor": "#ffffff",
+        "borderWidth": 0.4,
+        "borderColor": "#e2e8f0"
+      },
+      "data": {
+        "headers": ["Parameter", "Pre", "Post"],
+        "rows": [
+          ["Weight (kg)", "65.5", "62.8"],
+          ["BP (mmHg)", "150/90", "125/80"]
+        ]
+      }
+    },
+    {
+      "id": "w_note",
+      "type": "text",
+      "xMm": 10,
+      "yMm": 145,
+      "wMm": 100,
+      "hMm": 30,
+      "zIndex": 4,
+      "style": {
+        "backgroundColor": "#f8fafc",
+        "borderWidth": 0.3,
+        "borderColor": "#cbd5e1"
+      },
+      "data": {
+        "title": "Note",
+        "content": "Composition packs are unchanged. This package is layoutMode=absolute only."
+      }
+    }
+  ]
+}

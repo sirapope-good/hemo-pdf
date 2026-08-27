@@ -17,6 +17,13 @@ public sealed class HprpLayout
     /// <summary>Hemosheet (and similar) widget plan — interpreted by the C# planner.</summary>
     [JsonPropertyName("sections")]
     public IReadOnlyList<HprpSectionNode> Sections { get; init; } = [];
+
+    /// <summary>
+    /// Freeform widgets for <see cref="HprpLayoutModes.Absolute"/> (experimental).
+    /// Ignored by composition composers.
+    /// </summary>
+    [JsonPropertyName("widgets")]
+    public IReadOnlyList<HprpAbsoluteWidget> Widgets { get; init; } = [];
 }
 
 public sealed class HprpPage
@@ -36,6 +43,10 @@ public sealed class HprpPage
 
     [JsonPropertyName("fontSize")]
     public float? FontSize { get; init; }
+
+    /// <summary><c>portrait</c> (default) or <c>landscape</c>.</summary>
+    [JsonPropertyName("orientation")]
+    public string? Orientation { get; init; }
 }
 
 public sealed class HprpLayoutNode

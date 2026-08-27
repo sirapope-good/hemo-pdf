@@ -10,7 +10,7 @@
   <header class="top">
     <div>
       <h1>HPRP Studio</h1>
-      <p class="muted">Visual Designer — จัดลำดับ widget บนหน้ากระดาษ · Preview/Download คือ PDF จาก QuestPDF ชุดเดียวกัน · Import/Export .hprp</p>
+      <p class="muted">Visual Designer — composition packages ใช้ต้นไม้/ลำดับ · absolute (experimental) ลากพิกัด mm · Preview/Download = QuestPDF</p>
     </div>
     <div class="top-right">
       <div class="mode-toggle" role="group" aria-label="Editor mode">
@@ -49,7 +49,7 @@
         </div>
       </div>
       <div id="denseFormHint" class="dense-hint hidden" role="note"></div>
-      <div class="designer-split">
+      <div class="designer-split composition-only">
         <div class="subpane">
           <div class="subhead">Palette</div>
           <div id="palette" class="palette"></div>
@@ -61,6 +61,16 @@
         <div class="subpane page-canvas-pane">
           <div class="subhead">Page canvas</div>
           <div id="pageCanvas" class="page-canvas-scroll" aria-label="Visual page canvas"></div>
+        </div>
+      </div>
+      <div class="designer-split absolute-only hidden" id="absoluteDesignerPane">
+        <div class="subpane">
+          <div class="subhead">Absolute palette</div>
+          <div id="absolutePalette" class="palette"></div>
+        </div>
+        <div class="subpane page-canvas-pane abs-canvas-pane">
+          <div class="subhead">Absolute canvas (mm → QuestPDF)</div>
+          <div id="absoluteSheet" class="page-canvas-scroll" aria-label="Absolute mm canvas"></div>
         </div>
       </div>
     </section>
@@ -118,5 +128,6 @@
 
   <script src="/hprp-studio/vendor/jszip.min.js"></script>
   <script src="/hprp-studio/studio.js"></script>
+  <script src="/hprp-studio/absolute-designer.js"></script>
 </body>
 </html>

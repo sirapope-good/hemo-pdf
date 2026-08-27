@@ -39,6 +39,20 @@ Changing `layout.json` / labels in the unpacked folder does **not** require a C#
 
 Open **HPRP Studio** (Visual Designer) at `http://localhost:5090/` or `http://localhost:5090/hprp-studio/` (Development). Use Bearer `dev` with mock auth. Writes require `HemoPdf:EnableHprpStudioWrite=true`.
 
+### Experimental: `layoutMode: absolute`
+
+Spike path (QuestPDF freeform mm) — **does not replace** composition packs.
+
+| | Composition (default) | Absolute (experimental) |
+|--|--|--|
+| Manifest | omit `layoutMode` or `composition` | `layoutMode: "absolute"` |
+| Layout | `body` / `sections` | `widgets[]` with `xMm` `yMm` `wMm` `hMm` |
+| Studio | tree + Page canvas (reorder) | Absolute canvas drag/resize in mm |
+| PDF | existing composers | `AbsoluteCanvasComposer` (QuestPDF Layers) |
+| Sample | clinical-* packs | `experimental-absolute-demo` |
+
+Composition clinical packs remain the production path. Absolute is for exploring a true page designer; delete the branch / ignore the demo package if the spike is abandoned.
+
 ### Visual Designer (MVP)
 
 Studio is still a **composition editor** (not freeform x/y). The **Page canvas** shows A4 flow cards for `layout.body` **and** `layout.sections` (hemosheet / SOAP / dense clinical). Dense widgets are opaque cards — reorder and edit chrome/labels only; inner pixels stay in C#.

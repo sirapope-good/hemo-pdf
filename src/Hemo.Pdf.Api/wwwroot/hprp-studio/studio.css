@@ -303,6 +303,57 @@ button:disabled { opacity: 0.45; cursor: not-allowed; }
   width: 100%;
 }
 
+body.mode-absolute .composition-only { display: none !important; }
+body.mode-absolute .absolute-only { display: grid !important; }
+body:not(.mode-absolute) .absolute-only { display: none !important; }
+
+.absolute-only {
+  grid-template-rows: 28% minmax(0, 1fr);
+}
+
+.abs-canvas-pane {
+  background: #1a222c;
+}
+
+.abs-sheet {
+  position: relative;
+  margin: 8px auto;
+  background: #f8fafc;
+  border: 1px solid #94a3b8;
+  overflow: hidden;
+}
+
+.abs-widget {
+  position: absolute;
+  box-sizing: border-box;
+  border: 1px solid #64748b;
+  background: rgba(255, 255, 255, 0.92);
+  cursor: move;
+  padding: 4px 6px;
+  font-size: 0.7rem;
+  color: #0f172a;
+  user-select: none;
+}
+
+.abs-widget.selected {
+  border-color: #3d9cf0;
+  outline: 2px solid rgba(61, 156, 240, 0.35);
+}
+
+.abs-widget-title { font-weight: 600; text-transform: uppercase; font-size: 0.65rem; }
+.abs-widget-meta { color: #64748b; font-size: 0.6rem; }
+
+.abs-resize {
+  position: absolute;
+  right: -4px;
+  bottom: -4px;
+  width: 10px;
+  height: 10px;
+  background: #3d9cf0;
+  border: 1px solid #fff;
+  cursor: se-resize;
+}
+
 .schematic-row {
   display: flex;
   gap: 6px;

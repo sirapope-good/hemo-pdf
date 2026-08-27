@@ -35,9 +35,13 @@ public sealed class ClinicalDefaultDataProvider : IReportDataProvider
     {
         cancellationToken.ThrowIfCancellationRequested();
 
-        var package = _templates?.TryGetCached(
-            context.TenantCode,
-            ClinicalReportCatalog.ResolveEngineTemplateId(context.ReportTemplateId));
+        var package = context.LayoutPackage
+            ?? _templates?.TryGetCached(
+                context.TenantCode,
+                ClinicalReportCatalog.ResolveEngineTemplateId(context.ReportTemplateId));
+
+        if (package is not null && HprpLayoutModes.IsAbsolute(package.Manifest))
+            return Task.FromResult<object>(AbsoluteCanvasViewModel.FromPackage(package));
 
         var title = ResolveTitle(context, package);
         if (package is not null && package.Layout.Body.Count > 0)

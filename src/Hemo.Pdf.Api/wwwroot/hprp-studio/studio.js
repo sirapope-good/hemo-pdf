@@ -1587,6 +1587,13 @@ function renderDenseFormHint() {
 
 function renderDesigner() {
   if (state.mode !== "designer") return;
+  if (window.AbsoluteDesigner && AbsoluteDesigner.isAbsoluteMode()) {
+    AbsoluteDesigner.syncBodyClass();
+    AbsoluteDesigner.renderAbsoluteDesigner();
+    return;
+  }
+  if (window.AbsoluteDesigner)
+    AbsoluteDesigner.syncBodyClass();
   renderDenseFormHint();
   renderPalette();
   renderBodyList();

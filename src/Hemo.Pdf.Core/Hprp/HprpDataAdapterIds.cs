@@ -12,6 +12,7 @@ public static class HprpDataAdapterIds
     public const string Clinical05ProgressNoteChecklist = "clinical-05-progress-note-checklist";
     public const string Consent = "consent";
     public const string MedicinePreparationRound = "medicine-preparation-round";
+    public const string AbsoluteSample = "absolute-sample";
 
     public static readonly IReadOnlySet<string> All = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
     {
@@ -24,5 +25,6 @@ public static class HprpDataAdapterIds
         Clinical05ProgressNoteChecklist,
         Consent,
         MedicinePreparationRound,
+        AbsoluteSample,
     };
 }
