@@ -273,12 +273,85 @@
     };
   }
 
+  function clinical01CopayPieces() {
+    return [
+      {
+        id: "copay-banner",
+        type: "box-text",
+        band: "content",
+        place: "below",
+        box: { xMm: 0, yMm: 0, wMm: 206, hMm: 5 },
+        text: "ปริมาณยาที่มีสิทธิได้รับโดยไม่ต้องร่วมจ่าย",
+        bind: "$.coPayCriteria.title",
+        align: "center",
+        chrome: { headerFill: "$branding.sectionHeaderBackground", border: "thin", fontSize: 7.5 },
+      },
+      {
+        id: "copay-nhso",
+        type: "config-table",
+        band: "content",
+        presetId: "copay-nhso-v1",
+        place: "below",
+        manualWidth: true,
+        box: { xMm: 0, yMm: 0, wMm: 78, hMm: 27 },
+        chrome: { border: "thin", headerFill: "$branding.sectionHeaderBackground" },
+      },
+      {
+        id: "copay-sso",
+        type: "config-table",
+        band: "content",
+        presetId: "copay-sso-v1",
+        place: "beside",
+        manualWidth: true,
+        box: { xMm: 0, yMm: 0, wMm: 126, hMm: 27 },
+        chrome: { border: "thin", headerFill: "$branding.sectionHeaderBackground" },
+      },
+    ];
+  }
+
+  function isLegacyDenseCopay(el) {
+    if (!el) return false;
+    const widget = String(el.widget || "").toLowerCase();
+    const type = String(el.type || "").toLowerCase();
+    return widget === "clinical.hct-epo-copay"
+      || type === "clinical.hct-epo-copay"
+      || (type === "dense" && widget.indexOf("hct-epo-copay") >= 0);
+  }
+
+  /** Replace legacy dense clinical.hct-epo-copay with box-text + duo tables. */
+  function migrateLegacyDenseCopay() {
+    ensureElements();
+    const els = stateRef.draft.layout.elements;
+    let changed = false;
+
+    // Drop stale dense + any half-migrated ids so we can insert a clean trio once.
+    const hasLegacy = els.some(isLegacyDenseCopay);
+    if (!hasLegacy) return false;
+
+    const insertAt = Math.max(0, els.findIndex(isLegacyDenseCopay));
+    const next = els.filter((e) =>
+      !isLegacyDenseCopay(e)
+      && e.id !== "copay-banner"
+      && e.id !== "copay-nhso"
+      && e.id !== "copay-sso"
+      && e.id !== "copay");
+    const pieces = clinical01CopayPieces();
+    next.splice(insertAt, 0, pieces[0], pieces[1], pieces[2]);
+    stateRef.draft.layout.elements = next;
+    changed = true;
+    if (setStatusRef) {
+      setStatusRef("แทนที่ dense clinical.hct-epo-copay → box-text + ตาราง NHSO/SSO แล้ว", "ok");
+    }
+    return changed;
+  }
+
   function promoteToDesignerIfNeeded() {
     ensureElements();
     const manifest = stateRef.draft.manifest || (stateRef.draft.manifest = {});
     const layout = stateRef.draft.layout;
 
     if (isDesignerPackage() && layout.elements.length > 0) {
+      migrateLegacyDenseCopay();
       reflowElements();
       return false;
     }
@@ -310,38 +383,7 @@
           bindings: CLINICAL01_ANNUAL_BINDINGS.slice(),
           chrome: { border: "thin", headerFill: "$branding.sectionHeaderBackground" },
         },
-        {
-          id: "copay-banner",
-          type: "box-text",
-          band: "content",
-          place: "below",
-          box: { xMm: 0, yMm: 0, wMm: 206, hMm: 5 },
-          text: "ปริมาณยาที่มีสิทธิได้รับโดยไม่ต้องร่วมจ่าย",
-          bind: "$.coPayCriteria.title",
-          align: "center",
-          chrome: { headerFill: "$branding.sectionHeaderBackground", border: "thin", fontSize: 7.5 },
-        },
-        {
-          id: "copay-nhso",
-          type: "config-table",
-          band: "content",
-          presetId: "copay-nhso-v1",
-          place: "below",
-          manualWidth: true,
-          box: { xMm: 0, yMm: 0, wMm: 78, hMm: 27 },
-          chrome: { border: "thin", headerFill: "$branding.sectionHeaderBackground" },
-        },
-        {
-          id: "copay-sso",
-          type: "config-table",
-          band: "content",
-          presetId: "copay-sso-v1",
-          place: "beside",
-          manualWidth: true,
-          box: { xMm: 0, yMm: 0, wMm: 126, hMm: 27 },
-          chrome: { border: "thin", headerFill: "$branding.sectionHeaderBackground" },
-        },
-      ];
+      ].concat(clinical01CopayPieces());
     }
 
     if (layout.elements.length === 0) {
@@ -357,6 +399,7 @@
       });
     }
 
+    migrateLegacyDenseCopay();
     manifest.layoutMode = "designer";
     reflowElements();
     return true;
