@@ -9,7 +9,13 @@
   const A4_H = 297;
   const MIN_BLOCK_W = 20;
   const MIN_BLOCK_H = 12;
+  /** Banner / single-line box-text can be much shorter than tables. */
+  const MIN_BOX_TEXT_H = 4;
   const MIN_COL_WEIGHT = 0.25;
+
+  function minHeightForElement(el) {
+    return String(el && el.type || "").toLowerCase() === "box-text" ? MIN_BOX_TEXT_H : MIN_BLOCK_H;
+  }
 
   const CLINICAL01_ANNUAL_BINDINGS = [
     { path: "months[].monthLabel", column: "month", context: "group-label" },
@@ -149,7 +155,8 @@
         });
         let maxRowH = 0;
         row.forEach((e) => {
-          e.box.hMm = Math.max(MIN_BLOCK_H, Number(e.box.hMm) || MIN_BLOCK_H);
+          const minH = minHeightForElement(e);
+          e.box.hMm = Math.max(minH, Number(e.box.hMm) || minH);
           maxRowH = Math.max(maxRowH, e.box.hMm);
         });
         if (cursorY + maxRowH > maxH + 0.01 && result.length > 0) break;
@@ -1193,7 +1200,7 @@
         el.manualWidth = true;
       }
       if (dir === "s" || dir === "se") {
-        el.box.hMm = Math.max(MIN_BLOCK_H, startH + dy);
+        el.box.hMm = Math.max(minHeightForElement(el), startH + dy);
       }
       reflowElements();
       renderCanvas();

@@ -17,6 +17,7 @@ public static class HprpDesignerFlow
 {
     private const float MinBlockW = 10f;
     private const float MinBlockH = 4f;
+    private const float MinBoxTextH = 3f;
 
     public static IReadOnlyList<HprpDesignerElement> Reflow(
         HprpPage? page,
@@ -261,7 +262,9 @@ public static class HprpDesignerFlow
             var maxH = 0f;
             foreach (var e in row)
             {
-                var h = Math.Max(MinBlockH, e.Box.HMm > 0 ? e.Box.HMm : MinBlockH);
+                var h = Math.Max(
+                    MinHeightFor(e),
+                    e.Box.HMm > 0 ? e.Box.HMm : MinHeightFor(e));
                 maxH = Math.Max(maxH, h);
             }
 
@@ -290,6 +293,11 @@ public static class HprpDesignerFlow
 
         return (result, i);
     }
+
+    private static float MinHeightFor(HprpDesignerElement e) =>
+        string.Equals(e.Type, HprpDesignerElementTypes.BoxText, StringComparison.OrdinalIgnoreCase)
+            ? MinBoxTextH
+            : MinBlockH;
 }
 
 public sealed class HprpDesignerFlowResult
