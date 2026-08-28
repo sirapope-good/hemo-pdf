@@ -81,24 +81,23 @@ Left pane: **Packages | Library** (Headers / Tables / Fragments).
 
 | Action | Effect |
 |--|--|
-| **Click a Header** in Library | Opens that preset alone on the canvas (title `Library · …`) |
-| **Save** (main toolbar) while editing a library header | Writes `packages/library/headers/{id}.json` (overrides seed) — **not** a report `.hprp` |
-| **Delete** (Library) | Removes `packages/library/headers/{id}.json` only — seed under `assets/` is never deleted; if seed exists the id reappears from seed |
-| Delete header on pack canvas + Save pack | Removes element from `layout.elements` only — disk preset stays |
-| **+ Header** or Library → **Insert into pack** | Re-adds header referencing catalog preset into the open report |
-| Save from selection | `PUT /api/hprp/presets/headers/{id}` (same library folder) |
-| **+ Fragment** / Library → Fragments | Inserts multi-element recipe (e.g. `copay-duo-v1`) with renamed ids |
+| **Click** Headers / Tables / Fragments | Opens that preset alone on the canvas (title `Library · …`) |
+| **Save** (main toolbar) while editing a library item | Writes `packages/library/{headers\|tables\|fragments}/{id}.json` — **not** a report `.hprp` |
+| **Delete** (Library) | Removes library JSON only — seed under `assets/` is never deleted; if seed exists the id reappears from seed |
+| Delete element on pack canvas + Save pack | Removes element from `layout.elements` only — disk preset stays |
+| **Insert into pack** | Re-adds catalog preset into the open report |
+| Save from selection | `PUT /api/hprp/presets/{headers\|tables\|fragments}/{id}` (same library folder) |
 
-### Header library storage
+### Library storage
 
-| Layer | Path |
-|--|--|
-| Seed (read-only in repo) | `assets/templates/presets/headers/clinical-header-thaiur.json` |
-| Studio overrides (like `.hprp`) | `packages/library/headers/{id}.json` |
+| Kind | Seed | Studio override |
+|--|--|--|
+| Headers | `assets/templates/presets/headers/` | `packages/library/headers/` |
+| Tables | `assets/templates/presets/tables/` | `packages/library/tables/` |
+| Fragments | `assets/templates/presets/fragments/` | `packages/library/fragments/` |
 
 Naming convention for clinical headers: `clinical-header-{tenant}` — e.g. `clinical-header-thaiur`, later `clinical-header-default`, `clinical-header-rama`. Legacy id `thaiur-header-v1` aliases to `clinical-header-thaiur`.
 
-Fragment assets: `assets/templates/presets/fragments/*.json` — API `GET/PUT /api/hprp/presets/fragments/{id}`.
 Optional `tags` on header/table/fragment presets for filtering (e.g. `tenant:hogwarts`).
 
-**Not in this pass:** DELETE for tables/fragments, per-tenant folders beyond `packages/library/`, `type: group` wrapper, Library click-edit for tables/fragments.
+**Not in this pass:** per-tenant folders beyond `packages/library/`, `type: group` wrapper.

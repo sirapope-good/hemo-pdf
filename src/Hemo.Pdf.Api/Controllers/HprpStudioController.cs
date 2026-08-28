@@ -72,7 +72,32 @@ public sealed class HprpStudioController : ControllerBase
         if (!string.Equals(body.Id, presetId, StringComparison.OrdinalIgnoreCase))
             throw new PdfGenerationBadRequestException("preset id must match URL.");
         await _presets.SaveAsync(body, cancellationToken);
-        return Ok(body);
+        var saved = _presets.TryGet(presetId) ?? body;
+        return Ok(new
+        {
+            preset = saved,
+            outputPath = Path.Combine(_presets.LibraryRoot, presetId.Trim() + ".json"),
+        });
+    }
+
+    [HttpDelete("presets/tables/{presetId}")]
+    [EnableRateLimiting("PdfGeneration")]
+    public IActionResult DeleteTablePreset(string presetId)
+    {
+        EnsureWritesEnabled();
+        var result = _presets.DeleteLibrary(presetId);
+        if (result.IsNotFound)
+            return NotFound(new { error = result.Message, id = result.Id });
+        if (result.IsSeedOnly)
+            throw new PdfGenerationBadRequestException(result.Message ?? "Cannot delete seed table.");
+
+        return Ok(new
+        {
+            id = result.Id,
+            deletedPath = result.DeletedPath,
+            fellBackToSeed = result.FellBackToSeed,
+            message = result.Message,
+        });
     }
 
     [HttpGet("presets/headers")]
@@ -152,7 +177,32 @@ public sealed class HprpStudioController : ControllerBase
         if (errors.Count > 0)
             return BadRequest(new { errors });
         await _fragmentPresets.SaveAsync(body, cancellationToken);
-        return Ok(body);
+        var saved = _fragmentPresets.TryGet(presetId) ?? body;
+        return Ok(new
+        {
+            preset = saved,
+            outputPath = Path.Combine(_fragmentPresets.LibraryRoot, presetId.Trim() + ".json"),
+        });
+    }
+
+    [HttpDelete("presets/fragments/{presetId}")]
+    [EnableRateLimiting("PdfGeneration")]
+    public IActionResult DeleteFragmentPreset(string presetId)
+    {
+        EnsureWritesEnabled();
+        var result = _fragmentPresets.DeleteLibrary(presetId);
+        if (result.IsNotFound)
+            return NotFound(new { error = result.Message, id = result.Id });
+        if (result.IsSeedOnly)
+            throw new PdfGenerationBadRequestException(result.Message ?? "Cannot delete seed fragment.");
+
+        return Ok(new
+        {
+            id = result.Id,
+            deletedPath = result.DeletedPath,
+            fellBackToSeed = result.FellBackToSeed,
+            message = result.Message,
+        });
     }
 
     [HttpGet("adapters/{dataAdapterId}/schema")]

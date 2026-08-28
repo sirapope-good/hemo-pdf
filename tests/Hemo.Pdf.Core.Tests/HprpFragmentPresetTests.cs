@@ -198,4 +198,89 @@ public class HprpFragmentPresetTests
             try { Directory.Delete(packagesRoot, recursive: true); } catch { /* ignore */ }
         }
     }
+
+    [Fact]
+    public async Task TableStore_SaveAndDeleteLibrary()
+    {
+        var packagesRoot = Path.Combine(Path.GetTempPath(), "hprp-lib-tables-" + Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(packagesRoot);
+        try
+        {
+            var options = Options.Create(new HprpTemplateOptions
+            {
+                RootPath = HprpTestAssets.TemplatesRoot(),
+                PackagesRootPath = packagesRoot,
+                PackagesWritePath = packagesRoot,
+            });
+            var store = new HprpTablePresetStore(options);
+            Assert.NotNull(store.TryGet("hct-epo-annual-v1"));
+
+            await store.SaveAsync(new Hemo.Pdf.Core.Hprp.Table.HprpTablePreset
+            {
+                Id = "my-table-lib-v1",
+                DisplayName = "My table",
+                Tags = ["test"],
+            });
+            Assert.True(File.Exists(Path.Combine(packagesRoot, "library", "tables", "my-table-lib-v1.json")));
+            Assert.True(store.IsInLibrary("my-table-lib-v1"));
+
+            var del = store.DeleteLibrary("my-table-lib-v1");
+            Assert.True(del.Ok);
+            Assert.Null(store.TryGet("my-table-lib-v1"));
+
+            var seedOnly = store.DeleteLibrary("hct-epo-annual-v1");
+            Assert.True(seedOnly.IsSeedOnly);
+        }
+        finally
+        {
+            try { Directory.Delete(packagesRoot, recursive: true); } catch { /* ignore */ }
+        }
+    }
+
+    [Fact]
+    public async Task FragmentStore_SaveAndDeleteLibrary()
+    {
+        var packagesRoot = Path.Combine(Path.GetTempPath(), "hprp-lib-frags-" + Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(packagesRoot);
+        try
+        {
+            var options = Options.Create(new HprpTemplateOptions
+            {
+                RootPath = HprpTestAssets.TemplatesRoot(),
+                PackagesRootPath = packagesRoot,
+                PackagesWritePath = packagesRoot,
+            });
+            var store = new HprpFragmentPresetStore(options);
+            Assert.NotNull(store.TryGet("copay-duo-v1"));
+
+            await store.SaveAsync(new HprpFragmentPreset
+            {
+                Id = "my-frag-lib-v1",
+                DisplayName = "My frag",
+                Tags = ["test"],
+                Elements =
+                [
+                    new Hemo.Pdf.Core.Hprp.Table.HprpDesignerElement
+                    {
+                        Id = "a",
+                        Type = Hemo.Pdf.Core.Hprp.Table.HprpDesignerElementTypes.BoxText,
+                        Place = "below",
+                        Text = "x",
+                    },
+                ],
+            });
+            Assert.True(File.Exists(Path.Combine(packagesRoot, "library", "fragments", "my-frag-lib-v1.json")));
+
+            var del = store.DeleteLibrary("my-frag-lib-v1");
+            Assert.True(del.Ok);
+            Assert.Null(store.TryGet("my-frag-lib-v1"));
+
+            var seedOnly = store.DeleteLibrary("copay-duo-v1");
+            Assert.True(seedOnly.IsSeedOnly);
+        }
+        finally
+        {
+            try { Directory.Delete(packagesRoot, recursive: true); } catch { /* ignore */ }
+        }
+    }
 }

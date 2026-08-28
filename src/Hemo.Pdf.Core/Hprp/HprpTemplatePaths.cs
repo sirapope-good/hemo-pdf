@@ -16,6 +16,8 @@ public static class HprpTemplatePaths
     public const string FragmentPresetsFolder = "presets/fragments";
     /// <summary>Studio-editable library under <c>packages/library/headers</c> (JSON presets).</summary>
     public const string LibraryHeadersFolder = "library/headers";
+    public const string LibraryTablesFolder = "library/tables";
+    public const string LibraryFragmentsFolder = "library/fragments";
     public const string AdaptersFolder = "adapters";
     public const string DefaultVariant = "default";
     public const string SolutionFileName = "Hemo.Pdf.sln";
@@ -60,6 +62,12 @@ public static class HprpTemplatePaths
 
     public static string LibraryHeadersRoot(string packagesRoot) =>
         Path.Combine(packagesRoot, LibraryHeadersFolder);
+
+    public static string LibraryTablesRoot(string packagesRoot) =>
+        Path.Combine(packagesRoot, LibraryTablesFolder);
+
+    public static string LibraryFragmentsRoot(string packagesRoot) =>
+        Path.Combine(packagesRoot, LibraryFragmentsFolder);
 
     public static string AdaptersRoot(string templatesRoot) =>
         Path.Combine(templatesRoot, AdaptersFolder);

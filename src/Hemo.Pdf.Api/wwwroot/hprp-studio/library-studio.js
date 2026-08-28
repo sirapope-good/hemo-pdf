@@ -5,8 +5,12 @@
   let selectedKind = "headers";
   let selectedId = null;
   let filterTag = "";
-  /** Set by studio.js — opens header alone on the canvas. */
-  let openHeaderFn = null;
+  /** Set by studio.js — open handlers per kind. */
+  let openHandlers = {
+    headers: null,
+    tables: null,
+    fragments: null,
+  };
 
   function $(id) {
     return document.getElementById(id);
@@ -33,17 +37,17 @@
       || String(item.displayName || "").toLowerCase().indexOf(q) >= 0;
   }
 
-  function openHeaderOnCanvas(presetId) {
-    if (typeof openHeaderFn === "function") {
-      openHeaderFn(presetId);
+  function openOnCanvas(kind, presetId) {
+    const fn = openHandlers[kind]
+      || (kind === "headers" ? global.openLibraryHeader : null)
+      || (kind === "tables" ? global.openLibraryTable : null)
+      || (kind === "fragments" ? global.openLibraryFragment : null);
+    if (typeof fn === "function") {
+      fn(presetId);
       return;
     }
-    if (typeof global.openLibraryHeader === "function") {
-      global.openLibraryHeader(presetId);
-      return;
-    }
-    console.error("[LibraryStudio] openHeader handler missing — hard-refresh Studio (Ctrl+F5)");
-    alert("ยังโหลดตัวแก้ Library ไม่ครบ — กด Ctrl+F5 แล้วลองคลิก Header อีกครั้ง");
+    console.error("[LibraryStudio] open handler missing for", kind);
+    alert("ยังโหลดตัวแก้ Library ไม่ครบ — กด Ctrl+F5 แล้วลองอีกครั้ง");
   }
 
   function renderList() {
@@ -63,9 +67,7 @@
       const li = document.createElement("li");
       li.className = "lib-item" + (selectedId === item.id ? " active" : "");
       li.dataset.id = item.id;
-      li.title = selectedKind === "headers"
-        ? "คลิกเพื่อแก้บน canvas"
-        : "คลิกเพื่อเลือก · Insert into pack เพื่อใส่ในรายงาน";
+      li.title = "คลิกเพื่อแก้บน canvas";
       const title = document.createElement("strong");
       title.textContent = item.displayName || item.id;
       const meta = document.createElement("span");
@@ -81,13 +83,10 @@
         ev.preventDefault();
         ev.stopPropagation();
         selectedId = item.id;
-        // Highlight without full rebuild (rebuild raced async open).
         list.querySelectorAll(".lib-item").forEach((node) => {
           node.classList.toggle("active", node.dataset.id === item.id);
         });
-        if (selectedKind === "headers") {
-          openHeaderOnCanvas(item.id);
-        }
+        openOnCanvas(selectedKind, item.id);
       });
       list.appendChild(li);
     });
@@ -165,21 +164,29 @@
       alert("เลือก item ใน Library ก่อน");
       return;
     }
-    if (selectedKind !== "headers") {
-      alert("ตอนนี้ Delete รองรับเฉพาะ Headers (packages/library/headers)");
-      return;
-    }
     const id = selectedId;
-    if (!confirm("ลบ library header \"" + id + "\"?\n\nลบได้เฉพาะไฟล์ใน packages/library/headers/\nถ้ามี seed ใน assets จะกลับไปใช้ seed")) {
+    const kind = selectedKind;
+    const folder = kind === "headers" ? "headers" : kind === "tables" ? "tables" : "fragments";
+    if (!confirm(
+      "ลบ library " + kind.slice(0, -1) + " \"" + id + "\"?\n\n"
+      + "ลบได้เฉพาะไฟล์ใน packages/library/" + folder + "/\n"
+      + "ถ้ามี seed ใน assets จะกลับไปใช้ seed"
+    )) {
       return;
     }
     const td = global.TableDesigner;
-    if (!td || typeof td.deleteLibraryHeader !== "function") {
-      alert("deleteLibraryHeader ไม่พร้อม — hard refresh (Ctrl+F5)");
+    if (!td) return;
+    const delFn = kind === "headers"
+      ? td.deleteLibraryHeader
+      : kind === "tables"
+        ? td.deleteLibraryTable
+        : td.deleteLibraryFragment;
+    if (typeof delFn !== "function") {
+      alert("Delete handler ไม่พร้อม — hard refresh (Ctrl+F5) และ rebuild API");
       return;
     }
     try {
-      const result = await td.deleteLibraryHeader(id);
+      const result = await delFn.call(td, id);
       selectedId = null;
       renderList();
       const msg = (result && result.message) || ("Deleted " + id);
@@ -190,7 +197,7 @@
       }
       const title = document.getElementById("editorTitle");
       if (title && String(title.textContent || "").indexOf(id) >= 0) {
-        title.textContent = "Library header deleted";
+        title.textContent = "Library item deleted";
       }
     } catch (e) {
       alert(e.message || String(e));
@@ -217,14 +224,10 @@
     if (edit) {
       edit.addEventListener("click", () => {
         if (!selectedId) {
-          alert("เลือก Header ใน Library ก่อน");
+          alert("เลือก item ใน Library ก่อน");
           return;
         }
-        if (selectedKind !== "headers") {
-          alert("ตอนนี้ Edit on canvas รองรับเฉพาะ Headers");
-          return;
-        }
-        openHeaderOnCanvas(selectedId);
+        openOnCanvas(selectedKind, selectedId);
       });
     }
     const del = $("btnLibDelete");
@@ -237,7 +240,13 @@
     wire,
     refresh: renderList,
     setSideTab,
-    setOpenHeader: function (fn) { openHeaderFn = fn; },
+    setOpenHeader: function (fn) { openHandlers.headers = fn; },
+    setOpenHandlers: function (map) {
+      if (!map) return;
+      if (map.headers) openHandlers.headers = map.headers;
+      if (map.tables) openHandlers.tables = map.tables;
+      if (map.fragments) openHandlers.fragments = map.fragments;
+    },
   };
 
   if (document.readyState === "loading") {

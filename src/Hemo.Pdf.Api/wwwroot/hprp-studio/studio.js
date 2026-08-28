@@ -324,25 +324,14 @@ function setButtonsEnabled(on) {
   els.editor.disabled = !on;
 }
 
-async function openLibraryHeaderImpl(presetId) {
-  // Sync feedback first — so a hung await never looks like a no-op click.
-  setStatus("กำลังเปิด Library header: " + presetId + "…", "ok");
-  if (els.title) els.title.textContent = "Library · loading…";
-
-  if (!window.TableDesigner || typeof TableDesigner.openLibraryHeader !== "function") {
-    throw new Error("TableDesigner.openLibraryHeader is not available — hard refresh (Ctrl+F5)");
-  }
-  await TableDesigner.loadCatalogExtras({ silent: true });
-  const opened = await TableDesigner.openLibraryHeader(presetId);
-  if (!opened) throw new Error("Header preset not found: " + presetId);
-
+async function enterLibraryEditMode(opened) {
   state.libraryEdit = {
-    kind: "headers",
+    kind: opened.kind,
     id: opened.id,
     displayName: opened.displayName || opened.id,
   };
   state.selected = {
-    id: "__library__/headers/" + opened.id,
+    id: "__library__/" + opened.kind + "/" + opened.id,
     displayName: opened.displayName,
     library: true,
   };
@@ -351,9 +340,15 @@ async function openLibraryHeaderImpl(presetId) {
   els.title.textContent = "Library · " + (opened.displayName || opened.id);
   setButtonsEnabled(true);
   const btnSave = document.getElementById("btnSave");
+  const folder = opened.kind === "headers"
+    ? "headers"
+    : opened.kind === "tables"
+      ? "tables"
+      : "fragments";
+  const label = opened.kind === "headers" ? "header" : opened.kind === "tables" ? "table" : "fragment";
   if (btnSave) {
-    btnSave.textContent = "Save library header";
-    btnSave.title = "Write packages/library/headers/" + opened.id + ".json";
+    btnSave.textContent = "Save library " + label;
+    btnSave.title = "Write packages/library/" + folder + "/" + opened.id + ".json";
   }
   state.mode = "designer";
   document.body.classList.add("mode-designer");
@@ -364,13 +359,54 @@ async function openLibraryHeaderImpl(presetId) {
   if (btnJson) btnJson.classList.remove("active");
   if (typeof TableDesigner.renderAll === "function") TableDesigner.renderAll();
   else renderDesigner();
-  setStatus("แก้ไข header บน canvas · Save → packages/library/headers/" + opened.id + ".json", "ok");
+  setStatus(
+    "แก้ไข " + label + " บน canvas · Save → packages/library/" + folder + "/" + opened.id + ".json",
+    "ok"
+  );
+}
+
+async function openLibraryHeaderImpl(presetId) {
+  setStatus("กำลังเปิด Library header: " + presetId + "…", "ok");
+  if (els.title) els.title.textContent = "Library · loading…";
+
+  if (!window.TableDesigner || typeof TableDesigner.openLibraryHeader !== "function") {
+    throw new Error("TableDesigner.openLibraryHeader is not available — hard refresh (Ctrl+F5)");
+  }
+  await TableDesigner.loadCatalogExtras({ silent: true });
+  const opened = await TableDesigner.openLibraryHeader(presetId);
+  if (!opened) throw new Error("Header preset not found: " + presetId);
+  await enterLibraryEditMode({ kind: "headers", id: opened.id, displayName: opened.displayName });
+}
+
+async function openLibraryTableImpl(presetId) {
+  setStatus("กำลังเปิด Library table: " + presetId + "…", "ok");
+  if (els.title) els.title.textContent = "Library · loading…";
+
+  if (!window.TableDesigner || typeof TableDesigner.openLibraryTable !== "function") {
+    throw new Error("TableDesigner.openLibraryTable is not available — hard refresh (Ctrl+F5)");
+  }
+  await TableDesigner.loadCatalogExtras({ silent: true });
+  const opened = await TableDesigner.openLibraryTable(presetId);
+  if (!opened) throw new Error("Table preset not found: " + presetId);
+  await enterLibraryEditMode({ kind: "tables", id: opened.id, displayName: opened.displayName });
+}
+
+async function openLibraryFragmentImpl(presetId) {
+  setStatus("กำลังเปิด Library fragment: " + presetId + "…", "ok");
+  if (els.title) els.title.textContent = "Library · loading…";
+
+  if (!window.TableDesigner || typeof TableDesigner.openLibraryFragment !== "function") {
+    throw new Error("TableDesigner.openLibraryFragment is not available — hard refresh (Ctrl+F5)");
+  }
+  await TableDesigner.loadCatalogExtras({ silent: true });
+  const opened = await TableDesigner.openLibraryFragment(presetId);
+  if (!opened) throw new Error("Fragment preset not found: " + presetId);
+  await enterLibraryEditMode({ kind: "fragments", id: opened.id, displayName: opened.displayName });
 }
 
 /**
- * Global entry for Library tab. Must NOT be named openLibraryHeader — in classic
- * scripts, assigning window.openLibraryHeader = () => openLibraryHeader(...) replaces
- * the function declaration binding and causes infinite recursion (silent stack overflow).
+ * Global entry for Library tab. Must NOT reuse the impl function name on window —
+ * classic scripts share function declarations with window.* and recurse forever.
  */
 function invokeOpenLibraryHeader(presetId) {
   return openLibraryHeaderImpl(presetId).catch((err) => {
@@ -378,9 +414,29 @@ function invokeOpenLibraryHeader(presetId) {
     setStatus(err.message || String(err), "err");
   });
 }
+function invokeOpenLibraryTable(presetId) {
+  return openLibraryTableImpl(presetId).catch((err) => {
+    console.error("[openLibraryTable]", err);
+    setStatus(err.message || String(err), "err");
+  });
+}
+function invokeOpenLibraryFragment(presetId) {
+  return openLibraryFragmentImpl(presetId).catch((err) => {
+    console.error("[openLibraryFragment]", err);
+    setStatus(err.message || String(err), "err");
+  });
+}
 
 window.openLibraryHeader = invokeOpenLibraryHeader;
-if (window.LibraryStudio && typeof LibraryStudio.setOpenHeader === "function") {
+window.openLibraryTable = invokeOpenLibraryTable;
+window.openLibraryFragment = invokeOpenLibraryFragment;
+if (window.LibraryStudio && typeof LibraryStudio.setOpenHandlers === "function") {
+  LibraryStudio.setOpenHandlers({
+    headers: invokeOpenLibraryHeader,
+    tables: invokeOpenLibraryTable,
+    fragments: invokeOpenLibraryFragment,
+  });
+} else if (window.LibraryStudio && typeof LibraryStudio.setOpenHeader === "function") {
   LibraryStudio.setOpenHeader(invokeOpenLibraryHeader);
 }
 
@@ -1928,12 +1984,29 @@ function firstFileHeaderFill(layout) {
 }
 
 async function save() {
-  if (state.libraryEdit && state.libraryEdit.kind === "headers") {
-    if (!window.TableDesigner || typeof TableDesigner.saveLibraryHeader !== "function")
-      throw new Error("TableDesigner.saveLibraryHeader is not available");
-    const result = await TableDesigner.saveLibraryHeader();
-    const path = (result && result.outputPath) || ("packages/library/headers/" + state.libraryEdit.id + ".json");
-    setStatus("Saved library header → " + path, "ok");
+  if (state.libraryEdit) {
+    const kind = state.libraryEdit.kind;
+    if (kind === "headers") {
+      if (!window.TableDesigner || typeof TableDesigner.saveLibraryHeader !== "function")
+        throw new Error("TableDesigner.saveLibraryHeader is not available");
+      const result = await TableDesigner.saveLibraryHeader();
+      const path = (result && result.outputPath) || ("packages/library/headers/" + state.libraryEdit.id + ".json");
+      setStatus("Saved library header → " + path, "ok");
+    } else if (kind === "tables") {
+      if (!window.TableDesigner || typeof TableDesigner.saveLibraryTable !== "function")
+        throw new Error("TableDesigner.saveLibraryTable is not available");
+      const result = await TableDesigner.saveLibraryTable();
+      const path = (result && result.outputPath) || ("packages/library/tables/" + state.libraryEdit.id + ".json");
+      setStatus("Saved library table → " + path, "ok");
+    } else if (kind === "fragments") {
+      if (!window.TableDesigner || typeof TableDesigner.saveLibraryFragment !== "function")
+        throw new Error("TableDesigner.saveLibraryFragment is not available");
+      const result = await TableDesigner.saveLibraryFragment();
+      const path = (result && result.outputPath) || ("packages/library/fragments/" + state.libraryEdit.id + ".json");
+      setStatus("Saved library fragment → " + path, "ok");
+    } else {
+      throw new Error("Unknown library edit kind: " + kind);
+    }
     if (window.LibraryStudio && typeof LibraryStudio.refresh === "function")
       LibraryStudio.refresh();
     return;
@@ -2093,6 +2166,12 @@ loadCatalog().catch((err) => setStatus(err.message, "err"));
 if (window.TableDesigner)
   TableDesigner.init(state, els, api, setStatus, schedulePreview);
 // Re-bind after init in case LibraryStudio loaded first without handler.
-if (window.LibraryStudio && typeof LibraryStudio.setOpenHeader === "function") {
+if (window.LibraryStudio && typeof LibraryStudio.setOpenHandlers === "function") {
+  LibraryStudio.setOpenHandlers({
+    headers: invokeOpenLibraryHeader,
+    tables: invokeOpenLibraryTable,
+    fragments: invokeOpenLibraryFragment,
+  });
+} else if (window.LibraryStudio && typeof LibraryStudio.setOpenHeader === "function") {
   LibraryStudio.setOpenHeader(invokeOpenLibraryHeader);
 }

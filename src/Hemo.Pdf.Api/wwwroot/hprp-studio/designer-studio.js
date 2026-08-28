@@ -524,7 +524,9 @@
     if (scenario) qs.set("scenario", scenario);
     const q = qs.toString() ? "?" + qs.toString() : "";
     const useClinical01Sample =
-      (stateRef.libraryEdit && stateRef.libraryEdit.kind === "headers")
+      (stateRef.libraryEdit && (stateRef.libraryEdit.kind === "headers"
+        || stateRef.libraryEdit.kind === "tables"
+        || stateRef.libraryEdit.kind === "fragments"))
       || String(item.id || "").indexOf("__library__/") === 0;
     try {
       if (useClinical01Sample) {
@@ -2584,6 +2586,218 @@
     return result;
   }
 
+  async function openLibraryTable(presetId) {
+    await loadCatalogExtras({ silent: true });
+    const pid = String(presetId || "").trim();
+    let preset = tablePresets[pid];
+    if (!preset) {
+      try {
+        preset = await apiRef(`/api/hprp/presets/tables/${encodeURIComponent(pid)}`);
+        if (preset && preset.id) tablePresets[preset.id] = preset;
+      } catch (_) {
+        preset = null;
+      }
+    }
+    if (!preset) return null;
+
+    const working = JSON.parse(JSON.stringify(preset));
+    const id = working.id || pid;
+    working.id = id;
+    if (!stateRef) {
+      console.error("[TableDesigner.openLibraryTable] stateRef missing — init not called");
+      return null;
+    }
+
+    stateRef.draft = {
+      manifest: {
+        id: "__library__/tables/" + id,
+        displayName: working.displayName || id,
+        layoutMode: "designer",
+        layoutKind: "LibraryTable",
+      },
+      layout: {
+        page: { size: "A4", marginMm: 2, spacingMm: 2, border: "none" },
+        elements: [
+          {
+            id: "tbl_lib",
+            type: "config-table",
+            band: "content",
+            presetId: id,
+            tablePreset: working,
+            place: "below",
+            box: { xMm: 0, yMm: 0, wMm: 206, hMm: 140 },
+            bindings: [],
+            chrome: { border: "thin" },
+          },
+        ],
+        body: [],
+      },
+      labels: {},
+    };
+    selectedElementId = "tbl_lib";
+    stateRef.selectedKey = null;
+
+    try {
+      sampleData = await apiRef("/api/hprp/packages/clinical-01-hct-epo/sample-data");
+    } catch (_) {
+      sampleData = null;
+    }
+
+    if (canvasTools) canvasTools.resetHistory();
+    return { id: id, displayName: working.displayName || id };
+  }
+
+  async function saveLibraryTable() {
+    ensureElements();
+    const el = (stateRef.draft.layout.elements || []).find((e) => e.type === "config-table");
+    if (!el) throw new Error("No config-table on canvas");
+    const working = resolveTablePreset(el);
+    if (!working) throw new Error("Table preset missing");
+    ensureWorkingPreset(el, working);
+    commitWorking(el, el.tablePreset);
+
+    const id = (stateRef.libraryEdit && stateRef.libraryEdit.id)
+      || el.presetId
+      || (el.tablePreset && el.tablePreset.id)
+      || working.id;
+    if (!id) throw new Error("Table preset id missing");
+
+    const body = Object.assign({}, JSON.parse(JSON.stringify(el.tablePreset || working)), {
+      id: id,
+      displayName: (el.tablePreset && el.tablePreset.displayName)
+        || working.displayName
+        || (stateRef.libraryEdit && stateRef.libraryEdit.displayName)
+        || id,
+    });
+
+    const result = await apiRef(`/api/hprp/presets/tables/${encodeURIComponent(id)}`, {
+      method: "PUT",
+      body: JSON.stringify(body),
+    });
+    const saved = (result && result.preset) || body;
+    tablePresets[id] = saved;
+    el.presetId = id;
+    el.tablePreset = JSON.parse(JSON.stringify(saved));
+    renderAll();
+    return result || {
+      preset: saved,
+      outputPath: "packages/library/tables/" + id + ".json",
+    };
+  }
+
+  async function deleteLibraryTable(presetId) {
+    const id = String(presetId || "").trim();
+    if (!id) throw new Error("Table id required");
+    if (!apiRef) throw new Error("API not ready");
+    const result = await apiRef(`/api/hprp/presets/tables/${encodeURIComponent(id)}`, {
+      method: "DELETE",
+    });
+    delete tablePresets[id];
+    await loadCatalogExtras({ silent: true });
+    if (stateRef && stateRef.libraryEdit && stateRef.libraryEdit.id === id) {
+      stateRef.libraryEdit = null;
+    }
+    if (global.LibraryStudio && typeof global.LibraryStudio.refresh === "function") {
+      global.LibraryStudio.refresh();
+    }
+    return result;
+  }
+
+  async function openLibraryFragment(presetId) {
+    await loadCatalogExtras({ silent: true });
+    const pid = String(presetId || "").trim();
+    let frag = fragmentPresets[pid];
+    if (!frag) {
+      try {
+        frag = await apiRef(`/api/hprp/presets/fragments/${encodeURIComponent(pid)}`);
+        if (frag && frag.id) fragmentPresets[frag.id] = frag;
+      } catch (_) {
+        frag = null;
+      }
+    }
+    if (!frag || !Array.isArray(frag.elements) || !frag.elements.length) return null;
+
+    const id = frag.id || pid;
+    if (!stateRef) {
+      console.error("[TableDesigner.openLibraryFragment] stateRef missing — init not called");
+      return null;
+    }
+
+    const elements = JSON.parse(JSON.stringify(frag.elements));
+    stateRef.draft = {
+      manifest: {
+        id: "__library__/fragments/" + id,
+        displayName: frag.displayName || id,
+        layoutMode: "designer",
+        layoutKind: "LibraryFragment",
+      },
+      layout: {
+        page: { size: "A4", marginMm: 2, spacingMm: 2, border: "none" },
+        elements: elements,
+        body: [],
+      },
+      labels: {},
+    };
+    selectedElementId = elements[0] && elements[0].id ? elements[0].id : null;
+    stateRef.selectedKey = null;
+
+    try {
+      sampleData = await apiRef("/api/hprp/packages/clinical-01-hct-epo/sample-data");
+    } catch (_) {
+      sampleData = null;
+    }
+
+    if (canvasTools) canvasTools.resetHistory();
+    return { id: id, displayName: frag.displayName || id };
+  }
+
+  async function saveLibraryFragment() {
+    ensureElements();
+    const id = (stateRef.libraryEdit && stateRef.libraryEdit.id) || null;
+    if (!id) throw new Error("Fragment id missing");
+    const els = stateRef.draft.layout.elements || [];
+    if (!els.length) throw new Error("No elements on canvas");
+
+    const body = {
+      id: id,
+      displayName: (stateRef.libraryEdit && stateRef.libraryEdit.displayName)
+        || (fragmentPresets[id] && fragmentPresets[id].displayName)
+        || id,
+      tags: (fragmentPresets[id] && fragmentPresets[id].tags) || [],
+      elements: JSON.parse(JSON.stringify(els)),
+    };
+
+    const result = await apiRef(`/api/hprp/presets/fragments/${encodeURIComponent(id)}`, {
+      method: "PUT",
+      body: JSON.stringify(body),
+    });
+    const saved = (result && result.preset) || body;
+    fragmentPresets[id] = saved;
+    renderAll();
+    return result || {
+      preset: saved,
+      outputPath: "packages/library/fragments/" + id + ".json",
+    };
+  }
+
+  async function deleteLibraryFragment(presetId) {
+    const id = String(presetId || "").trim();
+    if (!id) throw new Error("Fragment id required");
+    if (!apiRef) throw new Error("API not ready");
+    const result = await apiRef(`/api/hprp/presets/fragments/${encodeURIComponent(id)}`, {
+      method: "DELETE",
+    });
+    delete fragmentPresets[id];
+    await loadCatalogExtras({ silent: true });
+    if (stateRef && stateRef.libraryEdit && stateRef.libraryEdit.id === id) {
+      stateRef.libraryEdit = null;
+    }
+    if (global.LibraryStudio && typeof global.LibraryStudio.refresh === "function") {
+      global.LibraryStudio.refresh();
+    }
+    return result;
+  }
+
   function uniqueElementId(base, taken) {
     let id = base || "el";
     let n = 0;
@@ -2857,6 +3071,12 @@
     openLibraryHeader,
     saveLibraryHeader,
     deleteLibraryHeader,
+    openLibraryTable,
+    saveLibraryTable,
+    deleteLibraryTable,
+    openLibraryFragment,
+    saveLibraryFragment,
+    deleteLibraryFragment,
     addBoxText,
     addPageOf,
     addFragmentPrompt,
