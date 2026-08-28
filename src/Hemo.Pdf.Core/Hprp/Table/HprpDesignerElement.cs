@@ -151,11 +151,29 @@ public sealed class HprpDesignerElement
     [JsonPropertyName("align")]
     public string? Align { get; init; }
 
-    public HprpDesignerElement WithBox(HprpDesignerBox box) => new()
+    /// <summary>
+    /// For <see cref="HprpDesignerElementTypes.Group"/>: <c>column</c> (default) stacks children vertically
+    /// inside this block’s width (inner section).
+    /// </summary>
+    [JsonPropertyName("direction")]
+    public string? Direction { get; init; }
+
+    /// <summary>Child elements when <see cref="Type"/> is <c>group</c> (max <see cref="HprpDesignerGroupLimits.MaxChildren"/>).</summary>
+    [JsonPropertyName("children")]
+    public IReadOnlyList<HprpDesignerElement>? Children { get; init; }
+
+    public HprpDesignerElement WithBox(HprpDesignerBox box) => Clone(box: box);
+
+    public HprpDesignerElement WithBoxAndChildren(HprpDesignerBox box, IReadOnlyList<HprpDesignerElement> children) =>
+        Clone(box: box, children: children);
+
+    private HprpDesignerElement Clone(
+        HprpDesignerBox? box = null,
+        IReadOnlyList<HprpDesignerElement>? children = null) => new()
     {
         Id = Id,
         Type = Type,
-        Box = box,
+        Box = box ?? Box,
         Preset = Preset,
         HeaderPreset = HeaderPreset,
         PresetId = PresetId,
@@ -171,5 +189,7 @@ public sealed class HprpDesignerElement
         Items = Items,
         Align = Align,
         Band = Band,
+        Direction = Direction,
+        Children = children ?? Children,
     };
 }

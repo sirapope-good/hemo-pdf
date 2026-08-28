@@ -90,31 +90,23 @@ public static class HprpDesignerFlow
             var pageEls = new List<HprpDesignerElement>();
 
             // Super-header: just above the margin guide (outside dashed box).
-            PlaceBandAbsolute(superHeader, marginLeftMm, guideTop - sh, pageEls);
+            AppendExpandedBand(superHeader, marginLeftMm, guideTop - sh, pageEls);
 
             var innerY = guideTop;
-            PlaceBandAbsolute(header, marginLeftMm, innerY, pageEls);
+            AppendExpandedBand(header, marginLeftMm, innerY, pageEls);
             innerY += headerH;
 
             if (p < contentPages.Count)
             {
                 foreach (var e in contentPages[p])
-                {
-                    pageEls.Add(e.WithBox(new HprpDesignerBox
-                    {
-                        XMm = marginLeftMm + e.Box.XMm,
-                        YMm = innerY + e.Box.YMm,
-                        WMm = e.Box.WMm,
-                        HMm = e.Box.HMm,
-                    }));
-                }
+                    AppendExpanded(e, marginLeftMm, innerY, pageEls);
             }
 
             var footerY = guideTop + guideHeight - footerH;
-            PlaceBandAbsolute(footer, marginLeftMm, footerY, pageEls);
+            AppendExpandedBand(footer, marginLeftMm, footerY, pageEls);
 
             // Super-footer: just below the margin guide (outside dashed box).
-            PlaceBandAbsolute(superFooter, marginLeftMm, guideTop + guideHeight, pageEls);
+            AppendExpandedBand(superFooter, marginLeftMm, guideTop + guideHeight, pageEls);
 
             pages.Add(new HprpDesignerPageSlice { PageIndex = p, Elements = pageEls });
         }
@@ -136,22 +128,41 @@ public static class HprpDesignerFlow
         };
     }
 
-    private static void PlaceBandAbsolute(
+    private static void AppendExpandedBand(
         List<HprpDesignerElement> band,
         float originX,
         float originY,
         List<HprpDesignerElement> pageEls)
     {
         foreach (var e in band)
+            AppendExpanded(e, originX, originY, pageEls);
+    }
+
+    /// <summary>
+    /// Emit paintables: groups expand to children (page-absolute); group chrome is Studio-only.
+    /// </summary>
+    private static void AppendExpanded(
+        HprpDesignerElement e,
+        float originX,
+        float originY,
+        List<HprpDesignerElement> pageEls)
+    {
+        if (IsGroup(e))
         {
-            pageEls.Add(e.WithBox(new HprpDesignerBox
-            {
-                XMm = originX + e.Box.XMm,
-                YMm = originY + e.Box.YMm,
-                WMm = e.Box.WMm,
-                HMm = e.Box.HMm,
-            }));
+            var gx = originX + e.Box.XMm;
+            var gy = originY + e.Box.YMm;
+            foreach (var child in e.Children ?? [])
+                AppendExpanded(child, gx, gy, pageEls);
+            return;
         }
+
+        pageEls.Add(e.WithBox(new HprpDesignerBox
+        {
+            XMm = originX + e.Box.XMm,
+            YMm = originY + e.Box.YMm,
+            WMm = e.Box.WMm,
+            HMm = e.Box.HMm,
+        }));
     }
 
     private static List<HprpDesignerElement> FilterBand(
@@ -245,36 +256,36 @@ public static class HprpDesignerFlow
             var remain = Math.Max(MinBlockW * autoCount, contentW - fixedW - gapTotal);
             var autoW = autoCount > 0 ? remain / autoCount : 0f;
 
+            // Pre-measure heights (groups pack children) for page-break decision.
+            var measured = new List<HprpDesignerElement>(row.Count);
             var maxH = 0f;
             foreach (var e in row)
             {
-                var h = Math.Max(
-                    MinHeightFor(e),
-                    e.Box.HMm > 0 ? e.Box.HMm : MinHeightFor(e));
-                maxH = Math.Max(maxH, h);
+                var w = e.ManualWidth
+                    ? Math.Clamp(e.Box.WMm > 0 ? e.Box.WMm : MinBlockW, MinBlockW, contentW)
+                    : Math.Max(MinBlockW, autoW);
+                var packed = IsGroup(e) ? PackColumnGroup(e, w, gaps) : MeasureLeaf(e, w);
+                measured.Add(packed);
+                maxH = Math.Max(maxH, packed.Box.HMm);
             }
 
             if (cursorY + maxH > maxHeight + 0.01f && result.Count > 0)
                 break;
 
             var x = 0f;
-            foreach (var e in row)
+            foreach (var e in measured)
             {
-                var w = e.ManualWidth
-                    ? Math.Clamp(e.Box.WMm > 0 ? e.Box.WMm : MinBlockW, MinBlockW, contentW)
-                    : Math.Max(MinBlockW, autoW);
-                var h = Math.Max(
-                    MinHeightFor(e),
-                    e.Box.HMm > 0 ? e.Box.HMm : MinHeightFor(e));
-                result.Add(e.WithBox(new HprpDesignerBox
+                var box = new HprpDesignerBox
                 {
                     XMm = x,
                     YMm = cursorY,
-                    WMm = w,
-                    // Own height — maxH only advances the next row.
-                    HMm = h,
-                }));
-                x += gaps.StepX(w);
+                    WMm = e.Box.WMm,
+                    HMm = e.Box.HMm,
+                };
+                result.Add(IsGroup(e)
+                    ? e.WithBoxAndChildren(box, e.Children ?? Array.Empty<HprpDesignerElement>())
+                    : e.WithBox(box));
+                x += gaps.StepX(e.Box.WMm);
             }
 
             cursorY += gaps.StepY(maxH);
@@ -284,6 +295,66 @@ public static class HprpDesignerFlow
         return (result, i);
     }
 
+    private static HprpDesignerElement MeasureLeaf(HprpDesignerElement e, float width)
+    {
+        var h = Math.Max(
+            MinHeightFor(e),
+            e.Box.HMm > 0 ? e.Box.HMm : MinHeightFor(e));
+        return e.WithBox(new HprpDesignerBox
+        {
+            XMm = 0,
+            YMm = 0,
+            WMm = width,
+            HMm = h,
+        });
+    }
+
+    /// <summary>Stack children vertically inside <paramref name="width"/>; child boxes are group-relative.</summary>
+    private static HprpDesignerElement PackColumnGroup(
+        HprpDesignerElement group,
+        float width,
+        HprpDesignerGaps gaps)
+    {
+        var raw = (group.Children ?? Array.Empty<HprpDesignerElement>())
+            .Take(HprpDesignerGroupLimits.MaxChildren)
+            .ToList();
+        if (raw.Count == 0)
+        {
+            return group.WithBoxAndChildren(
+                new HprpDesignerBox { XMm = 0, YMm = 0, WMm = width, HMm = MinBlockH },
+                Array.Empty<HprpDesignerElement>());
+        }
+
+        var packedKids = new List<HprpDesignerElement>(raw.Count);
+        var y = 0f;
+        for (var i = 0; i < raw.Count; i++)
+        {
+            var child = raw[i];
+            // Nested groups not supported in v1 — treat as leaf height.
+            var leaf = IsGroup(child)
+                ? PackColumnGroup(child, width, gaps)
+                : MeasureLeaf(child, width);
+            packedKids.Add(leaf.WithBox(new HprpDesignerBox
+            {
+                XMm = 0,
+                YMm = y,
+                WMm = width,
+                HMm = leaf.Box.HMm,
+            }));
+            if (i < raw.Count - 1)
+                y += gaps.StepY(leaf.Box.HMm);
+            else
+                y += leaf.Box.HMm;
+        }
+
+        return group.WithBoxAndChildren(
+            new HprpDesignerBox { XMm = 0, YMm = 0, WMm = width, HMm = y },
+            packedKids);
+    }
+
+    private static bool IsGroup(HprpDesignerElement e) =>
+        string.Equals(e.Type, HprpDesignerElementTypes.Group, StringComparison.OrdinalIgnoreCase);
+
     private static float MinHeightFor(HprpDesignerElement e)
     {
         var type = e.Type?.Trim() ?? "";
@@ -292,6 +363,9 @@ public static class HprpDesignerFlow
         {
             return MinBoxTextH;
         }
+
+        if (IsGroup(e))
+            return MinBlockH;
 
         return MinBlockH;
     }

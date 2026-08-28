@@ -215,4 +215,76 @@ public class HprpDesignerSpacingTests
         Assert.Equal(flow.GuideTopMm + flow.GuideHeightMm, pageOf.Box.YMm, 2);
         Assert.True(pageOf.Box.YMm >= flow.GuideTopMm + flow.GuideHeightMm - 0.01f);
     }
+
+    [Fact]
+    public void Reflow_ColumnGroup_StacksUnderBesideSibling()
+    {
+        var els = new List<HprpDesignerElement>
+        {
+            new()
+            {
+                Id = "left-tall",
+                Type = HprpDesignerElementTypes.ConfigTable,
+                Place = "below",
+                ManualWidth = true,
+                PresetId = "dummy",
+                Box = new HprpDesignerBox { WMm = 100, HMm = 60 },
+            },
+            new()
+            {
+                Id = "right-stack",
+                Type = HprpDesignerElementTypes.Group,
+                Place = "beside",
+                Direction = HprpDesignerGroupLimits.DirectionColumn,
+                ManualWidth = true,
+                Box = new HprpDesignerBox { WMm = 100, HMm = 10 },
+                Children =
+                [
+                    new()
+                    {
+                        Id = "r1",
+                        Type = HprpDesignerElementTypes.BoxText,
+                        Text = "a",
+                        Box = new HprpDesignerBox { WMm = 100, HMm = 15 },
+                    },
+                    new()
+                    {
+                        Id = "r2",
+                        Type = HprpDesignerElementTypes.BoxText,
+                        Text = "b",
+                        Box = new HprpDesignerBox { WMm = 100, HMm = 15 },
+                    },
+                    new()
+                    {
+                        Id = "r3",
+                        Type = HprpDesignerElementTypes.BoxText,
+                        Text = "c",
+                        Box = new HprpDesignerBox { WMm = 100, HMm = 15 },
+                    },
+                ],
+            },
+        };
+
+        var flow = HprpDesignerFlow.ReflowDetailed(
+            new HprpPage { SpacingMm = 2 },
+            els,
+            contentWidthMm: 206,
+            pageHeightMm: 297,
+            marginTopMm: 0,
+            marginBottomMm: 0,
+            marginLeftMm: 0);
+
+        var page = flow.Pages[0].Elements;
+        var left = Assert.Single(page, e => e.Id == "left-tall");
+        var r1 = Assert.Single(page, e => e.Id == "r1");
+        var r2 = Assert.Single(page, e => e.Id == "r2");
+        var r3 = Assert.Single(page, e => e.Id == "r3");
+
+        Assert.Equal(0, left.Box.YMm);
+        Assert.Equal(0, r1.Box.YMm);
+        Assert.Equal(r1.Box.YMm + r1.Box.HMm + 2f, r2.Box.YMm, 2);
+        Assert.Equal(r2.Box.YMm + r2.Box.HMm + 2f, r3.Box.YMm, 2);
+        Assert.Equal(left.Box.XMm + left.Box.WMm + 2f, r1.Box.XMm, 2);
+        Assert.DoesNotContain(page, e => e.Id == "right-stack");
+    }
 }

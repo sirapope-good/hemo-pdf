@@ -196,7 +196,7 @@ public static class HprpValidator
 
             var type = el.Type?.Trim() ?? "";
             if (!Hprp.Table.HprpDesignerElementTypes.All.Contains(type))
-                errors.Add($"{path}.type must be header, config-table, box-text, page-of, or dense.");
+                errors.Add($"{path}.type must be header, config-table, box-text, page-of, dense, or group.");
 
             if (el.Box.WMm <= 0 || el.Box.HMm <= 0)
                 errors.Add($"{path}.box wMm/hMm must be > 0.");
@@ -208,6 +208,12 @@ public static class HprpValidator
             }
 
             HprpChrome.Validate(el.Chrome, path + ".chrome", errors);
+
+            if (string.Equals(type, Hprp.Table.HprpDesignerElementTypes.Group, StringComparison.OrdinalIgnoreCase))
+            {
+                ValidateDesignerGroup(el, path, errors, depth: 0);
+                continue;
+            }
 
             if (string.Equals(type, Hprp.Table.HprpDesignerElementTypes.ConfigTable, StringComparison.OrdinalIgnoreCase))
             {
@@ -232,6 +238,60 @@ public static class HprpValidator
                 && (string.IsNullOrWhiteSpace(el.Widget) || !HprpWidgetIds.All.Contains(el.Widget)))
             {
                 errors.Add($"{path}.widget must be a known widget id for dense elements.");
+            }
+        }
+    }
+
+    private static void ValidateDesignerGroup(
+        Hprp.Table.HprpDesignerElement el,
+        string path,
+        List<string> errors,
+        int depth)
+    {
+        if (depth > 0)
+        {
+            errors.Add($"{path}: nested group is not supported (one column stack level only).");
+            return;
+        }
+
+        var dir = (el.Direction ?? Hprp.Table.HprpDesignerGroupLimits.DirectionColumn).Trim().ToLowerInvariant();
+        if (dir != Hprp.Table.HprpDesignerGroupLimits.DirectionColumn)
+            errors.Add($"{path}.direction must be column (v1).");
+
+        var kids = el.Children ?? Array.Empty<Hprp.Table.HprpDesignerElement>();
+        if (kids.Count == 0)
+            errors.Add($"{path}.children must contain at least one element.");
+        if (kids.Count > Hprp.Table.HprpDesignerGroupLimits.MaxChildren)
+            errors.Add($"{path}.children max is {Hprp.Table.HprpDesignerGroupLimits.MaxChildren}.");
+
+        for (var c = 0; c < kids.Count; c++)
+        {
+            var child = kids[c];
+            var cpath = $"{path}.children[{c}]";
+            if (string.IsNullOrWhiteSpace(child.Id))
+                errors.Add($"{cpath}.id is required.");
+            var ctype = child.Type?.Trim() ?? "";
+            if (string.Equals(ctype, Hprp.Table.HprpDesignerElementTypes.Group, StringComparison.OrdinalIgnoreCase))
+            {
+                errors.Add($"{cpath}: nested group is not supported.");
+                continue;
+            }
+            if (!Hprp.Table.HprpDesignerElementTypes.All.Contains(ctype)
+                || string.Equals(ctype, Hprp.Table.HprpDesignerElementTypes.Group, StringComparison.OrdinalIgnoreCase))
+            {
+                if (!Hprp.Table.HprpDesignerElementTypes.All.Contains(ctype))
+                    errors.Add($"{cpath}.type is invalid.");
+            }
+            if (string.Equals(ctype, Hprp.Table.HprpDesignerElementTypes.ConfigTable, StringComparison.OrdinalIgnoreCase))
+            {
+                if (string.IsNullOrWhiteSpace(child.PresetId) && child.TablePreset is null)
+                    errors.Add($"{cpath} presetId or tablePreset is required for config-table.");
+            }
+            if (string.Equals(ctype, Hprp.Table.HprpDesignerElementTypes.BoxText, StringComparison.OrdinalIgnoreCase))
+            {
+                var hasItems = child.Items is { Count: > 0 };
+                if (!hasItems && string.IsNullOrWhiteSpace(child.Text) && string.IsNullOrWhiteSpace(child.Bind))
+                    errors.Add($"{cpath} text, bind, or items is required for box-text.");
             }
         }
     }

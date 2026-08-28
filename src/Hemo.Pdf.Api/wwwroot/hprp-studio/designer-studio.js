@@ -12,6 +12,12 @@
   /** Banner / single-line box-text can be much shorter than tables. */
   const MIN_BOX_TEXT_H = 4;
   const MIN_COL_WEIGHT = 0.25;
+  /** Max children in one column stack (inner section). */
+  const MAX_GROUP_CHILDREN = 4;
+
+  function isGroup(el) {
+    return String(el && el.type || "").toLowerCase() === "group";
+  }
 
   function resolveBand(el) {
     const b = String(el.band || "").toLowerCase().trim();
@@ -19,12 +25,135 @@
     const t = String(el.type || "").toLowerCase();
     if (t === "header") return "header";
     if (t === "page-of") return "super-footer";
+    if (t === "group") return "content";
     return "content";
   }
 
   function minHeightForElement(el) {
     const t = String(el && el.type || "").toLowerCase();
     return t === "box-text" || t === "page-of" ? MIN_BOX_TEXT_H : MIN_BLOCK_H;
+  }
+
+  /** Locate element in top-level list or inside a group.children. */
+  function findElementLocation(id) {
+    ensureElements();
+    const els = stateRef.draft.layout.elements;
+    for (let i = 0; i < els.length; i++) {
+      const e = els[i];
+      if (e.id === id) return { list: els, index: i, parent: null, el: e };
+      if (isGroup(e) && Array.isArray(e.children)) {
+        for (let c = 0; c < e.children.length; c++) {
+          if (e.children[c].id === id)
+            return { list: e.children, index: c, parent: e, el: e.children[c] };
+        }
+      }
+    }
+    return null;
+  }
+
+  function findElementById(id) {
+    const loc = findElementLocation(id);
+    return loc ? loc.el : null;
+  }
+
+  /** Flatten leaf ids in document order (groups expand). */
+  function flattenElementIds(list) {
+    const out = [];
+    (list || []).forEach((e) => {
+      if (isGroup(e)) (e.children || []).forEach((c) => out.push(c.id));
+      else out.push(e.id);
+    });
+    return out;
+  }
+
+  function packColumnGroup(group, widthMm, gaps, scale) {
+    const kids = (group.children || []).slice(0, MAX_GROUP_CHILDREN);
+    group.children = kids;
+    group.direction = group.direction || "column";
+    if (!kids.length) {
+      group.box = group.box || {};
+      group.box.wMm = widthMm;
+      group.box.hMm = MIN_BLOCK_H;
+      return group;
+    }
+    let y = 0;
+    kids.forEach((child, idx) => {
+      child.box = child.box || { xMm: 0, yMm: 0, wMm: widthMm, hMm: minHeightForElement(child) };
+      const minH = minHeightForElement(child);
+      child.box.hMm = Math.max(minH, Number(child.box.hMm) || minH);
+      child.box.wMm = widthMm;
+      child.box.xMm = 0;
+      child.box.yMm = y;
+      if (idx < kids.length - 1) y += gapStep(child.box.hMm, gaps.below, scale);
+      else y += child.box.hMm;
+    });
+    group.box = group.box || {};
+    group.box.wMm = widthMm;
+    group.box.hMm = y;
+    return group;
+  }
+
+  function measurePacked(el, widthMm, gaps, scale) {
+    if (isGroup(el)) return packColumnGroup(el, widthMm, gaps, scale);
+    el.box = el.box || { xMm: 0, yMm: 0, wMm: widthMm, hMm: minHeightForElement(el) };
+    const minH = minHeightForElement(el);
+    el.box.hMm = Math.max(minH, Number(el.box.hMm) || minH);
+    el.box.wMm = widthMm;
+    return el;
+  }
+
+  function expandPageItems(e, originX, originY, outsideMargin) {
+    const items = [];
+    if (isGroup(e)) {
+      const gx = originX + (Number(e.box.xMm) || 0);
+      const gy = originY + (Number(e.box.yMm) || 0);
+      items.push({
+        kind: "group-frame",
+        el: e,
+        xMm: gx,
+        yMm: gy,
+        wMm: e.box.wMm,
+        hMm: e.box.hMm,
+        outsideMargin: !!outsideMargin,
+      });
+      const kids = e.children || [];
+      kids.forEach((child, idx) => {
+        items.push({
+          kind: "element",
+          el: child,
+          xMm: gx + (Number(child.box.xMm) || 0),
+          yMm: gy + (Number(child.box.yMm) || 0),
+          wMm: child.box.wMm,
+          hMm: child.box.hMm,
+          outsideMargin: !!outsideMargin,
+          groupId: e.id,
+        });
+        if (idx < kids.length - 1) {
+          const topChild = kids[idx];
+          const splitY = gy + (Number(topChild.box.yMm) || 0) + (Number(topChild.box.hMm) || 0);
+          items.push({
+            kind: "stack-split",
+            groupId: e.id,
+            index: idx,
+            xMm: gx,
+            yMm: splitY,
+            wMm: e.box.wMm,
+            outsideMargin: !!outsideMargin,
+          });
+        }
+      });
+      return items;
+    }
+    items.push({
+      kind: "element",
+      el: e,
+      xMm: originX + (Number(e.box.xMm) || 0),
+      yMm: originY + (Number(e.box.yMm) || 0),
+      wMm: e.box.wMm,
+      hMm: e.box.hMm,
+      outsideMargin: !!outsideMargin,
+    });
+    return items;
   }
 
   const CLINICAL01_ANNUAL_BINDINGS = [
@@ -84,11 +213,10 @@
     }
   }
 
-  /** Selected ids in layout.elements order (stable for fragments). */
+  /** Selected ids in layout order (groups expand to children). */
   function getSelectedIdsInLayoutOrder() {
     ensureElements();
-    return (stateRef.draft.layout.elements || [])
-      .map((e) => e.id)
+    return flattenElementIds(stateRef.draft.layout.elements || [])
       .filter((id) => selectedElementIds.has(id));
   }
 
@@ -150,8 +278,13 @@
 
   /** Max width for resize: row position + trailing siblings must fit in contentW. */
   function maxWidthInRow(el, contentW, margins, gaps, scale) {
+    const loc = findElementLocation(el.id);
+    if (loc && loc.parent && isGroup(loc.parent)) {
+      return Math.max(MIN_BLOCK_W, Number(loc.parent.box && loc.parent.box.wMm) || contentW);
+    }
+    const target = loc && loc.parent ? loc.parent : el;
     const els = stateRef.draft.layout.elements;
-    const idx = els.indexOf(el);
+    const idx = els.indexOf(target);
     if (idx < 0) return contentW;
     let start = idx;
     while (start > 0 && String(els[start].place || "below").toLowerCase() === "beside") start--;
@@ -227,20 +360,20 @@
             fixedW += e.box.wMm;
           }
         });
+        const remain = Math.max(MIN_BLOCK_W * autoCount, contentW - fixedW - gapTotal);
+        const autoW = autoCount > 0 ? remain / autoCount : 0;
         let maxRowH = 0;
         row.forEach((e) => {
-          const minH = minHeightForElement(e);
-          e.box.hMm = Math.max(minH, Number(e.box.hMm) || minH);
+          const w = e.manualWidth
+            ? Math.max(MIN_BLOCK_W, Math.min(Number(e.box.wMm) || MIN_BLOCK_W, contentW))
+            : Math.max(MIN_BLOCK_W, autoW);
+          measurePacked(e, w, gaps, scale);
           maxRowH = Math.max(maxRowH, e.box.hMm);
         });
         if (cursorY + maxRowH > maxH + 0.01 && result.length > 0) break;
 
-        const remain = Math.max(MIN_BLOCK_W * autoCount, contentW - fixedW - gapTotal);
-        const autoW = autoCount > 0 ? remain / autoCount : 0;
         let x = 0;
         row.forEach((e) => {
-          if (!e.manualWidth) e.box.wMm = Math.max(MIN_BLOCK_W, autoW);
-          // Keep each block's own height — only maxRowH drives vertical row advance.
           e.box.xMm = x;
           e.box.yMm = cursorY;
           x += gapStep(e.box.wMm, gaps.beside, scale);
@@ -300,14 +433,8 @@
       const pageEls = [];
       function placeBandAbs(band, originX, originY) {
         band.forEach((e) => {
-          pageEls.push({
-            el: e,
-            xMm: originX + e.box.xMm,
-            yMm: originY + e.box.yMm,
-            wMm: e.box.wMm,
-            hMm: e.box.hMm,
-            outsideMargin: originY < guideTop - 0.01 || originY >= guideTop + guideHeight - 0.01,
-          });
+          const outside = originY < guideTop - 0.01 || originY >= guideTop + guideHeight - 0.01;
+          expandPageItems(e, originX, originY, outside).forEach((item) => pageEls.push(item));
         });
       }
 
@@ -316,14 +443,7 @@
       placeBandAbs(header, margins.left, innerY);
       innerY += headerH;
       (contentPages[p] || []).forEach((e) => {
-        pageEls.push({
-          el: e,
-          xMm: margins.left + e.box.xMm,
-          yMm: innerY + e.box.yMm,
-          wMm: e.box.wMm,
-          hMm: e.box.hMm,
-          outsideMargin: false,
-        });
+        expandPageItems(e, margins.left, innerY, false).forEach((item) => pageEls.push(item));
       });
       placeBandAbs(footer, margins.left, guideTop + guideHeight - footerH);
       placeBandAbs(superFooter, margins.left, guideTop + guideHeight);
@@ -487,7 +607,7 @@
 
   function selectedElement() {
     ensureElements();
-    return stateRef.draft.layout.elements.find((e) => e.id === selectedElementId) || null;
+    return findElementById(selectedElementId);
   }
 
   function resolveTablePreset(el) {
@@ -716,7 +836,38 @@
       });
 
       (flow.pages[p] || []).forEach((item, index) => {
+        if (item.kind === "group-frame") {
+          const frame = document.createElement("div");
+          frame.className = "designer-group-frame";
+          frame.style.left = item.xMm * scale + "px";
+          frame.style.top = item.yMm * scale + "px";
+          frame.style.width = item.wMm * scale + "px";
+          frame.style.height = item.hMm * scale + "px";
+          frame.dataset.groupId = item.el.id;
+          frame.title = "Column stack · " + (item.el.children || []).length + " items";
+          sheet.appendChild(frame);
+          return;
+        }
+        if (item.kind === "stack-split") {
+          const split = document.createElement("div");
+          split.className = "stack-split";
+          split.style.left = item.xMm * scale + "px";
+          split.style.top = (item.yMm * scale - 4) + "px";
+          split.style.width = item.wMm * scale + "px";
+          split.title = "ลากเพื่อปรับความสูงชิ้นบน/ล่าง";
+          split.dataset.groupId = item.groupId;
+          split.dataset.splitIndex = String(item.index);
+          split.addEventListener("pointerdown", (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            startStackSplitDrag(e, item.groupId, item.index, m);
+          });
+          sheet.appendChild(split);
+          return;
+        }
+
         const el = item.el;
+        if (!el) return;
         const wrap = document.createElement("div");
         wrap.className = "designer-element" + (isElementSelected(el.id) ? " selected" : "");
         if (item.outsideMargin || resolveBand(el) === "super-header" || resolveBand(el) === "super-footer") {
@@ -731,6 +882,7 @@
         wrap.dataset.elementId = el.id;
         wrap.dataset.index = String(index);
         wrap.dataset.band = resolveBand(el);
+        if (item.groupId) wrap.dataset.groupId = item.groupId;
 
         wrap.addEventListener("click", (e) => {
           e.stopPropagation();
@@ -738,7 +890,7 @@
         });
 
         wrap.addEventListener("pointerdown", (e) => {
-          if (e.target.closest(".resize-handle") || e.target.closest(".col-resize") || e.target.closest(".el-toolbar"))
+          if (e.target.closest(".resize-handle") || e.target.closest(".col-resize") || e.target.closest(".el-toolbar") || e.target.closest(".stack-split"))
             return;
           if (e.button !== 0) return;
           e.preventDefault();
@@ -764,7 +916,7 @@
         const toolbar = document.createElement("div");
         toolbar.className = "el-toolbar";
         toolbar.innerHTML =
-          `<span class="el-tag">${escapeHtml(el.type)} · ${escapeHtml(resolveBand(el))}</span>`;
+          `<span class="el-tag">${escapeHtml(el.type)} · ${escapeHtml(resolveBand(el))}${item.groupId ? " · stack" : ""}</span>`;
         const delBtn = document.createElement("button");
         delBtn.type = "button";
         delBtn.className = "el-del";
@@ -1350,14 +1502,17 @@
     const startW = el.box.wMm;
     const startH = el.box.hMm;
     const { contentW, margins, gaps } = metrics;
+    const loc0 = findElementLocation(el.id);
+    const widthTarget = loc0 && loc0.parent && isGroup(loc0.parent) ? loc0.parent : el;
+    const startWidthTarget = Number(widthTarget.box.wMm) || startW;
 
     function onMove(ev) {
       const dx = (ev.clientX - startX) / metrics.scale;
       const dy = (ev.clientY - startY) / metrics.scale;
       if (dir === "e" || dir === "se") {
-        const maxW = maxWidthInRow(el, contentW, margins, gaps, metrics.scale);
-        el.box.wMm = Math.max(MIN_BLOCK_W, Math.min(maxW, startW + dx));
-        el.manualWidth = true;
+        const maxW = maxWidthInRow(widthTarget === el ? el : widthTarget, contentW, margins, gaps, metrics.scale);
+        widthTarget.box.wMm = Math.max(MIN_BLOCK_W, Math.min(maxW, startWidthTarget + dx));
+        widthTarget.manualWidth = true;
       }
       if (dir === "s" || dir === "se") {
         el.box.hMm = Math.max(minHeightForElement(el), startH + dy);
@@ -1380,13 +1535,24 @@
   function deleteElement(id) {
     ensureElements();
     if (canvasTools) canvasTools.pushHistory();
-    const els = stateRef.draft.layout.elements;
-    const idx = els.findIndex((e) => e.id === id);
-    if (idx < 0) return;
-    els.splice(idx, 1);
-    if (els[idx] && String(els[idx].place).toLowerCase() === "beside") {
-      // first of a row after delete should be below
-      els[idx].place = "below";
+    const loc = findElementLocation(id);
+    if (!loc) return;
+    loc.list.splice(loc.index, 1);
+    if (loc.parent && isGroup(loc.parent)) {
+      if (!loc.parent.children.length) {
+        const gLoc = findElementLocation(loc.parent.id);
+        if (gLoc && !gLoc.parent) {
+          const besideFix = gLoc.list[gLoc.index + 1];
+          gLoc.list.splice(gLoc.index, 1);
+          if (besideFix && String(besideFix.place).toLowerCase() === "beside")
+            besideFix.place = "below";
+        }
+      }
+    } else {
+      const els = stateRef.draft.layout.elements;
+      if (els[loc.index] && String(els[loc.index].place).toLowerCase() === "beside") {
+        els[loc.index].place = "below";
+      }
     }
     if (selectedElementId === id) selectedElementId = null;
     selectedElementIds.delete(id);
@@ -1398,6 +1564,121 @@
     reflowElements();
     renderAll();
     if (setStatusRef) setStatusRef("ลบ widget แล้ว", "ok");
+  }
+
+  function startStackSplitDrag(e, groupId, splitIndex, metrics) {
+    const gLoc = findElementLocation(groupId);
+    if (!gLoc || !isGroup(gLoc.el)) return;
+    const kids = gLoc.el.children || [];
+    if (splitIndex < 0 || splitIndex >= kids.length - 1) return;
+    if (canvasTools) canvasTools.pushHistory();
+    const above = kids[splitIndex];
+    const below = kids[splitIndex + 1];
+    const startY = e.clientY;
+    const startAboveH = Number(above.box.hMm) || minHeightForElement(above);
+    const startBelowH = Number(below.box.hMm) || minHeightForElement(below);
+    const minA = minHeightForElement(above);
+    const minB = minHeightForElement(below);
+    const total = startAboveH + startBelowH;
+
+    function onMove(ev) {
+      const dy = (ev.clientY - startY) / metrics.scale;
+      let nextAbove = startAboveH + dy;
+      nextAbove = Math.max(minA, Math.min(total - minB, nextAbove));
+      above.box.hMm = nextAbove;
+      below.box.hMm = total - nextAbove;
+      reflowElements();
+      renderCanvas();
+    }
+    function onUp() {
+      document.removeEventListener("pointermove", onMove);
+      document.removeEventListener("pointerup", onUp);
+      suppressClick = true;
+      setTimeout(() => { suppressClick = false; }, 0);
+      renderAll();
+    }
+    document.addEventListener("pointermove", onMove);
+    document.addEventListener("pointerup", onUp);
+  }
+
+  /**
+   * Insert element below selection inside a column stack (wrap into group if needed).
+   * Soft-capped at MAX_GROUP_CHILDREN.
+   */
+  function insertElementInnerBelow(newEl) {
+    ensureElements();
+    promoteToDesignerIfNeeded();
+    if (canvasTools) canvasTools.pushHistory();
+    newEl.band = newEl.band || "content";
+    newEl.place = "below";
+    newEl.box = newEl.box || { xMm: 0, yMm: 0, wMm: 80, hMm: 40 };
+
+    const selId = selectedElementId;
+    const loc = selId ? findElementLocation(selId) : null;
+    if (!loc) {
+      newEl.place = "below";
+      stateRef.draft.layout.elements.push(newEl);
+      setSingleSelection(newEl.id);
+      reflowElements();
+      renderAll();
+      if (setStatusRef) setStatusRef("ไม่มี selection — แทรกเป็นแถวนอก", "ok");
+      return;
+    }
+
+    if (loc.parent && isGroup(loc.parent)) {
+      if (loc.parent.children.length >= MAX_GROUP_CHILDREN) {
+        if (setStatusRef)
+          setStatusRef("คอลัมน์นี้มีครบ " + MAX_GROUP_CHILDREN + " ชิ้นแล้ว (inner stack max)", "err");
+        return;
+      }
+      loc.parent.children.splice(loc.index + 1, 0, newEl);
+      setSingleSelection(newEl.id);
+      reflowElements();
+      renderAll();
+      if (setStatusRef) setStatusRef("แทรก inner below ใน column stack", "ok");
+      return;
+    }
+
+    if (isGroup(loc.el)) {
+      if ((loc.el.children || []).length >= MAX_GROUP_CHILDREN) {
+        if (setStatusRef)
+          setStatusRef("คอลัมน์นี้มีครบ " + MAX_GROUP_CHILDREN + " ชิ้นแล้ว (inner stack max)", "err");
+        return;
+      }
+      loc.el.children = loc.el.children || [];
+      loc.el.children.push(newEl);
+      setSingleSelection(newEl.id);
+      reflowElements();
+      renderAll();
+      if (setStatusRef) setStatusRef("แทรกท้าย column stack", "ok");
+      return;
+    }
+
+    // Wrap selected leaf into a new group and append newEl.
+    const selected = loc.el;
+    const groupId = "grp_" + Math.random().toString(36).slice(2, 7);
+    const group = {
+      id: groupId,
+      type: "group",
+      direction: "column",
+      band: resolveBand(selected) || "content",
+      place: selected.place || "below",
+      manualWidth: !!selected.manualWidth,
+      box: {
+        xMm: 0,
+        yMm: 0,
+        wMm: Number(selected.box && selected.box.wMm) || 80,
+        hMm: Number(selected.box && selected.box.hMm) || 40,
+      },
+      children: [selected, newEl],
+    };
+    selected.place = "below";
+    loc.list[loc.index] = group;
+    setSingleSelection(newEl.id);
+    stateRef.draft.manifest.layoutMode = "designer";
+    reflowElements();
+    renderAll();
+    if (setStatusRef) setStatusRef("สร้าง column stack + แทรก inner below", "ok");
   }
 
   function renderInspector() {
@@ -2472,12 +2753,12 @@
     });
   }
 
-  function addConfigTable() {
+  function addConfigTable(opts) {
+    const inner = !!(opts && opts.inner);
     ensureElements();
     promoteToDesignerIfNeeded();
-    if (canvasTools) canvasTools.pushHistory();
     const id = "tbl_" + Math.random().toString(36).slice(2, 7);
-    stateRef.draft.layout.elements.push({
+    const el = {
       id,
       type: "config-table",
       band: "content",
@@ -2486,7 +2767,13 @@
       box: { xMm: 0, yMm: 0, wMm: 100, hMm: 80 },
       bindings: [],
       chrome: { border: "thin" },
-    });
+    };
+    if (inner) {
+      insertElementInnerBelow(el);
+      return;
+    }
+    if (canvasTools) canvasTools.pushHistory();
+    stateRef.draft.layout.elements.push(el);
     stateRef.draft.manifest.layoutMode = "designer";
     setSingleSelection(id);
     stateRef.selectedKey = null;
@@ -2926,8 +3213,20 @@
   }
 
   function getSelectedElement() {
-    ensureElements();
-    return (stateRef.draft.layout.elements || []).find((e) => e.id === selectedElementId) || null;
+    return findElementById(selectedElementId);
+  }
+
+  function collectElementsByIds(ids) {
+    const want = new Set(ids || []);
+    const out = [];
+    function walk(list) {
+      (list || []).forEach((e) => {
+        if (isGroup(e)) walk(e.children);
+        else if (want.has(e.id)) out.push(e);
+      });
+    }
+    walk(stateRef.draft.layout.elements || []);
+    return out;
   }
 
   function saveFragmentFromSelection(ids) {
@@ -2940,9 +3239,7 @@
         setStatusRef("Select element(s) first (Shift+click for multi)", "err");
         return;
       }
-      // Preserve layout order
-      const order = new Set(want);
-      const els = (stateRef.draft.layout.elements || []).filter((e) => order.has(e.id));
+      const els = collectElementsByIds(want);
       if (!els.length) {
         setStatusRef("No matching selection", "err");
         return;
@@ -3054,21 +3351,27 @@
     })();
   }
 
-  function addBoxText() {
+  function addBoxText(opts) {
+    const inner = !!(opts && opts.inner);
     ensureElements();
     promoteToDesignerIfNeeded();
-    if (canvasTools) canvasTools.pushHistory();
     const id = "box_" + Math.random().toString(36).slice(2, 7);
-    stateRef.draft.layout.elements.push({
+    const el = {
       id,
       type: "box-text",
       band: "content",
       place: "below",
-      box: { xMm: 0, yMm: 0, wMm: 206, hMm: 5 },
+      box: { xMm: 0, yMm: 0, wMm: inner ? 100 : 206, hMm: 5 },
       text: "หัวข้อ",
       align: "center",
       chrome: { border: "thin", headerFill: "$branding.sectionHeaderBackground", fontSize: 7.5 },
-    });
+    };
+    if (inner) {
+      insertElementInnerBelow(el);
+      return;
+    }
+    if (canvasTools) canvasTools.pushHistory();
+    stateRef.draft.layout.elements.push(el);
     stateRef.draft.manifest.layoutMode = "designer";
     setSingleSelection(id);
     stateRef.selectedKey = null;
@@ -3236,10 +3539,14 @@
 
     const addBtn = document.getElementById("btnAddConfigTable");
     if (addBtn) addBtn.addEventListener("click", () => addConfigTable());
+    const addTblInner = document.getElementById("btnAddConfigTableInner");
+    if (addTblInner) addTblInner.addEventListener("click", () => addConfigTable({ inner: true }));
     const hdrBtn = document.getElementById("btnAddHeader");
     if (hdrBtn) hdrBtn.addEventListener("click", () => addHeader());
     const boxBtn = document.getElementById("btnAddBoxText");
     if (boxBtn) boxBtn.addEventListener("click", () => addBoxText());
+    const boxInner = document.getElementById("btnAddBoxTextInner");
+    if (boxInner) boxInner.addEventListener("click", () => addBoxText({ inner: true }));
     const pageOfBtn = document.getElementById("btnAddPageOf");
     if (pageOfBtn) pageOfBtn.addEventListener("click", () => addPageOf());
     const fragBtn = document.getElementById("btnAddFragment");

@@ -253,6 +253,48 @@ button.tb-icon {
   border-color: var(--line);
 }
 
+.tb-menu-sep {
+  border: none;
+  border-top: 1px solid var(--line);
+  margin: 4px 0;
+}
+
+/* Column stack chrome */
+.designer-group-frame {
+  position: absolute;
+  pointer-events: none;
+  border: 1px dashed rgba(61, 156, 240, 0.55);
+  border-radius: 2px;
+  z-index: 1;
+  box-sizing: border-box;
+}
+
+.stack-split {
+  position: absolute;
+  height: 10px;
+  z-index: 6;
+  cursor: ns-resize;
+  box-sizing: border-box;
+}
+
+.stack-split::after {
+  content: "";
+  display: block;
+  height: 2px;
+  margin-top: 4px;
+  background: var(--accent);
+  opacity: 0.45;
+  border-radius: 1px;
+}
+
+.stack-split:hover::after,
+.stack-split:focus::after {
+  opacity: 1;
+  height: 3px;
+  margin-top: 3.5px;
+  box-shadow: 0 0 0 1px rgba(61, 156, 240, 0.35);
+}
+
 .pane-action-row {
   display: flex;
   flex-direction: row;

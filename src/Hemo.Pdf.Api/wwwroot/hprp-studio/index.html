@@ -4,7 +4,7 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>HPRP Studio — Table Designer</title>
-  <link rel="stylesheet" href="/hprp-studio/studio.css?v=ux-polish-2" />
+  <link rel="stylesheet" href="/hprp-studio/studio.css?v=ux-polish-3" />
 </head>
 <body class="mode-designer mode-wysiwyg">
   <header class="top">
@@ -124,10 +124,13 @@
                 </button>
                 <div class="tb-menu-panel" role="menu">
                   <button id="btnAddHeader" type="button" role="menuitem" title="Add header from catalog (recovery if deleted)">Header</button>
-                  <button id="btnAddConfigTable" type="button" role="menuitem" title="Add configurable table">Table</button>
-                  <button id="btnAddBoxText" type="button" role="menuitem" title="Add box text banner">Box text</button>
+                  <button id="btnAddConfigTable" type="button" role="menuitem" title="Add configurable table (outer row)">Table</button>
+                  <button id="btnAddBoxText" type="button" role="menuitem" title="Add box text banner (outer row)">Box text</button>
                   <button id="btnAddFragment" type="button" role="menuitem" title="Insert multi-element fragment (e.g. co-pay)">Fragment</button>
                   <button id="btnAddPageOf" type="button" role="menuitem" title="Add page number (super-footer)">Page of</button>
+                  <hr class="tb-menu-sep" />
+                  <button id="btnAddConfigTableInner" type="button" role="menuitem" title="Stack under selected column (inner section, max 4)">Table · inner below</button>
+                  <button id="btnAddBoxTextInner" type="button" role="menuitem" title="Stack under selected column (inner section, max 4)">Box text · inner below</button>
                 </div>
               </div>
 
@@ -211,12 +214,12 @@
   </div>
 
   <script src="/hprp-studio/vendor/jszip.min.js"></script>
-  <script src="/hprp-studio/studio-ui.js?v=ux-polish-2"></script>
-  <script src="/hprp-studio/table-layout-engine.js?v=ux-polish-2"></script>
-  <script src="/hprp-studio/header-layout-engine.js?v=ux-polish-2"></script>
-  <script src="/hprp-studio/designer-canvas-tools.js?v=ux-polish-2"></script>
-  <script src="/hprp-studio/designer-studio.js?v=ux-polish-2"></script>
-  <script src="/hprp-studio/library-studio.js?v=ux-polish-2"></script>
-  <script src="/hprp-studio/studio.js?v=ux-polish-2"></script>
+  <script src="/hprp-studio/studio-ui.js?v=ux-polish-3"></script>
+  <script src="/hprp-studio/table-layout-engine.js?v=ux-polish-3"></script>
+  <script src="/hprp-studio/header-layout-engine.js?v=ux-polish-3"></script>
+  <script src="/hprp-studio/designer-canvas-tools.js?v=ux-polish-3"></script>
+  <script src="/hprp-studio/designer-studio.js?v=ux-polish-3"></script>
+  <script src="/hprp-studio/library-studio.js?v=ux-polish-3"></script>
+  <script src="/hprp-studio/studio.js?v=ux-polish-3"></script>
 </body>
 </html>

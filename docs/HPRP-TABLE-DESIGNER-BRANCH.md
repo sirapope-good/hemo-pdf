@@ -46,9 +46,24 @@ Left pane: **Import / Export** primary; **Pack all** under Packages ⋯; Library
 
 Loading feedback: brand overlay spinner (`StudioUi.withBusy`) on open package / library item / save / reload / pack-all; list skeletons on package/library reload; A4 canvas skeleton while a pack opens.
 
-Scripts use `?v=ux-polish-2` cache-bust — hard refresh (Ctrl+F5) after pull.
+Scripts use `?v=ux-polish-3` cache-bust — hard refresh (Ctrl+F5) after pull.
 
 Top-left brand: inline HPRP wordmark logo (from `assets/icons/LOGO_HPRP.svg`, `currentColor` for dark chrome) — replaces the old title + hint paragraph.
+
+## Column stack (inner section)
+
+Fill empty space under a shorter beside sibling without starting a full-width outer row:
+
+| Concept | Detail |
+|--|--|
+| JSON | `type: "group"`, `direction: "column"`, `children[]` (max **4**) |
+| Insert | **Insert → Table · inner below** / **Box text · inner below** (selection required; wraps leaf into group if needed) |
+| Chrome | Dashed group frame on canvas |
+| Splitter | Drag the accent line between stacked children to redistribute height (above + below) |
+| PDF | `HprpDesignerFlow` packs groups; paint expands to leaf children (parity with Studio) |
+
+Outer **Insert → Table / Box text** still appends a new outer row (previous behavior).
+
 
 ## Canvas tools
 
@@ -121,4 +136,4 @@ Naming convention for clinical headers: `clinical-header-{tenant}` — e.g. `cli
 
 Optional `tags` on header/table/fragment presets for filtering (e.g. `tenant:hogwarts`).
 
-**Not in this pass:** per-tenant folders beyond `packages/library/`, `type: group` wrapper.
+**Not in this pass:** per-tenant folders beyond `packages/library/`; nested groups inside groups (one column-stack level only).
