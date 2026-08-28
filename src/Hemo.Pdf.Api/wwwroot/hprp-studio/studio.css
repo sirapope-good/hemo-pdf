@@ -902,6 +902,17 @@ button.tb-icon {
   margin: 4px 0;
 }
 
+.col-row input {
+  flex: 1 1 0;
+  min-width: 0;
+}
+
+.col-row input.col-id {
+  flex: 0.7 1 0;
+  opacity: 0.85;
+  font-size: 0.75rem;
+}
+
 .inspector label {
   display: block;
   margin: 6px 0;
