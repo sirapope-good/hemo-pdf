@@ -60,7 +60,8 @@ public static class HprpStudioCatalog
     public static object Describe(
         HprpTablePresetStore? presets = null,
         HprpHeaderPresetStore? headerPresets = null,
-        HprpAdapterSchemaStore? adapters = null) => new
+        HprpAdapterSchemaStore? adapters = null,
+        HprpFragmentPresetStore? fragments = null) => new
     {
         engineVersion = HprpEngine.CurrentVersion,
         fileExtension = HprpEngine.FileExtension,
@@ -68,8 +69,9 @@ public static class HprpStudioCatalog
         tableRowModes = HprpTableRowModes.All.OrderBy(x => x, StringComparer.OrdinalIgnoreCase),
         bindingContexts = HprpTableBindingContexts.All.OrderBy(x => x, StringComparer.OrdinalIgnoreCase),
         designerElementTypes = HprpDesignerElementTypes.All.OrderBy(x => x, StringComparer.OrdinalIgnoreCase),
-        tablePresets = presets?.ListAll().Select(p => new { p.Id, p.DisplayName, p.RowMode }) ?? [],
-        headerPresets = headerPresets?.ListAll().Select(p => new { p.Id, p.DisplayName }) ?? [],
+        tablePresets = presets?.ListAll().Select(p => new { p.Id, p.DisplayName, p.RowMode, p.Tags }) ?? [],
+        headerPresets = headerPresets?.ListAll().Select(p => new { p.Id, p.DisplayName, p.Tags }) ?? [],
+        fragmentPresets = fragments?.ListAll().Select(p => new { p.Id, p.DisplayName, p.Tags, elementCount = p.Elements.Count }) ?? [],
         adapterSchemas = adapters?.ListAdapterIds() ?? [],
         widgets = HprpWidgetRecipes.Dense,
         blockTypes = HprpWidgetRecipes.Blocks,

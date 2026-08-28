@@ -11,6 +11,10 @@ public sealed class HprpTablePreset
     [JsonPropertyName("displayName")]
     public string DisplayName { get; init; } = "";
 
+    /// <summary>Optional filters e.g. <c>tenant:hogwarts</c>, <c>clinical</c>.</summary>
+    [JsonPropertyName("tags")]
+    public IReadOnlyList<string> Tags { get; init; } = [];
+
     /// <summary><see cref="HprpTableRowModes"/></summary>
     [JsonPropertyName("rowMode")]
     public string RowMode { get; init; } = HprpTableRowModes.Annual;

@@ -13,6 +13,7 @@ public static class HprpTemplatePaths
     public const string PresetsFolder = "presets";
     public const string TablePresetsFolder = "presets/tables";
     public const string HeaderPresetsFolder = "presets/headers";
+    public const string FragmentPresetsFolder = "presets/fragments";
     public const string AdaptersFolder = "adapters";
     public const string DefaultVariant = "default";
     public const string SolutionFileName = "Hemo.Pdf.sln";
@@ -51,6 +52,9 @@ public static class HprpTemplatePaths
 
     public static string HeaderPresetsRoot(string templatesRoot) =>
         Path.Combine(templatesRoot, HeaderPresetsFolder);
+
+    public static string FragmentPresetsRoot(string templatesRoot) =>
+        Path.Combine(templatesRoot, FragmentPresetsFolder);
 
     public static string AdaptersRoot(string templatesRoot) =>
         Path.Combine(templatesRoot, AdaptersFolder);

@@ -1,6 +1,7 @@
 {
   "id": "thaiur-header-v1",
   "displayName": "ThaiUr clinical header",
+  "tags": ["clinical", "thaiur"],
   "titleRowHeightMm": 21.6,
   "bottomRowHeightMm": 5.4,
   "showDateAndHdNo": false,

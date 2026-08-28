@@ -56,6 +56,7 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<Hprp.HprpPackService>();
         services.AddSingleton<Hprp.HprpTablePresetStore>();
         services.AddSingleton<Hprp.HprpHeaderPresetStore>();
+        services.AddSingleton<Hprp.HprpFragmentPresetStore>();
         services.AddSingleton<Hprp.HprpAdapterSchemaStore>();
         services.AddSingleton<IHprpTablePresetCatalog, Hprp.HprpTablePresetCatalog>();
         services.AddSingleton<IHprpHeaderPresetCatalog, Hprp.HprpHeaderPresetCatalog>();

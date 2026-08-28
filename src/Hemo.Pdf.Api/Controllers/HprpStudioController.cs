@@ -22,6 +22,7 @@ public sealed class HprpStudioController : ControllerBase
     private readonly HprpStudioPreviewService _preview;
     private readonly HprpTablePresetStore _presets;
     private readonly HprpHeaderPresetStore _headerPresets;
+    private readonly HprpFragmentPresetStore _fragmentPresets;
     private readonly HprpAdapterSchemaStore _adapterSchemas;
 
     public HprpStudioController(
@@ -32,6 +33,7 @@ public sealed class HprpStudioController : ControllerBase
         HprpStudioPreviewService preview,
         HprpTablePresetStore presets,
         HprpHeaderPresetStore headerPresets,
+        HprpFragmentPresetStore fragmentPresets,
         HprpAdapterSchemaStore adapterSchemas)
     {
         _pack = pack;
@@ -41,11 +43,13 @@ public sealed class HprpStudioController : ControllerBase
         _preview = preview;
         _presets = presets;
         _headerPresets = headerPresets;
+        _fragmentPresets = fragmentPresets;
         _adapterSchemas = adapterSchemas;
     }
 
     [HttpGet("catalog")]
-    public IActionResult Catalog() => Ok(HprpStudioCatalog.Describe(_presets, _headerPresets, _adapterSchemas));
+    public IActionResult Catalog() =>
+        Ok(HprpStudioCatalog.Describe(_presets, _headerPresets, _adapterSchemas, _fragmentPresets));
 
     [HttpGet("presets/tables")]
     public IActionResult ListTablePresets() => Ok(_presets.ListAll());
@@ -92,6 +96,33 @@ public sealed class HprpStudioController : ControllerBase
         if (!string.Equals(body.Id, presetId, StringComparison.OrdinalIgnoreCase))
             throw new PdfGenerationBadRequestException("preset id must match URL.");
         await _headerPresets.SaveAsync(body, cancellationToken);
+        return Ok(body);
+    }
+
+    [HttpGet("presets/fragments")]
+    public IActionResult ListFragmentPresets() => Ok(_fragmentPresets.ListAll());
+
+    [HttpGet("presets/fragments/{presetId}")]
+    public IActionResult GetFragmentPreset(string presetId)
+    {
+        var preset = _fragmentPresets.TryGet(presetId);
+        return preset is null ? NotFound() : Ok(preset);
+    }
+
+    [HttpPut("presets/fragments/{presetId}")]
+    [EnableRateLimiting("PdfGeneration")]
+    public async Task<IActionResult> SaveFragmentPreset(
+        string presetId,
+        [FromBody] HprpFragmentPreset body,
+        CancellationToken cancellationToken)
+    {
+        EnsureWritesEnabled();
+        if (!string.Equals(body.Id, presetId, StringComparison.OrdinalIgnoreCase))
+            throw new PdfGenerationBadRequestException("preset id must match URL.");
+        var errors = HprpFragmentValidator.Validate(body);
+        if (errors.Count > 0)
+            return BadRequest(new { errors });
+        await _fragmentPresets.SaveAsync(body, cancellationToken);
         return Ok(body);
     }
 

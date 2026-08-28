@@ -26,6 +26,10 @@ public sealed class HprpHeaderPreset
     [JsonPropertyName("displayName")]
     public string DisplayName { get; init; } = "";
 
+    /// <summary>Optional filters e.g. <c>tenant:hogwarts</c>, <c>clinical</c>.</summary>
+    [JsonPropertyName("tags")]
+    public IReadOnlyList<string> Tags { get; init; } = [];
+
     [JsonPropertyName("titleRowHeightMm")]
     public float TitleRowHeightMm { get; init; } = 21.6f;
 
