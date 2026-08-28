@@ -83,6 +83,7 @@ Left pane: **Packages | Library** (Headers / Tables / Fragments).
 |--|--|
 | **Click a Header** in Library | Opens that preset alone on the canvas (title `Library · …`) |
 | **Save** (main toolbar) while editing a library header | Writes `packages/library/headers/{id}.json` (overrides seed) — **not** a report `.hprp` |
+| **Delete** (Library) | Removes `packages/library/headers/{id}.json` only — seed under `assets/` is never deleted; if seed exists the id reappears from seed |
 | Delete header on pack canvas + Save pack | Removes element from `layout.elements` only — disk preset stays |
 | **+ Header** or Library → **Insert into pack** | Re-adds header referencing catalog preset into the open report |
 | Save from selection | `PUT /api/hprp/presets/headers/{id}` (same library folder) |
@@ -100,4 +101,4 @@ Naming convention for clinical headers: `clinical-header-{tenant}` — e.g. `cli
 Fragment assets: `assets/templates/presets/fragments/*.json` — API `GET/PUT /api/hprp/presets/fragments/{id}`.
 Optional `tags` on header/table/fragment presets for filtering (e.g. `tenant:hogwarts`).
 
-**Not in this pass:** DELETE preset API, per-tenant folders beyond `packages/library/`, `type: group` wrapper, Library click-edit for tables/fragments.
+**Not in this pass:** DELETE for tables/fragments, per-tenant folders beyond `packages/library/`, `type: group` wrapper, Library click-edit for tables/fragments.

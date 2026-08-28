@@ -90,6 +90,39 @@ public sealed class HprpHeaderPresetStore
             cancellationToken);
     }
 
+    /// <summary>
+    /// Deletes <c>packages/library/headers/{id}.json</c> only — never seed under assets.
+    /// If a seed remains, the preset reappears from seed after delete.
+    /// </summary>
+    public HeaderLibraryDeleteResult DeleteLibrary(string presetId)
+    {
+        if (string.IsNullOrWhiteSpace(presetId))
+            return HeaderLibraryDeleteResult.NotFound(presetId);
+
+        var id = CanonicalId(presetId.Trim());
+        var libraryPath = Path.Combine(_libraryRoot, id + ".json");
+        var seedPath = Path.Combine(_seedRoot, id + ".json");
+        var hasSeed = File.Exists(seedPath);
+
+        if (!File.Exists(libraryPath))
+        {
+            if (hasSeed)
+                return HeaderLibraryDeleteResult.SeedOnly(id);
+            return HeaderLibraryDeleteResult.NotFound(id);
+        }
+
+        File.Delete(libraryPath);
+        return HeaderLibraryDeleteResult.Deleted(id, libraryPath, fellBackToSeed: hasSeed);
+    }
+
+    public bool IsInLibrary(string presetId)
+    {
+        if (string.IsNullOrWhiteSpace(presetId))
+            return false;
+        var id = CanonicalId(presetId.Trim());
+        return File.Exists(Path.Combine(_libraryRoot, id + ".json"));
+    }
+
     public static string CanonicalId(string presetId)
     {
         if (IdAliases.TryGetValue(presetId, out var mapped))

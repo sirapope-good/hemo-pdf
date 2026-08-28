@@ -2565,6 +2565,25 @@
     };
   }
 
+  async function deleteLibraryHeader(presetId) {
+    const id = String(presetId || "").trim();
+    if (!id) throw new Error("Header id required");
+    if (!apiRef) throw new Error("API not ready");
+    const result = await apiRef(`/api/hprp/presets/headers/${encodeURIComponent(id)}`, {
+      method: "DELETE",
+    });
+    delete headerPresets[id];
+    // If seed remains, reload catalog so seed reappears.
+    await loadCatalogExtras({ silent: true });
+    if (stateRef && stateRef.libraryEdit && stateRef.libraryEdit.id === id) {
+      stateRef.libraryEdit = null;
+    }
+    if (global.LibraryStudio && typeof global.LibraryStudio.refresh === "function") {
+      global.LibraryStudio.refresh();
+    }
+    return result;
+  }
+
   function uniqueElementId(base, taken) {
     let id = base || "el";
     let n = 0;
@@ -2837,6 +2856,7 @@
     addHeader,
     openLibraryHeader,
     saveLibraryHeader,
+    deleteLibraryHeader,
     addBoxText,
     addPageOf,
     addFragmentPrompt,

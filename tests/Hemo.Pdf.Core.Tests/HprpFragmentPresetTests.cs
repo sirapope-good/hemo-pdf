@@ -146,4 +146,56 @@ public class HprpFragmentPresetTests
             try { Directory.Delete(packagesRoot, recursive: true); } catch { /* ignore */ }
         }
     }
+
+    [Fact]
+    public async Task HeaderStore_DeleteLibraryRemovesOverrideOnly()
+    {
+        var packagesRoot = Path.Combine(Path.GetTempPath(), "hprp-lib-del-" + Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(packagesRoot);
+        try
+        {
+            var options = Options.Create(new HprpTemplateOptions
+            {
+                RootPath = HprpTestAssets.TemplatesRoot(),
+                PackagesRootPath = packagesRoot,
+                PackagesWritePath = packagesRoot,
+            });
+            var store = new HprpHeaderPresetStore(options);
+
+            // Library-only preset
+            await store.SaveAsync(new Hemo.Pdf.Core.Hprp.Header.HprpHeaderPreset
+            {
+                Id = "clinical-header-thaiur2",
+                DisplayName = "Clinical header ThaiUr 2",
+                Tags = ["clinical", "thaiur"],
+            });
+            Assert.True(store.IsInLibrary("clinical-header-thaiur2"));
+            var del = store.DeleteLibrary("clinical-header-thaiur2");
+            Assert.True(del.Ok);
+            Assert.False(del.FellBackToSeed);
+            Assert.Null(store.TryGet("clinical-header-thaiur2"));
+
+            // Seed-only cannot delete
+            var seedOnly = store.DeleteLibrary("clinical-header-thaiur");
+            Assert.True(seedOnly.IsSeedOnly);
+
+            // Override then delete → fall back to seed
+            var seed = store.TryGet("clinical-header-thaiur")!;
+            var json = System.Text.Json.JsonSerializer.Serialize(seed, HprpJson.Options);
+            json = json
+                .Replace("\"displayName\":\"Clinical header ThaiUr\"", "\"displayName\":\"override\"", StringComparison.Ordinal)
+                .Replace("\"displayName\": \"Clinical header ThaiUr\"", "\"displayName\": \"override\"", StringComparison.Ordinal);
+            var edited = System.Text.Json.JsonSerializer.Deserialize<Hemo.Pdf.Core.Hprp.Header.HprpHeaderPreset>(json, HprpJson.Options)!;
+            await store.SaveAsync(edited);
+            Assert.Equal("override", store.TryGet("clinical-header-thaiur")!.DisplayName);
+            var delOverride = store.DeleteLibrary("clinical-header-thaiur");
+            Assert.True(delOverride.Ok);
+            Assert.True(delOverride.FellBackToSeed);
+            Assert.Contains("ThaiUr", store.TryGet("clinical-header-thaiur")!.DisplayName, StringComparison.OrdinalIgnoreCase);
+        }
+        finally
+        {
+            try { Directory.Delete(packagesRoot, recursive: true); } catch { /* ignore */ }
+        }
+    }
 }

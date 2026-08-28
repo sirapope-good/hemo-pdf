@@ -108,6 +108,26 @@ public sealed class HprpStudioController : ControllerBase
         });
     }
 
+    [HttpDelete("presets/headers/{presetId}")]
+    [EnableRateLimiting("PdfGeneration")]
+    public IActionResult DeleteHeaderPreset(string presetId)
+    {
+        EnsureWritesEnabled();
+        var result = _headerPresets.DeleteLibrary(presetId);
+        if (result.IsNotFound)
+            return NotFound(new { error = result.Message, id = result.Id });
+        if (result.IsSeedOnly)
+            throw new PdfGenerationBadRequestException(result.Message ?? "Cannot delete seed header.");
+
+        return Ok(new
+        {
+            id = result.Id,
+            deletedPath = result.DeletedPath,
+            fellBackToSeed = result.FellBackToSeed,
+            message = result.Message,
+        });
+    }
+
     [HttpGet("presets/fragments")]
     public IActionResult ListFragmentPresets() => Ok(_fragmentPresets.ListAll());
 

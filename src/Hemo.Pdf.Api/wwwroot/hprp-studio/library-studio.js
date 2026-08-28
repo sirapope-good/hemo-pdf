@@ -160,6 +160,43 @@
     }
   }
 
+  async function deleteSelected() {
+    if (!selectedId) {
+      alert("เลือก item ใน Library ก่อน");
+      return;
+    }
+    if (selectedKind !== "headers") {
+      alert("ตอนนี้ Delete รองรับเฉพาะ Headers (packages/library/headers)");
+      return;
+    }
+    const id = selectedId;
+    if (!confirm("ลบ library header \"" + id + "\"?\n\nลบได้เฉพาะไฟล์ใน packages/library/headers/\nถ้ามี seed ใน assets จะกลับไปใช้ seed")) {
+      return;
+    }
+    const td = global.TableDesigner;
+    if (!td || typeof td.deleteLibraryHeader !== "function") {
+      alert("deleteLibraryHeader ไม่พร้อม — hard refresh (Ctrl+F5)");
+      return;
+    }
+    try {
+      const result = await td.deleteLibraryHeader(id);
+      selectedId = null;
+      renderList();
+      const msg = (result && result.message) || ("Deleted " + id);
+      const status = document.getElementById("status");
+      if (status) {
+        status.textContent = msg;
+        status.className = "status ok";
+      }
+      const title = document.getElementById("editorTitle");
+      if (title && String(title.textContent || "").indexOf(id) >= 0) {
+        title.textContent = "Library header deleted";
+      }
+    } catch (e) {
+      alert(e.message || String(e));
+    }
+  }
+
   function wire() {
     document.querySelectorAll(".side-tab").forEach((btn) => {
       btn.addEventListener("click", () => setSideTab(btn.getAttribute("data-side")));
@@ -190,6 +227,8 @@
         openHeaderOnCanvas(selectedId);
       });
     }
+    const del = $("btnLibDelete");
+    if (del) del.addEventListener("click", () => { deleteSelected().catch((e) => alert(e.message || e)); });
     const save = $("btnLibSaveSelection");
     if (save) save.addEventListener("click", () => { saveFromSelection().catch((e) => alert(e.message || e)); });
   }

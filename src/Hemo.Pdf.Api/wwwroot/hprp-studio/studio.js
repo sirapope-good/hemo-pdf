@@ -77,8 +77,10 @@ async function api(path, options) {
   let body = null;
   try { body = text ? JSON.parse(text) : null; } catch { body = { raw: text }; }
   if (!res.ok) {
-    const errors = body && body.errors ? body.errors.join("\n") : (body && body.raw) || text || res.statusText;
-    throw new Error(errors);
+    const errors = body && body.errors
+      ? body.errors.join("\n")
+      : (body && (body.message || body.error || body.title || body.raw)) || text || res.statusText;
+    throw new Error(typeof errors === "string" ? errors : JSON.stringify(errors));
   }
   return body;
 }
