@@ -686,6 +686,65 @@ body.mode-json .preview-col { display: none; }
   gap: 8px;
 }
 
+.side-tabs {
+  display: flex;
+  gap: 4px;
+}
+
+.side-tab,
+.lib-subtab {
+  background: transparent;
+  border: 1px solid transparent;
+  color: var(--muted, #9aa7b5);
+  padding: 4px 8px;
+  font-size: 0.78rem;
+}
+
+.side-tab.active,
+.lib-subtab.active {
+  color: var(--text);
+  border-color: var(--line);
+  background: #243140;
+}
+
+.lib-subtabs {
+  display: flex;
+  gap: 4px;
+  padding: 8px 10px 0;
+  flex-wrap: wrap;
+}
+
+.lib-filter {
+  margin: 8px 10px;
+  width: calc(100% - 20px);
+  box-sizing: border-box;
+  background: #1a2330;
+  border: 1px solid var(--line);
+  color: var(--text);
+  border-radius: 4px;
+  padding: 5px 8px;
+}
+
+.lib-list .lib-item {
+  cursor: pointer;
+  padding: 8px 10px;
+  border-bottom: 1px solid var(--line);
+  line-height: 1.35;
+}
+
+.lib-list .lib-item.active {
+  background: #1c4a73;
+}
+
+.lib-actions {
+  padding: 8px 10px;
+}
+
+.lib-hint {
+  padding: 0 10px 10px;
+  font-size: 0.72rem;
+}
+
 .actions { display: flex; gap: 6px; flex-wrap: wrap; }
 
 button.primary {

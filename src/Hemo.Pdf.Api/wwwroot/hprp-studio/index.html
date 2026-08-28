@@ -27,16 +27,35 @@
   <main class="layout">
     <aside class="pane packages">
       <div class="pane-head">
-        <strong>Packages</strong>
+        <div class="side-tabs" role="tablist" aria-label="Left pane">
+          <button type="button" class="side-tab active" data-side="packages">Packages</button>
+          <button type="button" class="side-tab" data-side="library">Library</button>
+        </div>
         <button id="btnReload" type="button">Reload</button>
       </div>
-      <div class="actions package-actions">
-        <button id="btnPackAll" type="button" title="Read every report folder and write packages/*.hprp">Pack all from disk</button>
-        <input type="file" id="fileImportHprp" accept=".hprp,.zip" class="hidden" />
-        <button id="btnImport" type="button" title="Load a .hprp into the editor (validate first)">Import .hprp</button>
-        <button id="btnExport" type="button" disabled title="Download draft as .hprp after validate">Export .hprp</button>
+      <div id="packagesPanel">
+        <div class="actions package-actions">
+          <button id="btnPackAll" type="button" title="Read every report folder and write packages/*.hprp">Pack all from disk</button>
+          <input type="file" id="fileImportHprp" accept=".hprp,.zip" class="hidden" />
+          <button id="btnImport" type="button" title="Load a .hprp into the editor (validate first)">Import .hprp</button>
+          <button id="btnExport" type="button" disabled title="Download draft as .hprp after validate">Export .hprp</button>
+        </div>
+        <ul id="packageList" class="list"></ul>
       </div>
-      <ul id="packageList" class="list"></ul>
+      <div id="libraryPanel" class="hidden">
+        <div class="lib-subtabs" role="tablist" aria-label="Library kinds">
+          <button type="button" class="lib-subtab active" data-lib="headers">Headers</button>
+          <button type="button" class="lib-subtab" data-lib="tables">Tables</button>
+          <button type="button" class="lib-subtab" data-lib="fragments">Fragments</button>
+        </div>
+        <input id="libraryFilter" type="search" placeholder="filter id / tag…" class="lib-filter" />
+        <ul id="libraryList" class="list lib-list"></ul>
+        <div class="actions lib-actions">
+          <button id="btnLibInsert" type="button" title="Insert into open pack">Insert into pack</button>
+          <button id="btnLibSaveSelection" type="button" title="Save selected canvas element(s) as library item">Save from selection</button>
+        </div>
+        <p class="muted lib-hint">ลบ element บน pack ไม่ลบ preset ใน Library — Insert เพื่อใส่กลับ</p>
+      </div>
     </aside>
 
     <section class="pane designer-col" id="designerPane">
@@ -68,8 +87,10 @@
                 <option value="">default</option>
               </select>
             </label>
+            <button id="btnAddHeader" type="button" title="Add header from catalog (recovery if deleted)">+ Header</button>
             <button id="btnAddConfigTable" type="button" title="Add configurable table">+ Table</button>
             <button id="btnAddBoxText" type="button" title="Add box text banner">+ Box text</button>
+            <button id="btnAddFragment" type="button" title="Insert multi-element fragment (e.g. co-pay)">+ Fragment</button>
             <button id="btnAddPageOf" type="button" title="Add page number (super-footer)">+ Page of</button>
             <button id="btnDesignerDownloadPdf" type="button" disabled title="QuestPDF verify">Download PDF</button>
           </div>
@@ -128,6 +149,7 @@
   <script src="/hprp-studio/header-layout-engine.js"></script>
   <script src="/hprp-studio/designer-canvas-tools.js"></script>
   <script src="/hprp-studio/designer-studio.js"></script>
+  <script src="/hprp-studio/library-studio.js"></script>
   <script src="/hprp-studio/studio.js"></script>
 </body>
 </html>

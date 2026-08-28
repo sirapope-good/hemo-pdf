@@ -1936,7 +1936,18 @@ onClick("btnPage", () => { state.selectedKey = "page"; renderDesigner(); });
 onClick("btnLabels", () => { state.selectedKey = "labels"; renderDesigner(); });
 onClick("btnModeDesigner", () => setMode("designer"));
 onClick("btnModeJson", () => setMode("json"));
-onClick("btnReload", () => loadList().catch((err) => setStatus(err.message, "err")));
+onClick("btnReload", () => {
+  loadList()
+    .then(async () => {
+      if (window.TableDesigner && typeof window.TableDesigner.loadCatalogExtras === "function") {
+        await window.TableDesigner.loadCatalogExtras();
+      }
+      if (window.LibraryStudio && typeof window.LibraryStudio.refresh === "function") {
+        window.LibraryStudio.refresh();
+      }
+    })
+    .catch((err) => setStatus(err.message, "err"));
+});
 onClick("btnPackAll", () => packAll().catch((err) => setStatus(err.message, "err")));
 onClick("btnExport", () => exportHprp().catch((err) => setStatus(err.message, "err")));
 onClick("btnImport", () => els.fileImport && els.fileImport.click());

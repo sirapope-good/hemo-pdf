@@ -47,6 +47,7 @@
   let selectedElementId = null;
   let tablePresets = {};
   let headerPresets = {};
+  let fragmentPresets = {};
   let adapterSchema = null;
   let sampleData = null;
   let dragState = null;
@@ -310,6 +311,10 @@
   }
 
   function clinical01CopayPieces() {
+    const frag = fragmentPresets["copay-duo-v1"];
+    if (frag && Array.isArray(frag.elements) && frag.elements.length) {
+      return JSON.parse(JSON.stringify(frag.elements));
+    }
     return [
       {
         id: "copay-banner",
@@ -339,7 +344,7 @@
         presetId: "copay-sso-v1",
         place: "beside",
         manualWidth: true,
-        box: { xMm: 0, yMm: 0, wMm: 126, hMm: 27 },
+        box: { xMm: 0, yMm: 0, wMm: 127, hMm: 27 },
         chrome: { border: "thin", headerFill: "$branding.sectionHeaderBackground" },
       },
     ];
@@ -454,6 +459,7 @@
   }
 
   async function loadCatalogExtras() {
+    if (!apiRef) return;
     try {
       const presets = await apiRef("/api/hprp/presets/tables");
       tablePresets = {};
@@ -466,7 +472,17 @@
       (headers || []).forEach((p) => { headerPresets[p.id] = p; });
     } catch (_) { /* optional */ }
 
-    const adapter = stateRef.draft.manifest && stateRef.draft.manifest.dataAdapter;
+    try {
+      const frags = await apiRef("/api/hprp/presets/fragments");
+      fragmentPresets = {};
+      (frags || []).forEach((p) => { fragmentPresets[p.id] = p; });
+    } catch (_) { /* optional */ }
+
+    if (global.LibraryStudio && typeof global.LibraryStudio.refresh === "function") {
+      global.LibraryStudio.refresh();
+    }
+
+    const adapter = stateRef && stateRef.draft && stateRef.draft.manifest && stateRef.draft.manifest.dataAdapter;
     if (adapter) {
       try {
         adapterSchema = await apiRef(`/api/hprp/adapters/${encodeURIComponent(adapter)}/schema`);
@@ -1907,6 +1923,58 @@
       renderAll();
     });
     insp.appendChild(addBot);
+
+    renderHeaderPresetActions(insp, el, working);
+  }
+
+  function renderHeaderPresetActions(insp, el, working) {
+    if (el.preset && !el.headerPreset) {
+      const detach = document.createElement("button");
+      detach.type = "button";
+      detach.textContent = "Detach preset (edit inline)";
+      detach.addEventListener("click", () => {
+        if (canvasTools) canvasTools.pushHistory();
+        ensureWorkingHeaderPreset(el, resolveHeaderPreset(el) || working);
+        renderAll();
+      });
+      insp.appendChild(detach);
+    }
+
+    const save = document.createElement("button");
+    save.type = "button";
+    save.textContent = "Save as preset";
+    save.addEventListener("click", async () => {
+      const id = prompt("Header preset id", working.id || el.preset || "my-header-preset");
+      if (!id) return;
+      const body = Object.assign({}, working, { id, displayName: working.displayName || id });
+      await apiRef(`/api/hprp/presets/headers/${encodeURIComponent(id)}`, {
+        method: "PUT",
+        body: JSON.stringify(body),
+      });
+      headerPresets[id] = body;
+      el.preset = id;
+      delete el.headerPreset;
+      setStatusRef("Saved header preset " + id, "ok");
+      if (global.LibraryStudio && typeof global.LibraryStudio.refresh === "function") {
+        global.LibraryStudio.refresh();
+      }
+      renderAll();
+    });
+    insp.appendChild(save);
+
+    const load = document.createElement("button");
+    load.type = "button";
+    load.textContent = "Load preset";
+    load.addEventListener("click", () => {
+      const ids = Object.keys(headerPresets);
+      const id = prompt("Header preset id\n" + ids.join(", "), el.preset || ids[0] || "");
+      if (!id || !headerPresets[id]) return;
+      if (canvasTools) canvasTools.pushHistory();
+      el.preset = id;
+      delete el.headerPreset;
+      renderAll();
+    });
+    insp.appendChild(load);
   }
 
   function renderTableInspector(insp, el) {
@@ -2352,6 +2420,199 @@
     renderAll();
   }
 
+  function addHeader(presetId) {
+    ensureElements();
+    promoteToDesignerIfNeeded();
+    if (canvasTools) canvasTools.pushHistory();
+    const ids = Object.keys(headerPresets);
+    const pid = presetId || "thaiur-header-v1";
+    if (!headerPresets[pid] && ids.length && !presetId) {
+      // fall through — still reference id; catalog may load later
+    }
+    const id = "hdr_" + Math.random().toString(36).slice(2, 7);
+    const el = {
+      id,
+      type: "header",
+      band: "header",
+      preset: headerPresets[pid] ? pid : (ids[0] || pid),
+      place: "below",
+      box: { xMm: 0, yMm: 0, wMm: 206, hMm: 27 },
+    };
+    const els = stateRef.draft.layout.elements;
+    let insertAt = 0;
+    for (let i = 0; i < els.length; i++) {
+      if (resolveBand(els[i]) === "header" || resolveBand(els[i]) === "super-header") {
+        insertAt = i + 1;
+      }
+    }
+    els.splice(insertAt, 0, el);
+    stateRef.draft.manifest.layoutMode = "designer";
+    selectedElementId = id;
+    stateRef.selectedKey = null;
+    reflowElements();
+    renderAll();
+    setStatusRef("Inserted header (" + el.preset + "). Save pack to persist.", "ok");
+  }
+
+  function uniqueElementId(base, taken) {
+    let id = base || "el";
+    let n = 0;
+    while (taken.has(id)) {
+      n += 1;
+      id = base + "_" + n;
+    }
+    taken.add(id);
+    return id;
+  }
+
+  function insertFragment(fragmentId) {
+    ensureElements();
+    promoteToDesignerIfNeeded();
+    const frag = fragmentPresets[fragmentId];
+    if (!frag || !Array.isArray(frag.elements) || !frag.elements.length) {
+      setStatusRef("Fragment not found: " + fragmentId, "err");
+      return;
+    }
+    if (canvasTools) canvasTools.pushHistory();
+    const taken = new Set(stateRef.draft.layout.elements.map((e) => e.id));
+    const clones = frag.elements.map((src) => {
+      const c = JSON.parse(JSON.stringify(src));
+      c.id = uniqueElementId(c.id || c.type || "frag", taken);
+      return c;
+    });
+    const els = stateRef.draft.layout.elements;
+    let insertAt = els.length;
+    if (selectedElementId) {
+      const idx = els.findIndex((e) => e.id === selectedElementId);
+      if (idx >= 0) insertAt = idx + 1;
+    }
+    els.splice(insertAt, 0, ...clones);
+    stateRef.draft.manifest.layoutMode = "designer";
+    selectedElementId = clones[0].id;
+    stateRef.selectedKey = null;
+    reflowElements();
+    renderAll();
+    setStatusRef("Inserted fragment " + fragmentId + " (" + clones.length + " elements)", "ok");
+  }
+
+  function addFragmentPrompt() {
+    const ids = Object.keys(fragmentPresets);
+    if (!ids.length) {
+      setStatusRef("No fragments in catalog yet", "err");
+      return;
+    }
+    const id = prompt("Fragment id\n" + ids.join(", "), ids.indexOf("copay-duo-v1") >= 0 ? "copay-duo-v1" : ids[0]);
+    if (!id) return;
+    insertFragment(id);
+  }
+
+  function getCatalogSnapshot() {
+    return {
+      headers: headerPresets,
+      tables: tablePresets,
+      fragments: fragmentPresets,
+    };
+  }
+
+  function getSelectedElement() {
+    ensureElements();
+    return (stateRef.draft.layout.elements || []).find((e) => e.id === selectedElementId) || null;
+  }
+
+  function saveFragmentFromSelection(ids) {
+    return (async () => {
+      ensureElements();
+      const want = Array.isArray(ids) && ids.length
+        ? ids
+        : selectedElementId
+          ? [selectedElementId]
+          : [];
+      if (!want.length) {
+        setStatusRef("Select element(s) first", "err");
+        return;
+      }
+      const els = stateRef.draft.layout.elements.filter((e) => want.indexOf(e.id) >= 0);
+      if (!els.length) {
+        setStatusRef("No matching selection", "err");
+        return;
+      }
+      const id = prompt("Fragment id", "my-fragment-v1");
+      if (!id) return;
+      const displayName = prompt("Display name", id) || id;
+      const body = {
+        id,
+        displayName,
+        tags: [],
+        elements: JSON.parse(JSON.stringify(els)),
+      };
+      await apiRef(`/api/hprp/presets/fragments/${encodeURIComponent(id)}`, {
+        method: "PUT",
+        body: JSON.stringify(body),
+      });
+      fragmentPresets[id] = body;
+      setStatusRef("Saved fragment " + id, "ok");
+      if (global.LibraryStudio && typeof global.LibraryStudio.refresh === "function") {
+        global.LibraryStudio.refresh();
+      }
+    })();
+  }
+
+  function saveHeaderPresetFromElement(el) {
+    return (async () => {
+      if (!el || el.type !== "header") {
+        setStatusRef("Select a header element", "err");
+        return;
+      }
+      const working = resolveHeaderPreset(el) || { columns: [], metaLines: [], bottomFields: [] };
+      const id = prompt("Header preset id", working.id || el.preset || "my-header-preset");
+      if (!id) return;
+      const body = Object.assign({}, JSON.parse(JSON.stringify(working)), {
+        id,
+        displayName: working.displayName || id,
+      });
+      await apiRef(`/api/hprp/presets/headers/${encodeURIComponent(id)}`, {
+        method: "PUT",
+        body: JSON.stringify(body),
+      });
+      headerPresets[id] = body;
+      el.preset = id;
+      delete el.headerPreset;
+      setStatusRef("Saved header preset " + id, "ok");
+      if (global.LibraryStudio && typeof global.LibraryStudio.refresh === "function") {
+        global.LibraryStudio.refresh();
+      }
+      renderAll();
+    })();
+  }
+
+  function saveTablePresetFromElement(el) {
+    return (async () => {
+      if (!el || el.type !== "config-table") {
+        setStatusRef("Select a table element", "err");
+        return;
+      }
+      const working = resolveTablePreset(el) || { columns: [] };
+      const id = prompt("Table preset id", working.id || el.presetId || "my-table-preset");
+      if (!id) return;
+      const body = Object.assign({}, JSON.parse(JSON.stringify(working)), {
+        id,
+        displayName: working.displayName || id,
+      });
+      await apiRef(`/api/hprp/presets/tables/${encodeURIComponent(id)}`, {
+        method: "PUT",
+        body: JSON.stringify(body),
+      });
+      tablePresets[id] = body;
+      el.presetId = id;
+      delete el.tablePreset;
+      setStatusRef("Saved table preset " + id, "ok");
+      if (global.LibraryStudio && typeof global.LibraryStudio.refresh === "function") {
+        global.LibraryStudio.refresh();
+      }
+      renderAll();
+    })();
+  }
+
   function addBoxText() {
     ensureElements();
     promoteToDesignerIfNeeded();
@@ -2462,10 +2723,19 @@
     promoteToDesignerIfNeeded,
     reflowElements,
     addConfigTable,
+    addHeader,
     addBoxText,
     addPageOf,
-    deleteElement,
+    addFragmentPrompt,
+    insertFragment,
+    getCatalogSnapshot,
+    getSelectedElement,
     getSelectedElementId: () => selectedElementId,
+    saveFragmentFromSelection,
+    saveHeaderPresetFromElement,
+    saveTablePresetFromElement,
+    deleteElement,
+    loadCatalogExtras,
   };
 
   global.TableDesigner.init = function (state, els, api, setStatus, schedulePreview) {
@@ -2506,9 +2776,13 @@
 
     const addBtn = document.getElementById("btnAddConfigTable");
     if (addBtn) addBtn.addEventListener("click", () => addConfigTable());
+    const hdrBtn = document.getElementById("btnAddHeader");
+    if (hdrBtn) hdrBtn.addEventListener("click", () => addHeader());
     const boxBtn = document.getElementById("btnAddBoxText");
     if (boxBtn) boxBtn.addEventListener("click", () => addBoxText());
     const pageOfBtn = document.getElementById("btnAddPageOf");
     if (pageOfBtn) pageOfBtn.addEventListener("click", () => addPageOf());
+    const fragBtn = document.getElementById("btnAddFragment");
+    if (fragBtn) fragBtn.addEventListener("click", () => addFragmentPrompt());
   };
 })(window);

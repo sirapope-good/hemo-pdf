@@ -74,3 +74,19 @@ Element type `page-of` (default band `super-footer`): format `{current} / {total
 | `flex` | Relative row weight (default 1) |
 
 Used by clinical-02 meta band (เดือน | ยา EPO | เข็ม/สัปดาห์). Co-pay banner stays single-value.
+
+## Library tab + recovery
+
+Left pane: **Packages | Library** (Headers / Tables / Fragments).
+
+| Action | Effect |
+|--|--|
+| Delete header on canvas + Save pack | Removes element from `layout.elements` only — disk preset stays |
+| **+ Header** or Library → Headers → Insert | Re-adds header referencing catalog preset |
+| Save as preset (inspector / Library) | `PUT /api/hprp/presets/headers/{id}` |
+| **+ Fragment** / Library → Fragments | Inserts multi-element recipe (e.g. `copay-duo-v1`) with renamed ids |
+
+Fragment assets: `assets/templates/presets/fragments/*.json` — API `GET/PUT /api/hprp/presets/fragments/{id}`.
+Optional `tags` on header/table/fragment presets for filtering (e.g. `tenant:hogwarts`).
+
+**Not in this pass:** DELETE preset API, per-tenant preset folders, `type: group` wrapper.
