@@ -1,0 +1,47 @@
+{
+  "dataAdapter": "clinical-02-epo-drug",
+  "displayName": "Clinical-02 EPO Drug",
+  "fields": [
+    { "path": "title", "label": "Title", "type": "string" },
+    {
+      "path": "header",
+      "label": "Header",
+      "type": "object",
+      "children": [
+        { "path": "header.patient.name", "label": "Patient name", "type": "string" },
+        { "path": "header.patient.hn", "label": "HN", "type": "string" }
+      ]
+    },
+    {
+      "path": "meta",
+      "label": "Meta band",
+      "type": "object",
+      "children": [
+        { "path": "meta.monthLabel", "label": "Month label", "type": "string" },
+        { "path": "meta.yearBe", "label": "Year (BE)", "type": "number" },
+        { "path": "meta.epoName", "label": "EPO name", "type": "string" },
+        { "path": "meta.needlesPerWeek", "label": "Needles / week", "type": "string" }
+      ]
+    },
+    {
+      "path": "rows",
+      "label": "Injection rows",
+      "type": "array",
+      "children": [
+        { "path": "rows[].dateLabel", "label": "Date", "type": "string" },
+        { "path": "rows[].doseIndex", "label": "Dose index", "type": "number" },
+        { "path": "rows[].stickerText", "label": "Sticker", "type": "string" },
+        { "path": "rows[].nurseName", "label": "Nurse", "type": "string" },
+        { "path": "rows[].remarks", "label": "Remarks", "type": "string" }
+      ]
+    },
+    {
+      "path": "coPayCriteria",
+      "label": "Co-pay criteria",
+      "type": "object",
+      "children": [
+        { "path": "coPayCriteria.title", "label": "Banner title", "type": "string" }
+      ]
+    }
+  ]
+}

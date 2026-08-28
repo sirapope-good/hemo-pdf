@@ -106,9 +106,16 @@ public class StudioSamplePayloadsSmokeTests
 
         if (string.Equals(engine, ClinicalReportCatalog.EpoDrug, StringComparison.OrdinalIgnoreCase))
         {
+            var opt = Options.Create(new HprpTemplateOptions
+            {
+                RootPath = HprpTestAssets.TemplatesRoot(),
+                PackagesRootPath = Path.Combine(HprpTestAssets.TemplatesRoot(), "_no-packages"),
+            });
+            var presets = new HprpTablePresetCatalog(new HprpTablePresetStore(opt));
+            var headers = new HprpHeaderPresetCatalog(new HprpHeaderPresetStore(opt));
             return new Clinical02EpoDrugReportRenderer(
                 new Clinical02EpoDrugDataProvider(),
-                new Clinical02EpoDrugComposer(store),
+                new Clinical02EpoDrugComposer(store, presets, headers),
                 quest).RenderReportAsync(context, CancellationToken.None);
         }
 

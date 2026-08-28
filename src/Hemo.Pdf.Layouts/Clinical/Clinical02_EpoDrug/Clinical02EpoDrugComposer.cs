@@ -1,8 +1,11 @@
+using System.Text.Json;
 using Hemo.Pdf.Core.Abstractions;
 using Hemo.Pdf.Core.Context;
 using Hemo.Pdf.Core.Hprp;
+using Hemo.Pdf.Core.Models;
 using Hemo.Pdf.Core.Models.Clinical;
 using Hemo.Pdf.Layouts.Clinical.Clinical01_HctEpo;
+using Hemo.Pdf.Layouts.Designer;
 using Hemo.Pdf.Layouts.Hprp;
 using Hemo.Pdf.Rendering;
 using Hemo.Pdf.Sections.ThaiUr;
@@ -13,7 +16,8 @@ namespace Hemo.Pdf.Layouts.Clinical.Clinical02_EpoDrug;
 
 /// <summary>
 /// Dense QuestPDF layout for clinical-02. Widget <b>order</b> from <c>.hprp</c>;
-/// meta band stays glued to <c>clinical.epo-drug-table</c> (not a separate reorderable widget yet).
+/// meta band stays glued to <c>clinical.epo-drug-table</c> in composition mode.
+/// Designer packs use <see cref="DesignerPageComposer"/> (box-text meta + freedom table + co-pay).
 /// </summary>
 public sealed class Clinical02EpoDrugComposer : ILayoutComposer
 {
@@ -29,16 +33,41 @@ public sealed class Clinical02EpoDrugComposer : ILayoutComposer
     private readonly EpoDrugInjectionTableSection _table = new();
     private readonly HctEpoCoPayCriteriaSection _coPayCriteria = new();
     private readonly IHprpTemplateStore? _templates;
+    private readonly IHprpTablePresetCatalog? _presets;
+    private readonly IHprpHeaderPresetCatalog? _headerPresets;
 
     public Clinical02EpoDrugComposer(IHprpTemplateStore? templates = null)
+        : this(templates, null, null)
+    {
+    }
+
+    public Clinical02EpoDrugComposer(
+        IHprpTemplateStore? templates,
+        IHprpTablePresetCatalog? presets,
+        IHprpHeaderPresetCatalog? headerPresets)
     {
         _templates = templates;
+        _presets = presets;
+        _headerPresets = headerPresets;
     }
 
     public object Compose(object dataModel, PdfReportContext context)
     {
         var vm = (EpoDrugReportViewModel)dataModel;
         var package = HprpLayoutPlan.TryGetPackage(_templates, context);
+
+        if (package is not null && HprpLayoutModes.IsDesigner(package.Manifest))
+        {
+            JsonElement? data = context.Data is JsonElement je ? je : null;
+            var designerVm = DesignerCanvasViewModel.FromPackage(
+                package,
+                data,
+                HprpLabelResolver.Resolve(_templates, context),
+                _presets?.LoadAll(),
+                _headerPresets?.LoadAll());
+            return DesignerPageComposer.Compose(designerVm, context);
+        }
+
         var page = HprpPageLayout.FromPackage(
             package,
             HprpPageFallback.Uniform(HemosheetThaiUrStyle.PageMarginMm, SectionSpacingMm));

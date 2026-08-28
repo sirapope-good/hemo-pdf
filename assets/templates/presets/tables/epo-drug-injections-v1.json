@@ -1,0 +1,17 @@
+{
+  "id": "epo-drug-injections-v1",
+  "displayName": "EPO drug injection log (freedom)",
+  "rowMode": "freedom",
+  "freedomRowCount": 8,
+  "columns": [
+    { "id": "date", "labelKey": "colDate", "title": "ว/ด/ป", "weight": 1.1, "center": false },
+    { "id": "dose", "labelKey": "colDose", "title": "เข็มที่", "weight": 0.7, "center": true },
+    { "id": "sticker", "labelKey": "colSticker", "title": "Sticker", "weight": 2.2, "center": false },
+    { "id": "nurse", "labelKey": "colNurse", "title": "พยาบาลผู้ฉีด", "weight": 1.6, "center": false },
+    { "id": "remarks", "labelKey": "colRemarks", "title": "หมายเหตุ", "weight": 1.4, "center": false }
+  ],
+  "chrome": {
+    "headerFill": "$branding.sectionHeaderBackground",
+    "border": "thin"
+  }
+}

@@ -66,7 +66,7 @@ WYSIWYG path on branch `feat/hprp-table-designer` — **does not replace** compo
 | Studio | tree + Page canvas + Preview pane | **3-column**: palette · HTML canvas · inspector (no preview pane) |
 | Table | fixed C# widget (`clinical.hct-epo-annual-table`) | preset `hct-epo-annual-v1` + bindings + column overrides |
 | PDF | section composers | shared `HprpTableLayoutEngine` → `ConfigurableTableComposer` |
-| Sample pack | `clinical-01-hct-epo` | `clinical-01-hct-epo-designer` |
+| Sample pack | `clinical-01-hct-epo` | `clinical-01-hct-epo-designer` / `clinical-02-epo-drug` |
 
 **Preset library:** `assets/templates/presets/tables/{id}.json` — reusable table chrome + columns + row mode (`freedom` | `monthly` | `annual`). Studio API: `GET/PUT /api/hprp/presets/tables/{id}`.
 
