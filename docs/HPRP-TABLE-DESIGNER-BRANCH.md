@@ -46,7 +46,9 @@ Left pane: **Import / Export** primary; **Pack all** under Packages ⋯; Library
 
 Loading feedback: brand overlay spinner (`StudioUi.withBusy`) on open package / library item / save / reload / pack-all; list skeletons on package/library reload; A4 canvas skeleton while a pack opens.
 
-Scripts use `?v=ux-polish-1` cache-bust — hard refresh (Ctrl+F5) after pull.
+Scripts use `?v=ux-polish-2` cache-bust — hard refresh (Ctrl+F5) after pull.
+
+Top-left brand: inline HPRP wordmark logo (from `assets/icons/LOGO_HPRP.svg`, `currentColor` for dark chrome) — replaces the old title + hint paragraph.
 
 ## Canvas tools
 
