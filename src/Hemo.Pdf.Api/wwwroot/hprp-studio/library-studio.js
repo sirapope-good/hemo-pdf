@@ -61,6 +61,10 @@
       li.addEventListener("click", () => {
         selectedId = item.id;
         renderList();
+        // Headers: click opens canvas editor (edit → Save → packages/library/headers/)
+        if (selectedKind === "headers" && typeof global.openLibraryHeader === "function") {
+          global.openLibraryHeader(item.id);
+        }
       });
       list.appendChild(li);
     });

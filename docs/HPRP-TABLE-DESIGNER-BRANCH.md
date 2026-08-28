@@ -16,7 +16,7 @@ Branch: `feat/hprp-table-designer` (isolated from `main` until merge).
 Layout: **Packages | Page canvas (WYSIWYG) | Inspector**
 
 Opening `clinical-01-hct-epo` loads `layoutMode: designer` with:
-- config-header (`thaiur-header-v1`)
+- config-header (`clinical-header-thaiur`)
 - config-table annual (`hct-epo-annual-v1`)
 - **box-text** co-pay banner + **two freedom tables** (`copay-nhso-v1`, `copay-sso-v1`, beside) — replaces dense `clinical.hct-epo-copay`
 
@@ -56,7 +56,7 @@ Element type `page-of` (default band `super-footer`): format `{current} / {total
 ## Assets
 
 - Table presets: `assets/templates/presets/tables/hct-epo-annual-v1.json`, `copay-nhso-v1.json`, `copay-sso-v1.json`, `epo-drug-injections-v1.json`
-- Header preset: `assets/templates/presets/headers/thaiur-header-v1.json`
+- Header preset: `assets/templates/presets/headers/clinical-header-thaiur.json`
 - Adapter schema: `assets/templates/adapters/clinical-01-hct-epo.schema.json`, `clinical-02-epo-drug.schema.json`
 - Sample designer pack (alias): `assets/templates/reports/clinical-01-hct-epo-designer/`
 - Production clinical-01 on this branch: `layoutMode: designer` + same elements
@@ -81,12 +81,23 @@ Left pane: **Packages | Library** (Headers / Tables / Fragments).
 
 | Action | Effect |
 |--|--|
-| Delete header on canvas + Save pack | Removes element from `layout.elements` only — disk preset stays |
-| **+ Header** or Library → Headers → Insert | Re-adds header referencing catalog preset |
-| Save as preset (inspector / Library) | `PUT /api/hprp/presets/headers/{id}` |
+| **Click a Header** in Library | Opens that preset alone on the canvas (title `Library · …`) |
+| **Save** (main toolbar) while editing a library header | Writes `packages/library/headers/{id}.json` (overrides seed) — **not** a report `.hprp` |
+| Delete header on pack canvas + Save pack | Removes element from `layout.elements` only — disk preset stays |
+| **+ Header** or Library → **Insert into pack** | Re-adds header referencing catalog preset into the open report |
+| Save from selection | `PUT /api/hprp/presets/headers/{id}` (same library folder) |
 | **+ Fragment** / Library → Fragments | Inserts multi-element recipe (e.g. `copay-duo-v1`) with renamed ids |
+
+### Header library storage
+
+| Layer | Path |
+|--|--|
+| Seed (read-only in repo) | `assets/templates/presets/headers/clinical-header-thaiur.json` |
+| Studio overrides (like `.hprp`) | `packages/library/headers/{id}.json` |
+
+Naming convention for clinical headers: `clinical-header-{tenant}` — e.g. `clinical-header-thaiur`, later `clinical-header-default`, `clinical-header-rama`. Legacy id `thaiur-header-v1` aliases to `clinical-header-thaiur`.
 
 Fragment assets: `assets/templates/presets/fragments/*.json` — API `GET/PUT /api/hprp/presets/fragments/{id}`.
 Optional `tags` on header/table/fragment presets for filtering (e.g. `tenant:hogwarts`).
 
-**Not in this pass:** DELETE preset API, per-tenant preset folders, `type: group` wrapper.
+**Not in this pass:** DELETE preset API, per-tenant folders beyond `packages/library/`, `type: group` wrapper, Library click-edit for tables/fragments.

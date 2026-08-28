@@ -410,7 +410,7 @@
           id: "hdr",
           type: "header",
           band: "header",
-          preset: "thaiur-header-v1",
+          preset: "clinical-header-thaiur",
           place: "below",
           box: { xMm: 0, yMm: 0, wMm: 206, hMm: 27 },
         },
@@ -522,10 +522,17 @@
     if (item.variant) qs.set("variant", item.variant);
     if (scenario) qs.set("scenario", scenario);
     const q = qs.toString() ? "?" + qs.toString() : "";
+    const useClinical01Sample =
+      (stateRef.libraryEdit && stateRef.libraryEdit.kind === "headers")
+      || String(item.id || "").indexOf("__library__/") === 0;
     try {
+      if (useClinical01Sample) {
+        sampleData = await apiRef(`/api/hprp/packages/clinical-01-hct-epo/sample-data${q}`);
+        return;
+      }
       sampleData = await apiRef(`/api/hprp/packages/${encodeURIComponent(item.id)}/sample-data${q}`);
     } catch (_) {
-      if (String(item.id).indexOf("clinical-01") === 0 && item.id !== "clinical-01-hct-epo") {
+      if (useClinical01Sample || (String(item.id).indexOf("clinical-01") === 0 && item.id !== "clinical-01-hct-epo")) {
         try {
           sampleData = await apiRef(`/api/hprp/packages/clinical-01-hct-epo/sample-data${q}`);
         } catch (__) {
@@ -2425,7 +2432,7 @@
     promoteToDesignerIfNeeded();
     if (canvasTools) canvasTools.pushHistory();
     const ids = Object.keys(headerPresets);
-    const pid = presetId || "thaiur-header-v1";
+    const pid = presetId || "clinical-header-thaiur";
     if (!headerPresets[pid] && ids.length && !presetId) {
       // fall through — still reference id; catalog may load later
     }
@@ -2452,6 +2459,104 @@
     reflowElements();
     renderAll();
     setStatusRef("Inserted header (" + el.preset + "). Save pack to persist.", "ok");
+  }
+
+  /**
+   * Open a library header preset alone on the canvas for edit/save
+   * (writes packages/library/headers/{id}.json — not a report .hprp).
+   */
+  async function openLibraryHeader(presetId) {
+    await loadCatalogExtras();
+    const pid = String(presetId || "").trim();
+    let preset = headerPresets[pid];
+    if (!preset) {
+      try {
+        preset = await apiRef(`/api/hprp/presets/headers/${encodeURIComponent(pid)}`);
+        if (preset && preset.id) headerPresets[preset.id] = preset;
+      } catch (_) {
+        preset = null;
+      }
+    }
+    if (!preset) return null;
+
+    const working = JSON.parse(JSON.stringify(preset));
+    const id = working.id || pid;
+    working.id = id;
+    const hMm = Number(working.titleRowHeightMm || 21.6) + Number(working.bottomRowHeightMm || 5.4);
+
+    stateRef.draft = {
+      manifest: {
+        id: "__library__/headers/" + id,
+        displayName: working.displayName || id,
+        layoutMode: "designer",
+        layoutKind: "LibraryHeader",
+      },
+      layout: {
+        page: { size: "A4", marginMm: 2, spacingMm: 2, border: "none" },
+        elements: [
+          {
+            id: "hdr_lib",
+            type: "header",
+            band: "header",
+            preset: id,
+            headerPreset: working,
+            place: "below",
+            box: { xMm: 0, yMm: 0, wMm: 206, hMm: hMm > 0 ? hMm : 27 },
+          },
+        ],
+        body: [],
+      },
+      labels: {},
+    };
+    selectedElementId = "hdr_lib";
+    stateRef.selectedKey = null;
+
+    try {
+      sampleData = await apiRef("/api/hprp/packages/clinical-01-hct-epo/sample-data");
+    } catch (_) {
+      sampleData = null;
+    }
+
+    if (canvasTools) canvasTools.resetHistory();
+    return { id: id, displayName: working.displayName || id };
+  }
+
+  async function saveLibraryHeader() {
+    ensureElements();
+    const el = (stateRef.draft.layout.elements || []).find((e) => e.type === "header");
+    if (!el) throw new Error("No header element on canvas");
+    const working = resolveHeaderPreset(el);
+    if (!working) throw new Error("Header preset missing");
+    ensureWorkingHeaderPreset(el, working);
+    commitHeaderWorking(el, el.headerPreset);
+
+    const id = (stateRef.libraryEdit && stateRef.libraryEdit.id)
+      || el.preset
+      || (el.headerPreset && el.headerPreset.id)
+      || working.id;
+    if (!id) throw new Error("Header preset id missing");
+
+    const body = Object.assign({}, JSON.parse(JSON.stringify(el.headerPreset || working)), {
+      id: id,
+      displayName: (el.headerPreset && el.headerPreset.displayName)
+        || working.displayName
+        || (stateRef.libraryEdit && stateRef.libraryEdit.displayName)
+        || id,
+    });
+
+    const result = await apiRef(`/api/hprp/presets/headers/${encodeURIComponent(id)}`, {
+      method: "PUT",
+      body: JSON.stringify(body),
+    });
+    const saved = (result && result.preset) || body;
+    headerPresets[id] = saved;
+    el.preset = id;
+    el.headerPreset = JSON.parse(JSON.stringify(saved));
+    renderAll();
+    return result || {
+      preset: saved,
+      outputPath: "packages/library/headers/" + id + ".json",
+    };
   }
 
   function uniqueElementId(base, taken) {
@@ -2724,6 +2829,8 @@
     reflowElements,
     addConfigTable,
     addHeader,
+    openLibraryHeader,
+    saveLibraryHeader,
     addBoxText,
     addPageOf,
     addFragmentPrompt,

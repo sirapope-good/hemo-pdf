@@ -82,7 +82,7 @@ public sealed class HprpDesignerElement
     [JsonPropertyName("box")]
     public HprpDesignerBox Box { get; init; } = new();
 
-    /// <summary>Header preset id (e.g. <c>thaiur-header-v1</c>).</summary>
+    /// <summary>Header preset id (e.g. <c>clinical-header-thaiur</c>).</summary>
     [JsonPropertyName("preset")]
     public string? Preset { get; init; }
 

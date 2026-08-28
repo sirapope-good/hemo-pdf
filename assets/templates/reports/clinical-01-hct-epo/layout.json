@@ -14,7 +14,7 @@
       "id": "hdr",
       "type": "header",
       "band": "header",
-      "preset": "thaiur-header-v1",
+      "preset": "clinical-header-thaiur",
       "place": "below",
       "box": { "xMm": 0, "yMm": 0, "wMm": 206, "hMm": 27 }
     },

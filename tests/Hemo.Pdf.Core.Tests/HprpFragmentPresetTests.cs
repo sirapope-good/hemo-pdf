@@ -92,8 +92,58 @@ public class HprpFragmentPresetTests
             PackagesRootPath = Path.Combine(HprpTestAssets.TemplatesRoot(), "_no-packages"),
         });
         var store = new HprpHeaderPresetStore(options);
+        var hdr = store.TryGet("clinical-header-thaiur");
+        Assert.NotNull(hdr);
+        Assert.Equal("clinical-header-thaiur", hdr!.Id);
+        Assert.Contains("ThaiUr", hdr.DisplayName, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public void HeaderStore_ResolvesLegacyAlias()
+    {
+        var options = Options.Create(new HprpTemplateOptions
+        {
+            RootPath = HprpTestAssets.TemplatesRoot(),
+            PackagesRootPath = Path.Combine(HprpTestAssets.TemplatesRoot(), "_no-packages"),
+        });
+        var store = new HprpHeaderPresetStore(options);
         var hdr = store.TryGet("thaiur-header-v1");
         Assert.NotNull(hdr);
-        Assert.False(string.IsNullOrWhiteSpace(hdr!.DisplayName));
+        Assert.Equal("clinical-header-thaiur", hdr!.Id);
+    }
+
+    [Fact]
+    public async Task HeaderStore_SaveWritesLibraryFolder()
+    {
+        var packagesRoot = Path.Combine(Path.GetTempPath(), "hprp-lib-headers-" + Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(packagesRoot);
+        try
+        {
+            var options = Options.Create(new HprpTemplateOptions
+            {
+                RootPath = HprpTestAssets.TemplatesRoot(),
+                PackagesRootPath = packagesRoot,
+                PackagesWritePath = packagesRoot,
+            });
+            var store = new HprpHeaderPresetStore(options);
+            var seed = store.TryGet("clinical-header-thaiur");
+            Assert.NotNull(seed);
+
+            var json = System.Text.Json.JsonSerializer.Serialize(seed, HprpJson.Options);
+            json = json
+                .Replace("\"displayName\":\"Clinical header ThaiUr\"", "\"displayName\":\"Clinical header ThaiUr (edited)\"", StringComparison.Ordinal)
+                .Replace("\"displayName\": \"Clinical header ThaiUr\"", "\"displayName\": \"Clinical header ThaiUr (edited)\"", StringComparison.Ordinal);
+            var edited = System.Text.Json.JsonSerializer.Deserialize<Hemo.Pdf.Core.Hprp.Header.HprpHeaderPreset>(json, HprpJson.Options)!;
+            await store.SaveAsync(edited);
+
+            var path = Path.Combine(packagesRoot, "library", "headers", "clinical-header-thaiur.json");
+            Assert.True(File.Exists(path), "expected write under PackagesWritePath: " + path);
+            var again = store.TryGet("clinical-header-thaiur");
+            Assert.Equal("Clinical header ThaiUr (edited)", again!.DisplayName);
+        }
+        finally
+        {
+            try { Directory.Delete(packagesRoot, recursive: true); } catch { /* ignore */ }
+        }
     }
 }

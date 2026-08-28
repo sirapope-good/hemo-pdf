@@ -9,7 +9,7 @@ public class HprpHeaderLayoutEngineTests
     private static HprpHeaderPreset ThaiUrPreset()
     {
         var json = File.ReadAllText(
-            Path.Combine(HprpTestAssets.TemplatesRoot(), "presets", "headers", "thaiur-header-v1.json"));
+            Path.Combine(HprpTestAssets.TemplatesRoot(), "presets", "headers", "clinical-header-thaiur.json"));
         return JsonSerializer.Deserialize<HprpHeaderPreset>(json, HprpJson.Options)!;
     }
 

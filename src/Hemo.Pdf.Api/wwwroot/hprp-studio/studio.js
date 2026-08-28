@@ -1,6 +1,8 @@
 const state = {
   list: [],
   selected: null,
+  /** When set, canvas edits a library preset (not a report .hprp). */
+  libraryEdit: null, // { kind: "headers", id, displayName }
   tab: "manifest",
   mode: "designer",
   draft: { manifest: {}, layout: { body: [] }, labels: {} },
@@ -299,14 +301,57 @@ function sampleScenarioEl() {
 }
 
 function setButtonsEnabled(on) {
+  const lib = !!state.libraryEdit;
   [
     "btnValidate", "btnSave", "btnPackThis", "btnValidateJson", "btnSaveJson", "btnPackThisJson",
     "btnPreview", "btnDownloadPdf", "btnDesignerDownloadPdf", "btnExport", "btnLabels",
   ].forEach((id) => {
     const el = document.getElementById(id);
-    if (el) el.disabled = !on;
+    if (!el) return;
+    if (!on) {
+      el.disabled = true;
+      return;
+    }
+    // Library edit: Save only (no pack / export / PDF against a report id)
+    if (lib && id !== "btnSave" && id !== "btnSaveJson") {
+      el.disabled = true;
+      return;
+    }
+    el.disabled = false;
   });
   els.editor.disabled = !on;
+}
+
+async function openLibraryHeader(presetId) {
+  if (!window.TableDesigner || typeof TableDesigner.openLibraryHeader !== "function") {
+    throw new Error("TableDesigner.openLibraryHeader is not available");
+  }
+  await TableDesigner.loadCatalogExtras();
+  const opened = await TableDesigner.openLibraryHeader(presetId);
+  if (!opened) throw new Error("Header preset not found: " + presetId);
+
+  state.libraryEdit = {
+    kind: "headers",
+    id: opened.id,
+    displayName: opened.displayName || opened.id,
+  };
+  state.selected = {
+    id: "__library__/headers/" + opened.id,
+    displayName: opened.displayName,
+    library: true,
+  };
+  state.selectedKey = null;
+  [...els.list.children].forEach((li) => li.classList.remove("active"));
+  els.title.textContent = "Library · " + (opened.displayName || opened.id);
+  setButtonsEnabled(true);
+  const btnSave = document.getElementById("btnSave");
+  if (btnSave) {
+    btnSave.textContent = "Save library header";
+    btnSave.title = "Write packages/library/headers/" + opened.id + ".json";
+  }
+  setMode("designer");
+  renderDesigner();
+  setStatus("แก้ไข header บน canvas · Save → packages/library/headers/" + opened.id + ".json", "ok");
 }
 
 async function loadList() {
@@ -1779,6 +1824,7 @@ function currentBody() {
 }
 
 async function openPackage(item) {
+  state.libraryEdit = null;
   const query = item.variant ? `?variant=${encodeURIComponent(item.variant)}` : "";
   const pkg = await api(`/api/hprp/packages/${encodeURIComponent(item.id)}${query}`);
   state.draft = {
@@ -1793,6 +1839,11 @@ async function openPackage(item) {
   const kind = item.layoutKind || state.draft.manifest.layoutKind || "";
   els.title.textContent = `${item.id} · ${label}${kind ? " (" + kind + ")" : ""}`;
   setButtonsEnabled(true);
+  const btnSave = document.getElementById("btnSave");
+  if (btnSave) {
+    btnSave.textContent = "Save and pack";
+    btnSave.title = "Write the editor JSON to packages/*.hprp";
+  }
   if (state.mode === "json") showJsonTab();
   else renderDesigner();
   setStatus("Loaded " + item.id, "ok");
@@ -1847,6 +1898,17 @@ function firstFileHeaderFill(layout) {
 }
 
 async function save() {
+  if (state.libraryEdit && state.libraryEdit.kind === "headers") {
+    if (!window.TableDesigner || typeof TableDesigner.saveLibraryHeader !== "function")
+      throw new Error("TableDesigner.saveLibraryHeader is not available");
+    const result = await TableDesigner.saveLibraryHeader();
+    const path = (result && result.outputPath) || ("packages/library/headers/" + state.libraryEdit.id + ".json");
+    setStatus("Saved library header → " + path, "ok");
+    if (window.LibraryStudio && typeof LibraryStudio.refresh === "function")
+      LibraryStudio.refresh();
+    return;
+  }
+
   const body = currentBody();
   const item = state.selected;
   const query = item.variant ? `?variant=${encodeURIComponent(item.variant)}` : "";
@@ -2000,3 +2062,7 @@ loadList().catch((err) => {
 loadCatalog().catch((err) => setStatus(err.message, "err"));
 if (window.TableDesigner)
   TableDesigner.init(state, els, api, setStatus, schedulePreview);
+
+/** Library tab → open header on canvas (used by library-studio.js). */
+window.openLibraryHeader = (presetId) =>
+  openLibraryHeader(presetId).catch((err) => setStatus(err.message || String(err), "err"));

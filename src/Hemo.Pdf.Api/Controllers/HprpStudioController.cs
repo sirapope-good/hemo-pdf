@@ -93,10 +93,19 @@ public sealed class HprpStudioController : ControllerBase
         CancellationToken cancellationToken)
     {
         EnsureWritesEnabled();
-        if (!string.Equals(body.Id, presetId, StringComparison.OrdinalIgnoreCase))
+        var canonical = HprpHeaderPresetStore.CanonicalId(presetId);
+        var bodyCanonical = HprpHeaderPresetStore.CanonicalId(
+            string.IsNullOrWhiteSpace(body.Id) ? presetId : body.Id);
+        if (!string.Equals(bodyCanonical, canonical, StringComparison.OrdinalIgnoreCase))
             throw new PdfGenerationBadRequestException("preset id must match URL.");
+
         await _headerPresets.SaveAsync(body, cancellationToken);
-        return Ok(body);
+        var saved = _headerPresets.TryGet(canonical) ?? body;
+        return Ok(new
+        {
+            preset = saved,
+            outputPath = Path.Combine(_headerPresets.LibraryRoot, canonical + ".json"),
+        });
     }
 
     [HttpGet("presets/fragments")]
