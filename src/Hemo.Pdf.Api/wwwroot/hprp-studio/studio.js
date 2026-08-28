@@ -323,10 +323,14 @@ function setButtonsEnabled(on) {
 }
 
 async function openLibraryHeader(presetId) {
+  // Sync feedback first — so a hung await never looks like a no-op click.
+  setStatus("กำลังเปิด Library header: " + presetId + "…", "ok");
+  if (els.title) els.title.textContent = "Library · loading…";
+
   if (!window.TableDesigner || typeof TableDesigner.openLibraryHeader !== "function") {
-    throw new Error("TableDesigner.openLibraryHeader is not available");
+    throw new Error("TableDesigner.openLibraryHeader is not available — hard refresh (Ctrl+F5)");
   }
-  await TableDesigner.loadCatalogExtras();
+  await TableDesigner.loadCatalogExtras({ silent: true });
   const opened = await TableDesigner.openLibraryHeader(presetId);
   if (!opened) throw new Error("Header preset not found: " + presetId);
 
@@ -349,9 +353,26 @@ async function openLibraryHeader(presetId) {
     btnSave.textContent = "Save library header";
     btnSave.title = "Write packages/library/headers/" + opened.id + ".json";
   }
-  setMode("designer");
-  renderDesigner();
+  state.mode = "designer";
+  document.body.classList.add("mode-designer");
+  document.body.classList.remove("mode-json");
+  const btnDes = document.getElementById("btnModeDesigner");
+  const btnJson = document.getElementById("btnModeJson");
+  if (btnDes) btnDes.classList.add("active");
+  if (btnJson) btnJson.classList.remove("active");
+  if (typeof TableDesigner.renderAll === "function") TableDesigner.renderAll();
+  else renderDesigner();
   setStatus("แก้ไข header บน canvas · Save → packages/library/headers/" + opened.id + ".json", "ok");
+}
+
+/** Wire immediately (do not wait until end of studio.js — init errors must not skip this). */
+window.openLibraryHeader = (presetId) =>
+  openLibraryHeader(presetId).catch((err) => {
+    console.error("[openLibraryHeader]", err);
+    setStatus(err.message || String(err), "err");
+  });
+if (window.LibraryStudio && typeof LibraryStudio.setOpenHeader === "function") {
+  LibraryStudio.setOpenHeader(window.openLibraryHeader);
 }
 
 async function loadList() {
@@ -2062,7 +2083,7 @@ loadList().catch((err) => {
 loadCatalog().catch((err) => setStatus(err.message, "err"));
 if (window.TableDesigner)
   TableDesigner.init(state, els, api, setStatus, schedulePreview);
-
-/** Library tab → open header on canvas (used by library-studio.js). */
-window.openLibraryHeader = (presetId) =>
-  openLibraryHeader(presetId).catch((err) => setStatus(err.message || String(err), "err"));
+// Re-bind after init in case LibraryStudio loaded first without handler.
+if (window.LibraryStudio && typeof LibraryStudio.setOpenHeader === "function") {
+  LibraryStudio.setOpenHeader(window.openLibraryHeader);
+}

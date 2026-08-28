@@ -5,6 +5,8 @@
   let selectedKind = "headers";
   let selectedId = null;
   let filterTag = "";
+  /** Set by studio.js — opens header alone on the canvas. */
+  let openHeaderFn = null;
 
   function $(id) {
     return document.getElementById(id);
@@ -31,6 +33,19 @@
       || String(item.displayName || "").toLowerCase().indexOf(q) >= 0;
   }
 
+  function openHeaderOnCanvas(presetId) {
+    if (typeof openHeaderFn === "function") {
+      openHeaderFn(presetId);
+      return;
+    }
+    if (typeof global.openLibraryHeader === "function") {
+      global.openLibraryHeader(presetId);
+      return;
+    }
+    console.error("[LibraryStudio] openHeader handler missing — hard-refresh Studio (Ctrl+F5)");
+    alert("ยังโหลดตัวแก้ Library ไม่ครบ — กด Ctrl+F5 แล้วลองคลิก Header อีกครั้ง");
+  }
+
   function renderList() {
     const list = $("libraryList");
     if (!list) return;
@@ -47,6 +62,10 @@
     items.forEach((item) => {
       const li = document.createElement("li");
       li.className = "lib-item" + (selectedId === item.id ? " active" : "");
+      li.dataset.id = item.id;
+      li.title = selectedKind === "headers"
+        ? "คลิกเพื่อแก้บน canvas"
+        : "คลิกเพื่อเลือก · Insert into pack เพื่อใส่ในรายงาน";
       const title = document.createElement("strong");
       title.textContent = item.displayName || item.id;
       const meta = document.createElement("span");
@@ -58,12 +77,16 @@
       li.appendChild(title);
       li.appendChild(document.createElement("br"));
       li.appendChild(meta);
-      li.addEventListener("click", () => {
+      li.addEventListener("click", (ev) => {
+        ev.preventDefault();
+        ev.stopPropagation();
         selectedId = item.id;
-        renderList();
-        // Headers: click opens canvas editor (edit → Save → packages/library/headers/)
-        if (selectedKind === "headers" && typeof global.openLibraryHeader === "function") {
-          global.openLibraryHeader(item.id);
+        // Highlight without full rebuild (rebuild raced async open).
+        list.querySelectorAll(".lib-item").forEach((node) => {
+          node.classList.toggle("active", node.dataset.id === item.id);
+        });
+        if (selectedKind === "headers") {
+          openHeaderOnCanvas(item.id);
         }
       });
       list.appendChild(li);
@@ -153,6 +176,20 @@
     }
     const ins = $("btnLibInsert");
     if (ins) ins.addEventListener("click", () => insertSelected());
+    const edit = $("btnLibEdit");
+    if (edit) {
+      edit.addEventListener("click", () => {
+        if (!selectedId) {
+          alert("เลือก Header ใน Library ก่อน");
+          return;
+        }
+        if (selectedKind !== "headers") {
+          alert("ตอนนี้ Edit on canvas รองรับเฉพาะ Headers");
+          return;
+        }
+        openHeaderOnCanvas(selectedId);
+      });
+    }
     const save = $("btnLibSaveSelection");
     if (save) save.addEventListener("click", () => { saveFromSelection().catch((e) => alert(e.message || e)); });
   }
@@ -161,6 +198,7 @@
     wire,
     refresh: renderList,
     setSideTab,
+    setOpenHeader: function (fn) { openHeaderFn = fn; },
   };
 
   if (document.readyState === "loading") {

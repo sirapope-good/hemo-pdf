@@ -51,10 +51,11 @@
         <input id="libraryFilter" type="search" placeholder="filter id / tag…" class="lib-filter" />
         <ul id="libraryList" class="list lib-list"></ul>
         <div class="actions lib-actions">
+          <button id="btnLibEdit" type="button" class="primary" title="Open selected header alone on canvas">Edit on canvas</button>
           <button id="btnLibInsert" type="button" title="Insert into open pack">Insert into pack</button>
           <button id="btnLibSaveSelection" type="button" title="Save selected canvas element(s) as library item">Save from selection</button>
         </div>
-        <p class="muted lib-hint">คลิก Header → แก้บน canvas · Save หลัก → packages/library/headers/ · Insert เพื่อใส่ใน pack ที่เปิดอยู่</p>
+        <p class="muted lib-hint">คลิก Header หรือกด Edit on canvas → แก้บน canvas · Save หลัก → packages/library/headers/</p>
       </div>
     </aside>
 
@@ -145,11 +146,11 @@
   <pre id="status" class="status" role="status"></pre>
 
   <script src="/hprp-studio/vendor/jszip.min.js"></script>
-  <script src="/hprp-studio/table-layout-engine.js"></script>
-  <script src="/hprp-studio/header-layout-engine.js"></script>
-  <script src="/hprp-studio/designer-canvas-tools.js"></script>
-  <script src="/hprp-studio/designer-studio.js"></script>
-  <script src="/hprp-studio/library-studio.js"></script>
-  <script src="/hprp-studio/studio.js"></script>
+  <script src="/hprp-studio/table-layout-engine.js?v=lib-edit-2"></script>
+  <script src="/hprp-studio/header-layout-engine.js?v=lib-edit-2"></script>
+  <script src="/hprp-studio/designer-canvas-tools.js?v=lib-edit-2"></script>
+  <script src="/hprp-studio/designer-studio.js?v=lib-edit-2"></script>
+  <script src="/hprp-studio/library-studio.js?v=lib-edit-2"></script>
+  <script src="/hprp-studio/studio.js?v=lib-edit-2"></script>
 </body>
 </html>

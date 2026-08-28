@@ -458,8 +458,9 @@
     return el.tablePreset || null;
   }
 
-  async function loadCatalogExtras() {
+  async function loadCatalogExtras(opts) {
     if (!apiRef) return;
+    const silent = opts && opts.silent;
     try {
       const presets = await apiRef("/api/hprp/presets/tables");
       tablePresets = {};
@@ -478,7 +479,7 @@
       (frags || []).forEach((p) => { fragmentPresets[p.id] = p; });
     } catch (_) { /* optional */ }
 
-    if (global.LibraryStudio && typeof global.LibraryStudio.refresh === "function") {
+    if (!silent && global.LibraryStudio && typeof global.LibraryStudio.refresh === "function") {
       global.LibraryStudio.refresh();
     }
 
@@ -2466,7 +2467,7 @@
    * (writes packages/library/headers/{id}.json — not a report .hprp).
    */
   async function openLibraryHeader(presetId) {
-    await loadCatalogExtras();
+    await loadCatalogExtras({ silent: true });
     const pid = String(presetId || "").trim();
     let preset = headerPresets[pid];
     if (!preset) {
@@ -2483,6 +2484,11 @@
     const id = working.id || pid;
     working.id = id;
     const hMm = Number(working.titleRowHeightMm || 21.6) + Number(working.bottomRowHeightMm || 5.4);
+
+    if (!stateRef) {
+      console.error("[TableDesigner.openLibraryHeader] stateRef missing — init not called");
+      return null;
+    }
 
     stateRef.draft = {
       manifest: {
