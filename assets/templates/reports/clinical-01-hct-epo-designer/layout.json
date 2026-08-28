@@ -4,7 +4,9 @@
     "orientation": "portrait",
     "marginMm": 2,
     "spacingMode": "custom",
-    "spacingMm": 2,
+    "spacingMm": 0,
+    "spacingBelowMm": 0.1,
+    "spacingBesideMm": 1,
     "border": "none"
   },
   "elements": [
@@ -22,7 +24,7 @@
       "band": "content",
       "presetId": "hct-epo-annual-v1",
       "place": "below",
-      "box": { "xMm": 0, "yMm": 29, "wMm": 206, "hMm": 228 },
+      "box": { "xMm": 0, "yMm": 29, "wMm": 206, "hMm": 230 },
       "chrome": { "border": "thin", "headerFill": "$branding.sectionHeaderBackground" },
       "bindings": [
         { "path": "months[].monthLabel", "column": "month", "context": "group-label" },
@@ -68,7 +70,7 @@
       "presetId": "copay-sso-v1",
       "place": "beside",
       "manualWidth": true,
-      "box": { "xMm": 80, "yMm": 266, "wMm": 126, "hMm": 27 },
+      "box": { "xMm": 80, "yMm": 266, "wMm": 127, "hMm": 27 },
       "chrome": { "border": "thin", "headerFill": "$branding.sectionHeaderBackground" }
     },
     {
