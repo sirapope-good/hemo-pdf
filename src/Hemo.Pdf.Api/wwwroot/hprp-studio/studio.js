@@ -368,40 +368,55 @@ async function enterLibraryEditMode(opened) {
 async function openLibraryHeaderImpl(presetId) {
   setStatus("กำลังเปิด Library header: " + presetId + "…", "ok");
   if (els.title) els.title.textContent = "Library · loading…";
+  if (window.StudioUi) StudioUi.showCanvasSkeleton();
 
-  if (!window.TableDesigner || typeof TableDesigner.openLibraryHeader !== "function") {
-    throw new Error("TableDesigner.openLibraryHeader is not available — hard refresh (Ctrl+F5)");
-  }
-  await TableDesigner.loadCatalogExtras({ silent: true });
-  const opened = await TableDesigner.openLibraryHeader(presetId);
-  if (!opened) throw new Error("Header preset not found: " + presetId);
-  await enterLibraryEditMode({ kind: "headers", id: opened.id, displayName: opened.displayName });
+  const run = async () => {
+    if (!window.TableDesigner || typeof TableDesigner.openLibraryHeader !== "function") {
+      throw new Error("TableDesigner.openLibraryHeader is not available — hard refresh (Ctrl+F5)");
+    }
+    await TableDesigner.loadCatalogExtras({ silent: true });
+    const opened = await TableDesigner.openLibraryHeader(presetId);
+    if (!opened) throw new Error("Header preset not found: " + presetId);
+    await enterLibraryEditMode({ kind: "headers", id: opened.id, displayName: opened.displayName });
+  };
+  if (window.StudioUi) await StudioUi.withBusy("Opening header…", run);
+  else await run();
 }
 
 async function openLibraryTableImpl(presetId) {
   setStatus("กำลังเปิด Library table: " + presetId + "…", "ok");
   if (els.title) els.title.textContent = "Library · loading…";
+  if (window.StudioUi) StudioUi.showCanvasSkeleton();
 
-  if (!window.TableDesigner || typeof TableDesigner.openLibraryTable !== "function") {
-    throw new Error("TableDesigner.openLibraryTable is not available — hard refresh (Ctrl+F5)");
-  }
-  await TableDesigner.loadCatalogExtras({ silent: true });
-  const opened = await TableDesigner.openLibraryTable(presetId);
-  if (!opened) throw new Error("Table preset not found: " + presetId);
-  await enterLibraryEditMode({ kind: "tables", id: opened.id, displayName: opened.displayName });
+  const run = async () => {
+    if (!window.TableDesigner || typeof TableDesigner.openLibraryTable !== "function") {
+      throw new Error("TableDesigner.openLibraryTable is not available — hard refresh (Ctrl+F5)");
+    }
+    await TableDesigner.loadCatalogExtras({ silent: true });
+    const opened = await TableDesigner.openLibraryTable(presetId);
+    if (!opened) throw new Error("Table preset not found: " + presetId);
+    await enterLibraryEditMode({ kind: "tables", id: opened.id, displayName: opened.displayName });
+  };
+  if (window.StudioUi) await StudioUi.withBusy("Opening table…", run);
+  else await run();
 }
 
 async function openLibraryFragmentImpl(presetId) {
   setStatus("กำลังเปิด Library fragment: " + presetId + "…", "ok");
   if (els.title) els.title.textContent = "Library · loading…";
+  if (window.StudioUi) StudioUi.showCanvasSkeleton();
 
-  if (!window.TableDesigner || typeof TableDesigner.openLibraryFragment !== "function") {
-    throw new Error("TableDesigner.openLibraryFragment is not available — hard refresh (Ctrl+F5)");
-  }
-  await TableDesigner.loadCatalogExtras({ silent: true });
-  const opened = await TableDesigner.openLibraryFragment(presetId);
-  if (!opened) throw new Error("Fragment preset not found: " + presetId);
-  await enterLibraryEditMode({ kind: "fragments", id: opened.id, displayName: opened.displayName });
+  const run = async () => {
+    if (!window.TableDesigner || typeof TableDesigner.openLibraryFragment !== "function") {
+      throw new Error("TableDesigner.openLibraryFragment is not available — hard refresh (Ctrl+F5)");
+    }
+    await TableDesigner.loadCatalogExtras({ silent: true });
+    const opened = await TableDesigner.openLibraryFragment(presetId);
+    if (!opened) throw new Error("Fragment preset not found: " + presetId);
+    await enterLibraryEditMode({ kind: "fragments", id: opened.id, displayName: opened.displayName });
+  };
+  if (window.StudioUi) await StudioUi.withBusy("Opening fragment…", run);
+  else await run();
 }
 
 /**
@@ -441,21 +456,28 @@ if (window.LibraryStudio && typeof LibraryStudio.setOpenHandlers === "function")
 }
 
 async function loadList() {
-  els.list.innerHTML = `<li class="muted">Loading…</li>`;
-  const items = await api("/api/hprp/packages");
-  state.list = items || [];
-  els.list.innerHTML = "";
-  if (!state.list.length) {
-    els.list.innerHTML = `<li class="muted">No packages found</li>`;
-    return;
-  }
-  for (const item of state.list) {
-    const li = document.createElement("li");
-    li.dataset.key = keyOf(item);
-    const label = profileLabel(item);
-    li.innerHTML = `<span class="id">${item.displayName || item.id}</span><span class="meta">${label}${item.variant ? " · " + item.variant : ""} · ${item.packed ? "packed" : "folder"}</span>`;
-    li.addEventListener("click", () => openPackage(item).catch((err) => setStatus(err.message, "err")));
-    els.list.appendChild(li);
+  if (window.StudioUi) StudioUi.showListSkeleton(els.list, 6);
+  else els.list.innerHTML = `<li class="muted">Loading…</li>`;
+  try {
+    const items = await api("/api/hprp/packages");
+    state.list = items || [];
+    els.list.innerHTML = "";
+    if (window.StudioUi) StudioUi.clearListLoading(els.list);
+    if (!state.list.length) {
+      els.list.innerHTML = `<li class="muted">No packages found</li>`;
+      return;
+    }
+    for (const item of state.list) {
+      const li = document.createElement("li");
+      li.dataset.key = keyOf(item);
+      const label = profileLabel(item);
+      li.innerHTML = `<span class="id">${item.displayName || item.id}</span><span class="meta">${label}${item.variant ? " · " + item.variant : ""} · ${item.packed ? "packed" : "folder"}</span>`;
+      li.addEventListener("click", () => openPackage(item).catch((err) => setStatus(err.message, "err")));
+      els.list.appendChild(li);
+    }
+  } catch (err) {
+    if (window.StudioUi) StudioUi.clearListLoading(els.list);
+    throw err;
   }
 }
 
@@ -1910,34 +1932,39 @@ function currentBody() {
 }
 
 async function openPackage(item) {
-  state.libraryEdit = null;
-  const query = item.variant ? `?variant=${encodeURIComponent(item.variant)}` : "";
-  const pkg = await api(`/api/hprp/packages/${encodeURIComponent(item.id)}${query}`);
-  state.draft = {
-    manifest: pkg.manifest || {},
-    layout: pkg.layout || { body: [] },
-    labels: pkg.labels || {},
+  const run = async () => {
+    state.libraryEdit = null;
+    if (window.StudioUi) StudioUi.showCanvasSkeleton();
+    const query = item.variant ? `?variant=${encodeURIComponent(item.variant)}` : "";
+    const pkg = await api(`/api/hprp/packages/${encodeURIComponent(item.id)}${query}`);
+    state.draft = {
+      manifest: pkg.manifest || {},
+      layout: pkg.layout || { body: [] },
+      labels: pkg.labels || {},
+    };
+    ensureLayout();
+    state.selectedKey = "page";
+    selectPackage(item);
+    const label = profileLabel(item);
+    const kind = item.layoutKind || state.draft.manifest.layoutKind || "";
+    els.title.textContent = `${item.id} · ${label}${kind ? " (" + kind + ")" : ""}`;
+    setButtonsEnabled(true);
+    const btnSave = document.getElementById("btnSave");
+    if (btnSave) {
+      btnSave.textContent = "Save and pack";
+      btnSave.title = "Write the editor JSON to packages/*.hprp";
+    }
+    if (state.mode === "json") showJsonTab();
+    else renderDesigner();
+    setStatus("Loaded " + item.id, "ok");
+    await loadSampleScenarios(item.id);
+    if (window.TableDesigner && TableDesigner.isDesignerMode())
+      await TableDesigner.onPackageOpened();
+    else
+      schedulePreview();
   };
-  ensureLayout();
-  state.selectedKey = "page";
-  selectPackage(item);
-  const label = profileLabel(item);
-  const kind = item.layoutKind || state.draft.manifest.layoutKind || "";
-  els.title.textContent = `${item.id} · ${label}${kind ? " (" + kind + ")" : ""}`;
-  setButtonsEnabled(true);
-  const btnSave = document.getElementById("btnSave");
-  if (btnSave) {
-    btnSave.textContent = "Save and pack";
-    btnSave.title = "Write the editor JSON to packages/*.hprp";
-  }
-  if (state.mode === "json") showJsonTab();
-  else renderDesigner();
-  setStatus("Loaded " + item.id, "ok");
-  await loadSampleScenarios(item.id);
-  if (window.TableDesigner && TableDesigner.isDesignerMode())
-    await TableDesigner.onPackageOpened();
-  else
-    schedulePreview();
+  if (window.StudioUi) await StudioUi.withBusy("Opening " + (item.id || "package") + "…", run);
+  else await run();
 }
 
 async function loadSampleScenarios(templateId) {
@@ -1984,6 +2011,7 @@ function firstFileHeaderFill(layout) {
 }
 
 async function save() {
+  const run = async () => {
   if (state.libraryEdit) {
     const kind = state.libraryEdit.kind;
     if (kind === "headers") {
@@ -2035,15 +2063,22 @@ async function save() {
   );
   await loadList();
   schedulePreview();
+  };
+  if (window.StudioUi) await StudioUi.withBusy("Saving…", run);
+  else await run();
 }
 
 async function packAll() {
-  const result = await api("/api/hprp/pack-from-templates", { method: "POST" });
-  const count = Array.isArray(result) ? result.length : 0;
-  await loadList();
-  if (state.selected)
-    await openPackage(state.selected);
-  setStatus(`Packed ${count} package(s) from assets/templates/reports.`, "ok");
+  const run = async () => {
+    const result = await api("/api/hprp/pack-from-templates", { method: "POST" });
+    const count = Array.isArray(result) ? result.length : 0;
+    await loadList();
+    if (state.selected)
+      await openPackage(state.selected);
+    setStatus(`Packed ${count} package(s) from assets/templates/reports.`, "ok");
+  };
+  if (window.StudioUi) await StudioUi.withBusy("Packing all…", run);
+  else await run();
 }
 
 async function packSelectedFromDisk() {
@@ -2102,16 +2137,19 @@ onClick("btnLabels", () => { state.selectedKey = "labels"; renderDesigner(); });
 onClick("btnModeDesigner", () => setMode("designer"));
 onClick("btnModeJson", () => setMode("json"));
 onClick("btnReload", () => {
-  loadList()
-    .then(async () => {
-      if (window.TableDesigner && typeof window.TableDesigner.loadCatalogExtras === "function") {
-        await window.TableDesigner.loadCatalogExtras();
-      }
-      if (window.LibraryStudio && typeof window.LibraryStudio.refresh === "function") {
-        window.LibraryStudio.refresh();
-      }
-    })
-    .catch((err) => setStatus(err.message, "err"));
+  const run = async () => {
+    const libList = document.getElementById("libraryList");
+    if (window.StudioUi && libList) StudioUi.showListSkeleton(libList, 5);
+    await loadList();
+    if (window.TableDesigner && typeof window.TableDesigner.loadCatalogExtras === "function") {
+      await window.TableDesigner.loadCatalogExtras();
+    }
+    if (window.LibraryStudio && typeof window.LibraryStudio.refresh === "function") {
+      window.LibraryStudio.refresh();
+    }
+  };
+  const go = window.StudioUi ? StudioUi.withBusy("Reloading…", run) : run();
+  go.catch((err) => setStatus(err.message, "err"));
 });
 onClick("btnPackAll", () => packAll().catch((err) => setStatus(err.message, "err")));
 onClick("btnExport", () => exportHprp().catch((err) => setStatus(err.message, "err")));

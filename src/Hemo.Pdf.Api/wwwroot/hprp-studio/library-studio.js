@@ -54,6 +54,7 @@
     const list = $("libraryList");
     if (!list) return;
     list.innerHTML = "";
+    if (window.StudioUi) StudioUi.clearListLoading(list);
     const items = itemsForKind(selectedKind).filter(matchesTag)
       .sort((a, b) => String(a.displayName || a.id).localeCompare(String(b.displayName || b.id)));
     if (!items.length) {

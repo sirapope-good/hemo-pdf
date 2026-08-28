@@ -4,7 +4,7 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>HPRP Studio — Table Designer</title>
-  <link rel="stylesheet" href="/hprp-studio/studio.css" />
+  <link rel="stylesheet" href="/hprp-studio/studio.css?v=ux-polish-1" />
 </head>
 <body class="mode-designer mode-wysiwyg">
   <header class="top">
@@ -31,14 +31,21 @@
           <button type="button" class="side-tab active" data-side="packages">Packages</button>
           <button type="button" class="side-tab" data-side="library">Library</button>
         </div>
-        <button id="btnReload" type="button">Reload</button>
+        <button id="btnReload" type="button" class="tb-icon" title="Reload lists">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M21 12a9 9 0 1 1-2.6-6.3"/><path d="M21 3v6h-6"/></svg>
+        </button>
       </div>
       <div id="packagesPanel">
-        <div class="actions package-actions">
-          <button id="btnPackAll" type="button" title="Read every report folder and write packages/*.hprp">Pack all from disk</button>
+        <div class="actions package-actions pane-action-row">
+          <button id="btnImport" type="button" class="primary" title="Load a .hprp into the editor (validate first)">Import</button>
+          <button id="btnExport" type="button" disabled title="Download draft as .hprp after validate">Export</button>
           <input type="file" id="fileImportHprp" accept=".hprp,.zip" class="hidden" />
-          <button id="btnImport" type="button" title="Load a .hprp into the editor (validate first)">Import .hprp</button>
-          <button id="btnExport" type="button" disabled title="Download draft as .hprp after validate">Export .hprp</button>
+          <div class="tb-menu" data-menu="packages-more">
+            <button type="button" class="tb-menu-btn" title="More package actions" aria-label="More">⋯</button>
+            <div class="tb-menu-panel" role="menu">
+              <button id="btnPackAll" type="button" role="menuitem" title="Read every report folder and write packages/*.hprp">Pack all from disk</button>
+            </div>
+          </div>
         </div>
         <ul id="packageList" class="list"></ul>
       </div>
@@ -50,13 +57,18 @@
         </div>
         <input id="libraryFilter" type="search" placeholder="filter id / tag…" class="lib-filter" />
         <ul id="libraryList" class="list lib-list"></ul>
-        <div class="actions lib-actions">
-          <button id="btnLibEdit" type="button" class="primary" title="Open selected header alone on canvas">Edit on canvas</button>
-          <button id="btnLibInsert" type="button" title="Insert into open pack">Insert into pack</button>
-          <button id="btnLibDelete" type="button" title="Delete packages/library/{kind}/{id}.json (not seed)">Delete</button>
-          <button id="btnLibSaveSelection" type="button" title="Save selected canvas element(s) as library item">Save from selection</button>
+        <div class="actions lib-actions pane-action-row">
+          <button id="btnLibEdit" type="button" class="primary" title="Open selected item alone on canvas">Edit</button>
+          <button id="btnLibInsert" type="button" title="Insert into open pack">Insert</button>
+          <div class="tb-menu" data-menu="library-more">
+            <button type="button" class="tb-menu-btn" title="More library actions" aria-label="More">⋯</button>
+            <div class="tb-menu-panel" role="menu">
+              <button id="btnLibSaveSelection" type="button" role="menuitem" title="Save selected canvas element(s) as library item">Save from selection</button>
+              <button id="btnLibDelete" type="button" role="menuitem" title="Delete packages/library/{kind}/{id}.json (not seed)">Delete</button>
+            </div>
+          </div>
         </div>
-        <p class="muted lib-hint">คลิก item → แก้บน canvas · หรือบน pack: Shift+คลิกหลายชิ้น → Add to library · Save/Delete ที่ packages/library/</p>
+        <p class="muted lib-hint">คลิก item → แก้บน canvas · Shift+คลิกหลายชิ้น → Add to library · Save/Delete ที่ packages/library/</p>
       </div>
     </aside>
 
@@ -74,28 +86,60 @@
         <div class="subpane page-canvas-pane designer-canvas-pane">
           <div class="subhead">Page canvas (WYSIWYG)</div>
           <div class="designer-canvas-toolbar-host">
-            <div class="canvas-tools" role="toolbar" aria-label="Canvas tools">
-              <button id="btnCanvasUndo" type="button" title="Undo (Ctrl+Z)" disabled>↶</button>
-              <button id="btnCanvasRedo" type="button" title="Redo (Ctrl+Y)" disabled>↷</button>
+            <div class="canvas-toolbar" role="toolbar" aria-label="Canvas tools">
+              <div class="tb-group" aria-label="View">
+                <span class="tb-group-label">View</span>
+                <button id="btnCanvasUndo" type="button" class="tb-icon" title="Undo (Ctrl+Z)" disabled>
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M9 14 4 9l5-5"/><path d="M4 9h10a5 5 0 0 1 0 10h-2"/></svg>
+                </button>
+                <button id="btnCanvasRedo" type="button" class="tb-icon" title="Redo (Ctrl+Y)" disabled>
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="m15 14 5-5-5-5"/><path d="M20 9H10a5 5 0 0 0 0 10h2"/></svg>
+                </button>
+                <span class="canvas-tools-sep"></span>
+                <button id="btnCanvasZoomOut" type="button" class="tb-icon" title="Zoom out">−</button>
+                <span id="canvasZoomLabel" class="canvas-zoom-label">100%</span>
+                <button id="btnCanvasZoomIn" type="button" class="tb-icon" title="Zoom in">+</button>
+                <button id="btnCanvasZoomFit" type="button" title="Zoom 100%">Fit</button>
+              </div>
+
               <span class="canvas-tools-sep"></span>
-              <button id="btnCanvasZoomOut" type="button" title="Zoom out">−</button>
-              <span id="canvasZoomLabel" class="canvas-zoom-label">100%</span>
-              <button id="btnCanvasZoomIn" type="button" title="Zoom in">+</button>
-              <button id="btnCanvasZoomFit" type="button" title="Zoom 100%">Fit</button>
-              <span class="canvas-tools-hint muted">Zoom: ปุ่ม / Ctrl± / Ctrl+0 · Undo: Ctrl+Z · Shift+คลิกเลือกหลายชิ้น</span>
+
+              <div class="tb-menu" data-menu="insert">
+                <button type="button" class="tb-menu-btn" title="Insert elements">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>
+                  Insert
+                  <span class="tb-caret" aria-hidden="true">▾</span>
+                </button>
+                <div class="tb-menu-panel" role="menu">
+                  <button id="btnAddHeader" type="button" role="menuitem" title="Add header from catalog (recovery if deleted)">Header</button>
+                  <button id="btnAddConfigTable" type="button" role="menuitem" title="Add configurable table">Table</button>
+                  <button id="btnAddBoxText" type="button" role="menuitem" title="Add box text banner">Box text</button>
+                  <button id="btnAddFragment" type="button" role="menuitem" title="Insert multi-element fragment (e.g. co-pay)">Fragment</button>
+                  <button id="btnAddPageOf" type="button" role="menuitem" title="Add page number (super-footer)">Page of</button>
+                </div>
+              </div>
+
+              <div class="tb-group" aria-label="Library">
+                <button id="btnAddToLibrary" type="button" class="primary" title="Save selection to Library (Shift+click multi → Fragment)">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>
+                  Add to library
+                </button>
+              </div>
+
+              <div class="tb-group" aria-label="Export">
+                <button id="btnDesignerDownloadPdf" type="button" disabled title="QuestPDF verify">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6M12 18v-6M9 15l3 3 3-3"/></svg>
+                  PDF
+                </button>
+              </div>
+
+              <label class="preview-opt">Sample
+                <select id="designerSampleScenario" title="Mock payload scenario">
+                  <option value="">default</option>
+                </select>
+              </label>
             </div>
-            <label class="preview-opt">Sample
-              <select id="designerSampleScenario" title="Mock payload scenario">
-                <option value="">default</option>
-              </select>
-            </label>
-            <button id="btnAddHeader" type="button" title="Add header from catalog (recovery if deleted)">+ Header</button>
-            <button id="btnAddConfigTable" type="button" title="Add configurable table">+ Table</button>
-            <button id="btnAddBoxText" type="button" title="Add box text banner">+ Box text</button>
-            <button id="btnAddFragment" type="button" title="Insert multi-element fragment (e.g. co-pay)">+ Fragment</button>
-            <button id="btnAddPageOf" type="button" title="Add page number (super-footer)">+ Page of</button>
-            <button id="btnAddToLibrary" type="button" class="primary" title="Save selection to Library (Shift+click multi → Fragment)">Add to library</button>
-            <button id="btnDesignerDownloadPdf" type="button" disabled title="QuestPDF verify">Download PDF</button>
+            <p class="canvas-tools-hint muted" title="Shift+click to multi-select · Zoom: buttons / Ctrl± / Ctrl+0 · Undo: Ctrl+Z">Shift+คลิกหลายชิ้น · Ctrl± zoom · Ctrl+Z undo</p>
           </div>
           <div id="designerOverflowBanner" class="designer-overflow-banner hidden" role="status"></div>
           <div id="designerCanvas" class="page-canvas-scroll" tabindex="0" aria-label="Designer WYSIWYG canvas"></div>
@@ -147,12 +191,20 @@
 
   <pre id="status" class="status" role="status"></pre>
 
+  <div id="studioBusyOverlay" class="studio-busy-overlay hidden" aria-hidden="true">
+    <div class="studio-busy-card" role="status" aria-live="polite">
+      <div class="studio-spinner" aria-hidden="true"></div>
+      <span class="studio-busy-label">Loading…</span>
+    </div>
+  </div>
+
   <script src="/hprp-studio/vendor/jszip.min.js"></script>
-  <script src="/hprp-studio/table-layout-engine.js?v=lib-edit-6"></script>
-  <script src="/hprp-studio/header-layout-engine.js?v=lib-edit-6"></script>
-  <script src="/hprp-studio/designer-canvas-tools.js?v=lib-edit-6"></script>
-  <script src="/hprp-studio/designer-studio.js?v=lib-edit-6"></script>
-  <script src="/hprp-studio/library-studio.js?v=lib-edit-6"></script>
-  <script src="/hprp-studio/studio.js?v=lib-edit-6"></script>
+  <script src="/hprp-studio/studio-ui.js?v=ux-polish-1"></script>
+  <script src="/hprp-studio/table-layout-engine.js?v=ux-polish-1"></script>
+  <script src="/hprp-studio/header-layout-engine.js?v=ux-polish-1"></script>
+  <script src="/hprp-studio/designer-canvas-tools.js?v=ux-polish-1"></script>
+  <script src="/hprp-studio/designer-studio.js?v=ux-polish-1"></script>
+  <script src="/hprp-studio/library-studio.js?v=ux-polish-1"></script>
+  <script src="/hprp-studio/studio.js?v=ux-polish-1"></script>
 </body>
 </html>

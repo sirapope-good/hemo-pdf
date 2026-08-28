@@ -30,11 +30,30 @@ Opening `clinical-01-hct-epo` loads `layoutMode: designer` with:
 
 Studio reflow and PDF (`HprpDesignerFlow.Reflow`) share the same rules.
 
+## Studio chrome (toolbar + loading)
+
+Canvas toolbar is grouped (not a flat button strip):
+
+| Group | Controls |
+|--|--|
+| **View** | Undo / Redo / Zoom − % + / Fit |
+| **Insert** (dropdown) | Header, Table, Box text, Fragment, Page of |
+| **Library** | Add to library |
+| **Export** | PDF (Download PDF) |
+| Sample | Mock scenario select (standalone) |
+
+Left pane: **Import / Export** primary; **Pack all** under Packages ⋯; Library **Edit / Insert** primary; **Save from selection / Delete** under ⋯.
+
+Loading feedback: brand overlay spinner (`StudioUi.withBusy`) on open package / library item / save / reload / pack-all; list skeletons on package/library reload; A4 canvas skeleton while a pack opens.
+
+Scripts use `?v=ux-polish-1` cache-bust — hard refresh (Ctrl+F5) after pull.
+
 ## Canvas tools
 
 - **Undo / Redo** — toolbar + `Ctrl+Z` / `Ctrl+Y`
 - **Pan** — hold **Space** + drag
 - **Zoom** — mouse wheel (or ± / Fit)
+- **Multi-select** — **Shift+click** on canvas elements
 
 ## Multi-page + bands
 
