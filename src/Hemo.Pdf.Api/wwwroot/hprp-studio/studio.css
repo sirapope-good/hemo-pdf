@@ -83,7 +83,7 @@ code { color: var(--accent); }
 body.mode-designer .layout,
 body.mode-wysiwyg .layout,
 body.mode-designer-layout .layout {
-  grid-template-columns: minmax(200px, 240px) minmax(0, 1fr) minmax(280px, 360px);
+  grid-template-columns: minmax(280px, 320px) minmax(0, 1fr) minmax(280px, 360px);
 }
 
 body.mode-designer .preview-col,
@@ -657,7 +657,7 @@ body.mode-designer-layout .designer-only {
 }
 
 body.mode-json .layout {
-  grid-template-columns: minmax(200px, 240px) minmax(0, 1fr);
+  grid-template-columns: minmax(280px, 320px) minmax(0, 1fr);
 }
 
 body.mode-designer .json-col { display: none; }
@@ -675,6 +675,38 @@ body.mode-json .preview-col { display: none; }
   overflow: hidden;
   position: relative;
   z-index: 1;
+}
+
+/* Left catalog: keep readable width; fill height so .list can flex */
+.pane.packages {
+  min-width: 280px;
+}
+
+#packagesPanel,
+#libraryPanel {
+  display: flex;
+  flex-direction: column;
+  flex: 1 1 0;
+  min-height: 0;
+  min-width: 0;
+  overflow: hidden;
+}
+
+#packagesPanel.hidden,
+#libraryPanel.hidden {
+  display: none;
+}
+
+.package-actions {
+  flex-direction: column;
+  align-items: stretch;
+  padding: 8px 10px;
+  flex-shrink: 0;
+}
+
+.package-actions button {
+  width: 100%;
+  text-align: left;
 }
 
 .pane-head {
