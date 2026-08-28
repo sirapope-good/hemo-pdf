@@ -96,6 +96,32 @@
     return sizeMm + (gapMm > 0 ? gapMm : -BORDER_COLLAPSE_MM);
   }
 
+  /** Flow-relative X within the content column (not page-absolute). */
+  function contentRelativeX(boxXMm, margins, contentW) {
+    const x = Number(boxXMm) || 0;
+    if (x >= margins.left - 0.01 && x <= margins.left + contentW + 0.01)
+      return Math.max(0, x - margins.left);
+    return Math.max(0, x);
+  }
+
+  /** Max width for resize: row position + trailing siblings must fit in contentW. */
+  function maxWidthInRow(el, contentW, margins, gaps) {
+    const els = stateRef.draft.layout.elements;
+    const idx = els.indexOf(el);
+    if (idx < 0) return contentW;
+    let start = idx;
+    while (start > 0 && String(els[start].place || "below").toLowerCase() === "beside") start--;
+    let end = idx;
+    while (end + 1 < els.length && String(els[end + 1].place || "below").toLowerCase() === "beside") end++;
+    let relX = 0;
+    for (let i = start; i < idx; i++)
+      relX += gapStep(Math.max(MIN_BLOCK_W, Number(els[i].box.wMm) || MIN_BLOCK_W), gaps.beside);
+    let tailW = 0;
+    for (let i = idx + 1; i <= end; i++)
+      tailW += gapStep(Math.max(MIN_BLOCK_W, Number(els[i].box.wMm) || MIN_BLOCK_W), gaps.beside);
+    return Math.max(MIN_BLOCK_W, contentW - relX - tailW);
+  }
+
   function pageMetrics() {
     ensureElements();
     const page = stateRef.draft.layout.page;
@@ -255,13 +281,7 @@
       pages.push(pageEls);
     }
 
-    // Persist page-absolute boxes from page 0 (PDF / save parity).
-    pages[0].forEach((item) => {
-      item.el.box.xMm = item.xMm;
-      item.el.box.yMm = item.yMm;
-      item.el.box.wMm = item.wMm;
-      item.el.box.hMm = item.hMm;
-    });
+    // packRows already wrote flow-relative box on each element — do not overwrite with page-absolute coords.
 
     lastFlow = {
       pages,
@@ -680,7 +700,7 @@
           if (catalogOrInline && global.TableLayoutEngine) {
             const preset = ensureWorkingPreset(el, catalogOrInline);
             const model = global.TableLayoutEngine.buildLayout(preset, el, labels, sampleData, item.hMm);
-            body.appendChild(renderTableHtml(model, el, scale));
+            body.appendChild(renderTableHtml(model, el, scale, item.hMm));
           } else {
             body.innerHTML = `<div class="ph-dense">config-table</div>`;
           }
@@ -735,7 +755,7 @@
    * - Body: month rowspan | day | data columns
    * - Row heights locked to layout engine mm (parity with Download PDF)
    */
-  function renderTableHtml(model, el, scale) {
+  function renderTableHtml(model, el, scale, boxHeightMm) {
     const root = document.createElement("div");
     root.className = "cfg-table" + (borderOn(el.chrome) ? "" : " cfg-no-border");
     const p = model.preset;
@@ -752,11 +772,16 @@
       : colWeights.slice();
     const sum = headerWeights.reduce((a, b) => a + b, 0) || 1;
 
-    // Exact mm→px so canvas height equals PDF box (no leftover white gap).
-    const headerPx = Math.max(4, model.headerHeightMm * scale);
-    const slotPx = Math.max(3, model.slotHeightMm * scale);
     const bodyRowCount = Math.max(1, (model.rows && model.rows.length) || 1);
-    const tablePx = headerPx + slotPx * bodyRowCount;
+    const boxPx = Math.max(0, Number(boxHeightMm) || 0) * scale;
+    let headerPx = Math.max(4, model.headerHeightMm * scale);
+    let slotPx = Math.max(3, model.slotHeightMm * scale);
+    let tablePx = headerPx + slotPx * bodyRowCount;
+    // Stretch rows to fill box so bottom border meets the block edge (no corner gap).
+    if (boxPx > tablePx + 0.5) {
+      tablePx = boxPx;
+      slotPx = Math.max(3, (boxPx - headerPx) / bodyRowCount);
+    }
     const nbsp = "\u00A0";
 
     const table = document.createElement("table");
@@ -1230,13 +1255,14 @@
     const startY = e.clientY;
     const startW = el.box.wMm;
     const startH = el.box.hMm;
-    const { contentW } = metrics;
+    const { contentW, margins, gaps } = metrics;
 
     function onMove(ev) {
       const dx = (ev.clientX - startX) / metrics.scale;
       const dy = (ev.clientY - startY) / metrics.scale;
       if (dir === "e" || dir === "se") {
-        el.box.wMm = Math.max(MIN_BLOCK_W, Math.min(contentW - el.box.xMm, startW + dx));
+        const maxW = maxWidthInRow(el, contentW, margins, gaps);
+        el.box.wMm = Math.max(MIN_BLOCK_W, Math.min(maxW, startW + dx));
         el.manualWidth = true;
       }
       if (dir === "s" || dir === "se") {
@@ -1379,6 +1405,20 @@
       renderAll();
     });
     insp.appendChild(fitBtn);
+
+    const fillRowBtn = document.createElement("button");
+    fillRowBtn.type = "button";
+    fillRowBtn.textContent = "กว้างเต็มแถว (fill row)";
+    fillRowBtn.title = "ขยาย block นี้ให้เต็มพื้นที่แนวนอนที่เหลือในแถว";
+    fillRowBtn.addEventListener("click", () => {
+      if (canvasTools) canvasTools.pushHistory();
+      const m = pageMetrics();
+      el.box.wMm = maxWidthInRow(el, m.contentW, m.margins, m.gaps);
+      el.manualWidth = true;
+      reflowElements();
+      renderAll();
+    });
+    insp.appendChild(fillRowBtn);
 
     if (el.type === "config-table") {
       renderTableInspector(insp, el);
@@ -2101,7 +2141,11 @@
         el.box = el.box || {};
         let v = Number(input.value);
         if (key === "hMm") v = Math.max(minHeightForElement(el), v);
-        if (key === "wMm") v = Math.max(MIN_BLOCK_W, v);
+        if (key === "wMm") {
+          v = Math.max(MIN_BLOCK_W, v);
+          const m = pageMetrics();
+          v = Math.min(maxWidthInRow(el, m.contentW, m.margins, m.gaps), v);
+        }
         el.box[key] = v;
         if (key === "wMm") el.manualWidth = true;
         reflowElements();
