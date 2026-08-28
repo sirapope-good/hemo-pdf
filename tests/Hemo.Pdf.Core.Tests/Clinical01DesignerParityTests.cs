@@ -15,6 +15,10 @@ using QuestPDF.Infrastructure;
 
 namespace Hemo.Pdf.Core.Tests;
 
+/// <summary>
+/// Parity checks for production <c>clinical-01-hct-epo</c> designer layout
+/// (former <c>-designer</c> sandbox pack was removed).
+/// </summary>
 public class Clinical01DesignerParityTests
 {
     static Clinical01DesignerParityTests()
@@ -23,7 +27,7 @@ public class Clinical01DesignerParityTests
     }
 
     [Fact]
-    public async Task DesignerPackage_ValidatesAndRendersPdf()
+    public async Task Clinical01DesignerPackage_ValidatesAndRendersPdf()
     {
         var templatesRoot = HprpTestAssets.TemplatesRoot();
         var options = Options.Create(new HprpTemplateOptions
@@ -37,18 +41,18 @@ public class Clinical01DesignerParityTests
         var headerStore = new HprpHeaderPresetStore(options);
         var headers = new HprpHeaderPresetCatalog(headerStore);
         var pack = new HprpPackService(options, store);
-        var package = LoadDesignerPackage(templatesRoot);
+        var package = LoadClinical01Package(templatesRoot);
 
         var validation = pack.Validate(package);
         Assert.True(validation.IsValid, string.Join("; ", validation.Errors));
 
-        var sample = HprpStudioSamplePayloads.TryLoad(templatesRoot, "clinical-01-hct-epo-designer");
+        var sample = HprpStudioSamplePayloads.TryLoad(templatesRoot, ClinicalReportCatalog.HctEpo);
         Assert.NotNull(sample);
 
         var renderer = CreateDesignerRenderer(store, presets, headers);
         var context = new PdfReportContext
         {
-            ReportTemplateId = "clinical-01-hct-epo-designer",
+            ReportTemplateId = ClinicalReportCatalog.HctEpo,
             TenantCode = "local",
             Metadata = new ReportMetadata { Title = package.Manifest.DisplayName },
             Data = sample.Value.Clone(),
@@ -98,11 +102,11 @@ public class Clinical01DesignerParityTests
         var designerBytes = await designerRenderer.RenderReportAsync(
             new PdfReportContext
             {
-                ReportTemplateId = "clinical-01-hct-epo-designer",
+                ReportTemplateId = ClinicalReportCatalog.HctEpo,
                 TenantCode = "local",
                 Metadata = new ReportMetadata { Title = "Designer" },
                 Data = data,
-                LayoutPackage = LoadDesignerPackage(templatesRoot),
+                LayoutPackage = LoadClinical01Package(templatesRoot),
             },
             CancellationToken.None);
 
@@ -111,7 +115,7 @@ public class Clinical01DesignerParityTests
     }
 
     [Fact]
-    public async Task PackDesigner_WritesPackageFile()
+    public async Task PackClinical01_WritesPackageFile()
     {
         var templatesRoot = HprpTestAssets.TemplatesRoot();
         var packages = Path.GetFullPath(Path.Combine(templatesRoot, "..", "..", "packages"));
@@ -124,28 +128,28 @@ public class Clinical01DesignerParityTests
         });
         var store = new FileHprpTemplateStore(options);
         var pack = new HprpPackService(options, store);
-        var packed = await pack.PackTemplateIdAsync("clinical-01-hct-epo-designer");
+        var packed = await pack.PackTemplateIdAsync(ClinicalReportCatalog.HctEpo);
         Assert.Single(packed);
         var output = packed[0].OutputPath;
         Assert.True(File.Exists(output));
-        Assert.EndsWith("clinical-01-hct-epo-designer.hprp", output, StringComparison.OrdinalIgnoreCase);
+        Assert.EndsWith("clinical-01-hct-epo.hprp", output, StringComparison.OrdinalIgnoreCase);
     }
 
-    private static HprpPackage LoadDesignerPackage(string templatesRoot)
+    private static HprpPackage LoadClinical01Package(string templatesRoot)
     {
-        var designerDir = Path.Combine(templatesRoot, "reports", "clinical-01-hct-epo-designer");
+        var dir = Path.Combine(templatesRoot, "reports", ClinicalReportCatalog.HctEpo);
         return new HprpPackage
         {
             Manifest = JsonSerializer.Deserialize<HprpManifest>(
-                File.ReadAllText(Path.Combine(designerDir, "manifest.json")),
+                File.ReadAllText(Path.Combine(dir, "manifest.json")),
                 HprpJson.Options)!,
             Layout = JsonSerializer.Deserialize<HprpLayout>(
-                File.ReadAllText(Path.Combine(designerDir, "layout.json")),
+                File.ReadAllText(Path.Combine(dir, "layout.json")),
                 HprpJson.Options)!,
             LabelsByLanguage = new Dictionary<string, IReadOnlyDictionary<string, string>>
             {
                 ["th"] = JsonSerializer.Deserialize<Dictionary<string, string>>(
-                    File.ReadAllText(Path.Combine(designerDir, "labels.th.json")),
+                    File.ReadAllText(Path.Combine(dir, "labels.th.json")),
                     HprpJson.Options)!,
             },
         };

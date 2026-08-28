@@ -58,8 +58,7 @@ Element type `page-of` (default band `super-footer`): format `{current} / {total
 - Table presets: `assets/templates/presets/tables/hct-epo-annual-v1.json`, `copay-nhso-v1.json`, `copay-sso-v1.json`, `epo-drug-injections-v1.json`
 - Header preset: `assets/templates/presets/headers/clinical-header-thaiur.json`
 - Adapter schema: `assets/templates/adapters/clinical-01-hct-epo.schema.json`, `clinical-02-epo-drug.schema.json`
-- Sample designer pack (alias): `assets/templates/reports/clinical-01-hct-epo-designer/`
-- Production clinical-01 on this branch: `layoutMode: designer` + same elements
+- Production clinical-01: `layoutMode: designer` (`assets/templates/reports/clinical-01-hct-epo/`)
 - Production clinical-02: `layoutMode: designer` — multi-item **box-text** meta + freedom injections table + shared co-pay duo
 
 ## box-text multi-value

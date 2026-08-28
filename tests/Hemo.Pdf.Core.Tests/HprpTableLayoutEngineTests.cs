@@ -76,9 +76,9 @@ public class HprpTableLayoutEngineTests
     }
 
     [Fact]
-    public void ValidateDesignerPackage_PassesForClinical01Designer()
+    public void ValidateDesignerPackage_PassesForClinical01()
     {
-        var dir = Path.Combine(HprpTestAssets.TemplatesRoot(), "reports", "clinical-01-hct-epo-designer");
+        var dir = Path.Combine(HprpTestAssets.TemplatesRoot(), "reports", "clinical-01-hct-epo");
         var manifest = JsonSerializer.Deserialize<HprpManifest>(
             File.ReadAllText(Path.Combine(dir, "manifest.json")),
             HprpJson.Options)!;
@@ -179,7 +179,7 @@ public class HprpTableLayoutEngineTests
     {
         var json = """
             {
-              "manifest": { "id": "clinical-01-hct-epo-designer", "layoutMode": "designer", "version": "1" },
+              "manifest": { "id": "clinical-01-hct-epo", "layoutMode": "designer", "version": "1" },
               "layout": {
                 "page": { "size": "A4", "marginMm": 2 },
                 "elements": [
