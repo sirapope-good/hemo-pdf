@@ -322,7 +322,7 @@ function setButtonsEnabled(on) {
   els.editor.disabled = !on;
 }
 
-async function openLibraryHeader(presetId) {
+async function openLibraryHeaderImpl(presetId) {
   // Sync feedback first — so a hung await never looks like a no-op click.
   setStatus("กำลังเปิด Library header: " + presetId + "…", "ok");
   if (els.title) els.title.textContent = "Library · loading…";
@@ -365,14 +365,21 @@ async function openLibraryHeader(presetId) {
   setStatus("แก้ไข header บน canvas · Save → packages/library/headers/" + opened.id + ".json", "ok");
 }
 
-/** Wire immediately (do not wait until end of studio.js — init errors must not skip this). */
-window.openLibraryHeader = (presetId) =>
-  openLibraryHeader(presetId).catch((err) => {
+/**
+ * Global entry for Library tab. Must NOT be named openLibraryHeader — in classic
+ * scripts, assigning window.openLibraryHeader = () => openLibraryHeader(...) replaces
+ * the function declaration binding and causes infinite recursion (silent stack overflow).
+ */
+function invokeOpenLibraryHeader(presetId) {
+  return openLibraryHeaderImpl(presetId).catch((err) => {
     console.error("[openLibraryHeader]", err);
     setStatus(err.message || String(err), "err");
   });
+}
+
+window.openLibraryHeader = invokeOpenLibraryHeader;
 if (window.LibraryStudio && typeof LibraryStudio.setOpenHeader === "function") {
-  LibraryStudio.setOpenHeader(window.openLibraryHeader);
+  LibraryStudio.setOpenHeader(invokeOpenLibraryHeader);
 }
 
 async function loadList() {
@@ -2085,5 +2092,5 @@ if (window.TableDesigner)
   TableDesigner.init(state, els, api, setStatus, schedulePreview);
 // Re-bind after init in case LibraryStudio loaded first without handler.
 if (window.LibraryStudio && typeof LibraryStudio.setOpenHeader === "function") {
-  LibraryStudio.setOpenHeader(window.openLibraryHeader);
+  LibraryStudio.setOpenHeader(invokeOpenLibraryHeader);
 }
