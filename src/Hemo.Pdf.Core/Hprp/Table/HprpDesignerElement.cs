@@ -33,6 +33,43 @@ public sealed class HprpTableBinding
     public string Context { get; init; } = HprpTableBindingContexts.Entry;
 }
 
+/// <summary>
+/// One horizontal segment inside a multi-value <c>box-text</c>
+/// (e.g. clinical-02 meta: month | EPO | needles/week).
+/// </summary>
+public sealed class HprpBoxTextItem
+{
+    /// <summary>Leading label (normal weight), e.g. <c>เดือน</c>.</summary>
+    [JsonPropertyName("label")]
+    public string? Label { get; init; }
+
+    /// <summary>Hardcoded primary value when <see cref="Bind"/> is empty.</summary>
+    [JsonPropertyName("text")]
+    public string? Text { get; init; }
+
+    /// <summary>JSON path for primary value, e.g. <c>$.meta.monthLabel</c>.</summary>
+    [JsonPropertyName("bind")]
+    public string? Bind { get; init; }
+
+    /// <summary>Optional second label after the primary value, e.g. <c>พ.ศ.</c>.</summary>
+    [JsonPropertyName("label2")]
+    public string? Label2 { get; init; }
+
+    [JsonPropertyName("text2")]
+    public string? Text2 { get; init; }
+
+    [JsonPropertyName("bind2")]
+    public string? Bind2 { get; init; }
+
+    /// <summary><c>left</c> / <c>center</c> / <c>right</c> within this segment.</summary>
+    [JsonPropertyName("align")]
+    public string? Align { get; init; }
+
+    /// <summary>Relative row weight (default 1).</summary>
+    [JsonPropertyName("flex")]
+    public float? Flex { get; init; }
+}
+
 public sealed class HprpDesignerElement
 {
     [JsonPropertyName("id")]
@@ -96,6 +133,13 @@ public sealed class HprpDesignerElement
     public string? Bind { get; init; }
 
     /// <summary>
+    /// Multi-value horizontal segments for <c>box-text</c>.
+    /// When non-empty, takes precedence over single <see cref="Text"/> / <see cref="Bind"/>.
+    /// </summary>
+    [JsonPropertyName("items")]
+    public IReadOnlyList<HprpBoxTextItem>? Items { get; init; }
+
+    /// <summary>
     /// Page band: <see cref="HprpDesignerBands"/> —
     /// <c>super-header</c> / <c>header</c> / <c>content</c> (default) / <c>footer</c> / <c>super-footer</c>.
     /// Chrome bands repeat on each page; content flows and may create extra pages.
@@ -103,7 +147,7 @@ public sealed class HprpDesignerElement
     [JsonPropertyName("band")]
     public string? Band { get; init; }
 
-    /// <summary><c>left</c> / <c>center</c> / <c>right</c> for <c>box-text</c>.</summary>
+    /// <summary><c>left</c> / <c>center</c> / <c>right</c> for single-value <c>box-text</c>.</summary>
     [JsonPropertyName("align")]
     public string? Align { get; init; }
 
@@ -124,6 +168,7 @@ public sealed class HprpDesignerElement
         ManualWidth = ManualWidth,
         Text = Text,
         Bind = Bind,
+        Items = Items,
         Align = Align,
         Band = Band,
     };

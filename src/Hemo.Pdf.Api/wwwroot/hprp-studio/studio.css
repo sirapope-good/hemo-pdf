@@ -504,8 +504,41 @@ body.mode-designer-layout .designer-only {
   background: #c8b8e8;
 }
 
+.cfg-box-text.cfg-box-text-multi {
+  justify-content: stretch;
+  gap: 4px;
+  text-overflow: clip;
+}
+
+.cfg-box-text-item {
+  display: flex;
+  align-items: center;
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.cfg-box-text-label {
+  font-weight: 400;
+}
+
+.cfg-box-text-value {
+  font-weight: 700;
+}
+
 .cfg-box-text.cfg-no-border {
   border-color: transparent;
+}
+
+.box-text-item-edit {
+  border: 1px solid var(--border, #d0d7de);
+  border-radius: 6px;
+  padding: 6px;
+  margin: 6px 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
 }
 
 .designer-header-placeholder {

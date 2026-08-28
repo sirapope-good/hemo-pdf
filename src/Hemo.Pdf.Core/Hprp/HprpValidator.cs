@@ -220,8 +220,12 @@ public static class HprpValidator
 
             if (string.Equals(type, Hprp.Table.HprpDesignerElementTypes.BoxText, StringComparison.OrdinalIgnoreCase))
             {
-                if (string.IsNullOrWhiteSpace(el.Text) && string.IsNullOrWhiteSpace(el.Bind))
-                    errors.Add($"{path} text or bind is required for box-text.");
+                var hasItems = el.Items is { Count: > 0 };
+                if (!hasItems && string.IsNullOrWhiteSpace(el.Text) && string.IsNullOrWhiteSpace(el.Bind))
+                    errors.Add($"{path} text, bind, or items is required for box-text.");
+
+                if (hasItems)
+                    ValidateBoxTextItems(el.Items!, path, errors);
             }
 
             if (string.Equals(type, Hprp.Table.HprpDesignerElementTypes.Dense, StringComparison.OrdinalIgnoreCase)
@@ -262,6 +266,33 @@ public static class HprpValidator
         {
             if (string.IsNullOrWhiteSpace(overrides[i].Id))
                 errors.Add($"{path}.columnOverrides[{i}].id is required.");
+        }
+    }
+
+    private static void ValidateBoxTextItems(
+        IReadOnlyList<Hprp.Table.HprpBoxTextItem> items,
+        string path,
+        List<string> errors)
+    {
+        for (var i = 0; i < items.Count; i++)
+        {
+            var item = items[i];
+            var itemPath = $"{path}.items[{i}]";
+            var hasContent = !string.IsNullOrWhiteSpace(item.Label)
+                || !string.IsNullOrWhiteSpace(item.Text)
+                || !string.IsNullOrWhiteSpace(item.Bind)
+                || !string.IsNullOrWhiteSpace(item.Label2)
+                || !string.IsNullOrWhiteSpace(item.Text2)
+                || !string.IsNullOrWhiteSpace(item.Bind2);
+            if (!hasContent)
+                errors.Add($"{itemPath} needs label, text, bind, or a second value pair.");
+
+            if (item.Align is { Length: > 0 } align)
+            {
+                var a = align.Trim().ToLowerInvariant();
+                if (a is not ("left" or "center" or "right"))
+                    errors.Add($"{itemPath}.align must be left, center, or right.");
+            }
         }
     }
 

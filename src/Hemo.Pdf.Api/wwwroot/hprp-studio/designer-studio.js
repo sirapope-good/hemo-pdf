@@ -1455,11 +1455,55 @@
   }
 
   function resolveBoxText(el, data) {
+    if (Array.isArray(el.items) && el.items.length) {
+      return el.items.map((item) => formatBoxTextItemPlain(item, data)).filter(Boolean).join("  ");
+    }
     if (el.bind && data && global.HeaderLayoutEngine) {
       const v = global.HeaderLayoutEngine.readAt(data, el.bind);
       if (v != null && String(v).trim() !== "") return String(v);
     }
     return el.text || "";
+  }
+
+  function resolveBoxItemValue(bind, text, data) {
+    if (bind && data && global.HeaderLayoutEngine) {
+      const v = global.HeaderLayoutEngine.readAt(data, bind);
+      if (v != null && String(v).trim() !== "") return String(v);
+    }
+    return text && String(text).trim() ? String(text) : "";
+  }
+
+  function formatBoxTextItemPlain(item, data) {
+    const parts = [];
+    const v1 = resolveBoxItemValue(item.bind, item.text, data);
+    const v2 = resolveBoxItemValue(item.bind2, item.text2, data);
+    if (item.label) parts.push(String(item.label).trim());
+    if (v1) parts.push(v1);
+    if (item.label2) parts.push(String(item.label2).trim());
+    if (v2) parts.push(v2);
+    return parts.join(" ");
+  }
+
+  function appendBoxTextItemSpans(host, item, data) {
+    function addLabel(text) {
+      if (!text) return;
+      const s = document.createElement("span");
+      s.className = "cfg-box-text-label";
+      s.textContent = String(text).trimEnd() + " ";
+      host.appendChild(s);
+    }
+    function addValue(text) {
+      if (!text) return;
+      const s = document.createElement("span");
+      s.className = "cfg-box-text-value";
+      s.textContent = text;
+      host.appendChild(s);
+    }
+    addLabel(item.label);
+    addValue(resolveBoxItemValue(item.bind, item.text, data));
+    addLabel(item.label2);
+    addValue(resolveBoxItemValue(item.bind2, item.text2, data));
+    if (!host.childNodes.length) host.textContent = "\u00A0";
   }
 
   function renderBoxTextHtml(el, data, scale) {
@@ -1470,8 +1514,28 @@
     else root.style.background = "#c8b8e8";
     const fs = (el.chrome && el.chrome.fontSize) || 7.5;
     root.style.fontSize = (fs * (scale / 2.5)).toFixed(1) + "px";
-    root.style.textAlign = el.align || "center";
     root.style.height = "100%";
+
+    if (Array.isArray(el.items) && el.items.length) {
+      root.classList.add("cfg-box-text-multi");
+      el.items.forEach((item) => {
+        const seg = document.createElement("div");
+        seg.className = "cfg-box-text-item";
+        const flex = item.flex != null && Number(item.flex) > 0 ? Number(item.flex) : 1;
+        seg.style.flex = String(flex);
+        const align = String(item.align || "left").toLowerCase();
+        seg.style.justifyContent =
+          align === "right" ? "flex-end" : align === "center" ? "center" : "flex-start";
+        seg.style.textAlign = align;
+        appendBoxTextItemSpans(seg, item, data);
+        root.appendChild(seg);
+      });
+      return root;
+    }
+
+    root.style.textAlign = el.align || "center";
+    root.style.justifyContent =
+      el.align === "left" ? "flex-start" : el.align === "right" ? "flex-end" : "center";
     root.textContent = resolveBoxText(el, data) || "\u00A0";
     return root;
   }
@@ -1537,11 +1601,11 @@
   function renderBoxTextInspector(insp, el) {
     const tip = document.createElement("p");
     tip.className = "muted";
-    tip.textContent = "Box text — hardcode หรือ bind จาก data";
+    tip.textContent = "Box text — hardcode / bind เดียว หรือ items[] หลาย value ในแถว";
     insp.appendChild(tip);
 
     const textLab = document.createElement("label");
-    textLab.textContent = "text (hardcode)";
+    textLab.textContent = "text (hardcode, ถ้าไม่มี items)";
     const textIn = document.createElement("input");
     textIn.type = "text";
     textIn.value = el.text || "";
@@ -1568,7 +1632,7 @@
     insp.appendChild(bindLab);
 
     const alignLab = document.createElement("label");
-    alignLab.textContent = "align";
+    alignLab.textContent = "align (single)";
     const alignSel = document.createElement("select");
     ["left", "center", "right"].forEach((a) => {
       const o = document.createElement("option");
@@ -1599,6 +1663,97 @@
     });
     fsLab.appendChild(fsIn);
     insp.appendChild(fsLab);
+
+    const itemsHead = document.createElement("p");
+    itemsHead.innerHTML = "<strong>Items (multi-value)</strong>";
+    insp.appendChild(itemsHead);
+
+    if (!Array.isArray(el.items)) el.items = [];
+
+    el.items.forEach((item, idx) => {
+      const box = document.createElement("div");
+      box.className = "box-text-item-edit";
+
+      const row1 = document.createElement("div");
+      row1.className = "col-row";
+      [["label", "label"], ["bind", "bind"], ["align", "align"]].forEach(([key, ph]) => {
+        if (key === "align") {
+          const sel = document.createElement("select");
+          ["left", "center", "right"].forEach((a) => {
+            const o = document.createElement("option");
+            o.value = a;
+            o.textContent = a;
+            if (String(item.align || "left") === a) o.selected = true;
+            sel.appendChild(o);
+          });
+          sel.title = "align";
+          sel.addEventListener("change", () => {
+            if (canvasTools) canvasTools.pushHistory();
+            item.align = sel.value;
+            renderAll();
+          });
+          row1.appendChild(sel);
+          return;
+        }
+        const inp = document.createElement("input");
+        inp.type = "text";
+        inp.placeholder = ph;
+        inp.value = item[key] || "";
+        inp.addEventListener("change", () => {
+          if (canvasTools) canvasTools.pushHistory();
+          item[key] = inp.value.trim() || undefined;
+          renderAll();
+        });
+        row1.appendChild(inp);
+      });
+      box.appendChild(row1);
+
+      const row2 = document.createElement("div");
+      row2.className = "col-row";
+      [["label2", "label2"], ["bind2", "bind2"], ["flex", "flex"]].forEach(([key, ph]) => {
+        const inp = document.createElement("input");
+        inp.type = key === "flex" ? "number" : "text";
+        if (key === "flex") inp.step = "0.1";
+        inp.placeholder = ph;
+        inp.value = item[key] != null ? String(item[key]) : "";
+        inp.addEventListener("change", () => {
+          if (canvasTools) canvasTools.pushHistory();
+          if (key === "flex") {
+            const n = Number(inp.value);
+            item.flex = Number.isFinite(n) && n > 0 ? n : undefined;
+          } else {
+            item[key] = inp.value.trim() || undefined;
+          }
+          renderAll();
+        });
+        row2.appendChild(inp);
+      });
+      box.appendChild(row2);
+
+      const rm = document.createElement("button");
+      rm.type = "button";
+      rm.className = "ghost";
+      rm.textContent = "Remove item " + (idx + 1);
+      rm.addEventListener("click", () => {
+        if (canvasTools) canvasTools.pushHistory();
+        el.items.splice(idx, 1);
+        if (!el.items.length) delete el.items;
+        renderAll();
+      });
+      box.appendChild(rm);
+      insp.appendChild(box);
+    });
+
+    const addItem = document.createElement("button");
+    addItem.type = "button";
+    addItem.textContent = "+ Item";
+    addItem.addEventListener("click", () => {
+      if (canvasTools) canvasTools.pushHistory();
+      if (!Array.isArray(el.items)) el.items = [];
+      el.items.push({ label: "", bind: "", align: "left", flex: 1 });
+      renderAll();
+    });
+    insp.appendChild(addItem);
   }
 
   function renderHeaderInspector(insp, el) {
