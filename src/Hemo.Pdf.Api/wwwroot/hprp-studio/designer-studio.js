@@ -910,6 +910,8 @@
           } else {
             selectedElementId = el.id;
           }
+          // Sync inspector immediately — startMoveDrag only re-renders after a real drag.
+          renderInspector();
           startMoveDrag(e, el, wrap, sheet, m);
         });
 
@@ -1436,6 +1438,8 @@
       if (hint) hint.classList.add("hidden");
       if (!dragState.moved) {
         dragState = null;
+        // Click-select (no drag): keep inspector in sync with canvas selection.
+        renderInspector();
         return;
       }
       suppressClick = true;
@@ -1464,10 +1468,26 @@
 
   function reorderElement(el, targetNode, mode) {
     if (canvasTools) canvasTools.pushHistory();
+    // Lift out of a column stack when reordering at top level.
+    const fromLoc = findElementLocation(el.id);
+    if (!fromLoc) return;
+
+    if (fromLoc.parent && isGroup(fromLoc.parent)) {
+      fromLoc.list.splice(fromLoc.index, 1);
+      if (!fromLoc.parent.children.length) {
+        const gLoc = findElementLocation(fromLoc.parent.id);
+        if (gLoc && !gLoc.parent) {
+          const besideFix = gLoc.list[gLoc.index + 1];
+          gLoc.list.splice(gLoc.index, 1);
+          if (besideFix && String(besideFix.place).toLowerCase() === "beside")
+            besideFix.place = "below";
+        }
+      }
+    } else {
+      fromLoc.list.splice(fromLoc.index, 1);
+    }
+
     const els = stateRef.draft.layout.elements;
-    const from = els.indexOf(el);
-    if (from < 0) return;
-    els.splice(from, 1);
 
     if (!targetNode || mode === "end") {
       el.place = "below";
@@ -1477,8 +1497,33 @@
     }
 
     const targetId = targetNode.dataset.elementId;
-    let to = els.findIndex((e) => e.id === targetId);
+    const toLoc = findElementLocation(targetId);
+    if (!toLoc) {
+      el.place = "below";
+      els.push(el);
+      reflowElements();
+      return;
+    }
+
+    // Drop onto a stack child → insert into that column (inner below / beside→below in stack).
+    if (toLoc.parent && isGroup(toLoc.parent)) {
+      if (toLoc.parent.children.length >= MAX_GROUP_CHILDREN && !toLoc.parent.children.includes(el)) {
+        el.place = "below";
+        els.push(el);
+        reflowElements();
+        if (setStatusRef) setStatusRef("คอลัมน์เต็ม (max " + MAX_GROUP_CHILDREN + ") — วางเป็นแถวนอก", "err");
+        return;
+      }
+      el.place = "below";
+      const insertAt = mode === "beside" ? toLoc.index + 1 : toLoc.index + 1;
+      toLoc.parent.children.splice(insertAt, 0, el);
+      reflowElements();
+      return;
+    }
+
+    const to = els.findIndex((e) => e.id === targetId);
     if (to < 0) {
+      el.place = "below";
       els.push(el);
       reflowElements();
       return;
@@ -1489,7 +1534,6 @@
       els.splice(to + 1, 0, el);
     } else {
       el.place = "below";
-      // clear beside on element that was after target if we insert between rows
       els.splice(to + 1, 0, el);
     }
     reflowElements();
@@ -2390,9 +2434,32 @@
       row.className = "col-row";
       const name = document.createElement("input");
       name.type = "text";
-      name.value = col.id;
+      name.title = "ชื่อที่แสดงบนหัวตาราง (title)";
+      name.placeholder = "title";
+      name.value = col.title || col.labelKey || col.id || "";
       name.addEventListener("change", () => {
-        col.id = name.value.trim() || col.id;
+        const v = name.value.trim() || col.id;
+        col.title = v;
+        if (!col.labelKey || col.labelKey === col.id) col.labelKey = v;
+        commitWorking(el, working);
+        renderAll();
+      });
+      const idInp = document.createElement("input");
+      idInp.type = "text";
+      idInp.className = "col-id";
+      idInp.title = "column id (binding key)";
+      idInp.placeholder = "id";
+      idInp.value = col.id || "";
+      idInp.addEventListener("change", () => {
+        const nextId = idInp.value.trim() || col.id;
+        const prevId = col.id;
+        col.id = nextId;
+        if (col.labelKey === prevId) col.labelKey = nextId;
+        if ((col.title || "") === prevId) col.title = nextId;
+        // Keep bindings in sync when id changes
+        (el.bindings || []).forEach((b) => {
+          if (b.column === prevId) b.column = nextId;
+        });
         commitWorking(el, working);
         renderAll();
       });
@@ -2405,6 +2472,7 @@
         renderAll();
       });
       row.appendChild(name);
+      row.appendChild(idInp);
       row.appendChild(del);
       insp.appendChild(row);
     });
