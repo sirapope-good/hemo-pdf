@@ -76,8 +76,10 @@
     if (page.border == null) page.border = "none";
   }
 
-  /** Overlap when gap is 0 so adjacent borders read as one line (parity with C#). */
-  const BORDER_COLLAPSE_MM = 0.2;
+  /** Canvas cfg-* borders are 0.5px; convert to mm at current zoom scale. */
+  function borderCollapseMm(scale) {
+    return 0.5 / Math.max(0.01, scale);
+  }
 
   function resolveDesignerGaps(page, margins) {
     const mode = String(page.spacingMode || "custom").toLowerCase();
@@ -92,8 +94,10 @@
     return { below, beside };
   }
 
-  function gapStep(sizeMm, gapMm) {
-    return sizeMm + (gapMm > 0 ? gapMm : -BORDER_COLLAPSE_MM);
+  function gapStep(sizeMm, gapMm, scale) {
+    if (gapMm > 0) return sizeMm + gapMm;
+    if (gapMm === 0) return sizeMm - borderCollapseMm(scale);
+    return sizeMm;
   }
 
   /** Flow-relative X within the content column (not page-absolute). */
@@ -105,7 +109,7 @@
   }
 
   /** Max width for resize: row position + trailing siblings must fit in contentW. */
-  function maxWidthInRow(el, contentW, margins, gaps) {
+  function maxWidthInRow(el, contentW, margins, gaps, scale) {
     const els = stateRef.draft.layout.elements;
     const idx = els.indexOf(el);
     if (idx < 0) return contentW;
@@ -115,10 +119,10 @@
     while (end + 1 < els.length && String(els[end + 1].place || "below").toLowerCase() === "beside") end++;
     let relX = 0;
     for (let i = start; i < idx; i++)
-      relX += gapStep(Math.max(MIN_BLOCK_W, Number(els[i].box.wMm) || MIN_BLOCK_W), gaps.beside);
+      relX += gapStep(Math.max(MIN_BLOCK_W, Number(els[i].box.wMm) || MIN_BLOCK_W), gaps.beside, scale);
     let tailW = 0;
     for (let i = idx + 1; i <= end; i++)
-      tailW += gapStep(Math.max(MIN_BLOCK_W, Number(els[i].box.wMm) || MIN_BLOCK_W), gaps.beside);
+      tailW += gapStep(Math.max(MIN_BLOCK_W, Number(els[i].box.wMm) || MIN_BLOCK_W), gaps.beside, scale);
     return Math.max(MIN_BLOCK_W, contentW - relX - tailW);
   }
 
@@ -152,8 +156,9 @@
    */
   function reflowElements() {
     ensureElements();
-    const { contentW, contentH, gaps, pageH, margins } = pageMetrics();
+    const { contentW, contentH, gaps, pageH, margins, scale } = pageMetrics();
     const els = stateRef.draft.layout.elements;
+    const collapseMm = borderCollapseMm(scale);
 
     function filterBand(name) {
       return els.filter((e) => resolveBand(e) === name);
@@ -172,7 +177,7 @@
           j++;
         }
         let gapTotal = gaps.beside * Math.max(0, row.length - 1);
-        if (gaps.beside <= 0 && row.length > 1) gapTotal = -BORDER_COLLAPSE_MM * (row.length - 1);
+        if (gaps.beside <= 0 && row.length > 1) gapTotal = -collapseMm * (row.length - 1);
         const autoCount = row.filter((e) => !e.manualWidth).length;
         let fixedW = 0;
         row.forEach((e) => {
@@ -198,14 +203,18 @@
           // Keep each block's own height — only maxRowH drives vertical row advance.
           e.box.xMm = x;
           e.box.yMm = cursorY;
-          x += gapStep(e.box.wMm, gaps.beside);
+          x += gapStep(e.box.wMm, gaps.beside, scale);
           result.push(e);
         });
-        cursorY += gapStep(maxRowH, gaps.below);
+        cursorY += gapStep(maxRowH, gaps.below, scale);
         i = j;
         consumed = i;
       }
-      return { rows: result, consumed, height: cursorY > 0 ? cursorY - (gaps.below > 0 ? gaps.below : -BORDER_COLLAPSE_MM) : 0 };
+      return {
+        rows: result,
+        consumed,
+        height: cursorY > 0 ? cursorY - (gaps.below > 0 ? gaps.below : -collapseMm) : 0,
+      };
     }
 
     function bandHeight(packed) {
@@ -531,7 +540,7 @@
     host.innerHTML = "";
 
     const m = pageMetrics();
-    const { page, pageH, margins, contentW, scale, landscape, sheetW } = m;
+    const { page, pageH, margins, contentW, scale, landscape, sheetW, gaps } = m;
     const flow = lastFlow || {
       pages: [[]],
       pageCount: 1,
@@ -695,6 +704,15 @@
 
         const body = document.createElement("div");
         body.className = "el-body";
+        const collapsePx = borderCollapseMm(scale) * scale;
+        if (gaps.below <= 0 && (Number(el.box.yMm) || 0) > 0.01) {
+          body.style.marginTop = collapsePx.toFixed(2) + "px";
+          body.style.height = "calc(100% - " + collapsePx.toFixed(2) + "px)";
+        }
+        if (gaps.beside <= 0 && String(el.place || "below").toLowerCase() === "beside") {
+          body.style.marginLeft = collapsePx.toFixed(2) + "px";
+          body.style.width = "calc(100% - " + collapsePx.toFixed(2) + "px)";
+        }
         if (el.type === "config-table") {
           const catalogOrInline = resolveTablePreset(el);
           if (catalogOrInline && global.TableLayoutEngine) {
@@ -1261,7 +1279,7 @@
       const dx = (ev.clientX - startX) / metrics.scale;
       const dy = (ev.clientY - startY) / metrics.scale;
       if (dir === "e" || dir === "se") {
-        const maxW = maxWidthInRow(el, contentW, margins, gaps);
+        const maxW = maxWidthInRow(el, contentW, margins, gaps, metrics.scale);
         el.box.wMm = Math.max(MIN_BLOCK_W, Math.min(maxW, startW + dx));
         el.manualWidth = true;
       }
@@ -1413,7 +1431,7 @@
     fillRowBtn.addEventListener("click", () => {
       if (canvasTools) canvasTools.pushHistory();
       const m = pageMetrics();
-      el.box.wMm = maxWidthInRow(el, m.contentW, m.margins, m.gaps);
+      el.box.wMm = maxWidthInRow(el, m.contentW, m.margins, m.gaps, m.scale);
       el.manualWidth = true;
       reflowElements();
       renderAll();
@@ -1936,7 +1954,8 @@
     } else if (modeNow === "margin") {
       modeHint.textContent = "ใช้ค่า marginMm เดียวกันทั้งข้างและล่าง";
     } else {
-      modeHint.textContent = "ตั้ง below / beside แยกได้ หรือใช้ spacingMm รวมทั้งคู่";
+      modeHint.textContent =
+        "ตั้ง below / beside แยกได้ · 0 = ชิดขอบ (collapse) · ลอง 0.2–0.5 ถ้าต้องการช่องว่างบาง ๆ";
     }
     insp.appendChild(modeHint);
 
@@ -1946,7 +1965,7 @@
       const sharedIn = document.createElement("input");
       sharedIn.type = "number";
       sharedIn.min = "0";
-      sharedIn.step = "0.5";
+      sharedIn.step = "0.1";
       sharedIn.value = String(page.spacingMm != null ? page.spacingMm : 2);
       sharedIn.addEventListener("change", () => {
         if (canvasTools) canvasTools.pushHistory();
@@ -1962,7 +1981,7 @@
       const belowIn = document.createElement("input");
       belowIn.type = "number";
       belowIn.min = "0";
-      belowIn.step = "0.5";
+      belowIn.step = "0.1";
       belowIn.placeholder = "ใช้ spacingMm";
       belowIn.value = page.spacingBelowMm != null ? String(page.spacingBelowMm) : "";
       belowIn.addEventListener("change", () => {
@@ -1980,7 +1999,7 @@
       const besideIn = document.createElement("input");
       besideIn.type = "number";
       besideIn.min = "0";
-      besideIn.step = "0.5";
+      besideIn.step = "0.1";
       besideIn.placeholder = "ใช้ spacingMm";
       besideIn.value = page.spacingBesideMm != null ? String(page.spacingBesideMm) : "";
       besideIn.addEventListener("change", () => {
@@ -2144,7 +2163,7 @@
         if (key === "wMm") {
           v = Math.max(MIN_BLOCK_W, v);
           const m = pageMetrics();
-          v = Math.min(maxWidthInRow(el, m.contentW, m.margins, m.gaps), v);
+          v = Math.min(maxWidthInRow(el, m.contentW, m.margins, m.gaps, m.scale), v);
         }
         el.box[key] = v;
         if (key === "wMm") el.manualWidth = true;
