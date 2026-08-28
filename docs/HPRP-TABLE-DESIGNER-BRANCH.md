@@ -85,7 +85,8 @@ Left pane: **Packages | Library** (Headers / Tables / Fragments).
 | **Save** (main toolbar) while editing a library item | Writes `packages/library/{headers\|tables\|fragments}/{id}.json` — **not** a report `.hprp` |
 | **Delete** (Library) | Removes library JSON only — seed under `assets/` is never deleted; if seed exists the id reappears from seed |
 | Delete element on pack canvas + Save pack | Removes element from `layout.elements` only — disk preset stays |
-| **Insert into pack** | Re-adds catalog preset into the open report |
+| **Add to library** (canvas toolbar) | Saves selection → Header / Table / Fragment under `packages/library/…` |
+| **Shift+click** on canvas | Multi-select elements; Add to library with 2+ items → Fragment (layout order) |
 | Save from selection | `PUT /api/hprp/presets/{headers\|tables\|fragments}/{id}` (same library folder) |
 
 ### Library storage

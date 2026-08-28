@@ -56,7 +56,7 @@
           <button id="btnLibDelete" type="button" title="Delete packages/library/{kind}/{id}.json (not seed)">Delete</button>
           <button id="btnLibSaveSelection" type="button" title="Save selected canvas element(s) as library item">Save from selection</button>
         </div>
-        <p class="muted lib-hint">คลิก Headers / Tables / Fragments → แก้บน canvas · Save → packages/library/{headers|tables|fragments}/ · Delete ลบไฟล์ library เท่านั้น</p>
+        <p class="muted lib-hint">คลิก item → แก้บน canvas · หรือบน pack: Shift+คลิกหลายชิ้น → Add to library · Save/Delete ที่ packages/library/</p>
       </div>
     </aside>
 
@@ -82,7 +82,7 @@
               <span id="canvasZoomLabel" class="canvas-zoom-label">100%</span>
               <button id="btnCanvasZoomIn" type="button" title="Zoom in">+</button>
               <button id="btnCanvasZoomFit" type="button" title="Zoom 100%">Fit</button>
-              <span class="canvas-tools-hint muted">Zoom: ปุ่ม / Ctrl± / Ctrl+0 · Undo: Ctrl+Z</span>
+              <span class="canvas-tools-hint muted">Zoom: ปุ่ม / Ctrl± / Ctrl+0 · Undo: Ctrl+Z · Shift+คลิกเลือกหลายชิ้น</span>
             </div>
             <label class="preview-opt">Sample
               <select id="designerSampleScenario" title="Mock payload scenario">
@@ -94,6 +94,7 @@
             <button id="btnAddBoxText" type="button" title="Add box text banner">+ Box text</button>
             <button id="btnAddFragment" type="button" title="Insert multi-element fragment (e.g. co-pay)">+ Fragment</button>
             <button id="btnAddPageOf" type="button" title="Add page number (super-footer)">+ Page of</button>
+            <button id="btnAddToLibrary" type="button" class="primary" title="Save selection to Library (Shift+click multi → Fragment)">Add to library</button>
             <button id="btnDesignerDownloadPdf" type="button" disabled title="QuestPDF verify">Download PDF</button>
           </div>
           <div id="designerOverflowBanner" class="designer-overflow-banner hidden" role="status"></div>
@@ -147,11 +148,11 @@
   <pre id="status" class="status" role="status"></pre>
 
   <script src="/hprp-studio/vendor/jszip.min.js"></script>
-  <script src="/hprp-studio/table-layout-engine.js?v=lib-edit-5"></script>
-  <script src="/hprp-studio/header-layout-engine.js?v=lib-edit-5"></script>
-  <script src="/hprp-studio/designer-canvas-tools.js?v=lib-edit-5"></script>
-  <script src="/hprp-studio/designer-studio.js?v=lib-edit-5"></script>
-  <script src="/hprp-studio/library-studio.js?v=lib-edit-5"></script>
-  <script src="/hprp-studio/studio.js?v=lib-edit-5"></script>
+  <script src="/hprp-studio/table-layout-engine.js?v=lib-edit-6"></script>
+  <script src="/hprp-studio/header-layout-engine.js?v=lib-edit-6"></script>
+  <script src="/hprp-studio/designer-canvas-tools.js?v=lib-edit-6"></script>
+  <script src="/hprp-studio/designer-studio.js?v=lib-edit-6"></script>
+  <script src="/hprp-studio/library-studio.js?v=lib-edit-6"></script>
+  <script src="/hprp-studio/studio.js?v=lib-edit-6"></script>
 </body>
 </html>

@@ -45,6 +45,8 @@
   let setStatusRef;
   let schedulePreviewRef;
   let selectedElementId = null;
+  /** Multi-select set (layout order when saving fragments). Primary = selectedElementId. */
+  let selectedElementIds = new Set();
   let tablePresets = {};
   let headerPresets = {};
   let fragmentPresets = {};
@@ -56,6 +58,43 @@
   let lastFlow = null;
 
   const BANDS = ["super-header", "header", "content", "footer", "super-footer"];
+
+  function clearElementSelection() {
+    selectedElementId = null;
+    selectedElementIds = new Set();
+  }
+
+  function setSingleSelection(id) {
+    selectedElementId = id || null;
+    selectedElementIds = id ? new Set([id]) : new Set();
+  }
+
+  function toggleAdditiveSelection(id) {
+    if (!id) return;
+    if (selectedElementIds.has(id)) {
+      selectedElementIds.delete(id);
+      if (selectedElementId === id) {
+        selectedElementId = selectedElementIds.size
+          ? selectedElementIds.values().next().value
+          : null;
+      }
+    } else {
+      selectedElementIds.add(id);
+      selectedElementId = id;
+    }
+  }
+
+  /** Selected ids in layout.elements order (stable for fragments). */
+  function getSelectedIdsInLayoutOrder() {
+    ensureElements();
+    return (stateRef.draft.layout.elements || [])
+      .map((e) => e.id)
+      .filter((id) => selectedElementIds.has(id));
+  }
+
+  function isElementSelected(id) {
+    return selectedElementIds.has(id);
+  }
 
   function isStudioCanvas() {
     return !stateRef || stateRef.mode !== "json";
@@ -670,7 +709,7 @@
 
       sheet.addEventListener("click", () => {
         if (suppressClick) return;
-        selectedElementId = null;
+        clearElementSelection();
         stateRef.selectedKey = null;
         renderInspector();
         document.querySelectorAll(".designer-element.selected").forEach((n) => n.classList.remove("selected"));
@@ -679,7 +718,7 @@
       (flow.pages[p] || []).forEach((item, index) => {
         const el = item.el;
         const wrap = document.createElement("div");
-        wrap.className = "designer-element" + (el.id === selectedElementId ? " selected" : "");
+        wrap.className = "designer-element" + (isElementSelected(el.id) ? " selected" : "");
         if (item.outsideMargin || resolveBand(el) === "super-header" || resolveBand(el) === "super-footer") {
           wrap.classList.add("outside-margin");
         }
@@ -695,10 +734,7 @@
 
         wrap.addEventListener("click", (e) => {
           e.stopPropagation();
-          if (suppressClick) return;
-          selectedElementId = el.id;
-          stateRef.selectedKey = null;
-          renderAll();
+          // Selection handled in pointerdown (incl. Shift); avoid double-toggle.
         });
 
         wrap.addEventListener("pointerdown", (e) => {
@@ -707,7 +743,21 @@
           if (e.button !== 0) return;
           e.preventDefault();
           e.stopPropagation();
-          selectedElementId = el.id;
+          stateRef.selectedKey = null;
+          if (e.shiftKey) {
+            toggleAdditiveSelection(el.id);
+            renderAll();
+            return;
+          }
+          // Keep multi-selection if dragging one of the already-selected group.
+          if (!(selectedElementIds.size > 1 && selectedElementIds.has(el.id))) {
+            setSingleSelection(el.id);
+            document.querySelectorAll(".designer-element").forEach((n) => {
+              n.classList.toggle("selected", n.dataset.elementId === el.id);
+            });
+          } else {
+            selectedElementId = el.id;
+          }
           startMoveDrag(e, el, wrap, sheet, m);
         });
 
@@ -1339,6 +1389,12 @@
       els[idx].place = "below";
     }
     if (selectedElementId === id) selectedElementId = null;
+    selectedElementIds.delete(id);
+    if (!selectedElementIds.has(selectedElementId)) {
+      selectedElementId = selectedElementIds.size
+        ? selectedElementIds.values().next().value
+        : null;
+    }
     reflowElements();
     renderAll();
     if (setStatusRef) setStatusRef("ลบ widget แล้ว", "ok");
@@ -1360,7 +1416,7 @@
 
     const el = selectedElement();
     if (!el) {
-      insp.innerHTML = "<p class=\"muted\">คลิก block บน canvas · ลากวางข้าง/ล่าง · ลากขอบขวา/ล่างเพื่อย่อขยาย</p>";
+      insp.innerHTML = "<p class=\"muted\">คลิก block บน canvas · Shift+คลิกเลือกหลายชิ้น · Add to library</p>";
       return;
     }
 
@@ -1368,6 +1424,14 @@
     head.className = "insp-head";
     head.innerHTML = `<strong>${escapeHtml(el.type)}</strong> <span class="muted">${escapeHtml(el.id)}</span>`;
     insp.appendChild(head);
+
+    if (selectedElementIds.size > 1) {
+      const multiNote = document.createElement("p");
+      multiNote.className = "muted";
+      multiNote.textContent = selectedElementIds.size
+        + " selected · Shift+คลิกเพิ่ม/ถอด · Add to library จะบันทึกเป็น Fragment";
+      insp.appendChild(multiNote);
+    }
 
     const del = document.createElement("button");
     del.type = "button";
@@ -2424,7 +2488,7 @@
       chrome: { border: "thin" },
     });
     stateRef.draft.manifest.layoutMode = "designer";
-    selectedElementId = id;
+    setSingleSelection(id);
     stateRef.selectedKey = null;
     reflowElements();
     renderAll();
@@ -2457,7 +2521,7 @@
     }
     els.splice(insertAt, 0, el);
     stateRef.draft.manifest.layoutMode = "designer";
-    selectedElementId = id;
+    setSingleSelection(id);
     stateRef.selectedKey = null;
     reflowElements();
     renderAll();
@@ -2517,6 +2581,7 @@
       labels: {},
     };
     selectedElementId = "hdr_lib";
+    selectedElementIds = new Set(["hdr_lib"]);
     stateRef.selectedKey = null;
 
     try {
@@ -2635,6 +2700,7 @@
       labels: {},
     };
     selectedElementId = "tbl_lib";
+    selectedElementIds = new Set(["tbl_lib"]);
     stateRef.selectedKey = null;
 
     try {
@@ -2738,7 +2804,8 @@
       },
       labels: {},
     };
-    selectedElementId = elements[0] && elements[0].id ? elements[0].id : null;
+    const firstId = elements[0] && elements[0].id ? elements[0].id : null;
+    setSingleSelection(firstId);
     stateRef.selectedKey = null;
 
     try {
@@ -2832,7 +2899,7 @@
     }
     els.splice(insertAt, 0, ...clones);
     stateRef.draft.manifest.layoutMode = "designer";
-    selectedElementId = clones[0].id;
+    setSingleSelection(clones[0].id);
     stateRef.selectedKey = null;
     reflowElements();
     renderAll();
@@ -2868,14 +2935,14 @@
       ensureElements();
       const want = Array.isArray(ids) && ids.length
         ? ids
-        : selectedElementId
-          ? [selectedElementId]
-          : [];
+        : getSelectedIdsInLayoutOrder();
       if (!want.length) {
-        setStatusRef("Select element(s) first", "err");
+        setStatusRef("Select element(s) first (Shift+click for multi)", "err");
         return;
       }
-      const els = stateRef.draft.layout.elements.filter((e) => want.indexOf(e.id) >= 0);
+      // Preserve layout order
+      const order = new Set(want);
+      const els = (stateRef.draft.layout.elements || []).filter((e) => order.has(e.id));
       if (!els.length) {
         setStatusRef("No matching selection", "err");
         return;
@@ -2889,15 +2956,45 @@
         tags: [],
         elements: JSON.parse(JSON.stringify(els)),
       };
-      await apiRef(`/api/hprp/presets/fragments/${encodeURIComponent(id)}`, {
+      const result = await apiRef(`/api/hprp/presets/fragments/${encodeURIComponent(id)}`, {
         method: "PUT",
         body: JSON.stringify(body),
       });
-      fragmentPresets[id] = body;
-      setStatusRef("Saved fragment " + id, "ok");
+      const saved = (result && result.preset) || body;
+      fragmentPresets[id] = saved;
+      const path = (result && result.outputPath) || ("packages/library/fragments/" + id + ".json");
+      setStatusRef("Saved fragment " + id + " → " + path, "ok");
       if (global.LibraryStudio && typeof global.LibraryStudio.refresh === "function") {
         global.LibraryStudio.refresh();
       }
+      return result;
+    })();
+  }
+
+  /**
+   * Add current canvas selection to Library:
+   * - 1 header → header preset
+   * - 1 config-table → table preset
+   * - otherwise (1+ any / mixed / multi) → fragment
+   */
+  function addSelectionToLibrary() {
+    return (async () => {
+      ensureElements();
+      const ids = getSelectedIdsInLayoutOrder();
+      if (!ids.length) {
+        setStatusRef("Select element(s) first — Shift+click to multi-select", "err");
+        return;
+      }
+      const els = (stateRef.draft.layout.elements || []).filter((e) => ids.indexOf(e.id) >= 0);
+      if (els.length === 1 && els[0].type === "header") {
+        await saveHeaderPresetFromElement(els[0]);
+        return;
+      }
+      if (els.length === 1 && els[0].type === "config-table") {
+        await saveTablePresetFromElement(els[0]);
+        return;
+      }
+      await saveFragmentFromSelection(ids);
     })();
   }
 
@@ -2973,7 +3070,7 @@
       chrome: { border: "thin", headerFill: "$branding.sectionHeaderBackground", fontSize: 7.5 },
     });
     stateRef.draft.manifest.layoutMode = "designer";
-    selectedElementId = id;
+    setSingleSelection(id);
     stateRef.selectedKey = null;
     reflowElements();
     renderAll();
@@ -2995,7 +3092,7 @@
       chrome: { border: "none", fontSize: 8 },
     });
     stateRef.draft.manifest.layoutMode = "designer";
-    selectedElementId = id;
+    setSingleSelection(id);
     stateRef.selectedKey = null;
     reflowElements();
     renderAll();
@@ -3018,7 +3115,7 @@
   }
 
   async function onPackageOpened() {
-    selectedElementId = null;
+    clearElementSelection();
     stateRef.selectedKey = null;
     promoteToDesignerIfNeeded();
     await loadCatalogExtras();
@@ -3026,7 +3123,7 @@
     renderAll();
     if (canvasTools) canvasTools.resetHistory();
     if (setStatusRef) {
-      setStatusRef("ลาก block วางข้าง/ล่าง · ลากขอบย่อขยาย · Page สำหรับ margin/ขอบ", "ok");
+      setStatusRef("ลาก block วางข้าง/ล่าง · Shift+คลิกเลือกหลายชิ้น · Add to library", "ok");
     }
   }
 
@@ -3084,6 +3181,8 @@
     getCatalogSnapshot,
     getSelectedElement,
     getSelectedElementId: () => selectedElementId,
+    getSelectedElementIds: () => getSelectedIdsInLayoutOrder(),
+    addSelectionToLibrary,
     saveFragmentFromSelection,
     saveHeaderPresetFromElement,
     saveTablePresetFromElement,
@@ -3108,6 +3207,7 @@
             page: stateRef.draft.layout.page,
             elements: stateRef.draft.layout.elements,
             selectedElementId,
+            selectedElementIds: [...selectedElementIds],
           };
         },
         applySnapshot: (snap) => {
@@ -3119,7 +3219,14 @@
             : stateRef.draft.layout.elements;
           stateRef.draft.layout.page = page;
           stateRef.draft.layout.elements = elements;
-          selectedElementId = snap.selectedElementId || null;
+          if (Array.isArray(snap.selectedElementIds) && snap.selectedElementIds.length) {
+            selectedElementIds = new Set(snap.selectedElementIds);
+            selectedElementId = snap.selectedElementId && selectedElementIds.has(snap.selectedElementId)
+              ? snap.selectedElementId
+              : snap.selectedElementIds[0];
+          } else {
+            setSingleSelection(snap.selectedElementId || null);
+          }
           lastFlow = null;
         },
         onViewChanged: () => renderAll(),
@@ -3137,5 +3244,14 @@
     if (pageOfBtn) pageOfBtn.addEventListener("click", () => addPageOf());
     const fragBtn = document.getElementById("btnAddFragment");
     if (fragBtn) fragBtn.addEventListener("click", () => addFragmentPrompt());
+    const addLibBtn = document.getElementById("btnAddToLibrary");
+    if (addLibBtn) {
+      addLibBtn.addEventListener("click", () => {
+        addSelectionToLibrary().catch((err) => {
+          if (setStatusRef) setStatusRef(err.message || String(err), "err");
+          else alert(err.message || err);
+        });
+      });
+    }
   };
 })(window);
