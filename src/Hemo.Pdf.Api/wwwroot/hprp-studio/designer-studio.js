@@ -276,7 +276,12 @@
     return Math.max(0, x);
   }
 
-  /** Max width for resize: row position + trailing siblings must fit in contentW. */
+  /**
+   * Max width for east-resize of el within its beside-row.
+   * Manual siblings keep their widths; auto siblings only reserve MIN_BLOCK_W
+   * so shrinking a manual block does not permanently lock free space into autos
+   * (which previously made maxW == currentW and blocked growing back).
+   */
   function maxWidthInRow(el, contentW, margins, gaps, scale) {
     const loc = findElementLocation(el.id);
     if (loc && loc.parent && isGroup(loc.parent)) {
@@ -286,17 +291,28 @@
     const els = stateRef.draft.layout.elements;
     const idx = els.indexOf(target);
     if (idx < 0) return contentW;
+
     let start = idx;
     while (start > 0 && String(els[start].place || "below").toLowerCase() === "beside") start--;
     let end = idx;
     while (end + 1 < els.length && String(els[end + 1].place || "below").toLowerCase() === "beside") end++;
-    let relX = 0;
-    for (let i = start; i < idx; i++)
-      relX += gapStep(Math.max(MIN_BLOCK_W, Number(els[i].box.wMm) || MIN_BLOCK_W), gaps.beside, scale);
-    let tailW = 0;
-    for (let i = idx + 1; i <= end; i++)
-      tailW += gapStep(Math.max(MIN_BLOCK_W, Number(els[i].box.wMm) || MIN_BLOCK_W), gaps.beside, scale);
-    return Math.max(MIN_BLOCK_W, contentW - relX - tailW);
+
+    const n = end - start + 1;
+    let gapTotal = gaps.beside * Math.max(0, n - 1);
+    if (gaps.beside <= 0 && n > 1) gapTotal = -borderCollapseMm(scale) * (n - 1);
+
+    let others = 0;
+    for (let i = start; i <= end; i++) {
+      if (i === idx) continue;
+      const sib = els[i];
+      if (sib.manualWidth) {
+        others += Math.max(MIN_BLOCK_W, Math.min(Number(sib.box && sib.box.wMm) || MIN_BLOCK_W, contentW));
+      } else {
+        // Auto columns can shrink — only reserve the floor while resizing this block.
+        others += MIN_BLOCK_W;
+      }
+    }
+    return Math.max(MIN_BLOCK_W, contentW - gapTotal - others);
   }
 
   function pageMetrics() {
@@ -1550,13 +1566,48 @@
     const widthTarget = loc0 && loc0.parent && isGroup(loc0.parent) ? loc0.parent : el;
     const startWidthTarget = Number(widthTarget.box.wMm) || startW;
 
+    // If east-resizing a block that has a beside neighbor to the right, treat the
+    // shared edge as a splitter: keep the pair's total width constant so the
+    // neighbor can reclaim space (fixes "can't drag back to the right").
+    let pairSibling = null;
+    let pairStartW = 0;
+    let pairTotal = 0;
+    if ((dir === "e" || dir === "se") && !(loc0 && loc0.parent)) {
+      const els = stateRef.draft.layout.elements;
+      const idx = els.indexOf(widthTarget);
+      if (idx >= 0 && idx + 1 < els.length
+        && String(els[idx + 1].place || "below").toLowerCase() === "beside") {
+        pairSibling = els[idx + 1];
+        pairStartW = Math.max(MIN_BLOCK_W, Number(pairSibling.box && pairSibling.box.wMm) || MIN_BLOCK_W);
+        pairTotal = startWidthTarget + pairStartW;
+      }
+    }
+
+    const frozenMaxW = (dir === "e" || dir === "se")
+      ? (pairSibling
+        ? Math.max(MIN_BLOCK_W, pairTotal - MIN_BLOCK_W)
+        : maxWidthInRow(widthTarget, contentW, margins, gaps, metrics.scale))
+      : contentW;
+
     function onMove(ev) {
       const dx = (ev.clientX - startX) / metrics.scale;
       const dy = (ev.clientY - startY) / metrics.scale;
       if (dir === "e" || dir === "se") {
-        const maxW = maxWidthInRow(widthTarget === el ? el : widthTarget, contentW, margins, gaps, metrics.scale);
-        widthTarget.box.wMm = Math.max(MIN_BLOCK_W, Math.min(maxW, startWidthTarget + dx));
-        widthTarget.manualWidth = true;
+        if (pairSibling) {
+          let nextW = Math.max(MIN_BLOCK_W, Math.min(frozenMaxW, startWidthTarget + dx));
+          let sibW = pairTotal - nextW;
+          if (sibW < MIN_BLOCK_W) {
+            sibW = MIN_BLOCK_W;
+            nextW = pairTotal - sibW;
+          }
+          widthTarget.box.wMm = nextW;
+          widthTarget.manualWidth = true;
+          pairSibling.box.wMm = sibW;
+          pairSibling.manualWidth = true;
+        } else {
+          widthTarget.box.wMm = Math.max(MIN_BLOCK_W, Math.min(frozenMaxW, startWidthTarget + dx));
+          widthTarget.manualWidth = true;
+        }
       }
       if (dir === "s" || dir === "se") {
         el.box.hMm = Math.max(minHeightForElement(el), startH + dy);
