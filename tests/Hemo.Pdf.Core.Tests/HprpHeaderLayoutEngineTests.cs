@@ -42,6 +42,48 @@ public class HprpHeaderLayoutEngineTests
         Assert.Equal("55", model.MetaLines[1].Value2);
         Assert.Contains(model.BottomFields, f => f.Label == "Diagnosis" && f.Value == "ESRD");
         Assert.Contains(model.BottomFields, f => f.Label == "Drug Allergy" && f.Value.Contains("ไม่มีแพ้ยา"));
+        Assert.Equal(HprpHeaderBottomModes.Diagnosis, model.BottomMode);
+    }
+
+    [Fact]
+    public void Build_ChecklistPatientBottomMode_UsesPatientFields()
+    {
+        var data = JsonDocument.Parse("""
+            {
+              "title": "Hemodialysis Progress note",
+              "header": {
+                "patient": {
+                  "name": "จินนี่ วัลลีย์",
+                  "hn": "6512620",
+                  "age": 31,
+                  "coverage": "—",
+                  "diagnosis": "ESRD",
+                  "hdPerWeek": "2"
+                },
+                "unit": { "fullName": "Hemodialysis Unit" }
+              },
+              "patient": {
+                "birthDateLabel": "03/01/1995 (31 years)",
+                "sessionsPerWeekLabel": "2 times/week",
+                "dialysisDays": "Wed Fri",
+                "dialysisMode": "HD",
+                "underlying": "—"
+              }
+            }
+            """).RootElement;
+
+        var model = HprpHeaderLayoutEngine.Build(
+            ThaiUrPreset(),
+            data,
+            bottomModeOverride: HprpHeaderBottomModes.ChecklistPatient);
+
+        Assert.Equal(HprpHeaderBottomModes.ChecklistPatient, model.BottomMode);
+        Assert.Equal(10.8f, model.BottomRowHeightMm);
+        Assert.Equal(2, model.BottomRowCount);
+        Assert.DoesNotContain(model.BottomFields, f => f.Label == "Diagnosis");
+        Assert.Contains(model.BottomFields, f => f.Label == "DOB" && f.Value.Contains("1995"));
+        Assert.Contains(model.BottomFields, f => f.Label == "Dialysis days" && f.Value == "Wed Fri");
+        Assert.Contains(model.BottomFields, f => f.Label == "Mode" && f.Value == "HD");
     }
 
     [Fact]

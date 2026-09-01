@@ -52,12 +52,15 @@ public static class ConfigurableHeaderComposer
                 }
             });
 
+            if (model.BottomRowHeightMm <= 0.01f || model.BottomFields.Count == 0)
+                return;
+
             col.Item().Height(model.BottomRowHeightMm, Mm).Row(row =>
             {
                 if (model.ShowDateAndHdNo)
                 {
                     row.RelativeItem(3).Border(bw).ExtendVertical().PaddingHorizontal(1.5f).AlignMiddle()
-                        .Row(r => DrawBottomFields(r, model));
+                        .Element(c => DrawBottomBand(c, model));
                     row.RelativeItem(1).Border(bw).ExtendVertical().PaddingHorizontal(1.5f).AlignMiddle()
                         .Row(r =>
                         {
@@ -72,9 +75,31 @@ public static class ConfigurableHeaderComposer
                 else
                 {
                     row.RelativeItem().Border(bw).ExtendVertical().PaddingHorizontal(1.5f).AlignMiddle()
-                        .Row(r => DrawBottomFields(r, model));
+                        .Element(c => DrawBottomBand(c, model));
                 }
             });
+        });
+    }
+
+    private static void DrawBottomBand(IContainer container, HprpHeaderLayoutModel model)
+    {
+        var rowCount = Math.Max(1, model.BottomRowCount);
+        if (rowCount <= 1)
+        {
+            container.Row(r => DrawBottomFields(r, model.BottomFields));
+            return;
+        }
+
+        var rowH = model.BottomRowHeightMm / rowCount;
+        container.Column(col =>
+        {
+            for (var row = 0; row < rowCount; row++)
+            {
+                var fields = model.BottomFields.Where(f => f.Row == row).ToList();
+                if (fields.Count == 0)
+                    continue;
+                col.Item().Height(rowH, Mm).Row(r => DrawBottomFields(r, fields));
+            }
         });
     }
 
@@ -106,9 +131,9 @@ public static class ConfigurableHeaderComposer
         }
     }
 
-    private static void DrawBottomFields(RowDescriptor r, HprpHeaderLayoutModel model)
+    private static void DrawBottomFields(RowDescriptor r, IReadOnlyList<HprpHeaderResolvedLine> fields)
     {
-        foreach (var field in model.BottomFields)
+        foreach (var field in fields)
         {
             // Label-only tokens (e.g. T/Wk) with tiny weight and empty bind
             if (string.IsNullOrWhiteSpace(field.Value) && field.Weight < 0.05f)

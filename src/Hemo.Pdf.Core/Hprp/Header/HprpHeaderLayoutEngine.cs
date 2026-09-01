@@ -10,6 +10,7 @@ public sealed class HprpHeaderResolvedLine
     public string? Value2 { get; init; }
     public float Weight { get; init; } = 1f;
     public string Id { get; init; } = "";
+    public int Row { get; init; }
 }
 
 public sealed class HprpHeaderLayoutModel
@@ -22,6 +23,8 @@ public sealed class HprpHeaderLayoutModel
     public string LogoFallbackText { get; init; } = "";
     public IReadOnlyList<HprpHeaderResolvedLine> MetaLines { get; init; } = [];
     public IReadOnlyList<HprpHeaderResolvedLine> BottomFields { get; init; } = [];
+    public string BottomMode { get; init; } = HprpHeaderBottomModes.Diagnosis;
+    public int BottomRowCount { get; init; } = 1;
     public bool ShowDateAndHdNo { get; init; }
     public string DateText { get; init; } = "";
     public string HdNoText { get; init; } = "";
@@ -36,7 +39,8 @@ public static class HprpHeaderLayoutEngine
     public static HprpHeaderLayoutModel Build(
         HprpHeaderPreset preset,
         JsonElement? data,
-        string? fallbackTitle = null)
+        string? fallbackTitle = null,
+        string? bottomModeOverride = null)
     {
         var root = data ?? default;
         var hasData = root.ValueKind == JsonValueKind.Object;
@@ -66,7 +70,71 @@ public static class HprpHeaderLayoutEngine
             })
             .ToList();
 
-        var bottom = preset.BottomFields
+        var mode = ResolveBottomMode(preset, bottomModeOverride);
+        var (bottomHeight, bottomLines) = ResolveBottom(preset, root, hasData, mode);
+        var rowCount = bottomLines.Count == 0
+            ? 0
+            : Math.Max(1, bottomLines.Max(f => f.Row) + 1);
+
+        return new HprpHeaderLayoutModel
+        {
+            Preset = preset,
+            TitleRowHeightMm = preset.TitleRowHeightMm > 0 ? preset.TitleRowHeightMm : 21.6f,
+            BottomRowHeightMm = bottomHeight,
+            TitleText = title,
+            LogoBase64 = logo,
+            LogoFallbackText = unitName,
+            MetaLines = meta,
+            BottomFields = bottomLines,
+            BottomMode = mode,
+            BottomRowCount = rowCount,
+            ShowDateAndHdNo = preset.ShowDateAndHdNo,
+            DateText = FormatValue(ReadValue(root, hasData, "$.header.cycleStartTime")),
+            HdNoText = FormatValue(ReadValue(root, hasData, "$.header.treatmentNo")),
+        };
+    }
+
+    public static string ResolveBottomMode(HprpHeaderPreset preset, string? bottomModeOverride)
+    {
+        var raw = !string.IsNullOrWhiteSpace(bottomModeOverride)
+            ? bottomModeOverride!
+            : (string.IsNullOrWhiteSpace(preset.BottomMode) ? HprpHeaderBottomModes.Diagnosis : preset.BottomMode);
+        var mode = raw.Trim().ToLowerInvariant();
+        return HprpHeaderBottomModes.All.Contains(mode) ? mode : HprpHeaderBottomModes.Diagnosis;
+    }
+
+    private static (float HeightMm, IReadOnlyList<HprpHeaderResolvedLine> Fields) ResolveBottom(
+        HprpHeaderPreset preset,
+        JsonElement root,
+        bool hasData,
+        string mode)
+    {
+        if (string.Equals(mode, HprpHeaderBottomModes.None, StringComparison.OrdinalIgnoreCase))
+            return (0f, []);
+
+        IReadOnlyList<HprpHeaderFieldLine> source;
+        float height;
+
+        if (preset.BottomFieldSets is not null
+            && TryGetFieldSet(preset.BottomFieldSets, mode, out var set))
+        {
+            source = set.Fields;
+            height = set.HeightMm > 0
+                ? set.HeightMm
+                : (preset.BottomRowHeightMm > 0 ? preset.BottomRowHeightMm : 5.4f);
+        }
+        else if (string.Equals(mode, HprpHeaderBottomModes.Diagnosis, StringComparison.OrdinalIgnoreCase)
+                 && preset.BottomFields.Count > 0)
+        {
+            source = preset.BottomFields;
+            height = preset.BottomRowHeightMm > 0 ? preset.BottomRowHeightMm : 5.4f;
+        }
+        else
+        {
+            return (0f, []);
+        }
+
+        var lines = source
             .Where(f => !f.WhenHdPerWeek || preset.ShowHdPerWeek)
             .Select(line => new HprpHeaderResolvedLine
             {
@@ -74,23 +142,29 @@ public static class HprpHeaderLayoutEngine
                 Label = line.Label,
                 Value = FormatValue(ReadValue(root, hasData, line.Bind)),
                 Weight = Math.Max(0.1f, line.Weight),
+                Row = Math.Max(0, line.Row),
             })
             .ToList();
 
-        return new HprpHeaderLayoutModel
+        return (height, lines);
+    }
+
+    private static bool TryGetFieldSet(
+        IReadOnlyDictionary<string, HprpHeaderBottomFieldSet> sets,
+        string mode,
+        out HprpHeaderBottomFieldSet set)
+    {
+        foreach (var (key, value) in sets)
         {
-            Preset = preset,
-            TitleRowHeightMm = preset.TitleRowHeightMm > 0 ? preset.TitleRowHeightMm : 21.6f,
-            BottomRowHeightMm = preset.BottomRowHeightMm > 0 ? preset.BottomRowHeightMm : 5.4f,
-            TitleText = title,
-            LogoBase64 = logo,
-            LogoFallbackText = unitName,
-            MetaLines = meta,
-            BottomFields = bottom,
-            ShowDateAndHdNo = preset.ShowDateAndHdNo,
-            DateText = FormatValue(ReadValue(root, hasData, "$.header.cycleStartTime")),
-            HdNoText = FormatValue(ReadValue(root, hasData, "$.header.treatmentNo")),
-        };
+            if (string.Equals(key, mode, StringComparison.OrdinalIgnoreCase))
+            {
+                set = value;
+                return true;
+            }
+        }
+
+        set = null!;
+        return false;
     }
 
     private static string FormatValue(string? raw) =>

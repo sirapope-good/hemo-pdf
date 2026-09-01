@@ -1,5 +1,6 @@
 using System.Text.Json;
 using Hemo.Pdf.Core.Hprp;
+using Hemo.Pdf.Core.Hprp.Header;
 using Hemo.Pdf.Core.Hprp.Table;
 
 namespace Hemo.Pdf.Core.Tests;
@@ -144,6 +145,10 @@ public class HprpTableLayoutEngineTests
         var grid = Assert.Single(layout.Elements!, e => e.Id == "grid");
         Assert.Equal(HprpDesignerElementTypes.ConfigTable, grid.Type);
         Assert.Equal("progress-note-checklist-matrix-v1", grid.PresetId);
+        var hdr = Assert.Single(layout.Elements!, e => e.Id == "hdr");
+        Assert.Equal(HprpHeaderBottomModes.ChecklistPatient, hdr.BottomMode);
+        Assert.DoesNotContain(layout.Elements!, e => e.Type == HprpDesignerElementTypes.Dense
+            && string.Equals(e.Widget, "clinical.checklist-patient", StringComparison.OrdinalIgnoreCase));
     }
 
     [Fact]

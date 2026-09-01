@@ -2,6 +2,10 @@
  * Port of HprpHeaderLayoutEngine (C#) — Studio HTML canvas for config-header.
  */
 (function (global) {
+  const BOTTOM_DIAGNOSIS = "diagnosis";
+  const BOTTOM_CHECKLIST = "checklist-patient";
+  const BOTTOM_NONE = "none";
+
   function readAt(data, path) {
     if (!data || !path) return null;
     let p = String(path).trim();
@@ -25,7 +29,40 @@
     return v == null || String(v).trim() === "" ? "" : String(v).trim();
   }
 
-  function buildLayout(preset, data, fallbackTitle) {
+  function resolveBottomMode(preset, bottomModeOverride) {
+    const raw = (bottomModeOverride != null && String(bottomModeOverride).trim() !== "")
+      ? String(bottomModeOverride)
+      : (preset && preset.bottomMode) || BOTTOM_DIAGNOSIS;
+    const mode = String(raw).trim().toLowerCase();
+    if (mode === BOTTOM_CHECKLIST || mode === BOTTOM_NONE || mode === BOTTOM_DIAGNOSIS) return mode;
+    return BOTTOM_DIAGNOSIS;
+  }
+
+  function resolveBottomSource(preset, mode) {
+    if (mode === BOTTOM_NONE) return { heightMm: 0, fields: [] };
+    const sets = preset && preset.bottomFieldSets;
+    if (sets) {
+      const key = Object.keys(sets).find((k) => String(k).toLowerCase() === mode);
+      if (key && sets[key]) {
+        const set = sets[key];
+        return {
+          heightMm: Number(set.heightMm) > 0
+            ? Number(set.heightMm)
+            : (Number(preset.bottomRowHeightMm) > 0 ? Number(preset.bottomRowHeightMm) : 5.4),
+          fields: set.fields || [],
+        };
+      }
+    }
+    if (mode === BOTTOM_DIAGNOSIS && preset && preset.bottomFields && preset.bottomFields.length) {
+      return {
+        heightMm: Number(preset.bottomRowHeightMm) > 0 ? Number(preset.bottomRowHeightMm) : 5.4,
+        fields: preset.bottomFields,
+      };
+    }
+    return { heightMm: 0, fields: [] };
+  }
+
+  function buildLayout(preset, data, fallbackTitle, bottomModeOverride) {
     const cols = preset.columns || [];
     const titleCol = cols.find((c) => String(c.kind || "").toLowerCase() === "title");
     const logoCol = cols.find((c) => String(c.kind || "").toLowerCase() === "logo");
@@ -44,24 +81,32 @@
       weight: Number(line.weight) || 1,
     }));
 
-    const bottomFields = (preset.bottomFields || [])
+    const mode = resolveBottomMode(preset, bottomModeOverride);
+    const bottomSrc = resolveBottomSource(preset, mode);
+    const bottomFields = (bottomSrc.fields || [])
       .filter((f) => !f.whenHdPerWeek || preset.showHdPerWeek)
       .map((line) => ({
         id: line.id,
         label: line.label || "",
         value: blank(readAt(data, line.bind)),
         weight: Math.max(0.1, Number(line.weight) || 1),
+        row: Math.max(0, Number(line.row) || 0),
       }));
+    const bottomRowCount = bottomFields.length
+      ? Math.max(1, ...bottomFields.map((f) => f.row + 1))
+      : 0;
 
     return {
       preset,
       titleRowHeightMm: Number(preset.titleRowHeightMm) > 0 ? Number(preset.titleRowHeightMm) : 21.6,
-      bottomRowHeightMm: Number(preset.bottomRowHeightMm) > 0 ? Number(preset.bottomRowHeightMm) : 5.4,
+      bottomRowHeightMm: bottomSrc.heightMm,
       titleText: title,
       logoBase64: logo || null,
       logoFallbackText: unitName,
       metaLines,
       bottomFields,
+      bottomMode: mode,
+      bottomRowCount,
       showDateAndHdNo: !!preset.showDateAndHdNo,
       dateText: blank(readAt(data, "$.header.cycleStartTime")),
       hdNoText: blank(readAt(data, "$.header.treatmentNo")),
@@ -94,5 +139,9 @@
     buildLayout,
     bandFractions,
     readAt,
+    resolveBottomMode,
+    BOTTOM_DIAGNOSIS,
+    BOTTOM_CHECKLIST,
+    BOTTOM_NONE,
   };
 })(window);

@@ -90,6 +90,14 @@ public sealed class HprpDesignerElement
     [JsonPropertyName("headerPreset")]
     public HprpHeaderPreset? HeaderPreset { get; init; }
 
+    /// <summary>
+    /// Header bottom profile override (<see cref="HprpHeaderBottomModes"/>).
+    /// When set, selects <c>bottomFieldSets[mode]</c> on the shared ThaiUR preset
+    /// (e.g. <c>checklist-patient</c> for Default progress note).
+    /// </summary>
+    [JsonPropertyName("bottomMode")]
+    public string? BottomMode { get; init; }
+
     /// <summary>Table preset id for <c>config-table</c>.</summary>
     [JsonPropertyName("presetId")]
     public string? PresetId { get; init; }
@@ -176,6 +184,7 @@ public sealed class HprpDesignerElement
         Box = box ?? Box,
         Preset = Preset,
         HeaderPreset = HeaderPreset,
+        BottomMode = BottomMode,
         PresetId = PresetId,
         TablePreset = TablePreset,
         ColumnOverrides = ColumnOverrides,

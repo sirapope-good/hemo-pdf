@@ -681,8 +681,9 @@
         type: "header",
         band: "header",
         preset: "clinical-header-thaiur",
+        bottomMode: "checklist-patient",
         place: "below",
-        box: { xMm: 0, yMm: 0, wMm: contentW, hMm: 27 },
+        box: { xMm: 0, yMm: 0, wMm: contentW, hMm: 32.4 },
       },
       Object.assign({}, codeEl || {}, {
         id: (codeEl && codeEl.id) || "report-code",
@@ -729,6 +730,50 @@
     return true;
   }
 
+  /** Move Default patient KV into ThaiUR header bottomMode=checklist-patient. */
+  function migrateChecklistPatientIntoHeaderBottom() {
+    const manifest = stateRef.draft.manifest || {};
+    const packId = String(manifest.id || "");
+    const adapter = String(manifest.dataAdapter || "");
+    const isChecklist =
+      packId.indexOf("clinical-05-progress-note-checklist") === 0
+      || adapter === "clinical-05-progress-note-checklist";
+    if (!isChecklist) return false;
+
+    ensureElements();
+    const layout = stateRef.draft.layout;
+    const els = layout.elements || [];
+    const hdr = els.find((e) =>
+      e
+      && e.type === "header"
+      && (e.preset === "clinical-header-thaiur"
+        || (e.headerPreset && e.headerPreset.id === "clinical-header-thaiur")));
+    if (!hdr) return false;
+
+    const patientIdx = els.findIndex((e) =>
+      e
+      && e.type === "dense"
+      && String(e.widget || "").toLowerCase() === "clinical.checklist-patient");
+
+    const already = String(hdr.bottomMode || "").toLowerCase() === "checklist-patient";
+    if (already && patientIdx < 0) return false;
+
+    if (canvasTools) canvasTools.pushHistory();
+    hdr.bottomMode = "checklist-patient";
+    const titleH = 21.6;
+    const bottomH = 10.8;
+    hdr.box = Object.assign({}, hdr.box || {}, {
+      hMm: titleH + bottomH,
+      wMm: hdr.box && hdr.box.wMm ? hdr.box.wMm : 269,
+    });
+    if (patientIdx >= 0) els.splice(patientIdx, 1);
+    layout.elements = els;
+    if (setStatusRef) {
+      setStatusRef("ย้าย checklist patient → header bottomMode=checklist-patient แล้ว", "ok");
+    }
+    return true;
+  }
+
   function promoteToDesignerIfNeeded() {
     ensureElements();
     const manifest = stateRef.draft.manifest || (stateRef.draft.manifest = {});
@@ -739,6 +784,7 @@
       migrateChecklistToThaiUrHeader();
       migrateDenseSoapToConfigTable();
       migrateDenseChecklistGridToConfigTable();
+      migrateChecklistPatientIntoHeaderBottom();
       reflowElements();
       return false;
     }
@@ -824,8 +870,9 @@
           type: "header",
           band: "header",
           preset: "clinical-header-thaiur",
+          bottomMode: "checklist-patient",
           place: "below",
-          box: { xMm: 0, yMm: 0, wMm: 269, hMm: 27 },
+          box: { xMm: 0, yMm: 0, wMm: 269, hMm: 32.4 },
         },
         {
           id: "report-code",
@@ -846,14 +893,6 @@
           bind: "$.rangeLabel",
           align: "center",
           chrome: { border: "none", headerFill: "#ffffff", fontSize: 10 },
-        },
-        {
-          id: "patient",
-          type: "dense",
-          band: "content",
-          widget: "clinical.checklist-patient",
-          place: "below",
-          box: { xMm: 0, yMm: 0, wMm: 269, hMm: 16 },
         },
         clinical05ChecklistMatrixElement(gridChrome),
         {
@@ -1285,7 +1324,11 @@
           if (catalogOrInline && global.HeaderLayoutEngine) {
             const preset = ensureWorkingHeaderPreset(el, catalogOrInline);
             const titleFallback = (sampleData && sampleData.title) || "Header";
-            const model = global.HeaderLayoutEngine.buildLayout(preset, sampleData, titleFallback);
+            const model = global.HeaderLayoutEngine.buildLayout(
+              preset,
+              sampleData,
+              titleFallback,
+              el.bottomMode);
             body.appendChild(renderHeaderHtml(model, el, scale));
           } else {
             const patient = sampleData && sampleData.header && sampleData.header.patient;
@@ -1959,7 +2002,7 @@
     const wMm = Math.max(1, el.box.wMm);
     const fracs = global.HeaderLayoutEngine.bandFractions(cols, wMm);
     const titlePx = Math.max(8, model.titleRowHeightMm * scale);
-    const bottomPx = Math.max(6, model.bottomRowHeightMm * scale);
+    const bottomPx = Math.max(0, model.bottomRowHeightMm * scale);
     root.style.height = "100%";
 
     const top = document.createElement("div");
@@ -2003,25 +2046,45 @@
     });
     root.appendChild(top);
 
-    const bottom = document.createElement("div");
-    bottom.className = "cfg-header-bottom";
-    bottom.style.height = bottomPx.toFixed(2) + "px";
-    const fieldsWrap = document.createElement("div");
-    fieldsWrap.className = "cfg-header-bottom-fields";
-    model.bottomFields.forEach((f) => {
-      const span = document.createElement("span");
-      span.className = "cfg-header-field";
-      span.innerHTML = `<strong>${escapeHtml(f.label)}</strong> ${escapeHtml(nbspOr(f.value))}`;
-      fieldsWrap.appendChild(span);
-    });
-    if (model.showDateAndHdNo) {
-      const date = document.createElement("span");
-      date.className = "cfg-header-field";
-      date.innerHTML = `<strong>Date</strong> ${escapeHtml(nbspOr(model.dateText))} <strong>HD NO.</strong> ${escapeHtml(nbspOr(model.hdNoText))}`;
-      fieldsWrap.appendChild(date);
+    if (bottomPx > 0.5 && (model.bottomFields || []).length) {
+      const bottom = document.createElement("div");
+      bottom.className = "cfg-header-bottom";
+      bottom.style.height = bottomPx.toFixed(2) + "px";
+      const rowCount = Math.max(1, Number(model.bottomRowCount) || 1);
+      if (rowCount <= 1) {
+        const fieldsWrap = document.createElement("div");
+        fieldsWrap.className = "cfg-header-bottom-fields";
+        model.bottomFields.forEach((f) => {
+          const span = document.createElement("span");
+          span.className = "cfg-header-field";
+          span.innerHTML = `<strong>${escapeHtml(f.label)}</strong> ${escapeHtml(nbspOr(f.value))}`;
+          fieldsWrap.appendChild(span);
+        });
+        if (model.showDateAndHdNo) {
+          const date = document.createElement("span");
+          date.className = "cfg-header-field";
+          date.innerHTML = `<strong>Date</strong> ${escapeHtml(nbspOr(model.dateText))} <strong>HD NO.</strong> ${escapeHtml(nbspOr(model.hdNoText))}`;
+          fieldsWrap.appendChild(date);
+        }
+        bottom.appendChild(fieldsWrap);
+      } else {
+        bottom.classList.add("cfg-header-bottom-multi");
+        bottom.style.display = "grid";
+        bottom.style.gridTemplateRows = "repeat(" + rowCount + ", 1fr)";
+        for (let ri = 0; ri < rowCount; ri++) {
+          const fieldsWrap = document.createElement("div");
+          fieldsWrap.className = "cfg-header-bottom-fields";
+          model.bottomFields.filter((f) => (Number(f.row) || 0) === ri).forEach((f) => {
+            const span = document.createElement("span");
+            span.className = "cfg-header-field";
+            span.innerHTML = `<strong>${escapeHtml(f.label)}</strong> ${escapeHtml(nbspOr(f.value))}`;
+            fieldsWrap.appendChild(span);
+          });
+          bottom.appendChild(fieldsWrap);
+        }
+      }
+      root.appendChild(bottom);
     }
-    bottom.appendChild(fieldsWrap);
-    root.appendChild(bottom);
 
     attachHeaderBandResizers(root, top, el, preset, fracs, wMm);
     return root;
@@ -2915,6 +2978,39 @@
     tip.className = "muted";
     tip.textContent = "ลากเส้นแบ่งบน canvas · แก้ field / bind ด้านล่าง";
     insp.appendChild(tip);
+
+    const modeLab = document.createElement("label");
+    modeLab.textContent = "Bottom mode";
+    const modeSel = document.createElement("select");
+    [
+      ["diagnosis", "diagnosis (Diagnosis / Allergy / HD)"],
+      ["checklist-patient", "checklist-patient (DOB / sessions / days / mode / underlying)"],
+      ["none", "none (hide bottom)"],
+    ].forEach(([v, t]) => {
+      const o = document.createElement("option");
+      o.value = v;
+      o.textContent = t;
+      const cur = String(el.bottomMode || working.bottomMode || "diagnosis").toLowerCase();
+      if (cur === v) o.selected = true;
+      modeSel.appendChild(o);
+    });
+    modeSel.addEventListener("change", () => {
+      if (canvasTools) canvasTools.pushHistory();
+      el.bottomMode = modeSel.value;
+      // Keep box height in sync with selected profile height when known
+      const sets = working.bottomFieldSets || (preset && preset.bottomFieldSets) || {};
+      const set = sets[el.bottomMode];
+      const titleH = Number(working.titleRowHeightMm || 21.6);
+      const bottomH = el.bottomMode === "none"
+        ? 0
+        : (set && Number(set.heightMm) > 0
+          ? Number(set.heightMm)
+          : Number(working.bottomRowHeightMm || 5.4));
+      el.box = Object.assign({}, el.box, { hMm: titleH + bottomH });
+      renderAll();
+    });
+    modeLab.appendChild(modeSel);
+    insp.appendChild(modeLab);
 
     const tog = document.createElement("label");
     tog.className = "check-lab";

@@ -874,6 +874,15 @@ button.tb-icon {
   padding: 0 3px;
   overflow: hidden;
 }
+.cfg-header-bottom.cfg-header-bottom-multi {
+  align-items: stretch;
+  padding: 1px 3px;
+  gap: 0;
+}
+.cfg-header-bottom-multi .cfg-header-bottom-fields {
+  min-height: 0;
+  align-items: center;
+}
 
 .cfg-header-bottom-fields {
   display: flex;

@@ -111,7 +111,8 @@ public static class DesignerPageComposer
             var model = HprpHeaderLayoutEngine.Build(
                 preset,
                 vm.Data,
-                ResolveReportTitle(vm));
+                ResolveReportTitle(vm),
+                element.BottomMode);
             ConfigurableHeaderComposer.Compose(container, model, element.Box.WMm);
             return;
         }

@@ -15,8 +15,9 @@
       "type": "header",
       "band": "header",
       "preset": "clinical-header-thaiur",
+      "bottomMode": "checklist-patient",
       "place": "below",
-      "box": { "xMm": 0, "yMm": 0, "wMm": 269, "hMm": 27 }
+      "box": { "xMm": 0, "yMm": 0, "wMm": 269, "hMm": 32.4 }
     },
     {
       "id": "report-code",
@@ -33,18 +34,10 @@
       "type": "box-text",
       "band": "content",
       "place": "below",
-      "box": { "xMm": 0, "yMm": 29, "wMm": 269, "hMm": 5 },
+      "box": { "xMm": 0, "yMm": 34.4, "wMm": 269, "hMm": 5 },
       "bind": "$.rangeLabel",
       "align": "center",
       "chrome": { "border": "none", "headerFill": "#ffffff", "fontSize": 10 }
-    },
-    {
-      "id": "patient",
-      "type": "dense",
-      "band": "content",
-      "widget": "clinical.checklist-patient",
-      "place": "below",
-      "box": { "xMm": 0, "yMm": 36, "wMm": 269, "hMm": 16 }
     },
     {
       "id": "grid",
@@ -52,7 +45,7 @@
       "band": "content",
       "presetId": "progress-note-checklist-matrix-v1",
       "place": "below",
-      "box": { "xMm": 0, "yMm": 54, "wMm": 269, "hMm": 118 },
+      "box": { "xMm": 0, "yMm": 41.4, "wMm": 269, "hMm": 130 },
       "chrome": {
         "headerFill": "#E8EEF5",
         "border": "thin",
@@ -66,7 +59,7 @@
       "band": "content",
       "widget": "clinical.checklist-text-notes",
       "place": "below",
-      "box": { "xMm": 0, "yMm": 174, "wMm": 269, "hMm": 4 }
+      "box": { "xMm": 0, "yMm": 173.4, "wMm": 269, "hMm": 4 }
     },
     {
       "id": "page-of",

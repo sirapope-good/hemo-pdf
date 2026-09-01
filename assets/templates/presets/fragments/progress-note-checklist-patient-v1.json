@@ -1,7 +1,7 @@
 {
   "id": "progress-note-checklist-patient-v1",
-  "displayName": "Progress note checklist · patient",
-  "tags": ["clinical", "progress-note", "checklist"],
+  "displayName": "Progress note checklist · patient (legacy dense)",
+  "tags": ["clinical", "progress-note", "checklist", "legacy"],
   "elements": [
     {
       "id": "patient",
