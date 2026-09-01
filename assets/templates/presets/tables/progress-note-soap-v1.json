@@ -1,0 +1,46 @@
+{
+  "id": "progress-note-soap-v1",
+  "displayName": "Progress note SOAP sessions",
+  "tags": ["clinical", "progress-note", "soap"],
+  "rowMode": "freedom",
+  "freedomRowCount": 2,
+  "columns": [
+    {
+      "id": "date",
+      "labelKey": "colDate",
+      "title": "DATE",
+      "weight": 0.9,
+      "center": true,
+      "cellKind": "text"
+    },
+    {
+      "id": "progress",
+      "labelKey": "colProgress",
+      "title": "PROGRESS NOTE",
+      "weight": 2.4,
+      "center": false,
+      "cellKind": "soap-progress"
+    },
+    {
+      "id": "orderOneDay",
+      "labelKey": "colOrderOneDay",
+      "title": "ORDER FOR ONE DAY",
+      "weight": 1.1,
+      "center": false,
+      "cellKind": "text"
+    },
+    {
+      "id": "orderContinuation",
+      "labelKey": "colOrderContinuation",
+      "title": "ORDER FOR CONTINUATION",
+      "weight": 1.1,
+      "center": false,
+      "cellKind": "text"
+    }
+  ],
+  "chrome": {
+    "headerFill": "$branding.sectionHeaderBackground",
+    "border": "thin",
+    "bandWeights": [1, 2.5, 1, 1]
+  }
+}

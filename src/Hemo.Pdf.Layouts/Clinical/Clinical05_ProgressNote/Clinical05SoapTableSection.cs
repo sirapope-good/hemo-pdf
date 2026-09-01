@@ -162,7 +162,8 @@ public sealed class Clinical05SoapTableSection
             .Style(ThaiUrText.Base);
     }
 
-    private static void SoapCell(
+    /// <summary>Nested S/O/A/P progress cell used by composition and config-table <c>soap-progress</c>.</summary>
+    public static void ComposeProgressCell(
         IContainer c,
         Clinical05SoapSession? row,
         float heightMm,
@@ -209,6 +210,14 @@ public sealed class Clinical05SoapTableSection
                 col.Item().Height(pMm, Mm).AlignTop().Element(band => SoapBand(band, "P", row?.Plan));
             });
     }
+
+    private static void SoapCell(
+        IContainer c,
+        Clinical05SoapSession? row,
+        float heightMm,
+        float border,
+        IReadOnlyList<float> bandWeights) =>
+        ComposeProgressCell(c, row, heightMm, border, bandWeights);
 
     private static void SoapBand(IContainer c, string letter, string? value)
     {

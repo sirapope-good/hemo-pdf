@@ -334,4 +334,28 @@ public sealed class HprpChrome
 
         return configured;
     }
+
+    /// <summary>
+    /// Overlay element chrome onto preset chrome; null overlay fields keep the base value.
+    /// </summary>
+    public static HprpChrome? Merge(HprpChrome? bas, HprpChrome? overlay)
+    {
+        if (overlay is null)
+            return bas;
+        if (bas is null)
+            return overlay;
+
+        return new HprpChrome
+        {
+            HeaderFill = overlay.HeaderFill ?? bas.HeaderFill,
+            Border = overlay.Border ?? bas.Border,
+            FontSize = overlay.FontSize ?? bas.FontSize,
+            RowHeightMm = overlay.RowHeightMm ?? bas.RowHeightMm,
+            ColumnWidths = overlay.ColumnWidths ?? bas.ColumnWidths,
+            BandWeights = overlay.BandWeights ?? bas.BandWeights,
+            HeaderHeightMm = overlay.HeaderHeightMm ?? bas.HeaderHeightMm,
+            HeaderAlign = overlay.HeaderAlign ?? bas.HeaderAlign,
+            HeaderPaddingMm = overlay.HeaderPaddingMm ?? bas.HeaderPaddingMm,
+        };
+    }
 }

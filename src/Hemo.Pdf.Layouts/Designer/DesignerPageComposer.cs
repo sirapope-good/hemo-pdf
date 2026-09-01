@@ -193,7 +193,7 @@ public static class DesignerPageComposer
             vm.Data,
             element.Box.HMm);
 
-        ConfigurableTableComposer.Compose(container, layout);
+        ConfigurableTableComposer.Compose(container, layout, vm.BoundModel);
     }
 
     private static void DrawDense(

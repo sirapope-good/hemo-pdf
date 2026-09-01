@@ -32,6 +32,24 @@ public static class HprpTableBindingContexts
     };
 }
 
+public static class HprpTableCellKinds
+{
+    /// <summary>Default plain text cell.</summary>
+    public const string Text = "text";
+
+    /// <summary>
+    /// Progress-note SOAP nested cell (S/O/A/P + Objective checkboxes).
+    /// Drawn by clinical SOAP section, not plain text.
+    /// </summary>
+    public const string SoapProgress = "soap-progress";
+
+    public static readonly IReadOnlySet<string> All = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
+    {
+        Text,
+        SoapProgress,
+    };
+}
+
 public static class HprpDesignerElementTypes
 {
     public const string Header = "header";

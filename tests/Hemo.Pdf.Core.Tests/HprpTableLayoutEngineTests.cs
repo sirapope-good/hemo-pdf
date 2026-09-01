@@ -76,6 +76,77 @@ public class HprpTableLayoutEngineTests
     }
 
     [Fact]
+    public void MergeColumns_OverridePreservesCellKind()
+    {
+        var bas = new List<HprpTableColumnDef>
+        {
+            new() { Id = "progress", Weight = 2f, CellKind = HprpTableCellKinds.SoapProgress },
+            new() { Id = "date", Weight = 1f, CellKind = HprpTableCellKinds.Text },
+        };
+        var merged = HprpTablePresetResolver.MergeColumns(
+            bas,
+            [new HprpTableColumnDef { Id = "progress", Weight = 3f }]);
+
+        Assert.Equal(3f, merged[0].Weight);
+        Assert.Equal(HprpTableCellKinds.SoapProgress, merged[0].CellKind);
+    }
+
+    [Fact]
+    public void Resolve_MergesElementBandWeightsOntoPresetChrome()
+    {
+        var preset = new HprpTablePreset
+        {
+            Id = "progress-note-soap-v1",
+            RowMode = HprpTableRowModes.Freedom,
+            FreedomRowCount = 2,
+            Columns =
+            [
+                new HprpTableColumnDef { Id = "progress", CellKind = HprpTableCellKinds.SoapProgress, Weight = 2f },
+            ],
+            Chrome = new HprpChrome
+            {
+                Border = "thin",
+                HeaderFill = HprpChrome.BrandingHeaderFill,
+                BandWeights = [1f, 2.5f, 1f, 1f],
+            },
+        };
+        var element = new HprpDesignerElement
+        {
+            Id = "soap",
+            Type = HprpDesignerElementTypes.ConfigTable,
+            Chrome = new HprpChrome { BandWeights = [1f, 4f, 1f, 1f] },
+        };
+
+        var resolved = HprpTablePresetResolver.Resolve(preset, element);
+
+        Assert.NotNull(resolved.Chrome);
+        Assert.Equal("thin", resolved.Chrome!.Border);
+        Assert.Equal(HprpChrome.BrandingHeaderFill, resolved.Chrome.HeaderFill);
+        Assert.Equal([1f, 4f, 1f, 1f], resolved.Chrome.BandWeights);
+        Assert.Equal(HprpTableCellKinds.SoapProgress, resolved.Columns[0].CellKind);
+    }
+
+    [Fact]
+    public void ValidateDesignerPackage_PassesForClinical05SoapConfigTable()
+    {
+        var dir = Path.Combine(HprpTestAssets.TemplatesRoot(), "reports", "clinical-05-progress-note");
+        var manifest = JsonSerializer.Deserialize<HprpManifest>(
+            File.ReadAllText(Path.Combine(dir, "manifest.json")),
+            HprpJson.Options)!;
+        var layout = JsonSerializer.Deserialize<HprpLayout>(
+            File.ReadAllText(Path.Combine(dir, "layout.json")),
+            HprpJson.Options)!;
+
+        var package = new HprpPackage { Manifest = manifest, Layout = layout };
+        var result = HprpValidator.Validate(package);
+
+        Assert.True(result.IsValid, string.Join("; ", result.Errors));
+        var soap = Assert.Single(layout.Elements!, e => e.Id == "soap");
+        Assert.Equal(HprpDesignerElementTypes.ConfigTable, soap.Type);
+        Assert.Equal("progress-note-soap-v1", soap.PresetId);
+    }
+
+    [Fact]
     public void ValidateDesignerPackage_PassesForClinical01()
     {
         var dir = Path.Combine(HprpTestAssets.TemplatesRoot(), "reports", "clinical-01-hct-epo");

@@ -20,17 +20,21 @@
     },
     {
       "id": "soap",
-      "type": "dense",
+      "type": "config-table",
       "band": "content",
-      "widget": "clinical.soap-table",
+      "presetId": "progress-note-soap-v1",
       "place": "below",
       "box": { "xMm": 0, "yMm": 29, "wMm": 206, "hMm": 255 },
       "chrome": {
-        "columnWidths": ["18mm", "2.4", "1.1", "1.1"],
-        "bandWeights": [1, 2.5, 1, 1],
         "border": "thin",
-        "headerFill": "$branding.sectionHeaderBackground"
-      }
+        "headerFill": "$branding.sectionHeaderBackground",
+        "bandWeights": [1, 2.5, 1, 1]
+      },
+      "bindings": [
+        { "path": "sessions[].dateLabel", "column": "date", "context": "freedom-row" },
+        { "path": "sessions[].orderForOneDay", "column": "orderOneDay", "context": "freedom-row" },
+        { "path": "sessions[].orderForContinuation", "column": "orderContinuation", "context": "freedom-row" }
+      ]
     },
     {
       "id": "page-of",

@@ -9,7 +9,7 @@ public static class HprpTablePresetResolver
         HprpDesignerElement? element = null)
     {
         var columns = MergeColumns(basePreset.Columns, element?.ColumnOverrides);
-        var chrome = element?.Chrome ?? basePreset.Chrome;
+        var chrome = HprpChrome.Merge(basePreset.Chrome, element?.Chrome);
 
         return new ResolvedTablePreset
         {
@@ -37,7 +37,24 @@ public static class HprpTablePresetResolver
         {
             if (string.IsNullOrWhiteSpace(o.Id))
                 continue;
-            map[o.Id] = o;
+
+            if (map.TryGetValue(o.Id, out var existing))
+            {
+                map[o.Id] = new HprpTableColumnDef
+                {
+                    Id = o.Id,
+                    LabelKey = string.IsNullOrWhiteSpace(o.LabelKey) ? existing.LabelKey : o.LabelKey,
+                    Title = string.IsNullOrWhiteSpace(o.Title) ? existing.Title : o.Title,
+                    Weight = o.Weight > 0 ? o.Weight : existing.Weight,
+                    Center = o.Center || existing.Center,
+                    IsLab = o.IsLab || existing.IsLab,
+                    CellKind = string.IsNullOrWhiteSpace(o.CellKind) ? existing.CellKind : o.CellKind,
+                };
+            }
+            else
+            {
+                map[o.Id] = o;
+            }
         }
 
         // Preserve base order, append new override ids at end.
@@ -47,7 +64,7 @@ public static class HprpTablePresetResolver
             if (string.IsNullOrWhiteSpace(o.Id))
                 continue;
             if (baseColumns.All(b => !string.Equals(b.Id, o.Id, StringComparison.OrdinalIgnoreCase)))
-                ordered.Add(o);
+                ordered.Add(map[o.Id]);
         }
 
         return ordered;

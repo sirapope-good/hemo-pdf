@@ -1,6 +1,8 @@
 using Hemo.Pdf.Core.Constants;
 using Hemo.Pdf.Core.Hprp;
 using Hemo.Pdf.Core.Hprp.Table;
+using Hemo.Pdf.Core.Models.Clinical;
+using Hemo.Pdf.Layouts.Clinical.Clinical05_ProgressNote;
 using Hemo.Pdf.Sections.ThaiUr;
 using QuestPDF.Fluent;
 using QuestPDF.Infrastructure;
@@ -12,7 +14,10 @@ public static class ConfigurableTableComposer
 {
     private const Unit Mm = Unit.Millimetre;
 
-    public static void Compose(IContainer container, HprpTableLayoutModel model)
+    public static void Compose(
+        IContainer container,
+        HprpTableLayoutModel model,
+        object? boundModel = null)
     {
         var preset = model.Preset;
         var chrome = preset.Chrome;
@@ -21,7 +26,7 @@ public static class ConfigurableTableComposer
 
         if (rowMode == HprpTableRowModes.Freedom)
         {
-            ComposeFreedom(container, model, bw, chrome);
+            ComposeFreedom(container, model, bw, chrome, boundModel);
             return;
         }
 
@@ -164,7 +169,8 @@ public static class ConfigurableTableComposer
         IContainer container,
         HprpTableLayoutModel model,
         float bw,
-        HprpChrome? chrome)
+        HprpChrome? chrome,
+        object? boundModel)
     {
         container.Column(col =>
         {
@@ -172,7 +178,7 @@ public static class ConfigurableTableComposer
             foreach (var row in model.Rows)
             {
                 col.Item().Height(model.SlotHeightMm, Mm)
-                    .Element(c => ComposeFreedomRow(c, row, model.Preset, bw, chrome));
+                    .Element(c => ComposeFreedomRow(c, row, model.Preset, bw, chrome, model.SlotHeightMm, boundModel));
             }
         });
     }
@@ -210,19 +216,46 @@ public static class ConfigurableTableComposer
         HprpTableRowModel row,
         ResolvedTablePreset preset,
         float bw,
-        HprpChrome? chrome)
+        HprpChrome? chrome,
+        float slotHeightMm,
+        object? boundModel)
     {
+        var bands = HprpChrome.ResolveBandWeights(
+            chrome?.BandWeights,
+            Clinical05SoapTableSection.DefaultSoapBandWeights);
+        var sessions = boundModel is Clinical05ProgressNoteReportViewModel soapVm
+            ? soapVm.Sessions
+            : null;
+
         container.Row(r =>
         {
             for (var i = 0; i < preset.Columns.Count; i++)
             {
                 var cell = i < row.Cells.Count ? row.Cells[i] : new HprpTableCellModel { Text = " " };
                 var col = preset.Columns[i];
+                var kind = (col.CellKind ?? HprpTableCellKinds.Text).Trim();
+
+                if (string.Equals(kind, HprpTableCellKinds.SoapProgress, StringComparison.OrdinalIgnoreCase))
+                {
+                    Clinical05SoapSession? session = null;
+                    if (sessions is not null && row.SlotIndex >= 0 && row.SlotIndex < sessions.Count)
+                        session = sessions[row.SlotIndex];
+
+                    r.RelativeItem(Math.Max(0.1f, col.Weight))
+                        .Element(c => Clinical05SoapTableSection.ComposeProgressCell(
+                            c,
+                            session,
+                            slotHeightMm,
+                            bw,
+                            bands));
+                    continue;
+                }
+
                 var box = r.RelativeItem(Math.Max(0.1f, col.Weight))
                     .Border(bw)
                     .ExtendVertical()
                     .PaddingHorizontal(1.2f)
-                    .AlignMiddle();
+                    .AlignTop();
                 if (col.Center)
                     box = box.AlignCenter();
                 box.Text(cell.Text).Style(BodyTextStyle(chrome, cell.Historical));

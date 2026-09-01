@@ -76,4 +76,11 @@ public sealed class HprpTableColumnDef
 
     [JsonPropertyName("isLab")]
     public bool IsLab { get; init; }
+
+    /// <summary>
+    /// Optional cell renderer kind (<see cref="HprpTableCellKinds"/>).
+    /// Empty / <c>text</c> = plain text; <c>soap-progress</c> = nested SOAP drawer.
+    /// </summary>
+    [JsonPropertyName("cellKind")]
+    public string? CellKind { get; init; }
 }

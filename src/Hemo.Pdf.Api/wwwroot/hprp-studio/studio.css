@@ -926,6 +926,41 @@ button.tb-icon {
 .dense-soap-letter { font-weight: 700; flex: 0 0 auto; }
 .dense-soap-text { flex: 1 1 auto; overflow: hidden; }
 
+/* config-table cellKind: soap-progress (library-style editable SOAP) */
+.cfg-table td.soap-progress-cell {
+  padding: 0;
+  vertical-align: top;
+  white-space: normal;
+  overflow: hidden;
+}
+.soap-progress-schematic {
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+  box-sizing: border-box;
+}
+.soap-progress-schematic .dense-soap-band {
+  white-space: nowrap;
+}
+.soap-band-resize-layer {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 5;
+}
+.soap-band-resize {
+  position: absolute;
+  height: 6px;
+  margin-top: -3px;
+  cursor: row-resize;
+  pointer-events: auto;
+  background: transparent;
+}
+.soap-band-resize:hover,
+.soap-band-resize:active {
+  background: rgba(61, 156, 240, 0.4);
+}
+
 .dense-checklist-patient { background: #fff; }
 .dense-checklist-cell {
   border: 0.5px solid #333;
@@ -963,6 +998,11 @@ button.tb-icon {
 .col-row input.col-id {
   flex: 0.7 1 0;
   opacity: 0.85;
+  font-size: 0.75rem;
+}
+.col-row select.col-kind {
+  flex: 0 0 auto;
+  max-width: 4.5rem;
   font-size: 0.75rem;
 }
 

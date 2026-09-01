@@ -561,6 +561,52 @@
     return changed;
   }
 
+  function clinical05SoapConfigTableElement(soapChrome) {
+    const chrome = Object.assign({
+      border: "thin",
+      headerFill: "$branding.sectionHeaderBackground",
+      bandWeights: [1, 2.5, 1, 1],
+    }, soapChrome || {});
+    if (!chrome.bandWeights) chrome.bandWeights = [1, 2.5, 1, 1];
+    return {
+      id: "soap",
+      type: "config-table",
+      band: "content",
+      presetId: "progress-note-soap-v1",
+      place: "below",
+      box: { xMm: 0, yMm: 0, wMm: 206, hMm: 255 },
+      chrome: chrome,
+      bindings: [
+        { path: "sessions[].dateLabel", column: "date", context: "freedom-row" },
+        { path: "sessions[].orderForOneDay", column: "orderOneDay", context: "freedom-row" },
+        { path: "sessions[].orderForContinuation", column: "orderContinuation", context: "freedom-row" },
+      ],
+    };
+  }
+
+  /** Upgrade legacy dense clinical.soap-table → config-table progress-note-soap-v1. */
+  function migrateDenseSoapToConfigTable() {
+    ensureElements();
+    const layout = stateRef.draft.layout;
+    const els = layout.elements || [];
+    const denseIdx = els.findIndex((e) =>
+      e
+      && e.type === "dense"
+      && String(e.widget || "").toLowerCase() === "clinical.soap-table");
+    if (denseIdx < 0) return false;
+
+    const dense = els[denseIdx];
+    const replacement = clinical05SoapConfigTableElement(dense.chrome);
+    replacement.id = dense.id || "soap";
+    replacement.box = Object.assign({}, dense.box || replacement.box);
+    replacement.place = dense.place || "below";
+    replacement.band = dense.band || "content";
+    els[denseIdx] = replacement;
+    layout.elements = els;
+    if (setStatusRef) setStatusRef("อัปเกรด dense SOAP → config-table progress-note-soap-v1 แล้ว", "ok");
+    return true;
+  }
+
   /** Replace checklist title box-texts with clinical-header-thaiur (landscape-aware). */
   function migrateChecklistToThaiUrHeader() {
     const manifest = stateRef.draft.manifest || {};
@@ -648,6 +694,7 @@
     if (isDesignerPackage() && layout.elements.length > 0) {
       migrateLegacyDenseCopay();
       migrateChecklistToThaiUrHeader();
+      migrateDenseSoapToConfigTable();
       reflowElements();
       return false;
     }
@@ -691,10 +738,7 @@
         },
       ].concat(clinical01CopayPieces());
     } else if (isProgressSoap && layout.elements.length === 0) {
-      const soapChrome = (body.find((n) => n && n.widget === "clinical.soap-table") || {}).chrome || {
-        columnWidths: ["18mm", "2.4", "1.1", "1.1"],
-        bandWeights: [1, 2.5, 1, 1],
-      };
+      const soapChrome = (body.find((n) => n && n.widget === "clinical.soap-table") || {}).chrome || {};
       layout.page = Object.assign({ size: "A4", orientation: "portrait", marginMm: 2, spacingMode: "custom", spacingMm: 2 }, layout.page || {});
       layout.elements = [
         {
@@ -705,15 +749,7 @@
           place: "below",
           box: { xMm: 0, yMm: 0, wMm: 206, hMm: 27 },
         },
-        {
-          id: "soap",
-          type: "dense",
-          band: "content",
-          widget: "clinical.soap-table",
-          place: "below",
-          box: { xMm: 0, yMm: 0, wMm: 206, hMm: 255 },
-          chrome: Object.assign({ border: "thin", headerFill: "$branding.sectionHeaderBackground" }, soapChrome),
-        },
+        clinical05SoapConfigTableElement(soapChrome),
         {
           id: "page-of",
           type: "page-of",
@@ -1328,21 +1364,27 @@
 
     const tbody = document.createElement("tbody");
     if (!isGrouped) {
-      model.rows.forEach((row) => {
+      model.rows.forEach((row, rowIndex) => {
         const tr = document.createElement("tr");
         tr.style.height = slotPx.toFixed(2) + "px";
-        row.cells.forEach((cell) => {
+        cols.forEach((colDef, ci) => {
+          const cell = (row.cells && row.cells[ci]) || { text: " " };
           const td = document.createElement("td");
-          td.textContent = cellText(cell.text, nbsp);
-          if (cell.historical) td.className = "historical";
-          if (cell.center) td.classList.add("center");
+          const kind = String((colDef && colDef.cellKind) || "text").toLowerCase();
+          if (kind === "soap-progress") {
+            td.className = "soap-progress-cell";
+            td.appendChild(buildSoapProgressSchematic(
+              sampleData,
+              row.slotIndex != null ? row.slotIndex : rowIndex,
+              slotPx,
+              el));
+          } else {
+            td.textContent = cellText(cell.text, nbsp);
+            if (cell.historical) td.className = "historical";
+            if (cell.center || (colDef && colDef.center)) td.classList.add("center");
+          }
           tr.appendChild(td);
         });
-        for (let i = row.cells.length; i < cols.length; i++) {
-          const td = document.createElement("td");
-          td.textContent = nbsp;
-          tr.appendChild(td);
-        }
         tbody.appendChild(tr);
       });
     } else {
@@ -1374,7 +1416,114 @@
     root.appendChild(table);
 
     attachColumnResizers(root, table, el, p, headerWeights, isGrouped, monthW, dayWSafe);
+    if (cols.some((c) => String((c && c.cellKind) || "").toLowerCase() === "soap-progress")) {
+      attachSoapBandSplitters(root, el);
+    }
     return root;
+  }
+
+  function mergeTableChrome(el) {
+    const preset = resolveTablePreset(el) || {};
+    return Object.assign({}, preset.chrome || {}, (el && el.chrome) || {});
+  }
+
+  function buildSoapProgressSchematic(data, sessionIndex, slotPx, el) {
+    const wrap = document.createElement("div");
+    wrap.className = "soap-progress-schematic";
+    wrap.style.height = "100%";
+    const chrome = mergeTableChrome(el);
+    const bands = soapBandWeights(chrome);
+    const bandSum = bands.reduce((a, b) => a + b, 0) || 1;
+    const sessions = (data && Array.isArray(data.sessions) ? data.sessions : []);
+    const session = sessions[sessionIndex] || null;
+    const bandDefs = [
+      { letter: "S", text: session && session.subjective },
+      { letter: "O", text: formatSoapObjective(session) },
+      { letter: "A", text: session && session.assessment },
+      { letter: "P", text: session && session.plan },
+    ];
+    wrap.style.display = "grid";
+    wrap.style.gridTemplateRows = bands.map((b) => (b / bandSum).toFixed(4) + "fr").join(" ");
+    bandDefs.forEach((b, bi) => {
+      const band = document.createElement("div");
+      band.className = "dense-soap-band";
+      band.dataset.bandIndex = String(bi);
+      band.innerHTML = `<span class="dense-soap-letter">${escapeHtml(b.letter)}</span>` +
+        `<span class="dense-soap-text">${escapeHtml(b.text || "")}</span>`;
+      wrap.appendChild(band);
+    });
+    void slotPx;
+    return wrap;
+  }
+
+  /** Drag horizontal splitters inside soap-progress cells to edit chrome.bandWeights. */
+  function attachSoapBandSplitters(root, el) {
+    requestAnimationFrame(() => {
+      const firstSchematic = root.querySelector(".soap-progress-schematic");
+      if (!firstSchematic) return;
+      const bands = firstSchematic.querySelectorAll(".dense-soap-band");
+      if (bands.length < 2) return;
+      const overlay = document.createElement("div");
+      overlay.className = "soap-band-resize-layer";
+      root.appendChild(overlay);
+      const rootRect = root.getBoundingClientRect();
+      const cellRect = firstSchematic.getBoundingClientRect();
+      for (let i = 0; i < bands.length - 1; i++) {
+        const rect = bands[i].getBoundingClientRect();
+        const handle = document.createElement("div");
+        handle.className = "soap-band-resize";
+        handle.style.left = (cellRect.left - rootRect.left) + "px";
+        handle.style.width = cellRect.width + "px";
+        handle.style.top = (rect.bottom - rootRect.top - 3) + "px";
+        handle.title = "ลากปรับสัดส่วนแถบ S/O/A/P (bandWeights)";
+        handle.dataset.splitIndex = String(i);
+        handle.addEventListener("pointerdown", (e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          startSoapBandResize(e, el, i, root);
+        });
+        overlay.appendChild(handle);
+      }
+    });
+  }
+
+  function startSoapBandResize(e, el, splitIndex, root) {
+    if (canvasTools) canvasTools.pushHistory();
+    el.chrome = mergeTableChrome(el);
+    const weights = soapBandWeights(el.chrome).slice();
+    const startY = e.clientY;
+    const above = weights[splitIndex];
+    const below = weights[splitIndex + 1];
+    const pair = above + below;
+    const cell = root.querySelector(".soap-progress-schematic");
+    const cellH = cell ? cell.getBoundingClientRect().height : 100;
+
+    function onMove(ev) {
+      const dy = ev.clientY - startY;
+      const dW = (dy / Math.max(1, cellH)) * pair;
+      const newAbove = Math.max(0.2, above + dW);
+      const newBelow = Math.max(0.2, pair - newAbove);
+      weights[splitIndex] = newAbove;
+      weights[splitIndex + 1] = newBelow;
+      el.chrome.bandWeights = weights.map((w) => Math.round(w * 100) / 100);
+      const working = el.tablePreset;
+      if (working) {
+        working.chrome = working.chrome || {};
+        working.chrome.bandWeights = el.chrome.bandWeights.slice();
+      }
+      // Live update grid rows on all schematics
+      const sum = weights.reduce((a, b) => a + b, 0) || 1;
+      root.querySelectorAll(".soap-progress-schematic").forEach((sch) => {
+        sch.style.gridTemplateRows = weights.map((b) => (b / sum).toFixed(4) + "fr").join(" ");
+      });
+    }
+    function onUp() {
+      document.removeEventListener("pointermove", onMove);
+      document.removeEventListener("pointerup", onUp);
+      renderAll();
+    }
+    document.addEventListener("pointermove", onMove);
+    document.addEventListener("pointerup", onUp);
   }
 
   function cellText(text, nbsp) {
@@ -2947,6 +3096,56 @@
     rowModeLabel.appendChild(rowModeSel);
     insp.appendChild(rowModeLabel);
 
+    if (String(working.rowMode || "").toLowerCase() === "freedom") {
+      const freeLab = document.createElement("label");
+      freeLab.textContent = "Freedom rows";
+      const freeIn = document.createElement("input");
+      freeIn.type = "number";
+      freeIn.min = "1";
+      freeIn.max = "40";
+      freeIn.value = String(working.freedomRowCount || 2);
+      freeIn.addEventListener("change", () => {
+        working.freedomRowCount = Math.max(1, Number(freeIn.value) || 2);
+        commitWorking(el, working);
+        renderAll();
+      });
+      freeLab.appendChild(freeIn);
+      insp.appendChild(freeLab);
+    }
+
+    const hasSoapProgress = (working.columns || []).some(
+      (c) => String((c && c.cellKind) || "").toLowerCase() === "soap-progress");
+    if (hasSoapProgress) {
+      const tip = document.createElement("p");
+      tip.className = "muted";
+      tip.textContent =
+        "SOAP progress — ลากเส้นคอลัมน์บน canvas · ลากเส้นแนวนอนในช่อง Progress เพื่อปรับ bandWeights S/O/A/P";
+      insp.appendChild(tip);
+
+      el.chrome = mergeTableChrome(el);
+      const weights = soapBandWeights(el.chrome);
+      const bandLab = document.createElement("label");
+      bandLab.textContent = "bandWeights (S,O,A,P)";
+      const bandIn = document.createElement("input");
+      bandIn.type = "text";
+      bandIn.value = weights.join(", ");
+      bandIn.addEventListener("change", () => {
+        if (canvasTools) canvasTools.pushHistory();
+        const parts = String(bandIn.value || "")
+          .split(/[, ]+/)
+          .map((x) => Number(x))
+          .filter((n) => Number.isFinite(n) && n > 0);
+        while (parts.length < 4) parts.push(1);
+        el.chrome = mergeTableChrome(el);
+        el.chrome.bandWeights = parts.slice(0, 4);
+        if (working.chrome) working.chrome.bandWeights = el.chrome.bandWeights.slice();
+        commitWorking(el, working);
+        renderAll();
+      });
+      bandLab.appendChild(bandIn);
+      insp.appendChild(bandLab);
+    }
+
     const slotsLabel = document.createElement("label");
     slotsLabel.textContent = "Slots per group";
     const slotsInput = document.createElement("input");
@@ -3000,6 +3199,21 @@
         commitWorking(el, working);
         renderAll();
       });
+      const kindSel = document.createElement("select");
+      kindSel.className = "col-kind";
+      kindSel.title = "cellKind";
+      [["text", "text"], ["soap-progress", "soap"]].forEach(([v, t]) => {
+        const o = document.createElement("option");
+        o.value = v;
+        o.textContent = t;
+        if (String(col.cellKind || "text").toLowerCase() === v) o.selected = true;
+        kindSel.appendChild(o);
+      });
+      kindSel.addEventListener("change", () => {
+        col.cellKind = kindSel.value === "text" ? "text" : kindSel.value;
+        commitWorking(el, working);
+        renderAll();
+      });
       const del = document.createElement("button");
       del.type = "button";
       del.textContent = "−";
@@ -3010,6 +3224,7 @@
       });
       row.appendChild(name);
       row.appendChild(idInp);
+      row.appendChild(kindSel);
       row.appendChild(del);
       insp.appendChild(row);
     });
@@ -3020,7 +3235,7 @@
     addCol.addEventListener("click", () => {
       const id = "col_" + Math.random().toString(36).slice(2, 6);
       working.columns = working.columns || [];
-      working.columns.push({ id, labelKey: id, title: id, weight: 1, center: false, isLab: false });
+      working.columns.push({ id, labelKey: id, title: id, weight: 1, center: false, isLab: false, cellKind: "text" });
       commitWorking(el, working);
       renderAll();
     });
