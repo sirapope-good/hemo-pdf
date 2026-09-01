@@ -1,4 +1,3 @@
-using System.Globalization;
 using Hemo.Pdf.Core.Hprp;
 using Hemo.Pdf.Core.Models.Clinical;
 using QuestPDF.Fluent;
@@ -14,7 +13,6 @@ namespace Hemo.Pdf.Layouts.Clinical.Clinical05_ProgressNote;
 public static class Clinical05ChecklistSections
 {
     private const Unit Mm = Unit.Millimetre;
-    private const float LabelColumnMm = 46f;
     private const float FontSize = 9f;
     private const float HeaderFontSize = 10f;
     private const float SectionTitleFontSize = 11f;
@@ -72,16 +70,20 @@ public static class Clinical05ChecklistSections
             return;
         }
 
-        var labelMm = ResolveLabelColumnMm(chrome);
+        var plan = HprpMatrixColumnPlan.Resolve(chrome?.ColumnWidths, monthCount);
         var fontSize = ResolveFontSize(chrome);
 
         container.Table(table =>
         {
             table.ColumnsDefinition(columns =>
             {
-                columns.ConstantColumn(labelMm, Mm);
-                for (var i = 0; i < monthCount; i++)
-                    columns.RelativeColumn();
+                foreach (var col in plan)
+                {
+                    if (col.ConstantMm)
+                        columns.ConstantColumn(col.Value, Mm);
+                    else
+                        columns.RelativeColumn(col.Value);
+                }
             });
 
             table.Cell().Element(c => HeaderCell(c, fontSize)).Text(string.Empty);
@@ -144,27 +146,6 @@ public static class Clinical05ChecklistSections
 
     private static float ResolveFontSize(HprpChrome? chrome) =>
         chrome?.FontSize is > 0 and < 48 ? chrome.FontSize.Value : FontSize;
-
-    private static float ResolveLabelColumnMm(HprpChrome? chrome)
-    {
-        var raw = chrome?.ColumnWidths?.FirstOrDefault();
-        if (string.IsNullOrWhiteSpace(raw))
-            return LabelColumnMm;
-
-        var token = raw.Trim();
-        if (token.EndsWith("mm", StringComparison.OrdinalIgnoreCase)
-            && float.TryParse(
-                token[..^2],
-                NumberStyles.Float,
-                CultureInfo.InvariantCulture,
-                out var mm)
-            && mm > 0)
-        {
-            return mm;
-        }
-
-        return LabelColumnMm;
-    }
 
     private static void LabelValue(TextDescriptor text, string label, string value)
     {

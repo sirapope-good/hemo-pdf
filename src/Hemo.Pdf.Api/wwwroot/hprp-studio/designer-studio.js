@@ -1952,10 +1952,91 @@
     return root;
   }
 
+  /** Port of HprpMatrixColumnPlan — 2 zones (item + month-band) → physical columns. */
+  function parseMixedColumnToken(raw) {
+    let token = String(raw == null ? "" : raw).trim();
+    if (!token) return null;
+    let constant = false;
+    if (/mm$/i.test(token)) {
+      constant = true;
+      token = token.slice(0, -2).trim();
+    } else if (token === "*") {
+      token = "1";
+    }
+    const value = Number(token);
+    if (!Number.isFinite(value) || value <= 0) return null;
+    return { constantMm: constant, value: value };
+  }
+
+  function formatMatrixWidthToken(zone) {
+    if (!zone) return "*";
+    if (zone.constantMm) {
+      const n = Math.round(zone.value * 100) / 100;
+      return n + "mm";
+    }
+    if (Math.abs(zone.value - 1) < 0.001) return "*";
+    return String(Math.round(zone.value * 100) / 100);
+  }
+
+  function resolveMatrixColumnPlan(columnWidths, monthCount) {
+    const months = Math.max(0, Number(monthCount) || 0);
+    let zones = (columnWidths || []).map(parseMixedColumnToken).filter(Boolean);
+    if (zones.length < 2) {
+      zones = [parseMixedColumnToken("46mm"), parseMixedColumnToken("*")];
+    }
+    const item = zones[0];
+    const band = zones[1];
+    const cols = [{ constantMm: item.constantMm, value: item.value }];
+    if (months === 0) return { zones: [item, band], columns: cols };
+    const per = Math.max(0.1, band.value / months);
+    for (let i = 0; i < months; i++) {
+      cols.push({ constantMm: band.constantMm, value: per });
+    }
+    return { zones: [item, band], columns: cols };
+  }
+
+  function matrixColgroupCss(plan, tableWidthMm) {
+    const cols = plan.columns || [];
+    const wMm = Math.max(1, Number(tableWidthMm) || 269);
+    let fixed = 0;
+    let rel = 0;
+    cols.forEach((c) => {
+      if (c.constantMm) fixed += c.value;
+      else rel += c.value;
+    });
+    const remain = Math.max(0.1, wMm - fixed);
+    return cols.map((c) => {
+      if (c.constantMm) {
+        const pct = (c.value / wMm) * 100;
+        return Math.max(0.5, pct).toFixed(3) + "%";
+      }
+      const share = rel > 0 ? (c.value / rel) * remain : remain / Math.max(1, cols.length);
+      return Math.max(0.5, (share / wMm) * 100).toFixed(3) + "%";
+    });
+  }
+
+  function readMatrixZoneTokens(el) {
+    const chrome = mergeTableChrome(el);
+    const widths = (chrome && chrome.columnWidths) || ["46mm", "*"];
+    const item = parseMixedColumnToken(widths[0]) || parseMixedColumnToken("46mm");
+    const band = parseMixedColumnToken(widths[1]) || parseMixedColumnToken("*");
+    return { chrome: chrome, item: item, band: band, widths: widths };
+  }
+
+  function writeMatrixZoneTokens(el, working, itemZone, bandZone) {
+    el.chrome = mergeTableChrome(el);
+    el.chrome.columnWidths = [formatMatrixWidthToken(itemZone), formatMatrixWidthToken(bandZone)];
+    if (working) {
+      working.chrome = working.chrome || {};
+      working.chrome.columnWidths = el.chrome.columnWidths.slice();
+    }
+  }
+
   function renderChecklistGridHtml(el, data, scale) {
     const root = document.createElement("div");
     root.className = "dense-checklist-grid";
     root.style.height = "100%";
+    root.style.position = "relative";
     const title = document.createElement("div");
     title.className = "dense-checklist-grid-title";
     title.textContent = "Check lists";
@@ -1972,8 +2053,23 @@
       return root;
     }
 
+    const plan = resolveMatrixColumnPlan(
+      (el.chrome && el.chrome.columnWidths)
+        || (el.tablePreset && el.tablePreset.chrome && el.tablePreset.chrome.columnWidths),
+      columns.length);
+    const tableW = Math.max(1, Number(el.box && el.box.wMm) || 269);
+    const cssWidths = matrixColgroupCss(plan, tableW);
+
     const table = document.createElement("table");
-    table.className = "dense-checklist-table";
+    table.className = "dense-checklist-table dense-checklist-table-plan";
+    const colgroup = document.createElement("colgroup");
+    cssWidths.forEach((w) => {
+      const col = document.createElement("col");
+      col.style.width = w;
+      colgroup.appendChild(col);
+    });
+    table.appendChild(colgroup);
+
     const thead = document.createElement("thead");
     const yearRow = document.createElement("tr");
     yearRow.appendChild(document.createElement("th"));
@@ -2023,9 +2119,92 @@
     });
     table.appendChild(tbody);
     root.appendChild(table);
-    void el;
+    attachMatrixZoneResizer(root, table, el, scale);
     void scale;
     return root;
+  }
+
+  /** Drag the Item | Month-band boundary (2-zone chrome.columnWidths). */
+  function attachMatrixZoneResizer(root, table, el, scale) {
+    const working = resolveTablePreset(el);
+    requestAnimationFrame(() => {
+      const itemTh = table.querySelector("thead tr:last-child th");
+      if (!itemTh) return;
+      const overlay = document.createElement("div");
+      overlay.className = "col-resize-layer";
+      root.appendChild(overlay);
+      const rootRect = root.getBoundingClientRect();
+      const rect = itemTh.getBoundingClientRect();
+      const handle = document.createElement("div");
+      handle.className = "col-resize";
+      handle.style.left = (rect.right - rootRect.left - 3) + "px";
+      handle.title = "ลากปรับ Item ↔ แถบเดือน (columnWidths)";
+      handle.addEventListener("pointerdown", (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        startMatrixZoneResize(e, el, working, table, handle, root, scale);
+      });
+      overlay.appendChild(handle);
+    });
+  }
+
+  function startMatrixZoneResize(e, el, working, table, handle, root, scale) {
+    if (canvasTools) canvasTools.pushHistory();
+    const startX = e.clientX;
+    const zones = readMatrixZoneTokens(el);
+    const tableW = Math.max(1, Number(el.box && el.box.wMm) || 269);
+    const itemTh = table.querySelector("thead tr:last-child th");
+    const tableRect = table.getBoundingClientRect();
+    const startItemPx = itemTh ? itemTh.getBoundingClientRect().width : tableRect.width * 0.2;
+    const pxPerMm = scale > 0 ? scale : (tableRect.width / tableW);
+
+    function onMove(ev) {
+      const dxPx = ev.clientX - startX;
+      let itemMm = (startItemPx + dxPx) / Math.max(0.01, pxPerMm);
+      itemMm = Math.max(20, Math.min(tableW - 20, itemMm));
+      const bandMm = Math.max(10, tableW - itemMm);
+      const itemShare = itemMm / tableW;
+      const bandShare = bandMm / tableW;
+
+      let nextItem = Object.assign({}, zones.item);
+      let nextBand = Object.assign({}, zones.band);
+
+      if (zones.item.constantMm && zones.band.constantMm) {
+        nextItem.value = Math.round(itemMm * 10) / 10;
+        nextBand.value = Math.round(bandMm * 10) / 10;
+      } else if (zones.item.constantMm && !zones.band.constantMm) {
+        nextItem.value = Math.round(itemMm * 10) / 10;
+      } else if (!zones.item.constantMm && zones.band.constantMm) {
+        nextBand.value = Math.round(bandMm * 10) / 10;
+      } else {
+        const pair = Math.max(0.2, zones.item.value + zones.band.value);
+        nextItem.value = Math.max(0.1, pair * itemShare);
+        nextBand.value = Math.max(0.1, pair * bandShare);
+      }
+
+      writeMatrixZoneTokens(el, working, nextItem, nextBand);
+      if (working) commitWorking(el, working);
+
+      const plan = resolveMatrixColumnPlan(el.chrome.columnWidths, (sampleData && sampleData.columns || []).length || 12);
+      const css = matrixColgroupCss(plan, tableW);
+      const cols = table.querySelectorAll("colgroup col");
+      css.forEach((w, i) => { if (cols[i]) cols[i].style.width = w; });
+      if (itemTh && handle && root) {
+        const rootRect = root.getBoundingClientRect();
+        const rect = itemTh.getBoundingClientRect();
+        handle.style.left = (rect.right - rootRect.left - 3) + "px";
+      }
+    }
+    function onUp() {
+      document.removeEventListener("pointermove", onMove);
+      document.removeEventListener("pointerup", onUp);
+      suppressClick = true;
+      setTimeout(() => { suppressClick = false; }, 0);
+      renderAll();
+      if (setStatusRef) setStatusRef("Matrix columnWidths อัปเดต — Download PDF จะใช้ชุดนี้", "ok");
+    }
+    document.addEventListener("pointermove", onMove);
+    document.addEventListener("pointerup", onUp);
   }
 
   function renderChecklistTextNotesHtml(data, scale) {
@@ -3294,31 +3473,38 @@
       const tip = document.createElement("p");
       tip.className = "muted";
       tip.textContent =
-        "Matrix (item × month) — ใช้ BoundModel checklist · ปรับ chrome.fontSize / columnWidths (เช่น 46mm,*) ได้ · Library: progress-note-checklist-matrix-v1";
+        "Matrix 2 โซน (Item | แถบเดือน) — columnWidths รับ 46mm / * / 1.5 · ลากเส้นบน canvas · Library: progress-note-checklist-matrix-v1";
       insp.appendChild(tip);
 
       el.chrome = mergeTableChrome(el);
-      const labelW = document.createElement("label");
-      labelW.textContent = "Label column (mm)";
-      const labelIn = document.createElement("input");
-      labelIn.type = "number";
-      labelIn.min = "20";
-      labelIn.max = "120";
-      const widths = (el.chrome && el.chrome.columnWidths) || ["46mm", "*"];
-      const first = String(widths[0] || "46mm");
-      const mmMatch = first.match(/^([0-9.]+)mm$/i);
-      labelIn.value = String(mmMatch ? Number(mmMatch[1]) : 46);
-      labelIn.addEventListener("change", () => {
-        if (canvasTools) canvasTools.pushHistory();
-        const mm = Math.max(20, Number(labelIn.value) || 46);
-        el.chrome = mergeTableChrome(el);
-        el.chrome.columnWidths = [mm + "mm", "*"];
-        if (working.chrome) working.chrome.columnWidths = el.chrome.columnWidths.slice();
-        commitWorking(el, working);
-        renderAll();
-      });
-      labelW.appendChild(labelIn);
-      insp.appendChild(labelW);
+      const zones = readMatrixZoneTokens(el);
+
+      function addZoneField(labelText, zoneKey) {
+        const lab = document.createElement("label");
+        lab.textContent = labelText;
+        const inp = document.createElement("input");
+        inp.type = "text";
+        inp.placeholder = "46mm หรือ * หรือ 1.5";
+        inp.value = formatMatrixWidthToken(zones[zoneKey]);
+        inp.addEventListener("change", () => {
+          if (canvasTools) canvasTools.pushHistory();
+          const parsed = parseMixedColumnToken(inp.value);
+          if (!parsed) {
+            if (setStatusRef) setStatusRef("รูปแบบความกว้างไม่ถูกต้อง (ใช้ 46mm / * / 1.5)", "warn");
+            inp.value = formatMatrixWidthToken(zones[zoneKey]);
+            return;
+          }
+          zones[zoneKey] = parsed;
+          writeMatrixZoneTokens(el, working, zones.item, zones.band);
+          commitWorking(el, working);
+          renderAll();
+        });
+        lab.appendChild(inp);
+        insp.appendChild(lab);
+      }
+
+      addZoneField("Item width", "item");
+      addZoneField("Month band width", "band");
     }
 
     if (String(working.rowMode || "").toLowerCase() === "freedom") {
@@ -3480,6 +3666,11 @@
 
   function commitWorking(el, working) {
     // Persist inline preset so Download PDF uses the same weights as canvas
+    if (el.chrome && el.chrome.columnWidths) {
+      working.chrome = Object.assign({}, working.chrome || {}, {
+        columnWidths: el.chrome.columnWidths.slice(),
+      });
+    }
     el.tablePreset = working;
     delete el.presetId;
     el.columnOverrides = (working.columns || []).map((c) => ({
@@ -4024,7 +4215,11 @@
             place: "below",
             box: { xMm: 0, yMm: 0, wMm: 206, hMm: 140 },
             bindings: [],
-            chrome: { border: "thin" },
+            chrome: Object.assign(
+              { border: "thin" },
+              working.chrome && working.chrome.columnWidths
+                ? { columnWidths: working.chrome.columnWidths.slice() }
+                : {}),
           },
         ],
         body: [],
@@ -4035,10 +4230,19 @@
     selectedElementIds = new Set(["tbl_lib"]);
     stateRef.selectedKey = null;
 
+    const isMatrix =
+      String(working.rowMode || "").toLowerCase() === "matrix"
+      || id.indexOf("progress-note-checklist-matrix") === 0;
     try {
-      sampleData = await apiRef("/api/hprp/packages/clinical-01-hct-epo/sample-data");
+      sampleData = await apiRef(
+        isMatrix
+          ? "/api/hprp/packages/clinical-05-progress-note-checklist/sample-data"
+          : "/api/hprp/packages/clinical-01-hct-epo/sample-data");
     } catch (_) {
       sampleData = null;
+    }
+    if (isMatrix && sampleData) {
+      sampleData = normalizeSampleForThaiUrHeader(sampleData);
     }
 
     if (canvasTools) canvasTools.resetHistory();

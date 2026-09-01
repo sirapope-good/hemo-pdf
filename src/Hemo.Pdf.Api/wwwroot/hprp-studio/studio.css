@@ -988,6 +988,8 @@ button.tb-icon {
 }
 .dense-checklist-table th:first-child,
 .dense-checklist-table td:first-child { text-align: left; width: 18%; }
+.dense-checklist-table-plan th:first-child,
+.dense-checklist-table-plan td:first-child { width: auto; }
 .dense-checklist-group { font-weight: 700; text-align: left !important; background: #f3f3f3; }
 .dense-checklist-notes { font-size: 8px; }
 

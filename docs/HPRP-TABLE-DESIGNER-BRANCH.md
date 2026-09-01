@@ -46,7 +46,7 @@ Left pane: **Import / Export** primary; **Pack all** under Packages ⋯; Library
 
 Loading feedback: brand overlay spinner (`StudioUi.withBusy`) on open package / library item / save / reload / pack-all; list skeletons on package/library reload; A4 canvas skeleton while a pack opens.
 
-Scripts use `?v=ux-polish-11` cache-bust — hard refresh (Ctrl+F5) after pull.
+Scripts use `?v=ux-polish-12` cache-bust — hard refresh (Ctrl+F5) after pull.
 
 Top-left brand: inline HPRP wordmark logo (from `assets/icons/LOGO_HPRP.svg`, `currentColor` for dark chrome) — replaces the old title + hint paragraph.
 
@@ -103,6 +103,7 @@ Element type `page-of` (default band `super-footer`): format `{current} / {total
 - Production clinical-02: `layoutMode: designer` — multi-item **box-text** meta + freedom injections table + shared co-pay duo
 - Production clinical-05 SOAP: `layoutMode: designer` — `clinical-header-thaiur` + **`config-table`** preset `progress-note-soap-v1` (`rowMode: freedom`, progress column `cellKind: soap-progress`) + page-of. Same library-table tools as HCT/EPO: column drag, freedom rows, detach/save preset; drag S/O/A/P band splitters (or edit `chrome.bandWeights`) for Objective height. PDF still draws Objective checkboxes via `Clinical05SoapTableSection.ComposeProgressCell`. Opening an old pack with dense `clinical.soap-table` auto-migrates to this config-table.
 - Production clinical-05 checklist (Default): `layoutMode: designer` — **same** `clinical-header-thaiur` with element `bottomMode: "checklist-patient"` (DOB / sessions / days / mode / underlying in a 2-line bottom; diagnosis profile stays default for SOAP/other packs) + range + **`config-table`** matrix + dense text-notes. Dense patient block is removed (auto-migrated). Header profiles live in `bottomFieldSets` on the shared ThaiUR library preset.
+- **Matrix column widths (2 zones):** `chrome.columnWidths: ["item", "monthBand"]` — each token is fixed (`46mm`) or relative (`*` / `1.5`). Month-band splits equally across N months. Studio: inspector fields + drag Item|Months edge; Library matrix opens with checklist sample. Shared resolver: `HprpMatrixColumnPlan`.
 
 ## box-text multi-value
 
