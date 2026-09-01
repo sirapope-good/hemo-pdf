@@ -30,7 +30,7 @@
         "headerFill": "$branding.sectionHeaderBackground",
         "border": "thin",
         "fontSize": 7,
-        "columnWidths": ["3", "*", "*", "*", "*", "*", "*"]
+        "columnWidths": ["3", "*", "*", "*", "*", "*", "*", "*"]
       }
     }
   ]
