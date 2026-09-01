@@ -1572,10 +1572,19 @@
     host.appendChild(stack);
   }
 
-  /** Mirrors DataGridRows.IsSectionBand (C#) — first cell only, rest empty. */
+  /** Mirrors DataGridRows.IsSectionBand — known frequency titles only (1/3/6/12 month, Other). */
+  const DATA_GRID_SECTION_TITLES = {
+    "1 month": true,
+    "3 month": true,
+    "6 month": true,
+    "1 year": true,
+    other: true,
+  };
+
   function isDataGridSectionBand(row) {
     if (!row || row.length < 2) return false;
-    if (!String(row[0] || "").trim()) return false;
+    const title = String(row[0] || "").trim();
+    if (!title || !DATA_GRID_SECTION_TITLES[title.toLowerCase()]) return false;
     for (let i = 1; i < row.length; i++) {
       if (row[i] != null && String(row[i]).trim() !== "") return false;
     }

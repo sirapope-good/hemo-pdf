@@ -5,13 +5,28 @@ namespace Hemo.Pdf.Sections.Tests;
 public class DataGridRowsTests
 {
     [Fact]
-    public void IsSectionBand_WhenOnlyFirstCellHasText()
+    public void IsSectionBand_RecognizesFrequencyTitlesOnly()
     {
         Assert.True(DataGridRows.IsSectionBand(["1 Month", "", ""]));
         Assert.True(DataGridRows.IsSectionBand(["3 Month", "", "", "", "", "", "", ""]));
+        Assert.True(DataGridRows.IsSectionBand(["1 year", "", ""]));
+        Assert.True(DataGridRows.IsSectionBand(["Other", "", ""]));
+    }
+
+    [Fact]
+    public void IsSectionBand_RejectsLabNameWithEmptyDates()
+    {
+        Assert.False(DataGridRows.IsSectionBand(["PMN", "", "", "", "", "", "", ""]));
+        Assert.False(DataGridRows.IsSectionBand(["Hb / Hct", "9.5", "", ""]));
         Assert.False(DataGridRows.IsSectionBand(["Hb", "11.2", ""]));
+    }
+
+    [Fact]
+    public void IsSectionBand_RejectsEmptyOrPartialRows()
+    {
         Assert.False(DataGridRows.IsSectionBand(["", "", ""]));
         Assert.False(DataGridRows.IsSectionBand(["1 Month"]));
+        Assert.False(DataGridRows.IsSectionBand(["1 Month", "x", ""]));
     }
 
     [Fact]

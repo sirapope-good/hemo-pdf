@@ -136,7 +136,7 @@ Designer element `type: "data-grid"` — bound rows + column headers (not config
 | Inspector | Per-column token inputs + **Sync to column count** (normalize tokens) |
 | Canvas | Drag vertical splitters between header cells to resize columns |
 | Insert | **Insert → Data grid** adds a default lab matrix block |
-| Section bands | Rows with label only in column 1 (`1 Month`, `3 Month`, …) merge all columns + light header fill (PDF + Studio) |
+| Section bands | Rows titled `1 Month` / `3 Month` / `6 Month` / `1 Year` / `Other` with empty DATE cells merge + header fill — **not** every label-only row (production omits valueless lab rows) |
 
 ## Library tab + recovery
 
