@@ -29,11 +29,11 @@ public class HprpDataGridColumnPlanTests
     }
 
     [Fact]
-    public void NormalizeLabColumnHeaders_BlankLabColumnAndDatePlaceholders()
+    public void NormalizeLabColumnHeaders_DateLabelThenBoundDates()
     {
         var headers = HprpDataGridColumnPlan.NormalizeLabColumnHeaders(
             ["content", "01/03/2026", "", "01/05/2026", "DATE"]);
 
-        Assert.Equal(["", "01/03/2026", "DATE", "01/05/2026", "DATE"], headers);
+        Assert.Equal(["DATE", "01/03/2026", "", "01/05/2026", "DATE"], headers);
     }
 }

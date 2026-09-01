@@ -24,7 +24,16 @@
       "reportSettings": { "showDateAndHdNo": false, "showHdPerWeek": true }
     }
   },
-  "columnHeaders": ["", "DATE", "DATE", "DATE", "DATE", "DATE", "DATE", "DATE"],
+  "columnHeaders": [
+    "DATE",
+    "01/03/2026",
+    "01/04/2026",
+    "01/05/2026",
+    "01/06/2026",
+    "01/07/2026",
+    "01/08/2026",
+    "01/09/2026"
+  ],
   "rows": [
     ["1 Month", "", "", "", "", "", "", ""],
     ["Hb / Hct", "9.5", "9.8", "10.1", "10.4", "", "", ""],

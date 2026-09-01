@@ -15,19 +15,19 @@ public static class HprpDataGridColumnPlan
     public const string EmptyDateHeaderLabel = "DATE";
 
     /// <summary>
-    /// Lab grid DATE row: column 0 is always blank; empty date slots show <see cref="EmptyDateHeaderLabel"/>.
+    /// Lab DATE row: column 0 is the <c>DATE</c> label; remaining cells keep bound dates
+    /// (blank slots stay blank — do not fill every column with the word DATE).
     /// </summary>
     public static IReadOnlyList<string> NormalizeLabColumnHeaders(IReadOnlyList<string>? headers)
     {
         if (headers is not { Count: > 0 })
             return headers ?? [];
 
-        var result = headers.ToList();
-        result[0] = "";
-        for (var i = 1; i < result.Count; i++)
+        var result = headers.Select(h => h?.Trim() ?? "").ToList();
+        if (string.IsNullOrEmpty(result[0])
+            || string.Equals(result[0], "content", StringComparison.OrdinalIgnoreCase))
         {
-            if (string.IsNullOrWhiteSpace(result[i]))
-                result[i] = EmptyDateHeaderLabel;
+            result[0] = EmptyDateHeaderLabel;
         }
 
         return result;

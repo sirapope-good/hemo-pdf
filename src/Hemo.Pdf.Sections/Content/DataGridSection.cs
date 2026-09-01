@@ -55,14 +55,13 @@ public sealed class DataGridSection : IContentSection
 
                 foreach (var columnHeader in grid.ColumnHeaders)
                 {
-                    var headerCell = header.Cell().Border(border).Background(headerFill);
+                    var headerCell = header.Cell().Border(border);
                     if (rowHeightMm is > 0)
                         headerCell = headerCell.Height(rowHeightMm.Value, Unit.Millimetre);
                     headerCell.Padding(PdfSectionMetrics.CellPadding)
                         .Text(columnHeader)
-                        .FontFamily(PdfStyleDefaults.Body.SectionTitleFontFamily)
-                        .FontSize(fontSize)
-                        .SemiBold();
+                        .FontFamily(PdfStyleDefaults.Body.DataFontFamily)
+                        .FontSize(fontSize);
                 }
             });
 

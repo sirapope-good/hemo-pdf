@@ -744,8 +744,10 @@ button.tb-icon {
   text-align: center;
 }
 
-.cfg-table-grid th.dg-lab-col {
-  background: #c8b8e8;
+.cfg-table-grid thead.dg-date-head th {
+  background: #fff;
+  font-weight: 600;
+  text-align: center;
 }
 
 .cfg-table-grid tr.dg-section-band td {

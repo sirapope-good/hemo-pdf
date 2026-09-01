@@ -1245,12 +1245,9 @@
   const DATA_GRID_EMPTY_DATE_HEADER = "DATE";
 
   function normalizeDataGridHeaders(headers) {
-    if (!headers || !headers.length) return [""];
-    const out = headers.map((h) => (h == null ? "" : String(h)));
-    out[0] = "";
-    for (let i = 1; i < out.length; i++) {
-      if (!String(out[i]).trim()) out[i] = DATA_GRID_EMPTY_DATE_HEADER;
-    }
+    if (!headers || !headers.length) return [DATA_GRID_EMPTY_DATE_HEADER];
+    const out = headers.map((h) => (h == null ? "" : String(h).trim()));
+    if (!out[0] || out[0].toLowerCase() === "content") out[0] = DATA_GRID_EMPTY_DATE_HEADER;
     return out;
   }
 
@@ -1276,7 +1273,7 @@
       });
     }
     if (!headers.length && rows.length) {
-      headers = rows[0].map((_, i) => (i === 0 ? "" : DATA_GRID_EMPTY_DATE_HEADER));
+      headers = rows[0].map((_, i) => (i === 0 ? DATA_GRID_EMPTY_DATE_HEADER : ""));
     }
     headers = normalizeDataGridHeaders(headers);
     return { headers, rows };
@@ -1607,7 +1604,6 @@
     const root = document.createElement("div");
     root.className = "cfg-table" + (borderOn(el.chrome) ? "" : " cfg-no-border");
     const fill = (el.chrome && el.chrome.headerFill) || "#E8EEF5";
-    if (String(fill).indexOf("$") !== 0) root.style.background = fill;
     const fs = (el.chrome && el.chrome.fontSize) || 7;
     root.style.fontSize = (fs * (scale / 2.5)).toFixed(1) + "px";
     root.style.height = "100%";
@@ -1640,13 +1636,13 @@
     table.appendChild(colgroup);
 
     const thead = document.createElement("thead");
+    thead.className = "dg-date-head";
     const hr = document.createElement("tr");
     hr.style.height = headerPx.toFixed(2) + "px";
-    headers.forEach((h, hi) => {
+    headers.forEach((h) => {
       const th = document.createElement("th");
-      th.textContent = hi === 0 ? "\u00A0" : (h || DATA_GRID_EMPTY_DATE_HEADER);
+      th.textContent = String(h || "").trim() ? String(h) : "\u00A0";
       th.style.height = headerPx.toFixed(2) + "px";
-      if (hi === 0) th.className = "dg-lab-col";
       hr.appendChild(th);
     });
     thead.appendChild(hr);
