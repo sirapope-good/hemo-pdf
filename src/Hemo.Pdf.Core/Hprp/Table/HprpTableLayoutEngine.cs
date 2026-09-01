@@ -52,16 +52,28 @@ public static class HprpTableLayoutEngine
     {
         var rowMode = preset.RowMode.Trim().ToLowerInvariant();
         var freedomRows = ResolveFreedomRowCount(preset);
-        var slots = rowMode == HprpTableRowModes.Freedom
-            ? freedomRows
-            : Math.Max(1, preset.SlotsPerGroup);
-        var slotHeight = BudgetSlotHeight(boxHeightMm, rowMode, preset.GroupCount, slots, freedomRows);
-        var blockHeight = slotHeight * (rowMode == HprpTableRowModes.Freedom ? freedomRows : slots);
+        var matrixRows = rowMode == HprpTableRowModes.Matrix
+            ? CountMatrixVisualRows(data)
+            : 0;
+        var slots = rowMode switch
+        {
+            HprpTableRowModes.Freedom => freedomRows,
+            HprpTableRowModes.Matrix => Math.Max(1, matrixRows),
+            _ => Math.Max(1, preset.SlotsPerGroup),
+        };
+        var slotHeight = BudgetSlotHeight(boxHeightMm, rowMode, preset.GroupCount, slots, freedomRows, matrixRows);
+        var blockHeight = slotHeight * (rowMode switch
+        {
+            HprpTableRowModes.Freedom => freedomRows,
+            HprpTableRowModes.Matrix => Math.Max(1, matrixRows),
+            _ => slots,
+        });
 
         var headerLabels = BuildHeaderLabels(preset, labels, rowMode);
         var rows = rowMode switch
         {
             HprpTableRowModes.Freedom => BuildFreedomRows(preset, bindings, data, labels),
+            HprpTableRowModes.Matrix => BuildMatrixRows(preset, data),
             HprpTableRowModes.Monthly => BuildGroupedRows(preset, bindings, data, labels, preset.GroupCount, Math.Max(1, preset.SlotsPerGroup)),
             _ => BuildGroupedRows(preset, bindings, data, labels, Math.Max(1, preset.GroupCount), Math.Max(1, preset.SlotsPerGroup)),
         };
@@ -82,12 +94,23 @@ public static class HprpTableLayoutEngine
         string rowMode,
         int groupCount,
         int slotsPerGroup,
-        int freedomRowCount = 0)
+        int freedomRowCount = 0,
+        int matrixRowCount = 0)
     {
-        var available = Math.Max(0f, boxHeightMm - HeaderBarHeightMm);
+        // Matrix draws a 2-row header (year + month) inside the body; reserve ~10mm.
+        var headerReserve = rowMode == HprpTableRowModes.Matrix
+            ? HeaderBarHeightMm * 2f + 4f
+            : HeaderBarHeightMm;
+        var available = Math.Max(0f, boxHeightMm - headerReserve);
         if (rowMode == HprpTableRowModes.Freedom)
         {
             var rows = Math.Max(1, freedomRowCount > 0 ? freedomRowCount : slotsPerGroup);
+            return Math.Max(available / rows, MinSlotHeightMm);
+        }
+
+        if (rowMode == HprpTableRowModes.Matrix)
+        {
+            var rows = Math.Max(1, matrixRowCount > 0 ? matrixRowCount : slotsPerGroup);
             return Math.Max(available / rows, MinSlotHeightMm);
         }
 
@@ -109,7 +132,7 @@ public static class HprpTableLayoutEngine
         string rowMode)
     {
         var list = new List<string>();
-        if (rowMode != HprpTableRowModes.Freedom)
+        if (rowMode != HprpTableRowModes.Freedom && rowMode != HprpTableRowModes.Matrix)
         {
             list.Add(HprpLabels.Get(labels, preset.DateColumns.DateHeaderLabelKey ?? "colDate", "วัน/เดือน/ปี"));
         }
@@ -120,6 +143,113 @@ public static class HprpTableLayoutEngine
         }
 
         return list;
+    }
+
+    /// <summary>
+    /// Studio/PDF shared row model for matrix mode (item label + month marks).
+    /// Group header rows use <c>Kind = "group"</c> with a single spanning label cell.
+    /// </summary>
+    private static IReadOnlyList<HprpTableRowModel> BuildMatrixRows(
+        ResolvedTablePreset preset,
+        JsonElement? data)
+    {
+        _ = preset;
+        var rows = new List<HprpTableRowModel>();
+        if (data is not JsonElement root || root.ValueKind != JsonValueKind.Object)
+            return rows;
+
+        var monthCount = 0;
+        if (root.TryGetProperty("columns", out var cols) && cols.ValueKind == JsonValueKind.Array)
+            monthCount = cols.GetArrayLength();
+
+        if (!root.TryGetProperty("checklistItems", out var items) || items.ValueKind != JsonValueKind.Array)
+            return rows;
+
+        string? lastGroup = null;
+        var index = 0;
+        foreach (var item in items.EnumerateArray())
+        {
+            var group = item.TryGetProperty("group", out var g) && g.ValueKind == JsonValueKind.String
+                ? g.GetString()
+                : null;
+            if (!string.IsNullOrWhiteSpace(group) && group != lastGroup)
+            {
+                lastGroup = group;
+                rows.Add(new HprpTableRowModel
+                {
+                    Kind = "group",
+                    GroupIndex = index,
+                    SlotIndex = 0,
+                    GroupLabel = group,
+                    Cells =
+                    [
+                        new HprpTableCellModel { Text = group!, Center = false },
+                    ],
+                });
+            }
+
+            var label = item.TryGetProperty("label", out var lab) && lab.ValueKind == JsonValueKind.String
+                ? lab.GetString() ?? " "
+                : " ";
+            var cells = new List<HprpTableCellModel>
+            {
+                new() { Text = string.IsNullOrWhiteSpace(label) ? " " : label, Center = false },
+            };
+
+            if (item.TryGetProperty("marks", out var marks) && marks.ValueKind == JsonValueKind.Array)
+            {
+                foreach (var mark in marks.EnumerateArray())
+                {
+                    var text = mark.ValueKind == JsonValueKind.String ? mark.GetString() : null;
+                    cells.Add(new HprpTableCellModel
+                    {
+                        Text = string.IsNullOrWhiteSpace(text) ? " " : text!,
+                        Center = true,
+                    });
+                }
+            }
+
+            while (cells.Count < monthCount + 1)
+                cells.Add(new HprpTableCellModel { Text = " ", Center = true });
+
+            rows.Add(new HprpTableRowModel
+            {
+                Kind = "matrix",
+                GroupIndex = index,
+                SlotIndex = 0,
+                Cells = cells,
+            });
+            index++;
+        }
+
+        return rows;
+    }
+
+    private static int CountMatrixVisualRows(JsonElement? data)
+    {
+        if (data is not JsonElement root || root.ValueKind != JsonValueKind.Object)
+            return 8;
+
+        if (!root.TryGetProperty("checklistItems", out var items) || items.ValueKind != JsonValueKind.Array)
+            return 8;
+
+        var count = 0;
+        string? lastGroup = null;
+        foreach (var item in items.EnumerateArray())
+        {
+            var group = item.TryGetProperty("group", out var g) && g.ValueKind == JsonValueKind.String
+                ? g.GetString()
+                : null;
+            if (!string.IsNullOrWhiteSpace(group) && group != lastGroup)
+            {
+                lastGroup = group;
+                count++;
+            }
+
+            count++;
+        }
+
+        return Math.Max(1, count);
     }
 
     private static IReadOnlyList<HprpTableRowModel> BuildFreedomRows(

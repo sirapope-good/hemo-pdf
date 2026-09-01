@@ -46,7 +46,7 @@ Left pane: **Import / Export** primary; **Pack all** under Packages ⋯; Library
 
 Loading feedback: brand overlay spinner (`StudioUi.withBusy`) on open package / library item / save / reload / pack-all; list skeletons on package/library reload; A4 canvas skeleton while a pack opens.
 
-Scripts use `?v=ux-polish-8` cache-bust — hard refresh (Ctrl+F5) after pull.
+Scripts use `?v=ux-polish-9` cache-bust — hard refresh (Ctrl+F5) after pull.
 
 Top-left brand: inline HPRP wordmark logo (from `assets/icons/LOGO_HPRP.svg`, `currentColor` for dark chrome) — replaces the old title + hint paragraph.
 
@@ -91,13 +91,14 @@ Element type `page-of` (default band `super-footer`): format `{current} / {total
 
 ## Assets
 
-- Table presets: `assets/templates/presets/tables/hct-epo-annual-v1.json`, `copay-nhso-v1.json`, `copay-sso-v1.json`, `epo-drug-injections-v1.json`, **`progress-note-soap-v1.json`**
+- Table presets: `assets/templates/presets/tables/hct-epo-annual-v1.json`, `copay-nhso-v1.json`, `copay-sso-v1.json`, `epo-drug-injections-v1.json`, **`progress-note-soap-v1.json`**, **`progress-note-checklist-matrix-v1.json`** (`rowMode: matrix`)
+- Fragments: `progress-note-checklist-patient-v1`, `progress-note-checklist-matrix-v1`, `progress-note-checklist-notes-v1`, `progress-note-checklist-body-v1` (Library → Fragments — insertable pieces)
 - Header preset: `assets/templates/presets/headers/clinical-header-thaiur.json`
 - Adapter schema: `assets/templates/adapters/clinical-01-hct-epo.schema.json`, `clinical-02-epo-drug.schema.json`, `clinical-05-progress-note.schema.json`, `clinical-05-progress-note-checklist.schema.json`
 - Production clinical-01: `layoutMode: designer` (`assets/templates/reports/clinical-01-hct-epo/`)
 - Production clinical-02: `layoutMode: designer` — multi-item **box-text** meta + freedom injections table + shared co-pay duo
 - Production clinical-05 SOAP: `layoutMode: designer` — `clinical-header-thaiur` + **`config-table`** preset `progress-note-soap-v1` (`rowMode: freedom`, progress column `cellKind: soap-progress`) + page-of. Same library-table tools as HCT/EPO: column drag, freedom rows, detach/save preset; drag S/O/A/P band splitters (or edit `chrome.bandWeights`) for Objective height. PDF still draws Objective checkboxes via `Clinical05SoapTableSection.ComposeProgressCell`. Opening an old pack with dense `clinical.soap-table` auto-migrates to this config-table.
-- Production clinical-05 checklist: `layoutMode: designer` — **same** `clinical-header-thaiur` (scales to landscape width) + range + dense patient/grid/notes (+ page-of)
+- Production clinical-05 checklist (Default): `layoutMode: designer` — `clinical-header-thaiur` + range + dense patient + **`config-table`** `progress-note-checklist-matrix-v1` (`rowMode: matrix`, item × month) + dense text-notes (+ page-of). Dense `clinical.checklist-grid` auto-migrates to the matrix config-table. Reuse pieces from Library Fragments without forking annual/monthly.
 
 ## box-text multi-value
 

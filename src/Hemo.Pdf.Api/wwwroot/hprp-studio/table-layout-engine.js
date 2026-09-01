@@ -5,6 +5,7 @@
   const ROW_ANNUAL = "annual";
   const ROW_MONTHLY = "monthly";
   const ROW_FREEDOM = "freedom";
+  const ROW_MATRIX = "matrix";
   const CTX_ENTRY = "entry";
   const CTX_GROUP = "group-label";
   const CTX_FREEDOM = "freedom-row";
@@ -78,11 +79,31 @@
     return Math.max(1, p.freedomRowCount || 1);
   }
 
-  function budgetSlotHeight(boxHeightMm, rowMode, groupCount, slotsPerGroup, freeRows) {
-    const headerMm = 5;
+  function countMatrixVisualRows(data) {
+    const items = data && Array.isArray(data.checklistItems) ? data.checklistItems : [];
+    if (!items.length) return 8;
+    let count = 0;
+    let lastGroup = null;
+    items.forEach((item) => {
+      const group = item && item.group;
+      if (group && group !== lastGroup) {
+        lastGroup = group;
+        count++;
+      }
+      count++;
+    });
+    return Math.max(1, count);
+  }
+
+  function budgetSlotHeight(boxHeightMm, rowMode, groupCount, slotsPerGroup, freeRows, matrixRows) {
+    const headerMm = rowMode === ROW_MATRIX ? 14 : 5;
     const available = Math.max(0, boxHeightMm - headerMm);
     if (rowMode === ROW_FREEDOM) {
       const rows = Math.max(1, freeRows || slotsPerGroup || 1);
+      return Math.max(available / rows, 4);
+    }
+    if (rowMode === ROW_MATRIX) {
+      const rows = Math.max(1, matrixRows || slotsPerGroup || 1);
       return Math.max(available / rows, 4);
     }
     const groups = Math.max(1, groupCount);
@@ -105,16 +126,46 @@
     const bindings = (element && element.bindings) || [];
     const rowMode = (p.rowMode || ROW_ANNUAL).toLowerCase();
     const freeRows = freedomRowCount(p);
-    const slots = rowMode === ROW_FREEDOM ? freeRows : Math.max(1, p.slotsPerGroup);
-    const slotHeight = budgetSlotHeight(boxHeightMm, rowMode, p.groupCount, slots, freeRows);
+    const matrixRows = rowMode === ROW_MATRIX ? countMatrixVisualRows(data) : 0;
+    const slots = rowMode === ROW_FREEDOM
+      ? freeRows
+      : (rowMode === ROW_MATRIX ? Math.max(1, matrixRows) : Math.max(1, p.slotsPerGroup));
+    const slotHeight = budgetSlotHeight(boxHeightMm, rowMode, p.groupCount, slots, freeRows, matrixRows);
 
-    const headerLabels = rowMode === ROW_FREEDOM
+    const headerLabels = (rowMode === ROW_FREEDOM || rowMode === ROW_MATRIX)
       ? p.columns.map((c) => label(labels, c.labelKey, c.title || c.id))
       : [label(labels, p.dateColumns.dateHeaderLabelKey || "colDate", "วัน/เดือน/ปี")]
           .concat(p.columns.map((c) => label(labels, c.labelKey, c.title || c.id)));
 
     const rows = [];
-    if (rowMode === ROW_FREEDOM) {
+    if (rowMode === ROW_MATRIX) {
+      const items = data && Array.isArray(data.checklistItems) ? data.checklistItems : [];
+      const monthCount = data && Array.isArray(data.columns) ? data.columns.length : 0;
+      let lastGroup = null;
+      items.forEach((item, index) => {
+        const group = item && item.group;
+        if (group && group !== lastGroup) {
+          lastGroup = group;
+          rows.push({
+            kind: "group",
+            groupIndex: index,
+            slotIndex: 0,
+            groupLabel: group,
+            cells: [{ text: group, historical: false, center: false }],
+          });
+        }
+        const cells = [{ text: (item && item.label) || " ", historical: false, center: false }];
+        const marks = (item && Array.isArray(item.marks)) ? item.marks : [];
+        for (let m = 0; m < Math.max(monthCount, marks.length); m++) {
+          cells.push({
+            text: marks[m] != null && String(marks[m]) !== "" ? String(marks[m]) : " ",
+            historical: false,
+            center: true,
+          });
+        }
+        rows.push({ kind: "matrix", groupIndex: index, slotIndex: 0, groupLabel: null, cells });
+      });
+    } else if (rowMode === ROW_FREEDOM) {
       if (p.staticRows && p.staticRows.length) {
         p.staticRows.forEach((src, r) => {
           const cells = p.columns.map((col, ci) => ({
@@ -170,7 +221,9 @@
       preset: p,
       headerHeightMm: 5,
       slotHeightMm: slotHeight,
-      blockHeightMm: slotHeight * (rowMode === ROW_FREEDOM ? freeRows : Math.max(1, p.slotsPerGroup)),
+      blockHeightMm: slotHeight * (rowMode === ROW_FREEDOM || rowMode === ROW_MATRIX
+        ? Math.max(1, rows.length || slots)
+        : Math.max(1, p.slotsPerGroup)),
       headerLabels,
       rows,
     };
@@ -184,5 +237,6 @@
     ROW_ANNUAL,
     ROW_MONTHLY,
     ROW_FREEDOM,
+    ROW_MATRIX,
   };
 })(window);

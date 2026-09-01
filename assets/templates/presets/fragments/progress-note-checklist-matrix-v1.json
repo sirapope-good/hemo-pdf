@@ -1,0 +1,21 @@
+{
+  "id": "progress-note-checklist-matrix-v1",
+  "displayName": "Progress note checklist · matrix",
+  "tags": ["clinical", "progress-note", "checklist", "matrix"],
+  "elements": [
+    {
+      "id": "grid",
+      "type": "config-table",
+      "band": "content",
+      "presetId": "progress-note-checklist-matrix-v1",
+      "place": "below",
+      "box": { "xMm": 0, "yMm": 0, "wMm": 269, "hMm": 118 },
+      "chrome": {
+        "headerFill": "#E8EEF5",
+        "border": "thin",
+        "fontSize": 9,
+        "columnWidths": ["46mm", "*"]
+      }
+    }
+  ]
+}

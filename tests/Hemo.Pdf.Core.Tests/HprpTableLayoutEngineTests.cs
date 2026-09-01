@@ -127,6 +127,48 @@ public class HprpTableLayoutEngineTests
     }
 
     [Fact]
+    public void ValidateDesignerPackage_PassesForClinical05ChecklistMatrix()
+    {
+        var dir = Path.Combine(HprpTestAssets.TemplatesRoot(), "reports", "clinical-05-progress-note-checklist");
+        var manifest = JsonSerializer.Deserialize<HprpManifest>(
+            File.ReadAllText(Path.Combine(dir, "manifest.json")),
+            HprpJson.Options)!;
+        var layout = JsonSerializer.Deserialize<HprpLayout>(
+            File.ReadAllText(Path.Combine(dir, "layout.json")),
+            HprpJson.Options)!;
+
+        var package = new HprpPackage { Manifest = manifest, Layout = layout };
+        var result = HprpValidator.Validate(package);
+
+        Assert.True(result.IsValid, string.Join("; ", result.Errors));
+        var grid = Assert.Single(layout.Elements!, e => e.Id == "grid");
+        Assert.Equal(HprpDesignerElementTypes.ConfigTable, grid.Type);
+        Assert.Equal("progress-note-checklist-matrix-v1", grid.PresetId);
+    }
+
+    [Fact]
+    public void Build_MatrixMode_BuildsItemRowsFromChecklistSample()
+    {
+        var samplePath = Path.Combine(
+            HprpTestAssets.TemplatesRoot(),
+            "reports",
+            "clinical-05-progress-note-checklist",
+            "sample.json");
+        using var doc = JsonDocument.Parse(File.ReadAllText(samplePath));
+        var preset = new HprpTablePreset
+        {
+            Id = "progress-note-checklist-matrix-v1",
+            RowMode = HprpTableRowModes.Matrix,
+            Columns = [new HprpTableColumnDef { Id = "item", Title = "Item", Weight = 1.6f }],
+        };
+        var resolved = HprpTablePresetResolver.Resolve(preset);
+        var model = HprpTableLayoutEngine.Build(resolved, [], new Dictionary<string, string>(), doc.RootElement, 118f);
+
+        Assert.Contains(model.Rows, r => r.Kind == "matrix" && r.Cells[0].Text == "General symptoms");
+        Assert.Contains(model.Rows, r => r.Kind == "group" && r.GroupLabel == "Volume status");
+    }
+
+    [Fact]
     public void ValidateDesignerPackage_PassesForClinical05SoapConfigTable()
     {
         var dir = Path.Combine(HprpTestAssets.TemplatesRoot(), "reports", "clinical-05-progress-note");

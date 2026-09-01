@@ -561,6 +561,48 @@
     return changed;
   }
 
+  function clinical05ChecklistMatrixElement(gridChrome) {
+    const chrome = Object.assign({
+      headerFill: "#E8EEF5",
+      border: "thin",
+      fontSize: 9,
+      columnWidths: ["46mm", "*"],
+    }, gridChrome || {});
+    if (!chrome.columnWidths) chrome.columnWidths = ["46mm", "*"];
+    return {
+      id: "grid",
+      type: "config-table",
+      band: "content",
+      presetId: "progress-note-checklist-matrix-v1",
+      place: "below",
+      box: { xMm: 0, yMm: 0, wMm: 269, hMm: 118 },
+      chrome: chrome,
+    };
+  }
+
+  /** Upgrade legacy dense clinical.checklist-grid → config-table matrix preset. */
+  function migrateDenseChecklistGridToConfigTable() {
+    ensureElements();
+    const layout = stateRef.draft.layout;
+    const els = layout.elements || [];
+    const denseIdx = els.findIndex((e) =>
+      e
+      && e.type === "dense"
+      && String(e.widget || "").toLowerCase() === "clinical.checklist-grid");
+    if (denseIdx < 0) return false;
+
+    const dense = els[denseIdx];
+    const replacement = clinical05ChecklistMatrixElement(dense.chrome);
+    replacement.id = dense.id || "grid";
+    replacement.box = Object.assign({}, dense.box || replacement.box);
+    replacement.place = dense.place || "below";
+    replacement.band = dense.band || "content";
+    els[denseIdx] = replacement;
+    layout.elements = els;
+    if (setStatusRef) setStatusRef("อัปเกรด dense checklist-grid → config-table matrix แล้ว", "ok");
+    return true;
+  }
+
   function clinical05SoapConfigTableElement(soapChrome) {
     const chrome = Object.assign({
       border: "thin",
@@ -628,7 +670,8 @@
     if (hasThaiUr) return false;
 
     const contentW = String((layout.page && layout.page.orientation) || "").toLowerCase() === "landscape" ? 269 : 206;
-    const denseAndNotes = els.filter((e) => e && (e.type === "dense" || e.type === "page-of"));
+    const keepBody = els.filter((e) =>
+      e && (e.type === "dense" || e.type === "page-of" || e.type === "config-table"));
     const rangeEl = els.find((e) => e && e.type === "box-text" && e.bind === "$.rangeLabel");
     const codeEl = els.find((e) => e && e.type === "box-text" && e.bind === "$.reportCodeValue");
 
@@ -668,9 +711,9 @@
       }),
     ];
 
-    denseAndNotes.forEach((e) => {
+    keepBody.forEach((e) => {
       next.push(Object.assign({}, e, {
-        box: Object.assign({}, e.box, { wMm: e.type === "page-of" ? contentW : contentW }),
+        box: Object.assign({}, e.box, { wMm: contentW }),
       }));
     });
 
@@ -695,6 +738,7 @@
       migrateLegacyDenseCopay();
       migrateChecklistToThaiUrHeader();
       migrateDenseSoapToConfigTable();
+      migrateDenseChecklistGridToConfigTable();
       reflowElements();
       return false;
     }
@@ -811,15 +855,7 @@
           place: "below",
           box: { xMm: 0, yMm: 0, wMm: 269, hMm: 16 },
         },
-        {
-          id: "grid",
-          type: "dense",
-          band: "content",
-          widget: "clinical.checklist-grid",
-          place: "below",
-          box: { xMm: 0, yMm: 0, wMm: 269, hMm: 118 },
-          chrome: gridChrome,
-        },
+        clinical05ChecklistMatrixElement(gridChrome),
         {
           id: "text-notes",
           type: "dense",
@@ -1224,10 +1260,19 @@
         }
         if (el.type === "config-table") {
           const catalogOrInline = resolveTablePreset(el);
-          if (catalogOrInline && global.TableLayoutEngine) {
-            const preset = ensureWorkingPreset(el, catalogOrInline);
-            const model = global.TableLayoutEngine.buildLayout(preset, el, labels, sampleData, item.hMm);
-            body.appendChild(renderTableHtml(model, el, scale, item.hMm));
+          if (catalogOrInline) {
+            const rowMode = String((catalogOrInline.rowMode
+              || (el.tablePreset && el.tablePreset.rowMode)
+              || "")).toLowerCase();
+            if (rowMode === "matrix") {
+              body.appendChild(renderChecklistGridHtml(el, sampleData, scale));
+            } else if (global.TableLayoutEngine) {
+              const preset = ensureWorkingPreset(el, catalogOrInline);
+              const model = global.TableLayoutEngine.buildLayout(preset, el, labels, sampleData, item.hMm);
+              body.appendChild(renderTableHtml(model, el, scale, item.hMm));
+            } else {
+              body.innerHTML = `<div class="ph-dense">config-table</div>`;
+            }
           } else {
             body.innerHTML = `<div class="ph-dense">config-table</div>`;
           }
@@ -3080,7 +3125,7 @@
     const rowModeLabel = document.createElement("label");
     rowModeLabel.textContent = "Row mode";
     const rowModeSel = document.createElement("select");
-    ["annual", "monthly", "freedom"].forEach((m) => {
+    ["annual", "monthly", "freedom", "matrix"].forEach((m) => {
       const opt = document.createElement("option");
       opt.value = m;
       opt.textContent = m;
@@ -3095,6 +3140,37 @@
     });
     rowModeLabel.appendChild(rowModeSel);
     insp.appendChild(rowModeLabel);
+
+    if (String(working.rowMode || "").toLowerCase() === "matrix") {
+      const tip = document.createElement("p");
+      tip.className = "muted";
+      tip.textContent =
+        "Matrix (item × month) — ใช้ BoundModel checklist · ปรับ chrome.fontSize / columnWidths (เช่น 46mm,*) ได้ · Library: progress-note-checklist-matrix-v1";
+      insp.appendChild(tip);
+
+      el.chrome = mergeTableChrome(el);
+      const labelW = document.createElement("label");
+      labelW.textContent = "Label column (mm)";
+      const labelIn = document.createElement("input");
+      labelIn.type = "number";
+      labelIn.min = "20";
+      labelIn.max = "120";
+      const widths = (el.chrome && el.chrome.columnWidths) || ["46mm", "*"];
+      const first = String(widths[0] || "46mm");
+      const mmMatch = first.match(/^([0-9.]+)mm$/i);
+      labelIn.value = String(mmMatch ? Number(mmMatch[1]) : 46);
+      labelIn.addEventListener("change", () => {
+        if (canvasTools) canvasTools.pushHistory();
+        const mm = Math.max(20, Number(labelIn.value) || 46);
+        el.chrome = mergeTableChrome(el);
+        el.chrome.columnWidths = [mm + "mm", "*"];
+        if (working.chrome) working.chrome.columnWidths = el.chrome.columnWidths.slice();
+        commitWorking(el, working);
+        renderAll();
+      });
+      labelW.appendChild(labelIn);
+      insp.appendChild(labelW);
+    }
 
     if (String(working.rowMode || "").toLowerCase() === "freedom") {
       const freeLab = document.createElement("label");

@@ -48,15 +48,16 @@
     },
     {
       "id": "grid",
-      "type": "dense",
+      "type": "config-table",
       "band": "content",
-      "widget": "clinical.checklist-grid",
+      "presetId": "progress-note-checklist-matrix-v1",
       "place": "below",
       "box": { "xMm": 0, "yMm": 54, "wMm": 269, "hMm": 118 },
       "chrome": {
         "headerFill": "#E8EEF5",
         "border": "thin",
-        "fontSize": 9
+        "fontSize": 9,
+        "columnWidths": ["46mm", "*"]
       }
     },
     {

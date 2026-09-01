@@ -1,0 +1,15 @@
+{
+  "id": "progress-note-checklist-patient-v1",
+  "displayName": "Progress note checklist · patient",
+  "tags": ["clinical", "progress-note", "checklist"],
+  "elements": [
+    {
+      "id": "patient",
+      "type": "dense",
+      "band": "content",
+      "widget": "clinical.checklist-patient",
+      "place": "below",
+      "box": { "xMm": 0, "yMm": 0, "wMm": 269, "hMm": 16 }
+    }
+  ]
+}

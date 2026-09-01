@@ -1,0 +1,22 @@
+{
+  "id": "progress-note-checklist-matrix-v1",
+  "displayName": "Progress note checklist matrix",
+  "tags": ["clinical", "progress-note", "checklist", "matrix"],
+  "rowMode": "matrix",
+  "columns": [
+    {
+      "id": "item",
+      "labelKey": "colItem",
+      "title": "Item",
+      "weight": 1.6,
+      "center": false,
+      "cellKind": "text"
+    }
+  ],
+  "chrome": {
+    "headerFill": "#E8EEF5",
+    "border": "thin",
+    "fontSize": 9,
+    "columnWidths": ["46mm", "*"]
+  }
+}

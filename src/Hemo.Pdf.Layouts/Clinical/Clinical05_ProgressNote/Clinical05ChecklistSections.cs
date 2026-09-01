@@ -1,3 +1,5 @@
+using System.Globalization;
+using Hemo.Pdf.Core.Hprp;
 using Hemo.Pdf.Core.Models.Clinical;
 using QuestPDF.Fluent;
 using QuestPDF.Helpers;
@@ -42,45 +44,59 @@ public static class Clinical05ChecklistSections
         });
     }
 
-    public static void ComposeChecklistGridSection(IContainer container, Clinical05ProgressNoteChecklistReportViewModel vm)
+    public static void ComposeChecklistGridSection(
+        IContainer container,
+        Clinical05ProgressNoteChecklistReportViewModel vm,
+        HprpChrome? chrome = null)
     {
+        var titleSize = chrome?.FontSize is > 0 and < 48
+            ? chrome.FontSize.Value + 2f
+            : SectionTitleFontSize;
         container.Column(col =>
         {
-            col.Item().Text("Check lists").FontSize(SectionTitleFontSize).Bold();
-            col.Item().PaddingTop(1, Mm).Element(c => ComposeChecklistGrid(c, vm));
+            col.Item().Text("Check lists").FontSize(titleSize).Bold();
+            col.Item().PaddingTop(1, Mm).Element(c => ComposeChecklistGrid(c, vm, chrome));
         });
     }
 
-    public static void ComposeChecklistGrid(IContainer container, Clinical05ProgressNoteChecklistReportViewModel vm)
+    public static void ComposeChecklistGrid(
+        IContainer container,
+        Clinical05ProgressNoteChecklistReportViewModel vm,
+        HprpChrome? chrome = null)
     {
         var monthCount = vm.Columns.Count;
         if (monthCount == 0 || vm.ChecklistItems.Count == 0)
         {
-            container.Text("No progress note data available for the selected range.").FontSize(FontSize);
+            container.Text("No progress note data available for the selected range.")
+                .FontSize(ResolveFontSize(chrome));
             return;
         }
+
+        var labelMm = ResolveLabelColumnMm(chrome);
+        var fontSize = ResolveFontSize(chrome);
 
         container.Table(table =>
         {
             table.ColumnsDefinition(columns =>
             {
-                columns.ConstantColumn(LabelColumnMm, Mm);
+                columns.ConstantColumn(labelMm, Mm);
                 for (var i = 0; i < monthCount; i++)
                     columns.RelativeColumn();
             });
 
-            table.Cell().Element(HeaderCell).Text(string.Empty);
+            table.Cell().Element(c => HeaderCell(c, fontSize)).Text(string.Empty);
             foreach (var span in vm.YearSpans)
             {
                 if (span.ColSpan <= 1)
-                    table.Cell().Element(HeaderCell).AlignCenter().Text(span.Year.ToString());
+                    table.Cell().Element(c => HeaderCell(c, fontSize)).AlignCenter().Text(span.Year.ToString());
                 else
-                    table.Cell().ColumnSpan((uint)span.ColSpan).Element(HeaderCell).AlignCenter().Text(span.Year.ToString());
+                    table.Cell().ColumnSpan((uint)span.ColSpan).Element(c => HeaderCell(c, fontSize)).AlignCenter()
+                        .Text(span.Year.ToString());
             }
 
-            table.Cell().Element(HeaderCell).Text("Item");
+            table.Cell().Element(c => HeaderCell(c, fontSize)).Text("Item");
             foreach (var column in vm.Columns)
-                table.Cell().Element(HeaderCell).AlignCenter().Text(column.CalendarMonth.ToString());
+                table.Cell().Element(c => HeaderCell(c, fontSize)).AlignCenter().Text(column.CalendarMonth.ToString());
 
             string? lastGroup = null;
             foreach (var item in vm.ChecklistItems)
@@ -88,12 +104,12 @@ public static class Clinical05ChecklistSections
                 if (!string.IsNullOrWhiteSpace(item.Group) && item.Group != lastGroup)
                 {
                     lastGroup = item.Group;
-                    table.Cell().ColumnSpan((uint)(monthCount + 1)).Element(GroupCell).Text(item.Group!);
+                    table.Cell().ColumnSpan((uint)(monthCount + 1)).Element(c => GroupCell(c, fontSize)).Text(item.Group!);
                 }
 
-                table.Cell().Element(BodyCell).Text(item.Label);
+                table.Cell().Element(c => BodyCell(c, fontSize)).Text(item.Label);
                 foreach (var mark in item.Marks)
-                    table.Cell().Element(BodyCell).AlignCenter().Text(mark ?? string.Empty);
+                    table.Cell().Element(c => BodyCell(c, fontSize)).AlignCenter().Text(mark ?? string.Empty);
             }
         });
     }
@@ -126,6 +142,30 @@ public static class Clinical05ChecklistSections
         });
     }
 
+    private static float ResolveFontSize(HprpChrome? chrome) =>
+        chrome?.FontSize is > 0 and < 48 ? chrome.FontSize.Value : FontSize;
+
+    private static float ResolveLabelColumnMm(HprpChrome? chrome)
+    {
+        var raw = chrome?.ColumnWidths?.FirstOrDefault();
+        if (string.IsNullOrWhiteSpace(raw))
+            return LabelColumnMm;
+
+        var token = raw.Trim();
+        if (token.EndsWith("mm", StringComparison.OrdinalIgnoreCase)
+            && float.TryParse(
+                token[..^2],
+                NumberStyles.Float,
+                CultureInfo.InvariantCulture,
+                out var mm)
+            && mm > 0)
+        {
+            return mm;
+        }
+
+        return LabelColumnMm;
+    }
+
     private static void LabelValue(TextDescriptor text, string label, string value)
     {
         text.Span(label).Bold().FontSize(FontSize);
@@ -139,11 +179,24 @@ public static class Clinical05ChecklistSections
             .Padding(CellPaddingMm, Mm)
             .DefaultTextStyle(x => x.FontSize(FontSize));
 
-    private static IContainer HeaderCell(IContainer container) =>
-        Cell(container).DefaultTextStyle(x => x.FontSize(FontSize).Bold());
+    private static IContainer HeaderCell(IContainer container, float fontSize) =>
+        container
+            .Border(0.5f)
+            .BorderColor(Colors.Black)
+            .Padding(CellPaddingMm, Mm)
+            .DefaultTextStyle(x => x.FontSize(fontSize).Bold());
 
-    private static IContainer BodyCell(IContainer container) => Cell(container);
+    private static IContainer BodyCell(IContainer container, float fontSize) =>
+        container
+            .Border(0.5f)
+            .BorderColor(Colors.Black)
+            .Padding(CellPaddingMm, Mm)
+            .DefaultTextStyle(x => x.FontSize(fontSize));
 
-    private static IContainer GroupCell(IContainer container) =>
-        Cell(container).DefaultTextStyle(x => x.FontSize(FontSize).Bold());
+    private static IContainer GroupCell(IContainer container, float fontSize) =>
+        container
+            .Border(0.5f)
+            .BorderColor(Colors.Black)
+            .Padding(CellPaddingMm, Mm)
+            .DefaultTextStyle(x => x.FontSize(fontSize).Bold());
 }

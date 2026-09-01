@@ -8,11 +8,18 @@ public static class HprpTableRowModes
     public const string Monthly = "monthly";
     public const string Annual = "annual";
 
+    /// <summary>
+    /// Item × month cross-tab (e.g. progress-note Default checklist).
+    /// Time on the X axis; rows are checklist items (not month groups).
+    /// </summary>
+    public const string Matrix = "matrix";
+
     public static readonly IReadOnlySet<string> All = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
     {
         Freedom,
         Monthly,
         Annual,
+        Matrix,
     };
 }
 

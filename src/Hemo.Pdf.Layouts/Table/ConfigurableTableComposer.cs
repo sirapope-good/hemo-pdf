@@ -30,6 +30,12 @@ public static class ConfigurableTableComposer
             return;
         }
 
+        if (rowMode == HprpTableRowModes.Matrix)
+        {
+            ComposeMatrix(container, chrome, boundModel);
+            return;
+        }
+
         container.Column(col =>
         {
             col.Item().Element(c => ComposeHeader(c, model, bw, chrome));
@@ -43,6 +49,22 @@ public static class ConfigurableTableComposer
                 col.Item().Element(c => ComposeGroupBlock(c, group.ToList(), model, bw, chrome));
             }
         });
+    }
+
+    private static void ComposeMatrix(
+        IContainer container,
+        HprpChrome? chrome,
+        object? boundModel)
+    {
+        if (boundModel is Clinical05ProgressNoteChecklistReportViewModel checklist)
+        {
+            Clinical05ChecklistSections.ComposeChecklistGridSection(container, checklist, chrome);
+            return;
+        }
+
+        container.Border(0.5f).Padding(2)
+            .Text("Checklist matrix — bind clinical-05 checklist sample")
+            .FontSize(8);
     }
 
     private static void ComposeHeader(
