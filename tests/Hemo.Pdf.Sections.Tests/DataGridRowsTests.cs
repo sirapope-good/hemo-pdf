@@ -8,6 +8,7 @@ public class DataGridRowsTests
     public void IsSectionBand_WhenOnlyFirstCellHasText()
     {
         Assert.True(DataGridRows.IsSectionBand(["1 Month", "", ""]));
+        Assert.True(DataGridRows.IsSectionBand(["3 Month", "", "", "", "", "", "", ""]));
         Assert.False(DataGridRows.IsSectionBand(["Hb", "11.2", ""]));
         Assert.False(DataGridRows.IsSectionBand(["", "", ""]));
         Assert.False(DataGridRows.IsSectionBand(["1 Month"]));

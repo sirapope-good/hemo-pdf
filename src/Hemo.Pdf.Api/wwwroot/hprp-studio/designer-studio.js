@@ -1572,6 +1572,16 @@
     host.appendChild(stack);
   }
 
+  /** Mirrors DataGridRows.IsSectionBand (C#) — first cell only, rest empty. */
+  function isDataGridSectionBand(row) {
+    if (!row || row.length < 2) return false;
+    if (!String(row[0] || "").trim()) return false;
+    for (let i = 1; i < row.length; i++) {
+      if (row[i] != null && String(row[i]).trim() !== "") return false;
+    }
+    return true;
+  }
+
   function renderDataGridHtml(el, data, scale, boxHeightMm) {
     const root = document.createElement("div");
     root.className = "cfg-table" + (borderOn(el.chrome) ? "" : " cfg-no-border");
@@ -1621,14 +1631,24 @@
     table.appendChild(thead);
 
     const tbody = document.createElement("tbody");
+    const bandFill = String(fill).indexOf("$") !== 0 ? fill : null;
     rows.forEach((row) => {
       const tr = document.createElement("tr");
       tr.style.height = slotPx.toFixed(2) + "px";
-      headers.forEach((_, i) => {
+      if (isDataGridSectionBand(row)) {
+        tr.className = "dg-section-band";
         const td = document.createElement("td");
-        td.textContent = (row[i] != null && String(row[i]).trim() !== "") ? String(row[i]) : "\u00A0";
+        td.colSpan = headers.length;
+        td.textContent = String(row[0]).trim();
+        if (bandFill) td.style.background = bandFill;
         tr.appendChild(td);
-      });
+      } else {
+        headers.forEach((_, i) => {
+          const td = document.createElement("td");
+          td.textContent = (row[i] != null && String(row[i]).trim() !== "") ? String(row[i]) : "\u00A0";
+          tr.appendChild(td);
+        });
+      }
       tbody.appendChild(tr);
     });
     table.appendChild(tbody);

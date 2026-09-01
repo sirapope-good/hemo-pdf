@@ -739,6 +739,13 @@ button.tb-icon {
   text-align: center;
 }
 
+.cfg-table-grid tr.dg-section-band td {
+  background: #c8b8e8;
+  font-weight: 600;
+  text-align: left;
+  white-space: nowrap;
+}
+
 .cfg-table td.historical {
   color: #888;
 }

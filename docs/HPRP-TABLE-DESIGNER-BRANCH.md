@@ -46,7 +46,7 @@ Left pane: **Import / Export** primary; **Pack all** under Packages ⋯; Library
 
 Loading feedback: brand overlay spinner (`StudioUi.withBusy`) on open package / library item / save / reload / pack-all; list skeletons on package/library reload; A4 canvas skeleton while a pack opens.
 
-Scripts use `?v=ux-polish-14` cache-bust — hard refresh (Ctrl+F5) after pull.
+Scripts use `?v=ux-polish-15` cache-bust — hard refresh (Ctrl+F5) after pull.
 
 Top-left brand: inline HPRP wordmark logo (from `assets/icons/LOGO_HPRP.svg`, `currentColor` for dark chrome) — replaces the old title + hint paragraph.
 
@@ -136,6 +136,7 @@ Designer element `type: "data-grid"` — bound rows + column headers (not config
 | Inspector | Per-column token inputs + **Sync to column count** (normalize tokens) |
 | Canvas | Drag vertical splitters between header cells to resize columns |
 | Insert | **Insert → Data grid** adds a default lab matrix block |
+| Section bands | Rows with label only in column 1 (`1 Month`, `3 Month`, …) merge all columns + light header fill (PDF + Studio) |
 
 ## Library tab + recovery
 
