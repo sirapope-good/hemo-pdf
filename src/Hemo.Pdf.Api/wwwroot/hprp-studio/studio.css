@@ -474,6 +474,11 @@ button.tb-icon {
   color: rgba(61, 156, 240, 0.7);
 }
 
+.designer-band-guide.band-guide-outline-only {
+  color: transparent;
+  font-size: 0;
+}
+
 .designer-band-guide.band-super {
   border-color: rgba(220, 140, 40, 0.55);
   color: rgba(200, 120, 30, 0.9);
@@ -737,6 +742,10 @@ button.tb-icon {
   background: #c8b8e8;
   font-weight: 600;
   text-align: center;
+}
+
+.cfg-table-grid th.dg-lab-col {
+  background: #c8b8e8;
 }
 
 .cfg-table-grid tr.dg-section-band td {

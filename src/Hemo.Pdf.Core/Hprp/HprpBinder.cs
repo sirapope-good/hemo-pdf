@@ -363,6 +363,8 @@ public static class HprpBinder
             }
         }
 
+        headers = HprpDataGridColumnPlan.NormalizeLabColumnHeaders(headers).ToList();
+
         var rows = new List<IReadOnlyList<string>>();
         foreach (var item in table.Value.EnumerateArray())
         {

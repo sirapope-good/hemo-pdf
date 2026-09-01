@@ -1242,6 +1242,18 @@
     el.chrome.columnWidths = weights.map((w, i) => formatDataGridWeightToken(w, prev[i]));
   }
 
+  const DATA_GRID_EMPTY_DATE_HEADER = "DATE";
+
+  function normalizeDataGridHeaders(headers) {
+    if (!headers || !headers.length) return [""];
+    const out = headers.map((h) => (h == null ? "" : String(h)));
+    out[0] = "";
+    for (let i = 1; i < out.length; i++) {
+      if (!String(out[i]).trim()) out[i] = DATA_GRID_EMPTY_DATE_HEADER;
+    }
+    return out;
+  }
+
   function resolveDataGridModel(el, data) {
     let headers = Array.isArray(el.columnHeaders) ? el.columnHeaders.slice() : [];
     if (!headers.length && el.columnHeadersBind) {
@@ -1259,14 +1271,14 @@
           return;
         }
         if (item != null && typeof item === "object") {
-          if (!headers.length) headers = Object.keys(item);
-          rows.push(headers.map((h) => (item[h] == null ? "" : String(item[h]))));
+          rows.push(Object.values(item).map((cell) => (cell == null ? "" : String(cell))));
         }
       });
     }
     if (!headers.length && rows.length) {
-      headers = rows[0].map((_, i) => (i === 0 ? "" : "DATE"));
+      headers = rows[0].map((_, i) => (i === 0 ? "" : DATA_GRID_EMPTY_DATE_HEADER));
     }
+    headers = normalizeDataGridHeaders(headers);
     return { headers, rows };
   }
 
@@ -1365,7 +1377,7 @@
         sheet.appendChild(g);
       }
       addBandGuide("header", flow.headerH || 0);
-      addBandGuide("content", flow.contentFlowH || 0, "band-content");
+      addBandGuide("content", flow.contentFlowH || 0, "band-content band-guide-outline-only");
       addBandGuide("footer", flow.footerH || 0);
       if (flow.superFooterH > 0) {
         const g = document.createElement("div");
@@ -1630,10 +1642,11 @@
     const thead = document.createElement("thead");
     const hr = document.createElement("tr");
     hr.style.height = headerPx.toFixed(2) + "px";
-    headers.forEach((h) => {
+    headers.forEach((h, hi) => {
       const th = document.createElement("th");
-      th.textContent = h || "\u00A0";
+      th.textContent = hi === 0 ? "\u00A0" : (h || DATA_GRID_EMPTY_DATE_HEADER);
       th.style.height = headerPx.toFixed(2) + "px";
+      if (hi === 0) th.className = "dg-lab-col";
       hr.appendChild(th);
     });
     thead.appendChild(hr);

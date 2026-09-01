@@ -11,6 +11,28 @@ public static class HprpDataGridColumnPlan
     /// <summary>Default lab layout: narrow first column + equal flexible date columns.</summary>
     public static readonly string[] DefaultLabTokens = ["3", "*"];
 
+    /// <summary>Placeholder for unfilled DATE columns (matches clinical-07 matrix).</summary>
+    public const string EmptyDateHeaderLabel = "DATE";
+
+    /// <summary>
+    /// Lab grid DATE row: column 0 is always blank; empty date slots show <see cref="EmptyDateHeaderLabel"/>.
+    /// </summary>
+    public static IReadOnlyList<string> NormalizeLabColumnHeaders(IReadOnlyList<string>? headers)
+    {
+        if (headers is not { Count: > 0 })
+            return headers ?? [];
+
+        var result = headers.ToList();
+        result[0] = "";
+        for (var i = 1; i < result.Count; i++)
+        {
+            if (string.IsNullOrWhiteSpace(result[i]))
+                result[i] = EmptyDateHeaderLabel;
+        }
+
+        return result;
+    }
+
     /// <summary>
     /// Resolves <paramref name="columnWidths"/> into <paramref name="columnCount"/> relative weights.
     /// When token count matches column count, uses exact parse (same as <see cref="HprpChrome.ParseColumnWeights"/>).
