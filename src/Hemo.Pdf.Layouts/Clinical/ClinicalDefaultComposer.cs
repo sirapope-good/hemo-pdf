@@ -102,7 +102,11 @@ public sealed class ClinicalDefaultComposer : BaseReportComposer<HprpBoundViewMo
             return block;
 
         var rowHeightMm = BudgetLabRowHeightMm(grid.Rows.Count + 1, page.Vertical);
-        return new DataGridReportBlock
+        return ApplyRowHeightToGrid(grid, rowHeightMm);
+    }
+
+    internal static DataGridReportBlock ApplyRowHeightToGrid(DataGridReportBlock grid, float rowHeightMm) =>
+        new()
         {
             Title = grid.Title,
             Columns = grid.Columns,
@@ -111,6 +115,14 @@ public sealed class ClinicalDefaultComposer : BaseReportComposer<HprpBoundViewMo
             Chrome = WithRowHeight(grid.Chrome, rowHeightMm),
             Box = grid.Box,
         };
+
+    /// <summary>Splits available height across header + body rows (designer content box or composition band).</summary>
+    internal static float BudgetRowHeightForTable(int tableRowCount, float availableHeightMm)
+    {
+        if (tableRowCount <= 0)
+            return MinLabRowHeightMm;
+
+        return Math.Max(availableHeightMm / tableRowCount, MinLabRowHeightMm);
     }
 
     private static HprpChrome WithRowHeight(HprpChrome? chrome, float rowHeightMm) =>
@@ -138,9 +150,6 @@ public sealed class ClinicalDefaultComposer : BaseReportComposer<HprpBoundViewMo
             - ThaiUrSectionSpacingMm
             - LayoutSafetyMm;
 
-        if (tableRowCount <= 0)
-            return MinLabRowHeightMm;
-
-        return Math.Max(availableMm / tableRowCount, MinLabRowHeightMm);
+        return BudgetRowHeightForTable(tableRowCount, availableMm);
     }
 }

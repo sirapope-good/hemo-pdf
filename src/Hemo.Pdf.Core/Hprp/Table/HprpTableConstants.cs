@@ -67,6 +67,9 @@ public static class HprpDesignerElementTypes
     /// <summary>Column (or future row) container; children stack in <c>direction</c>.</summary>
     public const string Group = "group";
 
+    /// <summary>Bound tabular block (<c>bindRows</c> / <c>columnHeadersBind</c>) — clinical lab matrix.</summary>
+    public const string DataGrid = "data-grid";
+
     public static readonly IReadOnlySet<string> All = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
     {
         Header,
@@ -75,6 +78,7 @@ public static class HprpDesignerElementTypes
         PageOf,
         Dense,
         Group,
+        DataGrid,
     };
 }
 

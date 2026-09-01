@@ -857,6 +857,10 @@
       && (packId.indexOf("clinical-05-progress-note") === 0
         || adapter === "clinical-05-progress-note"
         || body.some((n) => n && n.widget === "clinical.soap-table"));
+    const isClinical07 =
+      packId.indexOf("clinical-07-lab") === 0
+      || adapter === "clinical-07-lab"
+      || body.some((n) => n && n.type === "data-grid" && n.bindRows);
 
     if (isClinical01 && layout.elements.length === 0) {
       layout.elements = [
@@ -965,6 +969,46 @@
           text: "Page {current} of {total}",
           align: "right",
           chrome: { border: "none", fontSize: 8 },
+        },
+      ];
+    } else if (isClinical07 && layout.elements.length === 0) {
+      const gridNode = body.find((n) => n && n.type === "data-grid") || {};
+      const gridChrome = gridNode.chrome || {
+        headerFill: "$branding.sectionHeaderBackground",
+        border: "thin",
+        fontSize: 7,
+        columnWidths: ["3", "*", "*", "*", "*", "*", "*"],
+      };
+      const marginMm = Number((layout.page && layout.page.marginMm) || 8);
+      const contentW = Math.max(10, 210 - 2 * marginMm);
+      layout.page = Object.assign({
+        size: "A4",
+        orientation: "portrait",
+        marginMm: marginMm,
+        spacingMode: "custom",
+        spacingMm: 0,
+        spacingBelowMm: 0,
+        spacingBesideMm: 0,
+        border: "none",
+      }, layout.page || {});
+      layout.elements = [
+        {
+          id: "hdr",
+          type: "header",
+          band: "header",
+          preset: "clinical-header-thaiur",
+          place: "below",
+          box: { xMm: 0, yMm: 0, wMm: contentW, hMm: 27 },
+        },
+        {
+          id: "lab-grid",
+          type: "data-grid",
+          band: "content",
+          place: "below",
+          bindRows: gridNode.bindRows || "$.rows",
+          columnHeadersBind: gridNode.columnHeadersBind || "$.columnHeaders",
+          box: { xMm: 0, yMm: 0, wMm: contentW, hMm: 254 },
+          chrome: JSON.parse(JSON.stringify(gridChrome)),
         },
       ];
     }
@@ -1117,6 +1161,67 @@
       .replace(/</g, "&lt;")
       .replace(/>/g, "&gt;")
       .replace(/"/g, "&quot;");
+  }
+
+  function readJsonPathRaw(data, path) {
+    if (!data || !path) return null;
+    let p = String(path).trim();
+    if (p.startsWith("$.")) p = p.slice(2);
+    else if (p.startsWith("$")) p = p.slice(1).replace(/^\./, "");
+    const parts = p.split(".").filter(Boolean);
+    let cur = data;
+    for (let i = 0; i < parts.length; i++) {
+      if (cur == null || typeof cur !== "object") return null;
+      cur = cur[parts[i]];
+    }
+    return cur;
+  }
+
+  function parseDataGridColumnWeights(columnWidths, columnCount) {
+    const tokens = (columnWidths || []).slice();
+    if (!columnCount || tokens.length !== columnCount) {
+      return Array(Math.max(1, columnCount || 1)).fill(1);
+    }
+    const weights = [];
+    for (let i = 0; i < columnCount; i++) {
+      let token = String(tokens[i] || "").trim();
+      if (!token || token === "*") {
+        weights.push(1);
+        continue;
+      }
+      if (token.toLowerCase().endsWith("mm")) token = token.slice(0, -2).trim();
+      const n = Number(token);
+      weights.push(Number.isFinite(n) && n > 0 ? n : 1);
+    }
+    return weights;
+  }
+
+  function resolveDataGridModel(el, data) {
+    let headers = Array.isArray(el.columnHeaders) ? el.columnHeaders.slice() : [];
+    if (!headers.length && el.columnHeadersBind) {
+      const bound = readJsonPathRaw(data, el.columnHeadersBind);
+      if (Array.isArray(bound)) {
+        headers = bound.map((h) => (h == null ? "" : String(h)));
+      }
+    }
+    const rawRows = readJsonPathRaw(data, el.bindRows);
+    const rows = [];
+    if (Array.isArray(rawRows)) {
+      rawRows.forEach((item) => {
+        if (Array.isArray(item)) {
+          rows.push(item.map((cell) => (cell == null ? "" : String(cell))));
+          return;
+        }
+        if (item != null && typeof item === "object") {
+          if (!headers.length) headers = Object.keys(item);
+          rows.push(headers.map((h) => (item[h] == null ? "" : String(item[h]))));
+        }
+      });
+    }
+    if (!headers.length && rows.length) {
+      headers = rows[0].map((_, i) => (i === 0 ? "" : "DATE"));
+    }
+    return { headers, rows };
   }
 
   function borderOn(chrome) {
@@ -1393,6 +1498,8 @@
           }
         } else if (el.type === "dense") {
           body.appendChild(renderDenseWidgetHtml(el, sampleData, scale, item.hMm, labels));
+        } else if (el.type === "data-grid") {
+          body.appendChild(renderDataGridHtml(el, sampleData, scale, item.hMm));
         } else {
           body.innerHTML = `<div class="ph-dense">${escapeHtml(el.type)}: ${escapeHtml(el.widget || el.id)}</div>`;
         }
@@ -1417,6 +1524,69 @@
     }
 
     host.appendChild(stack);
+  }
+
+  function renderDataGridHtml(el, data, scale, boxHeightMm) {
+    const root = document.createElement("div");
+    root.className = "cfg-table" + (borderOn(el.chrome) ? "" : " cfg-no-border");
+    const fill = (el.chrome && el.chrome.headerFill) || "#E8EEF5";
+    if (String(fill).indexOf("$") !== 0) root.style.background = fill;
+    const fs = (el.chrome && el.chrome.fontSize) || 7;
+    root.style.fontSize = (fs * (scale / 2.5)).toFixed(1) + "px";
+    root.style.height = "100%";
+
+    const model = resolveDataGridModel(el, data);
+    const headers = model.headers.length ? model.headers : [""];
+    const rows = model.rows.length ? model.rows : [headers.map(() => "")];
+    const weights = parseDataGridColumnWeights(el.chrome && el.chrome.columnWidths, headers.length);
+    const sum = weights.reduce((a, b) => a + b, 0) || 1;
+    const bodyRowCount = rows.length;
+    const boxPx = Math.max(0, Number(boxHeightMm) || 0) * scale;
+    let headerPx = Math.max(4, (boxPx / (bodyRowCount + 1)) || 4);
+    let slotPx = Math.max(3, headerPx);
+    if (boxPx > 0) {
+      headerPx = Math.max(4, boxPx / (bodyRowCount + 1));
+      slotPx = headerPx;
+    }
+
+    const table = document.createElement("table");
+    table.className = "cfg-table-grid";
+    table.style.height = boxPx > 0 ? boxPx.toFixed(2) + "px" : "100%";
+
+    const colgroup = document.createElement("colgroup");
+    weights.forEach((w) => {
+      const col = document.createElement("col");
+      col.style.width = ((w / sum) * 100).toFixed(3) + "%";
+      colgroup.appendChild(col);
+    });
+    table.appendChild(colgroup);
+
+    const thead = document.createElement("thead");
+    const hr = document.createElement("tr");
+    hr.style.height = headerPx.toFixed(2) + "px";
+    headers.forEach((h) => {
+      const th = document.createElement("th");
+      th.textContent = h || "\u00A0";
+      th.style.height = headerPx.toFixed(2) + "px";
+      hr.appendChild(th);
+    });
+    thead.appendChild(hr);
+    table.appendChild(thead);
+
+    const tbody = document.createElement("tbody");
+    rows.forEach((row) => {
+      const tr = document.createElement("tr");
+      tr.style.height = slotPx.toFixed(2) + "px";
+      headers.forEach((_, i) => {
+        const td = document.createElement("td");
+        td.textContent = (row[i] != null && String(row[i]).trim() !== "") ? String(row[i]) : "\u00A0";
+        tr.appendChild(td);
+      });
+      tbody.appendChild(tr);
+    });
+    table.appendChild(tbody);
+    root.appendChild(table);
+    return root;
   }
 
   /**
@@ -2882,6 +3052,9 @@
     if (el.type === "config-table") {
       renderTableInspector(insp, el);
     }
+    if (el.type === "data-grid") {
+      renderDataGridInspector(insp, el);
+    }
     if (el.type === "header") {
       renderHeaderInspector(insp, el);
     }
@@ -3433,6 +3606,39 @@
       renderAll();
     });
     insp.appendChild(load);
+  }
+
+  function renderDataGridInspector(insp, el) {
+    const tip = document.createElement("p");
+    tip.className = "muted";
+    tip.textContent = "Lab matrix — bindRows / columnHeadersBind จาก DTO · ปรับ columnWidths รายคอลัมน์ใน Phase 2";
+    insp.appendChild(tip);
+
+    [["bindRows", el.bindRows || ""], ["columnHeadersBind", el.columnHeadersBind || ""]].forEach(([label, val]) => {
+      const lab = document.createElement("label");
+      lab.textContent = label + " (read-only)";
+      const inp = document.createElement("input");
+      inp.type = "text";
+      inp.readOnly = true;
+      inp.value = val;
+      lab.appendChild(inp);
+      insp.appendChild(lab);
+    });
+
+    const fsLab = document.createElement("label");
+    fsLab.textContent = "fontSize";
+    const fsIn = document.createElement("input");
+    fsIn.type = "number";
+    fsIn.step = "0.5";
+    fsIn.value = String((el.chrome && el.chrome.fontSize) || 7);
+    fsIn.addEventListener("change", () => {
+      if (canvasTools) canvasTools.pushHistory();
+      el.chrome = el.chrome || {};
+      el.chrome.fontSize = Number(fsIn.value) || 7;
+      renderAll();
+    });
+    fsLab.appendChild(fsIn);
+    insp.appendChild(fsLab);
   }
 
   function renderTableInspector(insp, el) {

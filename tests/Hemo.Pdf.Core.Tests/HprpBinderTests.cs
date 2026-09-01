@@ -451,7 +451,10 @@ public class HprpPackageAndStoreTests
         var package = HprpPackageReader.ReadDirectory(dir);
         Assert.Equal(ClinicalReportCatalog.Lab, package.Manifest.Id);
         Assert.True(HprpValidator.Validate(package).IsValid);
-        Assert.NotEmpty(package.Layout.Body);
+        Assert.True(HprpLayoutModes.IsDesigner(package.Manifest));
+        Assert.Contains(
+            package.Layout.Elements,
+            e => string.Equals(e.Type, "data-grid", StringComparison.OrdinalIgnoreCase));
     }
 
     [Fact]

@@ -178,6 +178,28 @@ public sealed class HprpDesignerElement
     [JsonPropertyName("omitWhenEmpty")]
     public string? OmitWhenEmpty { get; init; }
 
+    /// <summary>JSON path to row data for <c>data-grid</c> e.g. <c>$.rows</c>.</summary>
+    [JsonPropertyName("bindRows")]
+    public string? BindRows { get; init; }
+
+    /// <summary>Static column headers when not using <see cref="ColumnHeadersBind"/>.</summary>
+    [JsonPropertyName("columnHeaders")]
+    public IReadOnlyList<string>? ColumnHeaders { get; init; }
+
+    /// <summary>JSON path to column headers e.g. <c>$.columnHeaders</c>.</summary>
+    [JsonPropertyName("columnHeadersBind")]
+    public string? ColumnHeadersBind { get; init; }
+
+    /// <summary>Maps designer <c>data-grid</c> onto a composition layout node for <see cref="HprpBinder"/>.</summary>
+    public HprpLayoutNode ToLayoutNode() => new()
+    {
+        Type = HprpDesignerElementTypes.DataGrid,
+        BindRows = BindRows,
+        ColumnHeaders = ColumnHeaders,
+        ColumnHeadersBind = ColumnHeadersBind,
+        Chrome = Chrome,
+    };
+
     public HprpDesignerElement WithBox(HprpDesignerBox box) => Clone(box: box);
 
     public HprpDesignerElement WithBoxAndChildren(HprpDesignerBox box, IReadOnlyList<HprpDesignerElement> children) =>
@@ -209,5 +231,8 @@ public sealed class HprpDesignerElement
         Direction = Direction,
         Children = children ?? Children,
         OmitWhenEmpty = OmitWhenEmpty,
+        BindRows = BindRows,
+        ColumnHeaders = ColumnHeaders,
+        ColumnHeadersBind = ColumnHeadersBind,
     };
 }

@@ -1,5 +1,6 @@
 using System.Text.Json;
 using Hemo.Pdf.Core.Context;
+using Hemo.Pdf.Core.Hprp.Table;
 using Hemo.Pdf.Core.Models.Preview;
 
 namespace Hemo.Pdf.Core.Hprp;
@@ -78,6 +79,13 @@ public static class HprpBinder
             _ => null,
         };
     }
+
+    /// <summary>Binds a designer <c>data-grid</c> element into a <see cref="DataGridReportBlock"/>.</summary>
+    public static DataGridReportBlock? BindDesignerDataGrid(
+        HprpDesignerElement element,
+        JsonElement? data,
+        IReadOnlyDictionary<string, string> labels) =>
+        BindDataGrid(element.ToLayoutNode(), data, labels);
 
     private static ReportBlock? BindWidget(
         HprpLayoutNode node,

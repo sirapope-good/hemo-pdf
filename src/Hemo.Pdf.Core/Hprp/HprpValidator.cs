@@ -196,7 +196,7 @@ public static class HprpValidator
 
             var type = el.Type?.Trim() ?? "";
             if (!Hprp.Table.HprpDesignerElementTypes.All.Contains(type))
-                errors.Add($"{path}.type must be header, config-table, box-text, page-of, dense, or group.");
+                errors.Add($"{path}.type must be header, config-table, box-text, page-of, dense, data-grid, or group.");
 
             if (el.Box.WMm <= 0 || el.Box.HMm <= 0)
                 errors.Add($"{path}.box wMm/hMm must be > 0.");
@@ -238,6 +238,12 @@ public static class HprpValidator
                 && (string.IsNullOrWhiteSpace(el.Widget) || !HprpWidgetIds.All.Contains(el.Widget)))
             {
                 errors.Add($"{path}.widget must be a known widget id for dense elements.");
+            }
+
+            if (string.Equals(type, Hprp.Table.HprpDesignerElementTypes.DataGrid, StringComparison.OrdinalIgnoreCase)
+                && string.IsNullOrWhiteSpace(el.BindRows))
+            {
+                errors.Add($"{path}.bindRows is required for data-grid.");
             }
         }
     }

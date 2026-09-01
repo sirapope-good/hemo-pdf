@@ -1,5 +1,6 @@
 using Hemo.Pdf.Core.Constants;
 using Hemo.Pdf.Core.Hprp;
+using Hemo.Pdf.Core.Hprp.Table;
 using Hemo.Pdf.Core.Models.Hemosheet;
 using Hemo.Pdf.Layouts.Hprp;
 using Hemo.Pdf.Sections.Hemosheet;
@@ -61,7 +62,8 @@ public class HprpDialysisHeadersTests
     public void LabTemplate_HasDataGridChrome()
     {
         var package = HprpPackageReader.ReadDirectory(HprpTestAssets.PackageDir(ClinicalReportCatalog.Lab));
-        var grid = package.Layout.Body.Single(n => n.Type == "data-grid");
+        var grid = package.Layout.Elements.Single(e =>
+            string.Equals(e.Type, HprpDesignerElementTypes.DataGrid, StringComparison.OrdinalIgnoreCase));
         Assert.Equal(HprpChrome.BrandingHeaderFill, grid.Chrome?.HeaderFill);
         Assert.Equal("thin", grid.Chrome?.Border);
         Assert.True(HprpValidator.Validate(package).IsValid);

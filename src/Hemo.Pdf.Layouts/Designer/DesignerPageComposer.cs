@@ -5,9 +5,12 @@ using Hemo.Pdf.Core.Hprp.Table;
 using Hemo.Pdf.Core.Models;
 using Hemo.Pdf.Core.Models.Clinical;
 using Hemo.Pdf.Core.Models.Hemosheet;
+using Hemo.Pdf.Core.Models.Preview;
 using Hemo.Pdf.Layouts.Absolute;
+using Hemo.Pdf.Layouts.Clinical;
 using Hemo.Pdf.Layouts.Header;
 using Hemo.Pdf.Layouts.Table;
+using Hemo.Pdf.Sections.Content;
 using Hemo.Pdf.Sections.ThaiUr;
 using QuestPDF.Fluent;
 using QuestPDF.Helpers;
@@ -20,7 +23,6 @@ public static class DesignerPageComposer
 {
     public static object Compose(DesignerCanvasViewModel vm, PdfReportContext context)
     {
-        _ = context;
         var landscape = vm.Landscape;
         var slices = vm.Pages.Count > 0
             ? vm.Pages
@@ -61,7 +63,7 @@ public static class DesignerPageComposer
                                 .Height(Math.Max(1f, box.HMm), Unit.Millimetre)
                                 .TranslateX(Math.Max(0, box.XMm), Unit.Millimetre)
                                 .TranslateY(Math.Max(0, box.YMm), Unit.Millimetre)
-                                .Element(inner => DrawElement(inner, element, vm));
+                                .Element(inner => DrawElement(inner, element, vm, context));
                         }
                     }));
                 });
@@ -72,7 +74,8 @@ public static class DesignerPageComposer
     private static void DrawElement(
         IContainer container,
         HprpDesignerElement element,
-        DesignerCanvasViewModel vm)
+        DesignerCanvasViewModel vm,
+        PdfReportContext context)
     {
         var type = element.Type?.Trim().ToLowerInvariant() ?? "";
 
@@ -84,6 +87,10 @@ public static class DesignerPageComposer
 
             case HprpDesignerElementTypes.ConfigTable:
                 DrawConfigTable(container, element, vm);
+                break;
+
+            case HprpDesignerElementTypes.DataGrid:
+                DrawDataGrid(container, element, vm, context);
                 break;
 
             case HprpDesignerElementTypes.BoxText:
@@ -98,6 +105,28 @@ public static class DesignerPageComposer
                 DrawDense(container, element, vm);
                 break;
         }
+    }
+
+    private static void DrawDataGrid(
+        IContainer container,
+        HprpDesignerElement element,
+        DesignerCanvasViewModel vm,
+        PdfReportContext context)
+    {
+        var grid = HprpBinder.BindDesignerDataGrid(element, vm.Data, vm.Labels);
+        if (grid is null || grid.Columns.Count == 0)
+        {
+            container.Border(0.5f).Padding(2)
+                .Text("Missing data-grid bind")
+                .FontSize(8);
+            return;
+        }
+
+        var rowHeightMm = ClinicalDefaultComposer.BudgetRowHeightForTable(
+            grid.Rows.Count + 1,
+            element.Box.HMm);
+        var drawn = ClinicalDefaultComposer.ApplyRowHeightToGrid(grid, rowHeightMm);
+        ReportBlockPdfComposer.Compose(container, drawn, context);
     }
 
     private static void DrawHeader(

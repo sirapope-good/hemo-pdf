@@ -1,21 +1,35 @@
 {
   "page": {
     "size": "A4",
-    "marginMm": 8
+    "orientation": "portrait",
+    "marginMm": 8,
+    "spacingMode": "custom",
+    "spacingMm": 0,
+    "spacingBelowMm": 0,
+    "spacingBesideMm": 0,
+    "border": "none"
   },
-  "header": {
-    "widget": "thaiur.header"
-  },
-  "body": [
+  "elements": [
     {
+      "id": "hdr",
+      "type": "header",
+      "band": "header",
+      "preset": "clinical-header-thaiur",
+      "place": "below",
+      "box": { "xMm": 0, "yMm": 0, "wMm": 194, "hMm": 27 }
+    },
+    {
+      "id": "lab-grid",
       "type": "data-grid",
-      "columnHeadersBind": "$.columnHeaders",
+      "band": "content",
+      "place": "below",
       "bindRows": "$.rows",
+      "columnHeadersBind": "$.columnHeaders",
+      "box": { "xMm": 0, "yMm": 0, "wMm": 194, "hMm": 254 },
       "chrome": {
         "headerFill": "$branding.sectionHeaderBackground",
         "border": "thin",
         "fontSize": 7,
-        "rowHeightMm": 5,
         "columnWidths": ["3", "*", "*", "*", "*", "*", "*"]
       }
     }
