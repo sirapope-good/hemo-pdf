@@ -1,8 +1,9 @@
 {
   "id": "clinical-05-progress-note-checklist",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "displayName": "Hemodialysis Progress note",
   "engineVersion": 1,
+  "layoutMode": "designer",
   "dataAdapter": "clinical-05-progress-note-checklist",
   "requiresSignature": false,
   "language": "en",

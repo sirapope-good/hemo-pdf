@@ -1,0 +1,29 @@
+{
+  "dataAdapter": "clinical-05-progress-note-checklist",
+  "displayName": "Clinical-05 Progress note (checklist)",
+  "fields": [
+    { "path": "title", "label": "Title", "type": "string" },
+    { "path": "reportCodeValue", "label": "Report code", "type": "string" },
+    { "path": "fromYearMonth", "label": "From year-month", "type": "string" },
+    { "path": "toYearMonth", "label": "To year-month", "type": "string" },
+    { "path": "rangeLabel", "label": "Range label", "type": "string" },
+    {
+      "path": "patient",
+      "label": "Patient",
+      "type": "object",
+      "children": [
+        { "path": "patient.name", "label": "Name", "type": "string" },
+        { "path": "patient.hospitalNumber", "label": "HN", "type": "string" }
+      ]
+    },
+    {
+      "path": "checklistItems",
+      "label": "Checklist items",
+      "type": "array",
+      "children": [
+        { "path": "checklistItems[].label", "label": "Item label", "type": "string" },
+        { "path": "checklistItems[].group", "label": "Group", "type": "string" }
+      ]
+    }
+  ]
+}

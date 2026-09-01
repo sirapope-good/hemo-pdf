@@ -93,9 +93,11 @@ Element type `page-of` (default band `super-footer`): format `{current} / {total
 
 - Table presets: `assets/templates/presets/tables/hct-epo-annual-v1.json`, `copay-nhso-v1.json`, `copay-sso-v1.json`, `epo-drug-injections-v1.json`
 - Header preset: `assets/templates/presets/headers/clinical-header-thaiur.json`
-- Adapter schema: `assets/templates/adapters/clinical-01-hct-epo.schema.json`, `clinical-02-epo-drug.schema.json`
+- Adapter schema: `assets/templates/adapters/clinical-01-hct-epo.schema.json`, `clinical-02-epo-drug.schema.json`, `clinical-05-progress-note.schema.json`, `clinical-05-progress-note-checklist.schema.json`
 - Production clinical-01: `layoutMode: designer` (`assets/templates/reports/clinical-01-hct-epo/`)
 - Production clinical-02: `layoutMode: designer` — multi-item **box-text** meta + freedom injections table + shared co-pay duo
+- Production clinical-05 SOAP: `layoutMode: designer` — `clinical-header-thaiur` + dense `clinical.soap-table` (+ page-of)
+- Production clinical-05 checklist: `layoutMode: designer` — landscape box-text title band + dense patient/grid/text-notes (+ page-of)
 
 ## box-text multi-value
 

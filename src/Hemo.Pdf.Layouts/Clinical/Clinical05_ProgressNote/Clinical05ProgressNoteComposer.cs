@@ -1,7 +1,10 @@
+using System.Text.Json;
 using Hemo.Pdf.Core.Abstractions;
 using Hemo.Pdf.Core.Context;
 using Hemo.Pdf.Core.Hprp;
+using Hemo.Pdf.Core.Models;
 using Hemo.Pdf.Core.Models.Clinical;
+using Hemo.Pdf.Layouts.Designer;
 using Hemo.Pdf.Layouts.Hprp;
 using Hemo.Pdf.Rendering;
 using Hemo.Pdf.Sections.ThaiUr;
@@ -12,7 +15,8 @@ namespace Hemo.Pdf.Layouts.Clinical.Clinical05_ProgressNote;
 
 /// <summary>
 /// Dense QuestPDF layout for clinical-05: repeating header from <c>layout.header</c>,
-/// body widgets from <c>layout.body</c> (SOAP table).
+/// body widgets from <c>layout.body</c> (SOAP table). Designer packs use
+/// <see cref="DesignerPageComposer"/> (header preset + dense soap-table).
 /// </summary>
 public sealed class Clinical05ProgressNoteComposer : ILayoutComposer
 {
@@ -25,16 +29,42 @@ public sealed class Clinical05ProgressNoteComposer : ILayoutComposer
 
     private readonly Clinical05SoapTableSection _table = new();
     private readonly IHprpTemplateStore? _templates;
+    private readonly IHprpTablePresetCatalog? _presets;
+    private readonly IHprpHeaderPresetCatalog? _headerPresets;
 
     public Clinical05ProgressNoteComposer(IHprpTemplateStore? templates = null)
+        : this(templates, null, null)
+    {
+    }
+
+    public Clinical05ProgressNoteComposer(
+        IHprpTemplateStore? templates,
+        IHprpTablePresetCatalog? presets,
+        IHprpHeaderPresetCatalog? headerPresets)
     {
         _templates = templates;
+        _presets = presets;
+        _headerPresets = headerPresets;
     }
 
     public object Compose(object dataModel, PdfReportContext context)
     {
         var vm = (Clinical05ProgressNoteReportViewModel)dataModel;
         var package = HprpLayoutPlan.TryGetPackage(_templates, context);
+
+        if (package is not null && HprpLayoutModes.IsDesigner(package.Manifest))
+        {
+            JsonElement? data = context.Data is JsonElement je ? je : null;
+            var designerVm = DesignerCanvasViewModel.FromPackage(
+                package,
+                data,
+                HprpLabelResolver.Resolve(_templates, context),
+                _presets?.LoadAll(),
+                _headerPresets?.LoadAll(),
+                boundModel: vm);
+            return DesignerPageComposer.Compose(designerVm, context);
+        }
+
         var page = HprpPageLayout.FromPackage(
             package,
             HprpPageFallback.Uniform(HemosheetThaiUrStyle.PageMarginMm, SectionSpacingMm));

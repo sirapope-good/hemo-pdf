@@ -90,6 +90,8 @@ public class HprpPackAndStoreTests
 
         if (expectSections)
             Assert.NotEmpty(again.Layout.Sections);
+        else if (HprpLayoutModes.IsDesigner(again.Manifest))
+            Assert.NotEmpty(again.Layout.Elements);
         else
             Assert.True(
                 (again.Layout.Body?.Count ?? 0) > 0 || again.Layout.Header is not null,

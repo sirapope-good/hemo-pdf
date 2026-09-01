@@ -27,12 +27,19 @@ public sealed class DesignerCanvasViewModel
     public IReadOnlyDictionary<string, HprpHeaderPreset> HeaderPresets { get; init; } =
         new Dictionary<string, HprpHeaderPreset>(StringComparer.OrdinalIgnoreCase);
 
+    /// <summary>
+    /// Typed report model for <c>type: dense</c> hosts (e.g. clinical-05 SOAP / checklist).
+    /// When null, dense fall back to JSON readers such as <see cref="ReadHctEpo"/>.
+    /// </summary>
+    public object? BoundModel { get; init; }
+
     public static DesignerCanvasViewModel FromPackage(
         HprpPackage package,
         JsonElement? data = null,
         IReadOnlyDictionary<string, string>? labels = null,
         IReadOnlyDictionary<string, HprpTablePreset>? presets = null,
-        IReadOnlyDictionary<string, HprpHeaderPreset>? headerPresets = null)
+        IReadOnlyDictionary<string, HprpHeaderPreset>? headerPresets = null,
+        object? boundModel = null)
     {
         var page = HprpPageLayout.FromPackage(package, HprpPageFallback.Uniform(2f, 0f));
         var landscape = string.Equals(
@@ -70,6 +77,7 @@ public sealed class DesignerCanvasViewModel
             Presets = presets ?? new Dictionary<string, HprpTablePreset>(StringComparer.OrdinalIgnoreCase),
             HeaderPresets = headerPresets
                 ?? new Dictionary<string, HprpHeaderPreset>(StringComparer.OrdinalIgnoreCase),
+            BoundModel = boundModel,
         };
     }
 

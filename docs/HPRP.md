@@ -66,7 +66,9 @@ WYSIWYG path on branch `feat/hprp-table-designer` — **does not replace** compo
 | Studio | tree + Page canvas + Preview pane | **3-column**: palette · HTML canvas · inspector (no preview pane) |
 | Table | fixed C# widget (`clinical.hct-epo-annual-table`) | preset `hct-epo-annual-v1` + bindings + column overrides |
 | PDF | section composers | shared `HprpTableLayoutEngine` → `ConfigurableTableComposer` |
-| Sample pack | `clinical-01-hct-epo` | `clinical-01-hct-epo` / `clinical-02-epo-drug` |
+| Sample pack | `clinical-01-hct-epo` | `clinical-01-hct-epo` / `clinical-02-epo-drug` / `clinical-05-progress-note` (+ checklist) |
+
+**Dense on designer canvas (clinical-05):** SOAP keeps `type: "dense"` + `widget: "clinical.soap-table"` (nested S/O/A/P pixels stay in C#). Checklist uses dense `clinical.checklist-patient` / `clinical.checklist-grid` / `clinical.checklist-text-notes` plus box-text title band. Row height for SOAP is budgeted from the placed `hMm` box (~2 session rows).
 
 **Preset library:** `assets/templates/presets/tables/{id}.json` — reusable table chrome + columns + row mode (`freedom` | `monthly` | `annual`). Studio API: `GET/PUT /api/hprp/presets/tables/{id}`.
 
@@ -118,7 +120,7 @@ Hemosheet **Place beside stays off** — sections remain a vertical stack.
 
 #### Manual smoke checklist (Designer)
 
-1. Open a **body** package (e.g. `clinical-04-prescription`) and a **sections** package (e.g. `clinical-03-hemodialysis-record` / `clinical-05-progress-note`).
+1. Open a **designer** package (e.g. `clinical-01-hct-epo`, `clinical-05-progress-note`) and a **composition** package (e.g. `clinical-03-hemodialysis-record` / `clinical-04-prescription`).
 2. Confirm Page canvas lists the same nodes as the structure tree; reorder → Preview PDF updates.
 3. **Download PDF** — file opens and matches the Preview iframe.
 4. **Export .hprp** → **Import .hprp** the same file → draft restores; Validate OK.

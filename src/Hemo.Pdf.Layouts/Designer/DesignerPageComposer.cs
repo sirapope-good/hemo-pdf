@@ -3,6 +3,7 @@ using Hemo.Pdf.Core.Hprp;
 using Hemo.Pdf.Core.Hprp.Header;
 using Hemo.Pdf.Core.Hprp.Table;
 using Hemo.Pdf.Core.Models;
+using Hemo.Pdf.Core.Models.Clinical;
 using Hemo.Pdf.Core.Models.Hemosheet;
 using Hemo.Pdf.Layouts.Absolute;
 using Hemo.Pdf.Layouts.Header;
@@ -110,14 +111,44 @@ public static class DesignerPageComposer
             var model = HprpHeaderLayoutEngine.Build(
                 preset,
                 vm.Data,
-                vm.ReadHctEpo()?.Title ?? vm.Title);
+                ResolveReportTitle(vm));
             ConfigurableHeaderComposer.Compose(container, model);
             return;
         }
 
         var header = vm.ReadHeader() ?? new HemosheetReportViewModel();
-        var title = vm.ReadHctEpo()?.Title ?? vm.Title;
-        ThaiUrReportHeader.Compose(container, header, title);
+        ThaiUrReportHeader.Compose(container, header, ResolveReportTitle(vm));
+    }
+
+    private static string ResolveReportTitle(DesignerCanvasViewModel vm)
+    {
+        if (vm.BoundModel is Clinical05ProgressNoteReportViewModel soap
+            && !string.IsNullOrWhiteSpace(soap.Title))
+        {
+            return soap.Title;
+        }
+
+        if (vm.BoundModel is Clinical05ProgressNoteChecklistReportViewModel checklist
+            && !string.IsNullOrWhiteSpace(checklist.Title))
+        {
+            return checklist.Title;
+        }
+
+        var fromHct = vm.ReadHctEpo()?.Title;
+        if (!string.IsNullOrWhiteSpace(fromHct))
+            return fromHct!;
+
+        if (vm.Data is System.Text.Json.JsonElement json
+            && json.ValueKind == System.Text.Json.JsonValueKind.Object
+            && json.TryGetProperty("title", out var titleEl)
+            && titleEl.ValueKind == System.Text.Json.JsonValueKind.String)
+        {
+            var title = titleEl.GetString();
+            if (!string.IsNullOrWhiteSpace(title))
+                return title!;
+        }
+
+        return vm.Title;
     }
 
     private static HprpHeaderPreset? ResolveHeaderPreset(
@@ -182,9 +213,9 @@ public static class DesignerPageComposer
 
         var canvas = new AbsoluteCanvasViewModel
         {
-            Title = vm.Title,
+            Title = ResolveReportTitle(vm),
             Page = vm.Page,
-            BoundModel = vm.ReadHctEpo(),
+            BoundModel = vm.BoundModel ?? vm.ReadHctEpo(),
             Labels = vm.Labels,
         };
 

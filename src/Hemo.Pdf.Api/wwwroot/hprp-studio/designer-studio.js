@@ -573,11 +573,21 @@
     }
 
     const body = layout.body || [];
+    const packId = String(manifest.id || "");
+    const adapter = String(manifest.dataAdapter || "");
     const hasAnnual = body.some((n) => n && n.widget === "clinical.hct-epo-annual-table");
     const isClinical01 =
-      String(manifest.id || "").indexOf("clinical-01-hct-epo") === 0
-      || String(manifest.dataAdapter || "") === "clinical-01-hct-epo"
+      packId.indexOf("clinical-01-hct-epo") === 0
+      || adapter === "clinical-01-hct-epo"
       || hasAnnual;
+    const isProgressChecklist =
+      packId.indexOf("clinical-05-progress-note-checklist") === 0
+      || adapter === "clinical-05-progress-note-checklist";
+    const isProgressSoap =
+      !isProgressChecklist
+      && (packId.indexOf("clinical-05-progress-note") === 0
+        || adapter === "clinical-05-progress-note"
+        || body.some((n) => n && n.widget === "clinical.soap-table"));
 
     if (isClinical01 && layout.elements.length === 0) {
       layout.elements = [
@@ -600,6 +610,121 @@
           chrome: { border: "thin", headerFill: "$branding.sectionHeaderBackground" },
         },
       ].concat(clinical01CopayPieces());
+    } else if (isProgressSoap && layout.elements.length === 0) {
+      const soapChrome = (body.find((n) => n && n.widget === "clinical.soap-table") || {}).chrome || {
+        columnWidths: ["18mm", "2.4", "1.1", "1.1"],
+        bandWeights: [1, 2.5, 1, 1],
+      };
+      layout.page = Object.assign({ size: "A4", orientation: "portrait", marginMm: 2, spacingMode: "custom", spacingMm: 2 }, layout.page || {});
+      layout.elements = [
+        {
+          id: "hdr",
+          type: "header",
+          band: "header",
+          preset: "clinical-header-thaiur",
+          place: "below",
+          box: { xMm: 0, yMm: 0, wMm: 206, hMm: 27 },
+        },
+        {
+          id: "soap",
+          type: "dense",
+          band: "content",
+          widget: "clinical.soap-table",
+          place: "below",
+          box: { xMm: 0, yMm: 0, wMm: 206, hMm: 255 },
+          chrome: Object.assign({ border: "thin", headerFill: "$branding.sectionHeaderBackground" }, soapChrome),
+        },
+        {
+          id: "page-of",
+          type: "page-of",
+          band: "super-footer",
+          place: "below",
+          box: { xMm: 2, yMm: 292, wMm: 206, hMm: 5 },
+          text: "{current} / {total}",
+          align: "center",
+          chrome: { border: "none", fontSize: 8 },
+        },
+      ];
+    } else if (isProgressChecklist && layout.elements.length === 0) {
+      const gridChrome = (body.find((n) => n && n.widget === "clinical.checklist-grid") || {}).chrome || {
+        headerFill: "#E8EEF5",
+        border: "thin",
+        fontSize: 9,
+      };
+      layout.page = Object.assign({
+        size: "A4",
+        orientation: "landscape",
+        marginMm: 14,
+        spacingMode: "custom",
+        spacingMm: 3,
+      }, layout.page || {});
+      layout.elements = [
+        {
+          id: "report-code",
+          type: "box-text",
+          band: "header",
+          place: "below",
+          box: { xMm: 0, yMm: 0, wMm: 269, hMm: 5 },
+          bind: "$.reportCodeValue",
+          align: "right",
+          chrome: { border: "none", headerFill: "#ffffff", fontSize: 10 },
+        },
+        {
+          id: "title",
+          type: "box-text",
+          band: "header",
+          place: "below",
+          box: { xMm: 0, yMm: 0, wMm: 269, hMm: 7 },
+          bind: "$.title",
+          align: "center",
+          chrome: { border: "none", headerFill: "#ffffff", fontSize: 14 },
+        },
+        {
+          id: "range",
+          type: "box-text",
+          band: "header",
+          place: "below",
+          box: { xMm: 0, yMm: 0, wMm: 269, hMm: 5 },
+          bind: "$.rangeLabel",
+          align: "center",
+          chrome: { border: "none", headerFill: "#ffffff", fontSize: 10 },
+        },
+        {
+          id: "patient",
+          type: "dense",
+          band: "content",
+          widget: "clinical.checklist-patient",
+          place: "below",
+          box: { xMm: 0, yMm: 0, wMm: 269, hMm: 18 },
+        },
+        {
+          id: "grid",
+          type: "dense",
+          band: "content",
+          widget: "clinical.checklist-grid",
+          place: "below",
+          box: { xMm: 0, yMm: 0, wMm: 269, hMm: 140 },
+          chrome: gridChrome,
+        },
+        {
+          id: "text-notes",
+          type: "dense",
+          band: "content",
+          widget: "clinical.checklist-text-notes",
+          place: "below",
+          box: { xMm: 0, yMm: 0, wMm: 269, hMm: 8 },
+        },
+        {
+          id: "page-of",
+          type: "page-of",
+          band: "super-footer",
+          place: "below",
+          box: { xMm: 14, yMm: 202, wMm: 269, hMm: 5 },
+          text: "Page {current} of {total}",
+          align: "right",
+          chrome: { border: "none", fontSize: 8 },
+        },
+      ];
     }
 
     if (layout.elements.length === 0) {
