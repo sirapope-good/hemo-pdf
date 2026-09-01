@@ -59,6 +59,7 @@
       "band": "content",
       "widget": "clinical.checklist-text-notes",
       "place": "below",
+      "omitWhenEmpty": "$.textNotes",
       "box": { "xMm": 0, "yMm": 173.4, "wMm": 269, "hMm": 4 }
     },
     {

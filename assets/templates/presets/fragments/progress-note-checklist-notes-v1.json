@@ -9,6 +9,7 @@
       "band": "content",
       "widget": "clinical.checklist-text-notes",
       "place": "below",
+      "omitWhenEmpty": "$.textNotes",
       "box": { "xMm": 0, "yMm": 0, "wMm": 269, "hMm": 24 }
     }
   ]

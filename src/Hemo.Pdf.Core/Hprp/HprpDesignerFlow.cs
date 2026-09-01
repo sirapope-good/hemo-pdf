@@ -1,3 +1,4 @@
+using System.Text.Json;
 using Hemo.Pdf.Core.Hprp.Table;
 
 namespace Hemo.Pdf.Core.Hprp;
@@ -26,7 +27,9 @@ public static class HprpDesignerFlow
         IReadOnlyList<HprpDesignerElement> elements,
         float contentWidthMm,
         float marginLeftMm = 2f,
-        float fallbackSpacingMm = 2f) =>
+        float fallbackSpacingMm = 2f,
+        JsonElement? data = null,
+        object? boundModel = null) =>
         ReflowDetailed(
                 page,
                 elements,
@@ -35,7 +38,9 @@ public static class HprpDesignerFlow
                 marginTopMm: 2f,
                 marginBottomMm: 2f,
                 marginLeftMm,
-                fallbackSpacingMm)
+                fallbackSpacingMm,
+                data,
+                boundModel)
             .FlatElements;
 
     public static HprpDesignerFlowResult ReflowDetailed(
@@ -46,13 +51,17 @@ public static class HprpDesignerFlow
         float marginTopMm,
         float marginBottomMm,
         float marginLeftMm = 2f,
-        float fallbackSpacingMm = 2f)
+        float fallbackSpacingMm = 2f,
+        JsonElement? data = null,
+        object? boundModel = null)
     {
-        if (elements.Count == 0)
+        var flowElements = HprpDesignerOmit.FilterForFlow(elements, data, boundModel);
+
+        if (flowElements.Count == 0)
         {
             return new HprpDesignerFlowResult
             {
-                FlatElements = elements,
+                FlatElements = flowElements,
                 Pages = [new HprpDesignerPageSlice { PageIndex = 0, Elements = [] }],
                 ContentFlowHeightMm = Math.Max(MinBlockH, pageHeightMm - marginTopMm - marginBottomMm),
                 GuideTopMm = marginTopMm,
@@ -64,11 +73,11 @@ public static class HprpDesignerFlow
         var gaps = HprpPageLayout.ResolveDesignerGaps(page, marginLeftMm, fallbackSpacingMm);
         var contentW = Math.Max(MinBlockW, contentWidthMm);
 
-        var superHeader = PackBand(FilterBand(elements, HprpDesignerBands.SuperHeader), contentW, gaps);
-        var header = PackBand(FilterBand(elements, HprpDesignerBands.Header), contentW, gaps);
-        var footer = PackBand(FilterBand(elements, HprpDesignerBands.Footer), contentW, gaps);
-        var superFooter = PackBand(FilterBand(elements, HprpDesignerBands.SuperFooter), contentW, gaps);
-        var contentSrc = FilterBand(elements, HprpDesignerBands.Content);
+        var superHeader = PackBand(FilterBand(flowElements, HprpDesignerBands.SuperHeader), contentW, gaps);
+        var header = PackBand(FilterBand(flowElements, HprpDesignerBands.Header), contentW, gaps);
+        var footer = PackBand(FilterBand(flowElements, HprpDesignerBands.Footer), contentW, gaps);
+        var superFooter = PackBand(FilterBand(flowElements, HprpDesignerBands.SuperFooter), contentW, gaps);
+        var contentSrc = FilterBand(flowElements, HprpDesignerBands.Content);
 
         var sh = BandHeight(superHeader);
         var sf = BandHeight(superFooter);
@@ -82,6 +91,9 @@ public static class HprpDesignerFlow
         var contentFlowH = Math.Max(MinBlockH, guideHeight - headerH - footerH);
 
         var contentPages = PackContentAcrossPages(contentSrc, contentW, gaps, contentFlowH);
+        // Drop trailing pages that have no content (chrome-only leftovers).
+        while (contentPages.Count > 1 && contentPages[^1].Count == 0)
+            contentPages.RemoveAt(contentPages.Count - 1);
         var pageCount = Math.Max(1, contentPages.Count);
         var pages = new List<HprpDesignerPageSlice>(pageCount);
 

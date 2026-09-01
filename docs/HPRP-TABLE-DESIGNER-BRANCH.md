@@ -46,7 +46,7 @@ Left pane: **Import / Export** primary; **Pack all** under Packages ⋯; Library
 
 Loading feedback: brand overlay spinner (`StudioUi.withBusy`) on open package / library item / save / reload / pack-all; list skeletons on package/library reload; A4 canvas skeleton while a pack opens.
 
-Scripts use `?v=ux-polish-10` cache-bust — hard refresh (Ctrl+F5) after pull.
+Scripts use `?v=ux-polish-11` cache-bust — hard refresh (Ctrl+F5) after pull.
 
 Top-left brand: inline HPRP wordmark logo (from `assets/icons/LOGO_HPRP.svg`, `currentColor` for dark chrome) — replaces the old title + hint paragraph.
 
@@ -84,6 +84,10 @@ When **content** exceeds the content band height, Studio shows page 2+ automatic
 | `footer` / `super-footer` | Bottom chrome, repeats (e.g. page of) |
 
 **Super bands** always render **outside** the dashed margin guide (in the margin gutter). Inner header/content/footer stay inside.
+
+### Optional content (`omitWhenEmpty`)
+
+Content blocks can declare `"omitWhenEmpty": "$.textNotes"`. When that JSON path is empty (empty array / blank / missing), the block is **skipped in reflow** for both Studio and PDF. Use this for reserved sections (e.g. checklist text notes) so an empty notes slot does not push a second page that only repeats the header. Trailing content pages with zero blocks are also trimmed. Packs without the property still omit `clinical.checklist-text-notes` when `textNotes` is empty (compat fallback).
 
 ### Page of
 

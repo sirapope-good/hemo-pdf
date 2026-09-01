@@ -60,7 +60,9 @@ public sealed class DesignerCanvasViewModel
             page.Top,
             page.Bottom,
             page.Left,
-            fallbackSpacingMm: 2f);
+            fallbackSpacingMm: 2f,
+            data,
+            boundModel);
 
         return new DesignerCanvasViewModel
         {

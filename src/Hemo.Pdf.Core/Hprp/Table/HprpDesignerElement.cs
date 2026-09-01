@@ -170,6 +170,14 @@ public sealed class HprpDesignerElement
     [JsonPropertyName("children")]
     public IReadOnlyList<HprpDesignerElement>? Children { get; init; }
 
+    /// <summary>
+    /// JSON path that must be truthy for this element to join content flow
+    /// (e.g. <c>$.textNotes</c>). Empty array / blank / missing → omit so
+    /// optional sections do not create a trailing page with only repeating chrome.
+    /// </summary>
+    [JsonPropertyName("omitWhenEmpty")]
+    public string? OmitWhenEmpty { get; init; }
+
     public HprpDesignerElement WithBox(HprpDesignerBox box) => Clone(box: box);
 
     public HprpDesignerElement WithBoxAndChildren(HprpDesignerBox box, IReadOnlyList<HprpDesignerElement> children) =>
@@ -200,5 +208,6 @@ public sealed class HprpDesignerElement
         Band = Band,
         Direction = Direction,
         Children = children ?? Children,
+        OmitWhenEmpty = OmitWhenEmpty,
     };
 }

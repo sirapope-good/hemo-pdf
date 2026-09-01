@@ -342,11 +342,44 @@
   /**
    * Band-aware pack (parity with HprpDesignerFlow):
    * chrome bands repeat; content flows and may create extra pages.
+   * Optional blocks with omitWhenEmpty / checklist text-notes are skipped when sample data is empty
+   * so the canvas does not invent a chrome-only trailing page.
    */
+  function pathIsTruthy(data, path) {
+    if (!data || !path) return false;
+    let p = String(path).trim();
+    if (p.startsWith("$.")) p = p.slice(2);
+    else if (p === "$") return !!data;
+    else if (p.startsWith("$")) p = p.slice(1).replace(/^\./, "");
+    const parts = p.split(".").filter(Boolean);
+    let cur = data;
+    for (let i = 0; i < parts.length; i++) {
+      if (cur == null || typeof cur !== "object") return false;
+      cur = cur[parts[i]];
+    }
+    if (cur == null) return false;
+    if (Array.isArray(cur)) return cur.length > 0;
+    if (typeof cur === "boolean") return cur;
+    if (typeof cur === "number") return cur !== 0;
+    return String(cur).trim() !== "";
+  }
+
+  function shouldIncludeInFlow(el, data) {
+    if (!el) return false;
+    if (data == null) return true;
+    const omitPath = el.omitWhenEmpty != null ? String(el.omitWhenEmpty).trim() : "";
+    if (omitPath) return pathIsTruthy(data, omitPath);
+    const widget = String(el.widget || "").toLowerCase();
+    if (String(el.type || "").toLowerCase() === "dense" && widget === "clinical.checklist-text-notes") {
+      return pathIsTruthy(data, "$.textNotes");
+    }
+    return true;
+  }
+
   function reflowElements() {
     ensureElements();
     const { contentW, contentH, gaps, pageH, margins, scale } = pageMetrics();
-    const els = stateRef.draft.layout.elements;
+    const els = stateRef.draft.layout.elements.filter((e) => shouldIncludeInFlow(e, sampleData));
     const collapseMm = borderCollapseMm(scale);
 
     function filterBand(name) {
@@ -442,6 +475,9 @@
       remaining = remaining.slice(packed.consumed);
     }
     if (contentPages.length === 0) contentPages.push([]);
+    while (contentPages.length > 1 && contentPages[contentPages.length - 1].length === 0) {
+      contentPages.pop();
+    }
 
     const pageCount = Math.max(1, contentPages.length);
     const pages = [];
@@ -774,6 +810,21 @@
     return true;
   }
 
+  /** Ensure checklist text-notes declare omitWhenEmpty so empty samples do not invent page 2. */
+  function migrateOmitWhenEmptyOnChecklistNotes() {
+    ensureElements();
+    const els = stateRef.draft.layout.elements || [];
+    let changed = false;
+    els.forEach((e) => {
+      if (!e || String(e.type || "").toLowerCase() !== "dense") return;
+      if (String(e.widget || "").toLowerCase() !== "clinical.checklist-text-notes") return;
+      if (e.omitWhenEmpty != null && String(e.omitWhenEmpty).trim() !== "") return;
+      e.omitWhenEmpty = "$.textNotes";
+      changed = true;
+    });
+    return changed;
+  }
+
   function promoteToDesignerIfNeeded() {
     ensureElements();
     const manifest = stateRef.draft.manifest || (stateRef.draft.manifest = {});
@@ -785,6 +836,7 @@
       migrateDenseSoapToConfigTable();
       migrateDenseChecklistGridToConfigTable();
       migrateChecklistPatientIntoHeaderBottom();
+      migrateOmitWhenEmptyOnChecklistNotes();
       reflowElements();
       return false;
     }
@@ -901,6 +953,7 @@
           band: "content",
           widget: "clinical.checklist-text-notes",
           place: "below",
+          omitWhenEmpty: "$.textNotes",
           box: { xMm: 0, yMm: 0, wMm: 269, hMm: 4 },
         },
         {
