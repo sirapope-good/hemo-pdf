@@ -98,13 +98,6 @@ public sealed class DataGridSection : IContentSection
             return grid.ColumnWeights;
         }
 
-        if (columnCount <= 0)
-        {
-            return [];
-        }
-
-        var weights = Enumerable.Repeat(1f, columnCount).ToArray();
-        weights[0] = 3f;
-        return weights;
+        return HprpDataGridColumnPlan.Resolve(grid.Chrome?.ColumnWidths, columnCount);
     }
 }

@@ -1178,22 +1178,68 @@
   }
 
   function parseDataGridColumnWeights(columnWidths, columnCount) {
+    return resolveDataGridColumnWeights(columnWidths, columnCount);
+  }
+
+  function parseDataGridWeightToken(raw, fallback) {
+    let token = String(raw == null ? "" : raw).trim();
+    if (!token || token === "*") return fallback;
+    if (token.toLowerCase().endsWith("mm")) token = token.slice(0, -2).trim();
+    const n = Number(token);
+    return Number.isFinite(n) && n > 0 ? n : fallback;
+  }
+
+  function formatDataGridWeightToken(weight, previousToken) {
+    const prev = String(previousToken || "").trim();
+    if (prev === "*" && weight >= 0.999 && weight <= 1.001) return "*";
+    if (prev.toLowerCase().endsWith("mm")) {
+      const n = Math.round(weight * 100) / 100;
+      return n.toFixed(2).replace(/\.?0+$/, "") + "mm";
+    }
+    if (weight >= 0.999 && weight <= 1.001 && (!prev || prev === "*")) return "*";
+    return String(Math.round(weight * 100) / 100);
+  }
+
+  /** Mirrors HprpDataGridColumnPlan.Resolve (C#). */
+  function resolveDataGridColumnWeights(columnWidths, columnCount) {
+    if (!columnCount || columnCount <= 0) return [1];
     const tokens = (columnWidths || []).slice();
-    if (!columnCount || tokens.length !== columnCount) {
-      return Array(Math.max(1, columnCount || 1)).fill(1);
-    }
-    const weights = [];
-    for (let i = 0; i < columnCount; i++) {
-      let token = String(tokens[i] || "").trim();
-      if (!token || token === "*") {
-        weights.push(1);
-        continue;
+    if (tokens.length === columnCount) {
+      const weights = [];
+      for (let i = 0; i < columnCount; i++) {
+        weights.push(parseDataGridWeightToken(tokens[i], 1));
       }
-      if (token.toLowerCase().endsWith("mm")) token = token.slice(0, -2).trim();
-      const n = Number(token);
-      weights.push(Number.isFinite(n) && n > 0 ? n : 1);
+      return weights;
     }
+    const src = tokens.length ? tokens : ["3", "*"];
+    const lab = parseDataGridWeightToken(src[0], 3);
+    const date = src.length > 1 ? parseDataGridWeightToken(src[1], 1) : 1;
+    const weights = [lab];
+    for (let i = 1; i < columnCount; i++) weights.push(date);
     return weights;
+  }
+
+  function normalizeDataGridColumnTokens(columnWidths, columnCount) {
+    const weights = resolveDataGridColumnWeights(columnWidths, columnCount);
+    const src = columnWidths && columnWidths.length ? columnWidths : ["3", "*"];
+    const out = [];
+    for (let i = 0; i < columnCount; i++) {
+      const raw = i < src.length ? src[i] : (i === 0 ? src[0] : (src.length > 1 ? src[1] : "*"));
+      out.push(formatDataGridWeightToken(weights[i], raw));
+    }
+    return out;
+  }
+
+  function ensureDataGridColumnWidths(el, columnCount) {
+    if (!columnCount || columnCount <= 0) return;
+    el.chrome = el.chrome || {};
+    el.chrome.columnWidths = normalizeDataGridColumnTokens(el.chrome.columnWidths, columnCount);
+  }
+
+  function writeDataGridWeightsToChrome(el, weights) {
+    el.chrome = el.chrome || {};
+    const prev = el.chrome.columnWidths || [];
+    el.chrome.columnWidths = weights.map((w, i) => formatDataGridWeightToken(w, prev[i]));
   }
 
   function resolveDataGridModel(el, data) {
@@ -1538,7 +1584,8 @@
     const model = resolveDataGridModel(el, data);
     const headers = model.headers.length ? model.headers : [""];
     const rows = model.rows.length ? model.rows : [headers.map(() => "")];
-    const weights = parseDataGridColumnWeights(el.chrome && el.chrome.columnWidths, headers.length);
+    ensureDataGridColumnWidths(el, headers.length);
+    const weights = resolveDataGridColumnWeights(el.chrome && el.chrome.columnWidths, headers.length);
     const sum = weights.reduce((a, b) => a + b, 0) || 1;
     const bodyRowCount = rows.length;
     const boxPx = Math.max(0, Number(boxHeightMm) || 0) * scale;
@@ -1586,7 +1633,79 @@
     });
     table.appendChild(tbody);
     root.appendChild(table);
+    attachDataGridColumnResizers(root, table, el, weights.slice());
     return root;
+  }
+
+  function attachDataGridColumnResizers(root, table, el, headerWeights) {
+    requestAnimationFrame(() => {
+      const ths = table.querySelectorAll("thead th");
+      if (ths.length < 2) return;
+      const overlay = document.createElement("div");
+      overlay.className = "col-resize-layer";
+      root.appendChild(overlay);
+      const rootRect = root.getBoundingClientRect();
+      ths.forEach((th, hi) => {
+        if (hi >= ths.length - 1) return;
+        const rect = th.getBoundingClientRect();
+        const handle = document.createElement("div");
+        handle.className = "col-resize";
+        handle.style.left = (rect.right - rootRect.left - 3) + "px";
+        handle.title = "ลากปรับความกว้างคอลัมน์ data-grid (ส่งผลต่อ PDF)";
+        handle.addEventListener("pointerdown", (e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          startDataGridColumnResize(e, el, hi, headerWeights.slice(), table, handle, root);
+        });
+        overlay.appendChild(handle);
+      });
+    });
+  }
+
+  function startDataGridColumnResize(e, el, headerIndex, headerWeights, table, handle, root) {
+    if (canvasTools) canvasTools.pushHistory();
+    const startX = e.clientX;
+    const leftW = headerWeights[headerIndex];
+    const rightW = headerWeights[headerIndex + 1];
+    const pair = leftW + rightW;
+    const metrics = pageMetrics();
+
+    function applyColgroup() {
+      const sum = headerWeights.reduce((a, b) => a + b, 0) || 1;
+      const cols = table.querySelectorAll("colgroup col");
+      headerWeights.forEach((w, i) => {
+        if (cols[i]) cols[i].style.width = ((w / sum) * 100).toFixed(3) + "%";
+      });
+    }
+
+    function onMove(ev) {
+      const dxMm = (ev.clientX - startX) / metrics.scale;
+      const total = headerWeights.reduce((a, b) => a + b, 0);
+      const dWeight = (dxMm / Math.max(1, el.box.wMm)) * total;
+      let newLeft = Math.max(MIN_COL_WEIGHT, leftW + dWeight);
+      let newRight = Math.max(MIN_COL_WEIGHT, pair - newLeft);
+      headerWeights[headerIndex] = newLeft;
+      headerWeights[headerIndex + 1] = newRight;
+      writeDataGridWeightsToChrome(el, headerWeights);
+      applyColgroup();
+      const ths = table.querySelectorAll("thead th");
+      const th = ths[headerIndex];
+      if (th && handle && root) {
+        const rootRect = root.getBoundingClientRect();
+        const rect = th.getBoundingClientRect();
+        handle.style.left = (rect.right - rootRect.left - 3) + "px";
+      }
+    }
+    function onUp() {
+      document.removeEventListener("pointermove", onMove);
+      document.removeEventListener("pointerup", onUp);
+      suppressClick = true;
+      setTimeout(() => { suppressClick = false; }, 0);
+      renderAll();
+      if (setStatusRef) setStatusRef("data-grid columnWidths อัปเดต — Download PDF จะใช้ชุดนี้", "ok");
+    }
+    document.addEventListener("pointermove", onMove);
+    document.addEventListener("pointerup", onUp);
   }
 
   /**
@@ -3609,9 +3728,14 @@
   }
 
   function renderDataGridInspector(insp, el) {
+    const model = resolveDataGridModel(el, sampleData);
+    const colCount = Math.max(1, (model.headers && model.headers.length) || 1);
+    ensureDataGridColumnWidths(el, colCount);
+
     const tip = document.createElement("p");
     tip.className = "muted";
-    tip.textContent = "Lab matrix — bindRows / columnHeadersBind จาก DTO · ปรับ columnWidths รายคอลัมน์ใน Phase 2";
+    tip.textContent =
+      "Lab data-grid — ลากเส้นคั่นคอลัมน์บน canvas หรือแก้ token ด้านล่าง (3 / * / 12mm / 1.5)";
     insp.appendChild(tip);
 
     [["bindRows", el.bindRows || ""], ["columnHeadersBind", el.columnHeadersBind || ""]].forEach(([label, val]) => {
@@ -3624,6 +3748,44 @@
       lab.appendChild(inp);
       insp.appendChild(lab);
     });
+
+    const syncBtn = document.createElement("button");
+    syncBtn.type = "button";
+    syncBtn.textContent = "Sync columnWidths จาก sample (" + colCount + " cols)";
+    syncBtn.addEventListener("click", () => {
+      if (canvasTools) canvasTools.pushHistory();
+      ensureDataGridColumnWidths(el, colCount);
+      renderAll();
+      if (setStatusRef) setStatusRef("columnWidths sync แล้ว (" + colCount + " คอลัมน์)", "ok");
+    });
+    insp.appendChild(syncBtn);
+
+    const widthsHead = document.createElement("p");
+    widthsHead.innerHTML = "<strong>Column widths</strong>";
+    insp.appendChild(widthsHead);
+
+    if (!el.chrome) el.chrome = {};
+    if (!Array.isArray(el.chrome.columnWidths)) el.chrome.columnWidths = ["3", "*"];
+    while (el.chrome.columnWidths.length < colCount) {
+      el.chrome.columnWidths.push(el.chrome.columnWidths.length === 0 ? "3" : "*");
+    }
+
+    for (let i = 0; i < colCount; i++) {
+      const lab = document.createElement("label");
+      const hdr = (model.headers && model.headers[i]) || ("Col " + (i + 1));
+      lab.textContent = (i === 0 ? "Lab" : "Col " + i) + " · " + (hdr || "—");
+      const inp = document.createElement("input");
+      inp.type = "text";
+      inp.placeholder = i === 0 ? "3 หรือ 12mm" : "* หรือ 1.5";
+      inp.value = el.chrome.columnWidths[i] || (i === 0 ? "3" : "*");
+      inp.addEventListener("change", () => {
+        if (canvasTools) canvasTools.pushHistory();
+        el.chrome.columnWidths[i] = inp.value.trim() || (i === 0 ? "3" : "*");
+        renderAll();
+      });
+      lab.appendChild(inp);
+      insp.appendChild(lab);
+    }
 
     const fsLab = document.createElement("label");
     fsLab.textContent = "fontSize";
@@ -4193,6 +4355,36 @@
       lab.appendChild(input);
       insp.appendChild(lab);
     });
+  }
+
+  function addDataGrid() {
+    ensureElements();
+    promoteToDesignerIfNeeded();
+    if (canvasTools) canvasTools.pushHistory();
+    const m = pageMetrics();
+    const id = "grid_" + Math.random().toString(36).slice(2, 7);
+    const el = {
+      id,
+      type: "data-grid",
+      band: "content",
+      place: "below",
+      bindRows: "$.rows",
+      columnHeadersBind: "$.columnHeaders",
+      box: { xMm: 0, yMm: 0, wMm: m.contentW, hMm: 120 },
+      chrome: {
+        border: "thin",
+        fontSize: 7,
+        headerFill: "$branding.sectionHeaderBackground",
+        columnWidths: ["3", "*"],
+      },
+    };
+    stateRef.draft.layout.elements.push(el);
+    stateRef.draft.manifest.layoutMode = "designer";
+    setSingleSelection(id);
+    stateRef.selectedKey = null;
+    reflowElements();
+    renderAll();
+    setStatusRef("Inserted data-grid (lab matrix). Save pack to persist.", "ok");
   }
 
   function addConfigTable(opts) {
@@ -4922,6 +5114,7 @@
     promoteToDesignerIfNeeded,
     reflowElements,
     addConfigTable,
+    addDataGrid,
     addHeader,
     openLibraryHeader,
     saveLibraryHeader,
@@ -4994,6 +5187,8 @@
 
     const addBtn = document.getElementById("btnAddConfigTable");
     if (addBtn) addBtn.addEventListener("click", () => addConfigTable());
+    const addGridBtn = document.getElementById("btnAddDataGrid");
+    if (addGridBtn) addGridBtn.addEventListener("click", () => addDataGrid());
     const addTblInner = document.getElementById("btnAddConfigTableInner");
     if (addTblInner) addTblInner.addEventListener("click", () => addConfigTable({ inner: true }));
     const hdrBtn = document.getElementById("btnAddHeader");

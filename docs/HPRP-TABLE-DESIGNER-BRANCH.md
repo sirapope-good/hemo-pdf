@@ -37,7 +37,7 @@ Canvas toolbar is grouped (not a flat button strip):
 | Group | Controls |
 |--|--|
 | **View** | Undo / Redo / Zoom − % + / Fit |
-| **Insert** (dropdown) | Header, Table, Box text, Fragment, Page of |
+| **Insert** (dropdown) | Header, Table, **Data grid**, Box text, Fragment, Page of |
 | **Library** | Add to library |
 | **Export** | PDF (Download PDF) |
 | Sample | Mock scenario select (standalone) |
@@ -46,7 +46,7 @@ Left pane: **Import / Export** primary; **Pack all** under Packages ⋯; Library
 
 Loading feedback: brand overlay spinner (`StudioUi.withBusy`) on open package / library item / save / reload / pack-all; list skeletons on package/library reload; A4 canvas skeleton while a pack opens.
 
-Scripts use `?v=ux-polish-13` cache-bust — hard refresh (Ctrl+F5) after pull.
+Scripts use `?v=ux-polish-14` cache-bust — hard refresh (Ctrl+F5) after pull.
 
 Top-left brand: inline HPRP wordmark logo (from `assets/icons/LOGO_HPRP.svg`, `currentColor` for dark chrome) — replaces the old title + hint paragraph.
 
@@ -103,7 +103,7 @@ Element type `page-of` (default band `super-footer`): format `{current} / {total
 - Production clinical-02: `layoutMode: designer` — multi-item **box-text** meta + freedom injections table + shared co-pay duo
 - Production clinical-05 SOAP: `layoutMode: designer` — `clinical-header-thaiur` + **`config-table`** preset `progress-note-soap-v1` (`rowMode: freedom`, progress column `cellKind: soap-progress`) + page-of. Same library-table tools as HCT/EPO: column drag, freedom rows, detach/save preset; drag S/O/A/P band splitters (or edit `chrome.bandWeights`) for Objective height. PDF still draws Objective checkboxes via `Clinical05SoapTableSection.ComposeProgressCell`. Opening an old pack with dense `clinical.soap-table` auto-migrates to this config-table.
 - Production clinical-05 checklist (Default): `layoutMode: designer` — **same** `clinical-header-thaiur` with element `bottomMode: "checklist-patient"` (DOB / sessions / days / mode / underlying in a 2-line bottom; diagnosis profile stays default for SOAP/other packs) + range + **`config-table`** matrix + dense text-notes. Dense patient block is removed (auto-migrated). Header profiles live in `bottomFieldSets` on the shared ThaiUR library preset.
-- Production **clinical-07-lab**: `layoutMode: designer` — `clinical-header-thaiur` + designer element **`data-grid`** (`bindRows: $.rows`, `columnHeadersBind: $.columnHeaders`, `chrome.columnWidths` for Lab + DATE columns). PDF via `DesignerPageComposer.DrawDataGrid` + lab row-height budget. Studio auto-migrates legacy composition `layout.body` data-grid. Per-column width drag in inspector: Phase 2.
+- Production **clinical-07-lab**: `layoutMode: designer` — `clinical-header-thaiur` + designer element **`data-grid`** (`bindRows: $.rows`, `columnHeadersBind: $.columnHeaders`, `chrome.columnWidths` per column). PDF via `DesignerPageComposer.DrawDataGrid` + `HprpDataGridColumnPlan` (lab token + date columns expand when header count changes). Studio: inspector column tokens, canvas drag, **Insert → Data grid**. ไม่ใช้ config-table `rowMode: lab` — คอลัมน์ DATE dynamic จาก DTO.
 - **Matrix column widths (2 zones):** `chrome.columnWidths: ["item", "monthBand"]` — each token is fixed (`46mm`) or relative (`*` / `1.5`). Month-band splits equally across N months. Studio: inspector fields + drag Item|Months edge; Library matrix opens with checklist sample. Shared resolver: `HprpMatrixColumnPlan`.
 
 ## box-text multi-value
@@ -118,6 +118,24 @@ Element type `page-of` (default band `super-footer`): format `{current} / {total
 | `flex` | Relative row weight (default 1) |
 
 Used by clinical-02 meta band (เดือน | ยา EPO | เข็ม/สัปดาห์). Co-pay banner stays single-value.
+
+## Data grid (lab matrix)
+
+Designer element `type: "data-grid"` — bound rows + column headers (not config-table `rowMode: lab`).
+
+| Field | Detail |
+|--|--|
+| `bindRows` | JSON path to row matrix (e.g. `$.rows`) |
+| `columnHeadersBind` | Path to header labels (e.g. `$.columnHeaders`) |
+| `chrome.columnWidths` | Relative tokens per column (`3`, `*`, `2`, `12mm`) |
+
+**Column plan (`HprpDataGridColumnPlan`):** when token count matches header count, exact parse; otherwise token[0] = lab column, token[1] (or `*`) repeats for each DATE column. Studio mirrors the same rules for preview, inspector inputs, and canvas drag.
+
+| Studio | Detail |
+|--|--|
+| Inspector | Per-column token inputs + **Sync to column count** (normalize tokens) |
+| Canvas | Drag vertical splitters between header cells to resize columns |
+| Insert | **Insert → Data grid** adds a default lab matrix block |
 
 ## Library tab + recovery
 

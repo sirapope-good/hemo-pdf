@@ -390,7 +390,7 @@ public static class HprpBinder
                 item.TryGetProperty(h, out var cell) ? HprpJsonPath.AsString(cell) ?? "" : "").ToList());
         }
 
-        var weights = HprpChrome.ParseColumnWeights(node.Chrome?.ColumnWidths, headers.Count);
+        var weights = HprpDataGridColumnPlan.Resolve(node.Chrome?.ColumnWidths, headers.Count);
         return new DataGridReportBlock
         {
             Title = ResolveText(node.Title, data, labels, null),
