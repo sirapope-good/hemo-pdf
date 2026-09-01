@@ -68,21 +68,25 @@
     };
   }
 
-  /** Convert band columns to display fractions for a given content width (mm). */
+  /** Convert band columns to display fractions for a given content width (mm).
+   * Fixed mm columns scale with content width so landscape stays proportional to portrait (design base 206). */
   function bandFractions(columns, contentWMm) {
     const cols = columns || [];
+    const designW = 206;
+    const w = Math.max(1, Number(contentWMm) || designW);
+    const scaleFixed = w / designW;
     let fixed = 0;
     let weightSum = 0;
     cols.forEach((c) => {
-      if (c.widthMm != null && Number(c.widthMm) > 0) fixed += Number(c.widthMm);
+      if (c.widthMm != null && Number(c.widthMm) > 0) fixed += Number(c.widthMm) * scaleFixed;
       else weightSum += Math.max(0.1, Number(c.weight) || 1);
     });
-    const remain = Math.max(1, contentWMm - fixed);
+    const remain = Math.max(1, w - fixed);
     return cols.map((c) => {
       if (c.widthMm != null && Number(c.widthMm) > 0)
-        return Number(c.widthMm) / contentWMm;
-      const w = Math.max(0.1, Number(c.weight) || 1);
-      return (remain * (w / (weightSum || 1))) / contentWMm;
+        return (Number(c.widthMm) * scaleFixed) / w;
+      const weight = Math.max(0.1, Number(c.weight) || 1);
+      return (remain * (weight / (weightSum || 1))) / w;
     });
   }
 

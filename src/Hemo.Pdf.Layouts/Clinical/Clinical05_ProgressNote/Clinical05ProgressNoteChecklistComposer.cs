@@ -15,7 +15,7 @@ namespace Hemo.Pdf.Layouts.Clinical.Clinical05_ProgressNote;
 /// <summary>
 /// Landscape Hemodialysis Progress note — monthly checklist grid (clinical-05-checklist).
 /// Composition: widget order from <c>layout.body</c>. Designer packs use
-/// <see cref="DesignerPageComposer"/> (box-text header + dense patient/grid/notes).
+/// <see cref="DesignerPageComposer"/> (ThaiUR header + dense patient/grid/notes).
 /// </summary>
 public sealed class Clinical05ProgressNoteChecklistComposer : ILayoutComposer
 {
@@ -51,7 +51,9 @@ public sealed class Clinical05ProgressNoteChecklistComposer : ILayoutComposer
 
         if (package is not null && HprpLayoutModes.IsDesigner(package.Manifest))
         {
-            JsonElement? data = context.Data is JsonElement je ? je : null;
+            JsonElement? data = context.Data is JsonElement je
+                ? EnsureThaiUrHeaderFromChecklistPatient(je)
+                : null;
             var designerVm = DesignerCanvasViewModel.FromPackage(
                 package,
                 data,
@@ -147,5 +149,83 @@ public sealed class Clinical05ProgressNoteChecklistComposer : ILayoutComposer
             text.Span(" of ");
             text.TotalPages();
         });
+    }
+
+    /// <summary>
+    /// Checklist wire uses top-level <c>patient</c>; ThaiUR header binds <c>$.header.patient.*</c>.
+    /// </summary>
+    internal static JsonElement EnsureThaiUrHeaderFromChecklistPatient(JsonElement root)
+    {
+        if (root.ValueKind != JsonValueKind.Object)
+            return root;
+
+        if (root.TryGetProperty("header", out var headerEl)
+            && headerEl.ValueKind == JsonValueKind.Object
+            && headerEl.TryGetProperty("patient", out var existing)
+            && existing.ValueKind == JsonValueKind.Object)
+        {
+            return root;
+        }
+
+        if (!root.TryGetProperty("patient", out var patientEl) || patientEl.ValueKind != JsonValueKind.Object)
+            return root;
+
+        using var stream = new MemoryStream();
+        using (var writer = new Utf8JsonWriter(stream))
+        {
+            writer.WriteStartObject();
+            foreach (var prop in root.EnumerateObject())
+            {
+                if (string.Equals(prop.Name, "header", StringComparison.OrdinalIgnoreCase))
+                    continue;
+                prop.WriteTo(writer);
+            }
+
+            writer.WritePropertyName("header");
+            writer.WriteStartObject();
+            writer.WritePropertyName("patient");
+            writer.WriteStartObject();
+            WriteMapped(writer, "name", patientEl, "name");
+            WriteMapped(writer, "hn", patientEl, "hospitalNumber", "hn");
+            WriteMapped(writer, "coverage", patientEl, "coverageScheme", "coverage");
+            WriteMapped(writer, "diagnosis", patientEl, "underlying", "diagnosis");
+            WriteMapped(writer, "hdPerWeek", patientEl, "sessionsPerWeekLabel", "hdPerWeek");
+            if (patientEl.TryGetProperty("identityNumber", out var idEl))
+            {
+                writer.WritePropertyName("identityNumber");
+                idEl.WriteTo(writer);
+            }
+            if (patientEl.TryGetProperty("age", out var ageEl))
+            {
+                writer.WritePropertyName("age");
+                ageEl.WriteTo(writer);
+            }
+            writer.WriteEndObject();
+            writer.WritePropertyName("unit");
+            writer.WriteStartObject();
+            writer.WriteNumber("id", -1);
+            writer.WriteString("fullName", "");
+            writer.WriteEndObject();
+            writer.WriteEndObject();
+            writer.WriteEndObject();
+        }
+
+        return JsonDocument.Parse(stream.ToArray()).RootElement.Clone();
+    }
+
+    private static void WriteMapped(
+        Utf8JsonWriter writer,
+        string targetName,
+        JsonElement source,
+        params string[] sourceNames)
+    {
+        foreach (var name in sourceNames)
+        {
+            if (!source.TryGetProperty(name, out var value) || value.ValueKind is JsonValueKind.Null or JsonValueKind.Undefined)
+                continue;
+            writer.WritePropertyName(targetName);
+            value.WriteTo(writer);
+            return;
+        }
     }
 }

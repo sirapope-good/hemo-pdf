@@ -11,10 +11,16 @@ public static class ConfigurableHeaderComposer
 {
     private const Unit Mm = Unit.Millimetre;
 
-    public static void Compose(IContainer container, HprpHeaderLayoutModel model)
+    /// <summary>Portrait design width used by clinical-header-thaiur fixed columns (mm).</summary>
+    private const float DesignContentWidthMm = 206f;
+
+    public static void Compose(IContainer container, HprpHeaderLayoutModel model, float? contentWidthMm = null)
     {
         var preset = model.Preset;
         var bw = BorderWidth(preset.Chrome);
+        var widthScale = contentWidthMm is > 0
+            ? contentWidthMm.Value / DesignContentWidthMm
+            : 1f;
 
         container.Column(col =>
         {
@@ -22,7 +28,7 @@ public static class ConfigurableHeaderComposer
             {
                 foreach (var band in preset.Columns)
                 {
-                    var cell = PlaceBand(row, band);
+                    var cell = PlaceBand(row, band, widthScale);
                     var kind = band.Kind.Trim().ToLowerInvariant();
                     switch (kind)
                     {
@@ -72,10 +78,10 @@ public static class ConfigurableHeaderComposer
         });
     }
 
-    private static IContainer PlaceBand(RowDescriptor row, HprpHeaderBandColumn band)
+    private static IContainer PlaceBand(RowDescriptor row, HprpHeaderBandColumn band, float widthScale)
     {
         if (band.WidthMm is > 0)
-            return row.ConstantItem(band.WidthMm.Value, Mm);
+            return row.ConstantItem(band.WidthMm.Value * Math.Max(0.25f, widthScale), Mm);
         return row.RelativeItem(Math.Max(0.1f, band.Weight));
     }
 

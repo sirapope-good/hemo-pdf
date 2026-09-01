@@ -112,7 +112,7 @@ public static class DesignerPageComposer
                 preset,
                 vm.Data,
                 ResolveReportTitle(vm));
-            ConfigurableHeaderComposer.Compose(container, model);
+            ConfigurableHeaderComposer.Compose(container, model, element.Box.WMm);
             return;
         }
 

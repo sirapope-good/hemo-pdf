@@ -4,6 +4,22 @@
   "fromYearMonth": "2025-07",
   "toYearMonth": "2026-06",
   "rangeLabel": "JUL 2025 – JUN 2026",
+  "header": {
+    "patient": {
+      "name": "จินนี่ วัลลีย์",
+      "hn": "6512620",
+      "age": 31,
+      "coverage": "—",
+      "identityNumber": "",
+      "diagnosis": "—",
+      "allergies": [],
+      "hdPerWeek": "2"
+    },
+    "unit": { "id": -1, "fullName": "Hemodialysis Unit" },
+    "layoutContext": {
+      "reportSettings": { "showDateAndHdNo": false, "showHdPerWeek": true }
+    }
+  },
   "patient": {
     "name": "จินนี่ วัลลีย์",
     "hospitalNumber": "6512620",

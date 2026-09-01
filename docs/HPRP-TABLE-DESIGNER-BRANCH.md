@@ -96,8 +96,8 @@ Element type `page-of` (default band `super-footer`): format `{current} / {total
 - Adapter schema: `assets/templates/adapters/clinical-01-hct-epo.schema.json`, `clinical-02-epo-drug.schema.json`, `clinical-05-progress-note.schema.json`, `clinical-05-progress-note-checklist.schema.json`
 - Production clinical-01: `layoutMode: designer` (`assets/templates/reports/clinical-01-hct-epo/`)
 - Production clinical-02: `layoutMode: designer` — multi-item **box-text** meta + freedom injections table + shared co-pay duo
-- Production clinical-05 SOAP: `layoutMode: designer` — `clinical-header-thaiur` + dense `clinical.soap-table` (+ page-of)
-- Production clinical-05 checklist: `layoutMode: designer` — landscape box-text title band + dense patient/grid/text-notes (+ page-of)
+- Production clinical-05 SOAP: `layoutMode: designer` — `clinical-header-thaiur` + dense `clinical.soap-table` (+ page-of). Studio canvas draws SOAP schematic (DATE | S/O/A/P | orders), not a blank placeholder.
+- Production clinical-05 checklist: `layoutMode: designer` — **same** `clinical-header-thaiur` (scales to landscape width) + range + dense patient/grid/notes (+ page-of)
 
 ## box-text multi-value
 

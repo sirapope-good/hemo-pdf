@@ -561,6 +561,85 @@
     return changed;
   }
 
+  /** Replace checklist title box-texts with clinical-header-thaiur (landscape-aware). */
+  function migrateChecklistToThaiUrHeader() {
+    const manifest = stateRef.draft.manifest || {};
+    const packId = String(manifest.id || "");
+    const adapter = String(manifest.dataAdapter || "");
+    const isChecklist =
+      packId.indexOf("clinical-05-progress-note-checklist") === 0
+      || adapter === "clinical-05-progress-note-checklist";
+    if (!isChecklist) return false;
+
+    ensureElements();
+    const layout = stateRef.draft.layout;
+    const els = layout.elements || [];
+    const hasThaiUr = els.some((e) =>
+      e
+      && e.type === "header"
+      && (e.preset === "clinical-header-thaiur"
+        || (e.headerPreset && e.headerPreset.id === "clinical-header-thaiur")));
+    if (hasThaiUr) return false;
+
+    const contentW = String((layout.page && layout.page.orientation) || "").toLowerCase() === "landscape" ? 269 : 206;
+    const denseAndNotes = els.filter((e) => e && (e.type === "dense" || e.type === "page-of"));
+    const rangeEl = els.find((e) => e && e.type === "box-text" && e.bind === "$.rangeLabel");
+    const codeEl = els.find((e) => e && e.type === "box-text" && e.bind === "$.reportCodeValue");
+
+    const next = [
+      {
+        id: "hdr",
+        type: "header",
+        band: "header",
+        preset: "clinical-header-thaiur",
+        place: "below",
+        box: { xMm: 0, yMm: 0, wMm: contentW, hMm: 27 },
+      },
+      Object.assign({}, codeEl || {}, {
+        id: (codeEl && codeEl.id) || "report-code",
+        type: "box-text",
+        band: "super-header",
+        place: "below",
+        box: {
+          xMm: Math.max(0, contentW - 69),
+          yMm: 2,
+          wMm: 69,
+          hMm: 5,
+        },
+        bind: "$.reportCodeValue",
+        align: "right",
+        chrome: { border: "none", headerFill: "#ffffff", fontSize: 9 },
+      }),
+      Object.assign({}, rangeEl || {}, {
+        id: (rangeEl && rangeEl.id) || "range",
+        type: "box-text",
+        band: "content",
+        place: "below",
+        box: { xMm: 0, yMm: 0, wMm: contentW, hMm: 5 },
+        bind: "$.rangeLabel",
+        align: "center",
+        chrome: { border: "none", headerFill: "#ffffff", fontSize: 10 },
+      }),
+    ];
+
+    denseAndNotes.forEach((e) => {
+      next.push(Object.assign({}, e, {
+        box: Object.assign({}, e.box, { wMm: e.type === "page-of" ? contentW : contentW }),
+      }));
+    });
+
+    layout.page = Object.assign({
+      size: "A4",
+      orientation: "landscape",
+      marginMm: 14,
+      spacingMode: "custom",
+      spacingMm: 2,
+    }, layout.page || {});
+    layout.elements = next;
+    if (setStatusRef) setStatusRef("อัปเกรด Default checklist → clinical-header-thaiur (landscape) แล้ว", "ok");
+    return true;
+  }
+
   function promoteToDesignerIfNeeded() {
     ensureElements();
     const manifest = stateRef.draft.manifest || (stateRef.draft.manifest = {});
@@ -568,6 +647,7 @@
 
     if (isDesignerPackage() && layout.elements.length > 0) {
       migrateLegacyDenseCopay();
+      migrateChecklistToThaiUrHeader();
       reflowElements();
       return false;
     }
@@ -656,33 +736,31 @@
         orientation: "landscape",
         marginMm: 14,
         spacingMode: "custom",
-        spacingMm: 3,
+        spacingMm: 2,
       }, layout.page || {});
       layout.elements = [
         {
-          id: "report-code",
-          type: "box-text",
+          id: "hdr",
+          type: "header",
           band: "header",
+          preset: "clinical-header-thaiur",
           place: "below",
-          box: { xMm: 0, yMm: 0, wMm: 269, hMm: 5 },
-          bind: "$.reportCodeValue",
-          align: "right",
-          chrome: { border: "none", headerFill: "#ffffff", fontSize: 10 },
+          box: { xMm: 0, yMm: 0, wMm: 269, hMm: 27 },
         },
         {
-          id: "title",
+          id: "report-code",
           type: "box-text",
-          band: "header",
+          band: "super-header",
           place: "below",
-          box: { xMm: 0, yMm: 0, wMm: 269, hMm: 7 },
-          bind: "$.title",
-          align: "center",
-          chrome: { border: "none", headerFill: "#ffffff", fontSize: 14 },
+          box: { xMm: 200, yMm: 2, wMm: 69, hMm: 5 },
+          bind: "$.reportCodeValue",
+          align: "right",
+          chrome: { border: "none", headerFill: "#ffffff", fontSize: 9 },
         },
         {
           id: "range",
           type: "box-text",
-          band: "header",
+          band: "content",
           place: "below",
           box: { xMm: 0, yMm: 0, wMm: 269, hMm: 5 },
           bind: "$.rangeLabel",
@@ -695,7 +773,7 @@
           band: "content",
           widget: "clinical.checklist-patient",
           place: "below",
-          box: { xMm: 0, yMm: 0, wMm: 269, hMm: 18 },
+          box: { xMm: 0, yMm: 0, wMm: 269, hMm: 16 },
         },
         {
           id: "grid",
@@ -703,7 +781,7 @@
           band: "content",
           widget: "clinical.checklist-grid",
           place: "below",
-          box: { xMm: 0, yMm: 0, wMm: 269, hMm: 140 },
+          box: { xMm: 0, yMm: 0, wMm: 269, hMm: 118 },
           chrome: gridChrome,
         },
         {
@@ -712,7 +790,7 @@
           band: "content",
           widget: "clinical.checklist-text-notes",
           place: "below",
-          box: { xMm: 0, yMm: 0, wMm: 269, hMm: 8 },
+          box: { xMm: 0, yMm: 0, wMm: 269, hMm: 4 },
         },
         {
           id: "page-of",
@@ -843,6 +921,30 @@
         }
       } else sampleData = null;
     }
+    sampleData = normalizeSampleForThaiUrHeader(sampleData);
+  }
+
+  /** Checklist wire uses top-level patient; ThaiUR header binds $.header.patient.*. */
+  function normalizeSampleForThaiUrHeader(data) {
+    if (!data || typeof data !== "object") return data;
+    if (data.header && data.header.patient) return data;
+    const p = data.patient;
+    if (!p || typeof p !== "object") return data;
+    const next = Object.assign({}, data);
+    next.header = Object.assign({}, data.header || {}, {
+      patient: {
+        name: p.name || "",
+        hn: p.hospitalNumber || p.hn || "",
+        age: p.age,
+        coverage: p.coverageScheme || p.coverage || "",
+        identityNumber: p.identityNumber || "",
+        diagnosis: p.underlying || p.diagnosis || "",
+        allergies: p.allergies || [],
+        hdPerWeek: p.sessionsPerWeekLabel || p.hdPerWeek || "",
+      },
+      unit: (data.header && data.header.unit) || { fullName: "" },
+    });
+    return next;
   }
 
   function escapeHtml(s) {
@@ -1112,6 +1214,8 @@
               `<div class="ph-title">${escapeHtml(title)}</div>` +
               `<div class="ph-meta">${escapeHtml((patient && patient.name) || "Patient")} · HN ${escapeHtml((patient && patient.hn) || "—")}</div>`;
           }
+        } else if (el.type === "dense") {
+          body.appendChild(renderDenseWidgetHtml(el, sampleData, scale, item.hMm, labels));
         } else {
           body.innerHTML = `<div class="ph-dense">${escapeHtml(el.type)}: ${escapeHtml(el.widget || el.id)}</div>`;
         }
@@ -1394,6 +1498,263 @@
   function nbspOr(text) {
     if (text == null || text === "") return "\u00A0";
     return String(text);
+  }
+
+  function renderDenseWidgetHtml(el, data, scale, boxHeightMm, packLabels) {
+    const widget = String(el.widget || "").toLowerCase();
+    if (widget === "clinical.soap-table")
+      return renderSoapTableHtml(el, data, scale, boxHeightMm, packLabels);
+    if (widget === "clinical.checklist-patient")
+      return renderChecklistPatientHtml(data, scale);
+    if (widget === "clinical.checklist-grid")
+      return renderChecklistGridHtml(el, data, scale);
+    if (widget === "clinical.checklist-text-notes")
+      return renderChecklistTextNotesHtml(data, scale);
+
+    const root = document.createElement("div");
+    root.className = "ph-dense";
+    root.textContent = "dense: " + (el.widget || el.id);
+    return root;
+  }
+
+  function soapColWidths(chrome) {
+    const raw = (chrome && chrome.columnWidths) || ["18mm", "2.4", "1.1", "1.1"];
+    const parsed = raw.map((v) => {
+      const s = String(v);
+      if (s.endsWith("mm")) return { kind: "mm", value: parseFloat(s) || 18 };
+      return { kind: "rel", value: parseFloat(s) || 1 };
+    });
+    while (parsed.length < 4) parsed.push({ kind: "rel", value: 1 });
+    let fixed = 0;
+    let weightSum = 0;
+    parsed.forEach((p) => {
+      if (p.kind === "mm") fixed += p.value;
+      else weightSum += p.value;
+    });
+    const remain = Math.max(1, 100 - (fixed > 0 ? 0 : 0));
+    // Use CSS grid: fixed mm columns as fr approximations via % of typical 206mm.
+    const baseW = 206;
+    return parsed.map((p) => {
+      if (p.kind === "mm") return ((p.value / baseW) * 100).toFixed(2) + "%";
+      const pct = ((100 - (fixed / baseW) * 100) * (p.value / (weightSum || 1)));
+      return Math.max(4, pct).toFixed(2) + "%";
+    });
+  }
+
+  function soapBandWeights(chrome) {
+    const w = (chrome && chrome.bandWeights) || [1, 2.5, 1, 1];
+    const nums = w.map((x) => Math.max(0.1, Number(x) || 1));
+    while (nums.length < 4) nums.push(1);
+    return nums.slice(0, 4);
+  }
+
+  function renderSoapTableHtml(el, data, scale, boxHeightMm, packLabels) {
+    const root = document.createElement("div");
+    root.className = "dense-soap";
+    root.style.height = "100%";
+    const chrome = el.chrome || {};
+    const cols = soapColWidths(chrome);
+    const bands = soapBandWeights(chrome);
+    const bandSum = bands.reduce((a, b) => a + b, 0) || 1;
+    const labelsMap = packLabels || {};
+    const hDate = labelsMap.colDate || "DATE";
+    const hProg = labelsMap.colProgress || "PROGRESS NOTE";
+    const hOne = labelsMap.colOrderOneDay || "ORDER FOR ONE DAY";
+    const hCont = labelsMap.colOrderContinuation || "ORDER FOR CONTINUATION";
+    const headerH = Math.max(10, (Number(chrome.headerHeightMm) || 5) * scale);
+    const sessions = (data && Array.isArray(data.sessions) ? data.sessions : []).slice();
+    while (sessions.length < 2) sessions.push(null);
+    const rowH = Math.max(40, ((Number(boxHeightMm) || 255) - (Number(chrome.headerHeightMm) || 5)) / sessions.length * scale);
+
+    const table = document.createElement("div");
+    table.className = "dense-soap-table";
+    table.style.display = "grid";
+    table.style.gridTemplateColumns = cols.join(" ");
+    table.style.height = "100%";
+
+    [hDate, hProg, hOne, hCont].forEach((text) => {
+      const cell = document.createElement("div");
+      cell.className = "dense-soap-th";
+      cell.style.minHeight = headerH.toFixed(2) + "px";
+      cell.textContent = text;
+      table.appendChild(cell);
+    });
+
+    sessions.forEach((session) => {
+      const date = document.createElement("div");
+      date.className = "dense-soap-td dense-soap-date";
+      date.style.minHeight = rowH.toFixed(2) + "px";
+      date.textContent = (session && session.dateLabel) || "";
+      table.appendChild(date);
+
+      const soap = document.createElement("div");
+      soap.className = "dense-soap-td dense-soap-bands";
+      soap.style.minHeight = rowH.toFixed(2) + "px";
+      soap.style.display = "grid";
+      soap.style.gridTemplateRows = bands.map((b) => (b / bandSum).toFixed(4) + "fr").join(" ");
+      const bandDefs = [
+        { letter: "S", text: session && session.subjective },
+        { letter: "O", text: formatSoapObjective(session) },
+        { letter: "A", text: session && session.assessment },
+        { letter: "P", text: session && session.plan },
+      ];
+      bandDefs.forEach((b) => {
+        const band = document.createElement("div");
+        band.className = "dense-soap-band";
+        band.innerHTML = `<span class="dense-soap-letter">${escapeHtml(b.letter)}</span>` +
+          `<span class="dense-soap-text">${escapeHtml(b.text || "")}</span>`;
+        soap.appendChild(band);
+      });
+      table.appendChild(soap);
+
+      const one = document.createElement("div");
+      one.className = "dense-soap-td";
+      one.style.minHeight = rowH.toFixed(2) + "px";
+      one.textContent = (session && session.orderForOneDay) || "";
+      table.appendChild(one);
+
+      const cont = document.createElement("div");
+      cont.className = "dense-soap-td";
+      cont.style.minHeight = rowH.toFixed(2) + "px";
+      cont.textContent = (session && session.orderForContinuation) || "";
+      table.appendChild(cont);
+    });
+
+    root.appendChild(table);
+    return root;
+  }
+
+  function formatSoapObjective(session) {
+    if (!session) return "";
+    const bits = [];
+    if (session.generalAppearance) bits.push(String(session.generalAppearance));
+    if (session.heent) bits.push("HEENT:" + session.heent);
+    if (session.lung) bits.push("Lung:" + session.lung);
+    if (session.extremities) bits.push("Ext:" + session.extremities);
+    if (session.objectiveOther) bits.push(session.objectiveOther);
+    return bits.join(" · ");
+  }
+
+  function renderChecklistPatientHtml(data, scale) {
+    const root = document.createElement("div");
+    root.className = "dense-checklist-patient";
+    const p = (data && data.patient) || {};
+    const cells = [
+      ["Patient name:", p.name],
+      ["DOB:", p.birthDateLabel],
+      ["HN:", p.hospitalNumber],
+      ["Sessions per week:", p.sessionsPerWeekLabel],
+      ["Dialysis days:", p.dialysisDays],
+      ["Coverage scheme:", p.coverageScheme],
+      ["Dialysis mode:", p.dialysisMode],
+      ["Underlying:", p.underlying],
+    ];
+    root.style.display = "grid";
+    root.style.gridTemplateColumns = "1fr 1fr 1fr 1fr";
+    root.style.height = "100%";
+    root.style.fontSize = Math.max(7, 9 * Math.min(1, scale / 3.2)) + "px";
+    cells.forEach((pair) => {
+      const cell = document.createElement("div");
+      cell.className = "dense-checklist-cell";
+      cell.innerHTML = `<strong>${escapeHtml(pair[0])}</strong> ${escapeHtml(pair[1] || "—")}`;
+      root.appendChild(cell);
+    });
+    return root;
+  }
+
+  function renderChecklistGridHtml(el, data, scale) {
+    const root = document.createElement("div");
+    root.className = "dense-checklist-grid";
+    root.style.height = "100%";
+    const title = document.createElement("div");
+    title.className = "dense-checklist-grid-title";
+    title.textContent = "Check lists";
+    root.appendChild(title);
+
+    const columns = (data && data.columns) || [];
+    const yearSpans = (data && data.yearSpans) || [];
+    const items = (data && data.checklistItems) || [];
+    if (!columns.length || !items.length) {
+      const empty = document.createElement("div");
+      empty.className = "ph-dense";
+      empty.textContent = "No progress note data available for the selected range.";
+      root.appendChild(empty);
+      return root;
+    }
+
+    const table = document.createElement("table");
+    table.className = "dense-checklist-table";
+    const thead = document.createElement("thead");
+    const yearRow = document.createElement("tr");
+    yearRow.appendChild(document.createElement("th"));
+    yearSpans.forEach((span) => {
+      const th = document.createElement("th");
+      th.colSpan = Math.max(1, Number(span.colSpan) || 1);
+      th.textContent = String(span.year || "");
+      yearRow.appendChild(th);
+    });
+    thead.appendChild(yearRow);
+    const monthRow = document.createElement("tr");
+    const itemTh = document.createElement("th");
+    itemTh.textContent = "Item";
+    monthRow.appendChild(itemTh);
+    columns.forEach((c) => {
+      const th = document.createElement("th");
+      th.textContent = String(c.calendarMonth || "");
+      monthRow.appendChild(th);
+    });
+    thead.appendChild(monthRow);
+    table.appendChild(thead);
+
+    const tbody = document.createElement("tbody");
+    let lastGroup = null;
+    items.forEach((item) => {
+      if (item.group && item.group !== lastGroup) {
+        lastGroup = item.group;
+        const gr = document.createElement("tr");
+        const gd = document.createElement("td");
+        gd.colSpan = columns.length + 1;
+        gd.className = "dense-checklist-group";
+        gd.textContent = item.group;
+        gr.appendChild(gd);
+        tbody.appendChild(gr);
+      }
+      const tr = document.createElement("tr");
+      const label = document.createElement("td");
+      label.textContent = item.label || "";
+      tr.appendChild(label);
+      const marks = item.marks || [];
+      for (let i = 0; i < columns.length; i++) {
+        const td = document.createElement("td");
+        td.textContent = marks[i] || "";
+        tr.appendChild(td);
+      }
+      tbody.appendChild(tr);
+    });
+    table.appendChild(tbody);
+    root.appendChild(table);
+    void el;
+    void scale;
+    return root;
+  }
+
+  function renderChecklistTextNotesHtml(data, scale) {
+    const root = document.createElement("div");
+    root.className = "dense-checklist-notes";
+    const notes = (data && data.textNotes) || [];
+    if (!notes.length) {
+      root.innerHTML = `<div class="ph-dense">text notes (empty)</div>`;
+      return root;
+    }
+    root.innerHTML = `<div class="dense-checklist-grid-title">Text note</div>`;
+    notes.forEach((n) => {
+      const block = document.createElement("div");
+      block.className = "dense-checklist-note";
+      block.innerHTML = `<strong>${escapeHtml(n.monthLabel || "")}</strong><div>${escapeHtml(n.content || "")}</div>`;
+      root.appendChild(block);
+    });
+    void scale;
+    return root;
   }
 
   function renderHeaderHtml(model, el, scale) {

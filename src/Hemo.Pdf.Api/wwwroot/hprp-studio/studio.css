@@ -894,6 +894,59 @@ button.tb-icon {
 .ph-meta { font-size: 8px; color: #555; }
 .ph-dense { font-size: 8px; padding: 4px; color: #555; }
 
+.dense-soap { overflow: hidden; font-size: 8px; color: #222; background: #fff; }
+.dense-soap-table { width: 100%; border-collapse: collapse; }
+.dense-soap-th {
+  border: 0.5px solid #333;
+  background: #e8eef5;
+  font-weight: 700;
+  text-align: center;
+  padding: 2px 3px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.dense-soap-td {
+  border: 0.5px solid #333;
+  padding: 2px 3px;
+  vertical-align: top;
+  overflow: hidden;
+}
+.dense-soap-date { text-align: center; font-weight: 600; }
+.dense-soap-bands { padding: 0; }
+.dense-soap-band {
+  border-bottom: 0.5px solid #bbb;
+  padding: 1px 3px;
+  display: flex;
+  gap: 4px;
+  min-height: 0;
+  overflow: hidden;
+}
+.dense-soap-band:last-child { border-bottom: none; }
+.dense-soap-letter { font-weight: 700; flex: 0 0 auto; }
+.dense-soap-text { flex: 1 1 auto; overflow: hidden; }
+
+.dense-checklist-patient { background: #fff; }
+.dense-checklist-cell {
+  border: 0.5px solid #333;
+  padding: 2px 4px;
+  overflow: hidden;
+}
+.dense-checklist-grid { overflow: auto; background: #fff; font-size: 8px; }
+.dense-checklist-grid-title { font-weight: 700; font-size: 10px; margin-bottom: 2px; }
+.dense-checklist-table { width: 100%; border-collapse: collapse; table-layout: fixed; }
+.dense-checklist-table th,
+.dense-checklist-table td {
+  border: 0.5px solid #333;
+  padding: 1px 2px;
+  text-align: center;
+  overflow: hidden;
+}
+.dense-checklist-table th:first-child,
+.dense-checklist-table td:first-child { text-align: left; width: 18%; }
+.dense-checklist-group { font-weight: 700; text-align: left !important; background: #f3f3f3; }
+.dense-checklist-notes { font-size: 8px; }
+
 .col-row, .bind-row {
   display: flex;
   justify-content: space-between;
