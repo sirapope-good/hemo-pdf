@@ -1,8 +1,9 @@
 {
   "id": "clinical-09-consent-en",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "displayName": "Treatment Consent (EN)",
   "engineVersion": 1,
+  "layoutMode": "designer",
   "dataAdapter": "consent",
   "requiresSignature": false,
   "language": "en",

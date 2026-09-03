@@ -1,13 +1,31 @@
 {
   "page": {
-    "size": "A4"
+    "size": "A4",
+    "orientation": "portrait",
+    "marginMm": 8,
+    "spacingMode": "custom",
+    "spacingMm": 0,
+    "spacingBelowMm": 0,
+    "spacingBesideMm": 0,
+    "border": "none"
   },
-  "header": {
-    "widget": "thaiur.header"
-  },
-  "body": [
+  "elements": [
     {
-      "widget": "clinical.consent-narrative"
+      "id": "hdr",
+      "type": "header",
+      "band": "header",
+      "preset": "clinical-header-thaiur",
+      "place": "below",
+      "box": { "xMm": 0, "yMm": 0, "wMm": 194, "hMm": 27 }
+    },
+    {
+      "id": "consent-narrative",
+      "type": "dense",
+      "band": "content",
+      "widget": "clinical.consent-narrative",
+      "place": "below",
+      "box": { "xMm": 0, "yMm": 27, "wMm": 194, "hMm": 254 },
+      "chrome": { "border": "thin" }
     }
   ]
 }

@@ -308,7 +308,7 @@ JSON schema: `assets/templates/schema/hprp-layout.schema.json`
 | **clinical-01** | Section order (`header`+`body`) + labels + extra form blocks — pixels of dense widgets stay in C# sections |
 | **clinical-02** | Same; `clinical.epo-drug-table` includes meta band (not a separate widget yet) |
 | **clinical-05** | `layout.header` → repeating page header; `layout.body` → SOAP + extra form blocks |
-| **clinical-08/09** | `layout.header` + `clinical.consent-narrative` body + extra form blocks; narrative internals stay C# |
+| **clinical-08/09** | `layoutMode: designer` — `clinical-header-thaiur` + dense `clinical.consent-narrative`; narrative internals stay C# |
 | **clinical-04** | ThaiUr header + doctor-prescription style body (`$.dialysisFields` / med lines) via `Clinical04PrescriptionReportDataService` |
 | **clinical-06 / 10–16** | Trusted `report-data` via `ClinicalFormReportDataService` + HPRP `$.fields` / `$.rows` |
 | **clinical-07** | Dedicated lab matrix endpoint (unchanged) |

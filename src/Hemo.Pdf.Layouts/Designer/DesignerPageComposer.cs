@@ -164,6 +164,12 @@ public static class DesignerPageComposer
             return checklist.Title;
         }
 
+        if (vm.BoundModel is ConsentReportViewModel consent
+            && !string.IsNullOrWhiteSpace(consent.Title))
+        {
+            return consent.Title;
+        }
+
         var fromHct = vm.ReadHctEpo()?.Title;
         if (!string.IsNullOrWhiteSpace(fromHct))
             return fromHct!;

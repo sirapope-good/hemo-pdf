@@ -1,7 +1,10 @@
+using System.Text.Json;
 using Hemo.Pdf.Core.Abstractions;
 using Hemo.Pdf.Core.Context;
 using Hemo.Pdf.Core.Hprp;
+using Hemo.Pdf.Core.Models;
 using Hemo.Pdf.Core.Models.Clinical;
+using Hemo.Pdf.Layouts.Designer;
 using Hemo.Pdf.Layouts.Hprp;
 using Hemo.Pdf.Rendering;
 using Hemo.Pdf.Sections;
@@ -15,7 +18,8 @@ namespace Hemo.Pdf.Layouts.Clinical.Clinical08_Consent;
 
 /// <summary>
 /// Consent under the shared ThaiUr header + narrative content frame
-/// (<see cref="NarrativeLayout"/>). Header/body widgets come from <c>.hprp</c>;
+/// (<see cref="NarrativeLayout"/>). Designer packs use
+/// <see cref="DesignerPageComposer"/> (header preset + dense consent-narrative);
 /// narrative internals stay C# (intro / paragraphs / signatures).
 /// </summary>
 public sealed class ConsentReportComposer : ILayoutComposer
@@ -23,16 +27,42 @@ public sealed class ConsentReportComposer : ILayoutComposer
     private const string Ellipsis = "...";
     private const float LineHeight = NarrativeLayout.LineHeight;
     private readonly IHprpTemplateStore? _templates;
+    private readonly IHprpTablePresetCatalog? _presets;
+    private readonly IHprpHeaderPresetCatalog? _headerPresets;
 
     public ConsentReportComposer(IHprpTemplateStore? templates = null)
+        : this(templates, null, null)
+    {
+    }
+
+    public ConsentReportComposer(
+        IHprpTemplateStore? templates,
+        IHprpTablePresetCatalog? presets,
+        IHprpHeaderPresetCatalog? headerPresets)
     {
         _templates = templates;
+        _presets = presets;
+        _headerPresets = headerPresets;
     }
 
     public object Compose(object dataModel, PdfReportContext context)
     {
         var vm = (ConsentReportViewModel)dataModel;
         var package = HprpLayoutPlan.TryGetPackage(_templates, context);
+
+        if (package is not null && HprpLayoutModes.IsDesigner(package.Manifest))
+        {
+            JsonElement? data = context.Data is JsonElement je ? je : null;
+            var designerVm = DesignerCanvasViewModel.FromPackage(
+                package,
+                data,
+                HprpLabelResolver.Resolve(_templates, context, vm.Language),
+                _presets?.LoadAll(),
+                _headerPresets?.LoadAll(),
+                boundModel: vm);
+            return DesignerPageComposer.Compose(designerVm, context);
+        }
+
         var page = HprpPageLayout.FromPackage(
             package,
             HprpPageFallback.Uniform(HemosheetThaiUrStyle.PageMarginMm));
@@ -53,6 +83,18 @@ public sealed class ConsentReportComposer : ILayoutComposer
             header: null,
             content: c => ComposeContent(c, vm, labels, overlay, headerWidget, bodyNodes, context),
             footer: null);
+    }
+
+    /// <summary>
+    /// Dense designer / absolute host entry — framed narrative body (no page header).
+    /// </summary>
+    public static void ComposeDenseNarrative(IContainer container, ConsentReportViewModel vm)
+    {
+        var labels = ConsentReportLabels.For(vm.Language);
+        var isTreatment = !string.Equals(vm.Type, "PDPA", StringComparison.OrdinalIgnoreCase);
+        var isEn = string.Equals(vm.Language, "en", StringComparison.OrdinalIgnoreCase);
+        var bodyFont = isEn ? 10.5f : 11f;
+        NarrativeLayout.Frame(container, c => ComposeFramedBody(c, vm, labels, isTreatment, bodyFont));
     }
 
     private static void ComposeContent(

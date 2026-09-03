@@ -4,6 +4,7 @@ using Hemo.Pdf.Core.Models.Clinical;
 using Hemo.Pdf.Core.Models.Hemosheet;
 using Hemo.Pdf.Layouts.Clinical.Clinical01_HctEpo;
 using Hemo.Pdf.Layouts.Clinical.Clinical05_ProgressNote;
+using Hemo.Pdf.Layouts.Clinical.Clinical08_Consent;
 using Hemo.Pdf.Sections.ThaiUr;
 using QuestPDF.Fluent;
 using QuestPDF.Infrastructure;
@@ -42,6 +43,13 @@ public static class AbsoluteDenseWidgetHost
         HprpWidgetIds.ClinicalChecklistTextNotes,
     };
 
+    /// <summary>Clinical-08/09 consent dense widgets.</summary>
+    public static readonly IReadOnlySet<string> Clinical08WidgetIds = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
+    {
+        HprpWidgetIds.ThaiUrHeader,
+        HprpWidgetIds.ClinicalConsentNarrative,
+    };
+
     public static bool TryCompose(
         IContainer container,
         HprpAbsoluteWidget widget,
@@ -75,6 +83,9 @@ public static class AbsoluteDenseWidgetHost
         if (string.Equals(widgetId, HprpWidgetIds.ClinicalChecklistTextNotes, StringComparison.OrdinalIgnoreCase))
             return TryComposeChecklistTextNotes(container, canvas);
 
+        if (string.Equals(widgetId, HprpWidgetIds.ClinicalConsentNarrative, StringComparison.OrdinalIgnoreCase))
+            return TryComposeConsentNarrative(container, canvas);
+
         return false;
     }
 
@@ -83,6 +94,12 @@ public static class AbsoluteDenseWidgetHost
         if (canvas.BoundModel is Clinical05ProgressNoteReportViewModel soap)
         {
             ThaiUrReportHeader.Compose(container, soap.Header, soap.Title);
+            return true;
+        }
+
+        if (canvas.BoundModel is ConsentReportViewModel consent)
+        {
+            ThaiUrReportHeader.Compose(container, consent.Header, consent.Title);
             return true;
         }
 
@@ -100,6 +117,14 @@ public static class AbsoluteDenseWidgetHost
 
         // Placeholder when sample / adapter not bound yet — still placeable for layout work.
         ThaiUrReportHeader.Compose(container, new HemosheetReportViewModel(), canvas.Title);
+        return true;
+    }
+
+    private static bool TryComposeConsentNarrative(IContainer container, AbsoluteCanvasViewModel canvas)
+    {
+        var vm = canvas.BoundModel as ConsentReportViewModel
+            ?? new ConsentReportViewModel { Title = canvas.Title };
+        ConsentReportComposer.ComposeDenseNarrative(container, vm);
         return true;
     }
 
