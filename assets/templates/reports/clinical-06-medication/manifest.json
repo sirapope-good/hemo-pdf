@@ -1,8 +1,9 @@
 {
   "id": "clinical-06-medication",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "displayName": "Medication Record",
   "engineVersion": 1,
+  "layoutMode": "designer",
   "dataAdapter": "flatten-dto",
   "requiresSignature": false,
   "language": "th",
@@ -11,7 +12,19 @@
     "menuGroup": "clinical",
     "sortOrder": 60,
     "visibleInMenu": true,
-    "parameters": [],
+    "parameters": [
+      {
+        "name": "from",
+        "source": "default",
+        "generator": "lastMonths",
+        "months": 2
+      },
+      {
+        "name": "to",
+        "source": "default",
+        "generator": "today"
+      }
+    ],
     "reportDataPath": "api/Patients/{patientId}/reports/{templateId}/report-data"
   }
 }

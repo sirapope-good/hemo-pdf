@@ -98,6 +98,7 @@ public static class ClinicalReportCatalog
             || string.Equals(engineId, ProgressNote, StringComparison.OrdinalIgnoreCase)
             || string.Equals(engineId, ProgressNoteChecklist, StringComparison.OrdinalIgnoreCase)
             || string.Equals(engineId, Lab, StringComparison.OrdinalIgnoreCase)
+            || string.Equals(engineId, Medication, StringComparison.OrdinalIgnoreCase)
             || string.Equals(engineId, "medicine-preparation-round", StringComparison.OrdinalIgnoreCase)
             || IsConsentReport(engineId);
     }

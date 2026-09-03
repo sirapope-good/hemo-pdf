@@ -1,46 +1,37 @@
 {
   "page": {
     "size": "A4",
-    "marginMm": 10
+    "orientation": "portrait",
+    "marginMm": 8,
+    "spacingMode": "custom",
+    "spacingMm": 0,
+    "spacingBelowMm": 0,
+    "spacingBesideMm": 0,
+    "border": "none"
   },
-  "body": [
+  "elements": [
     {
-      "type": "text",
-      "style": "title",
-      "bind": "$title"
+      "id": "hdr",
+      "type": "header",
+      "band": "header",
+      "preset": "clinical-header-thaiur",
+      "place": "below",
+      "box": { "xMm": 0, "yMm": 0, "wMm": 194, "hMm": 27 }
     },
     {
-      "type": "field-grid",
-      "columns": 2,
-      "fields": [
-        {
-          "label": { "$label": "hn" },
-          "bind": "$.patient.hn"
-        },
-        {
-          "label": { "$label": "patientName" },
-          "bind": "$.patient.name"
-        },
-        {
-          "label": { "$label": "unit" },
-          "bind": "$.patient.unit"
-        },
-        {
-          "label": { "$label": "reportDate" },
-          "bind": "$.reportDate"
-        }
-      ]
-    },
-    {
-      "type": "key-value-table",
-      "bindRows": "$.fields",
-      "when": "$.fields.length > 0"
-    },
-    {
+      "id": "med-grid",
       "type": "data-grid",
-      "columnHeadersBind": "$.columnHeaders",
+      "band": "content",
+      "place": "below",
       "bindRows": "$.rows",
-      "when": "$.rows.length > 0"
+      "columnHeadersBind": "$.columnHeaders",
+      "box": { "xMm": 0, "yMm": 0, "wMm": 194, "hMm": 254 },
+      "chrome": {
+        "headerFill": "$branding.sectionHeaderBackground",
+        "border": "thin",
+        "fontSize": 7,
+        "columnWidths": ["3.2", "2.2", "1.6", "*", "*", "*", "*", "*"]
+      }
     }
   ]
 }
