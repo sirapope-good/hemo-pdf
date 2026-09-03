@@ -70,6 +70,12 @@ public static class HprpDesignerElementTypes
     /// <summary>Bound tabular block (<c>bindRows</c> / <c>columnHeadersBind</c>) — clinical lab matrix.</summary>
     public const string DataGrid = "data-grid";
 
+    /// <summary>
+    /// Multi-paragraph Word-lite block (<c>paragraphs[]</c> editable in Studio;
+    /// optional <c>bindParagraphs</c> for live report-data override).
+    /// </summary>
+    public const string Narrative = "narrative";
+
     public static readonly IReadOnlySet<string> All = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
     {
         Header,
@@ -79,6 +85,7 @@ public static class HprpDesignerElementTypes
         Dense,
         Group,
         DataGrid,
+        Narrative,
     };
 }
 

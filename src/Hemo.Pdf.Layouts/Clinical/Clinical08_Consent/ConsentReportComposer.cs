@@ -19,8 +19,8 @@ namespace Hemo.Pdf.Layouts.Clinical.Clinical08_Consent;
 /// <summary>
 /// Consent under the shared ThaiUr header + narrative content frame
 /// (<see cref="NarrativeLayout"/>). Designer packs use
-/// <see cref="DesignerPageComposer"/> (header preset + dense consent-narrative);
-/// narrative internals stay C# (intro / paragraphs / signatures).
+/// <see cref="DesignerPageComposer"/> (header + dense intro/closing + Word-lite
+/// <c>narrative</c> for body paragraphs). Intro / signatures stay C#.
 /// </summary>
 public sealed class ConsentReportComposer : ILayoutComposer
 {
@@ -86,15 +86,21 @@ public sealed class ConsentReportComposer : ILayoutComposer
     }
 
     /// <summary>
-    /// Dense designer / absolute host entry — framed narrative body (no page header).
+    /// Dense designer / absolute host entry — framed consent chrome (no page header).
+    /// <paramref name="contentMode"/>: <c>full</c> (default), <c>intro</c>, or <c>closing</c>.
+    /// Body paragraphs belong on a designer <c>narrative</c> element when mode is not full.
     /// </summary>
-    public static void ComposeDenseNarrative(IContainer container, ConsentReportViewModel vm)
+    public static void ComposeDenseNarrative(
+        IContainer container,
+        ConsentReportViewModel vm,
+        string? contentMode = null)
     {
         var labels = ConsentReportLabels.For(vm.Language);
         var isTreatment = !string.Equals(vm.Type, "PDPA", StringComparison.OrdinalIgnoreCase);
         var isEn = string.Equals(vm.Language, "en", StringComparison.OrdinalIgnoreCase);
         var bodyFont = isEn ? 10.5f : 11f;
-        NarrativeLayout.Frame(container, c => ComposeFramedBody(c, vm, labels, isTreatment, bodyFont));
+        var mode = (contentMode ?? "full").Trim().ToLowerInvariant();
+        NarrativeLayout.Frame(container, c => ComposeFramedBody(c, vm, labels, isTreatment, bodyFont, mode));
     }
 
     private static void ComposeContent(
@@ -149,25 +155,39 @@ public sealed class ConsentReportComposer : ILayoutComposer
         ConsentReportViewModel vm,
         ConsentReportLabels labels,
         bool isTreatment,
-        float bodyFont)
+        float bodyFont,
+        string mode = "full")
     {
+        var includeIntro = mode is "full" or "intro";
+        var includeBody = mode is "full";
+        var includeClosing = mode is "full" or "closing";
+
         container.Column(col =>
         {
             col.Spacing(0);
-            col.Item().Element(c => ComposeDocumentTitle(c, vm.Title));
 
-            if (isTreatment)
+            if (includeIntro)
             {
-                col.Item().PaddingTop(10).Element(c => ComposeTreatmentIntro(c, vm, labels, bodyFont));
-            }
-            else
-            {
-                col.Item().PaddingTop(10).Element(c => ComposePdpaIntro(c, vm, labels, bodyFont));
+                col.Item().Element(c => ComposeDocumentTitle(c, vm.Title));
+
+                if (isTreatment)
+                {
+                    col.Item().PaddingTop(10).Element(c => ComposeTreatmentIntro(c, vm, labels, bodyFont));
+                }
+                else
+                {
+                    col.Item().PaddingTop(10).Element(c => ComposePdpaIntro(c, vm, labels, bodyFont));
+                }
             }
 
-            col.Item().PaddingTop(10).Element(c => ComposeBody(c, vm, bodyFont));
-            col.Item().PaddingTop(16).ShowEntire().Element(c =>
-                ComposeClosing(c, vm, labels, isTreatment));
+            if (includeBody)
+                col.Item().PaddingTop(10).Element(c => ComposeBody(c, vm, bodyFont));
+
+            if (includeClosing)
+            {
+                col.Item().PaddingTop(includeIntro || includeBody ? 16 : 0).ShowEntire().Element(c =>
+                    ComposeClosing(c, vm, labels, isTreatment));
+            }
         });
     }
 

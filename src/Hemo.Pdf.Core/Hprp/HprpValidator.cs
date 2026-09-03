@@ -196,7 +196,7 @@ public static class HprpValidator
 
             var type = el.Type?.Trim() ?? "";
             if (!Hprp.Table.HprpDesignerElementTypes.All.Contains(type))
-                errors.Add($"{path}.type must be header, config-table, box-text, page-of, dense, data-grid, or group.");
+                errors.Add($"{path}.type must be header, config-table, box-text, page-of, dense, data-grid, narrative, or group.");
 
             if (el.Box.WMm <= 0 || el.Box.HMm <= 0)
                 errors.Add($"{path}.box wMm/hMm must be > 0.");
@@ -244,6 +244,14 @@ public static class HprpValidator
                 && string.IsNullOrWhiteSpace(el.BindRows))
             {
                 errors.Add($"{path}.bindRows is required for data-grid.");
+            }
+
+            if (string.Equals(type, Hprp.Table.HprpDesignerElementTypes.Narrative, StringComparison.OrdinalIgnoreCase))
+            {
+                var hasPack = el.Paragraphs is { Count: > 0 };
+                var hasBind = !string.IsNullOrWhiteSpace(el.BindParagraphs);
+                if (!hasPack && !hasBind)
+                    errors.Add($"{path} paragraphs or bindParagraphs is required for narrative.");
             }
         }
     }

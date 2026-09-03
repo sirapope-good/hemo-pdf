@@ -70,6 +70,8 @@ WYSIWYG path on branch `feat/hprp-table-designer` — **does not replace** compo
 
 **Dense on designer canvas (clinical-05):** SOAP keeps `type: "dense"` + `widget: "clinical.soap-table"` (nested S/O/A/P pixels stay in C#). Checklist uses dense `clinical.checklist-patient` / `clinical.checklist-grid` / `clinical.checklist-text-notes` plus box-text title band. Row height for SOAP is budgeted from the placed `hMm` box (~2 session rows).
 
+**Narrative (Word-lite):** `type: "narrative"` with `paragraphs[]` (`text`, `sub`, `align`, `role: title|body|note`) and optional `bindParagraphs` (e.g. `$.bodyParagraphs`). Studio **Insert → Narrative** edits/reorders paragraphs; PDF draws via `ConfigurableNarrativeComposer`. Consent 08/09: dense `contentMode: intro|closing` + narrative body.
+
 **Preset library:** `assets/templates/presets/tables/{id}.json` — reusable table chrome + columns + row mode (`freedom` | `monthly` | `annual`). Studio API: `GET/PUT /api/hprp/presets/tables/{id}`.
 
 **Adapter schema (field mapper):** `assets/templates/adapters/{dataAdapterId}.schema.json` — `GET /api/hprp/adapters/{dataAdapterId}/schema` drives the Studio “Map field…” picker.
@@ -245,7 +247,7 @@ Per-node `box.marginMm` / `box.paddingMm`: number, `[v,h]`, `[t,r,b,l]`, or name
 | `columnPlan` / hemosheet `columns` | **Table data** columns (HCT/EPO, dialysis headers) | Add/remove/reorder in inspector |
 | `row.cells[].width` | Side-by-side **blocks** | Place beside / cell width `*` `40%` `32mm` |
 
-Dense widgets (SOAP, consent narrative, most hemosheet sections) still own inner pixels in C#. Chrome / recipe knobs only.
+Dense widgets (SOAP, consent intro/signatures, most hemosheet sections) still own inner pixels in C#. Body paragraphs for consent use designer `narrative`. Chrome / recipe knobs only.
 
 Studio is a **constraint / flow editor** with a visual **Page canvas** (`Page → Flow → Row/Cell → Block`), not a free absolute canvas. Do not promise extra SOAP/consent columns in the UI unless the recipe already has `columnPlan`.
 
@@ -253,7 +255,7 @@ Studio is a **constraint / flow editor** with a visual **Page canvas** (`Page �
 
 | Driven by `.hprp` / Studio (pack, no compile) | Needs a C# widget / recipe change |
 |-----------------------------------------------|-----------------------------------|
-| Page `margin` / `spacingMm` / `fontSize` when the file sets them | Inner pixels of SOAP, HCT/EPO tables, consent narrative |
+| Page `margin` / `spacingMm` / `fontSize` when the file sets them | Inner pixels of SOAP, HCT/EPO tables, consent intro/signatures (C#) |
 | Per-node `box`, `chrome.fontSize`, labels, bind paths | New widget ids, new `layoutKind` |
 | `row` / `column-stack` around form blocks and allowed widgets | Hemosheet **section order** as a free grid; Place beside between hemosheet sections |
 | `field-grid.columns`, `columnPlan` / dialysis `columns` when the recipe already lists them | Bind fields inside HCT tables outside the C# formula |
@@ -308,7 +310,7 @@ JSON schema: `assets/templates/schema/hprp-layout.schema.json`
 | **clinical-01** | Section order (`header`+`body`) + labels + extra form blocks — pixels of dense widgets stay in C# sections |
 | **clinical-02** | Same; `clinical.epo-drug-table` includes meta band (not a separate widget yet) |
 | **clinical-05** | `layout.header` → repeating page header; `layout.body` → SOAP + extra form blocks |
-| **clinical-08/09** | `layoutMode: designer` — `clinical-header-thaiur` + dense `clinical.consent-narrative`; narrative internals stay C# |
+| **clinical-08/09** | `layoutMode: designer` — `clinical-header-thaiur` + dense intro/closing (`contentMode`) + Word-lite `narrative` for body paragraphs |
 | **clinical-04** | ThaiUr header + doctor-prescription style body (`$.dialysisFields` / med lines) via `Clinical04PrescriptionReportDataService` |
 | **clinical-06 / 10–16** | Trusted `report-data` via `ClinicalFormReportDataService` + HPRP `$.fields` / `$.rows` |
 | **clinical-07** | Dedicated lab matrix endpoint (unchanged) |

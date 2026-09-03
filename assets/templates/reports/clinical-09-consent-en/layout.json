@@ -19,13 +19,41 @@
       "box": { "xMm": 0, "yMm": 0, "wMm": 194, "hMm": 27 }
     },
     {
-      "id": "consent-narrative",
+      "id": "consent-intro",
       "type": "dense",
       "band": "content",
       "widget": "clinical.consent-narrative",
       "place": "below",
-      "box": { "xMm": 0, "yMm": 27, "wMm": 194, "hMm": 254 },
-      "chrome": { "border": "thin" }
+      "box": { "xMm": 0, "yMm": 27, "wMm": 194, "hMm": 72 },
+      "chrome": { "border": "thin", "contentMode": "intro" }
+    },
+    {
+      "id": "consent-body",
+      "type": "narrative",
+      "band": "content",
+      "place": "below",
+      "box": { "xMm": 0, "yMm": 99, "wMm": 194, "hMm": 128 },
+      "bindParagraphs": "$.bodyParagraphs",
+      "paragraphs": [
+        { "text": "I acknowledge that I have been informed and understand hemodialysis treatment as follows:", "sub": false, "align": "left" },
+        { "text": "1. Hemodialysis removes waste products and excess fluid from the body.", "sub": false, "align": "left" },
+        { "text": "2. Possible complications during or after treatment include:", "sub": false, "align": "left" },
+        { "text": "2.1 Infection", "sub": true, "align": "left" },
+        { "text": "2.2 Bleeding", "sub": true, "align": "left" },
+        { "text": "2.3 Hypotension", "sub": true, "align": "left" },
+        { "text": "2.4 Muscle cramps", "sub": true, "align": "left" },
+        { "text": "2.5 Allergic reaction to materials used in dialysis", "sub": true, "align": "left" }
+      ],
+      "chrome": { "border": "thin", "fontSize": 10.5, "rowHeightMm": 3.5 }
+    },
+    {
+      "id": "consent-closing",
+      "type": "dense",
+      "band": "content",
+      "widget": "clinical.consent-narrative",
+      "place": "below",
+      "box": { "xMm": 0, "yMm": 227, "wMm": 194, "hMm": 54 },
+      "chrome": { "border": "thin", "contentMode": "closing" }
     }
   ]
 }

@@ -56,6 +56,13 @@ public sealed class HprpChrome
     [JsonPropertyName("headerPaddingMm")]
     public float? HeaderPaddingMm { get; init; }
 
+    /// <summary>
+    /// Consent dense slice: <c>full</c> (default), <c>intro</c> (title + fill-in),
+    /// or <c>closing</c> (signatures). Body paragraphs live in designer <c>narrative</c>.
+    /// </summary>
+    [JsonPropertyName("contentMode")]
+    public string? ContentMode { get; init; }
+
     public static string ResolveHeaderFill(
         HprpChrome? chrome,
         PdfReportContext? context,
@@ -192,6 +199,13 @@ public sealed class HprpChrome
 
         if (chrome.HeaderPaddingMm is < 0 or > HprpBox.MaxMm)
             errors.Add($"{path}.headerPaddingMm must be between 0 and {HprpBox.MaxMm}.");
+
+        var contentMode = chrome.ContentMode?.Trim().ToLowerInvariant();
+        if (!string.IsNullOrWhiteSpace(contentMode)
+            && contentMode is not ("full" or "intro" or "closing"))
+        {
+            errors.Add($"{path}.contentMode must be full, intro, or closing.");
+        }
 
         if (chrome.BandWeights is { Count: > 0 } bands)
         {
@@ -356,6 +370,7 @@ public sealed class HprpChrome
             HeaderHeightMm = overlay.HeaderHeightMm ?? bas.HeaderHeightMm,
             HeaderAlign = overlay.HeaderAlign ?? bas.HeaderAlign,
             HeaderPaddingMm = overlay.HeaderPaddingMm ?? bas.HeaderPaddingMm,
+            ContentMode = overlay.ContentMode ?? bas.ContentMode,
         };
     }
 }

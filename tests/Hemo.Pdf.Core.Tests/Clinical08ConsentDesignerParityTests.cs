@@ -35,8 +35,16 @@ public class Clinical08ConsentDesignerParityTests
             e => string.Equals(e.Type, HprpDesignerElementTypes.Header, StringComparison.OrdinalIgnoreCase));
         Assert.Contains(
             package.Layout.Elements,
+            e => string.Equals(e.Type, HprpDesignerElementTypes.Narrative, StringComparison.OrdinalIgnoreCase));
+        Assert.Contains(
+            package.Layout.Elements,
             e => string.Equals(e.Type, HprpDesignerElementTypes.Dense, StringComparison.OrdinalIgnoreCase)
-                && string.Equals(e.Widget, HprpWidgetIds.ClinicalConsentNarrative, StringComparison.OrdinalIgnoreCase));
+                && string.Equals(e.Widget, HprpWidgetIds.ClinicalConsentNarrative, StringComparison.OrdinalIgnoreCase)
+                && string.Equals(e.Chrome?.ContentMode, "intro", StringComparison.OrdinalIgnoreCase));
+        Assert.Contains(
+            package.Layout.Elements,
+            e => string.Equals(e.Type, HprpDesignerElementTypes.Dense, StringComparison.OrdinalIgnoreCase)
+                && string.Equals(e.Chrome?.ContentMode, "closing", StringComparison.OrdinalIgnoreCase));
 
         var sample = HprpStudioSamplePayloads.TryLoad(templatesRoot, templateId);
         Assert.NotNull(sample);

@@ -31,7 +31,7 @@
 
   function minHeightForElement(el) {
     const t = String(el && el.type || "").toLowerCase();
-    return t === "box-text" || t === "page-of" ? MIN_BOX_TEXT_H : MIN_BLOCK_H;
+    return t === "box-text" || t === "page-of" || t === "narrative" ? MIN_BOX_TEXT_H : MIN_BLOCK_H;
   }
 
   /** Locate element in top-level list or inside a group.children. */
@@ -1555,6 +1555,8 @@
           body.appendChild(renderDenseWidgetHtml(el, sampleData, scale, item.hMm, labels));
         } else if (el.type === "data-grid") {
           body.appendChild(renderDataGridHtml(el, sampleData, scale, item.hMm));
+        } else if (el.type === "narrative") {
+          body.appendChild(renderNarrativeHtml(el, sampleData, scale));
         } else {
           body.innerHTML = `<div class="ph-dense">${escapeHtml(el.type)}: ${escapeHtml(el.widget || el.id)}</div>`;
         }
@@ -2127,11 +2129,259 @@
       return renderChecklistGridHtml(el, data, scale);
     if (widget === "clinical.checklist-text-notes")
       return renderChecklistTextNotesHtml(data, scale);
+    if (widget === "clinical.consent-narrative")
+      return renderConsentDenseHtml(el, data, scale);
 
     const root = document.createElement("div");
     root.className = "ph-dense";
     root.textContent = "dense: " + (el.widget || el.id);
     return root;
+  }
+
+  function renderConsentDenseHtml(el, data, scale) {
+    const mode = String((el.chrome && el.chrome.contentMode) || "full").toLowerCase();
+    const root = document.createElement("div");
+    root.className = "narrative-block consent-dense-mock";
+    root.style.fontSize = Math.max(8, 10 * (scale / 2.5)).toFixed(1) + "px";
+    const title = (data && data.title) || "Consent";
+    if (mode === "closing") {
+      root.innerHTML =
+        `<div class="narrative-p muted">ลายเซ็น / signatures (C#)</div>` +
+        `<div class="narrative-p muted">validity note</div>`;
+      return root;
+    }
+    if (mode === "intro") {
+      root.innerHTML =
+        `<div class="narrative-p role-title">${escapeHtml(title)}</div>` +
+        `<div class="narrative-p">ข้าพเจ้า / I am … (fill-in C#)</div>` +
+        `<div class="narrative-p muted">intro · contentMode=intro</div>`;
+      return root;
+    }
+    root.innerHTML =
+      `<div class="narrative-p role-title">${escapeHtml(title)}</div>` +
+      `<div class="narrative-p">intro + body + signatures (full)</div>` +
+      `<div class="narrative-p muted">ใช้ narrative element สำหรับย่อหน้า body</div>`;
+    return root;
+  }
+
+  /** Studio prefers pack paragraphs so Word-lite edits show; PDF may still bind. */
+  function resolveNarrativeParagraphs(el, data) {
+    if (Array.isArray(el.paragraphs) && el.paragraphs.length)
+      return el.paragraphs;
+    if (el.bindParagraphs && data && global.HeaderLayoutEngine) {
+      const v = global.HeaderLayoutEngine.readAt(data, el.bindParagraphs);
+      if (Array.isArray(v) && v.length) {
+        return v.map((item) => {
+          if (typeof item === "string") return { text: item, sub: false };
+          return {
+            text: (item && item.text) || "",
+            sub: !!(item && item.sub),
+            align: (item && item.align) || undefined,
+            role: (item && item.role) || undefined,
+          };
+        }).filter((p) => p.text && String(p.text).trim());
+      }
+    }
+    return [];
+  }
+
+  function renderNarrativeHtml(el, data, scale) {
+    const root = document.createElement("div");
+    root.className = "narrative-block" + (borderOn(el.chrome) ? "" : " narrative-no-border");
+    const fs = (el.chrome && el.chrome.fontSize) || 11;
+    root.style.fontSize = Math.max(8, fs * (scale / 2.5)).toFixed(1) + "px";
+    const paras = resolveNarrativeParagraphs(el, data);
+    if (!paras.length) {
+      root.innerHTML = `<div class="narrative-p muted">(empty narrative — แก้ใน Inspector)</div>`;
+      return root;
+    }
+    paras.forEach((p) => {
+      const div = document.createElement("div");
+      const role = String(p.role || "body").toLowerCase();
+      div.className = "narrative-p" + (p.sub ? " sub" : "") + (role === "title" ? " role-title" : "") + (role === "note" ? " role-note" : "");
+      const align = String(p.align || (role === "title" ? "center" : "left")).toLowerCase();
+      div.style.textAlign = align === "right" || align === "center" ? align : "left";
+      div.textContent = p.text || "\u00A0";
+      root.appendChild(div);
+    });
+    return root;
+  }
+
+  function renderNarrativeInspector(insp, el) {
+    const tip = document.createElement("p");
+    tip.className = "muted";
+    tip.textContent =
+      "Narrative (Word-lite) — แก้ย่อหน้า / จัดบรรทัด / เยื้อง sub / จัดชิด. Soft break ใช้ Enter ในช่องข้อความ.";
+    insp.appendChild(tip);
+
+    const bindLab = document.createElement("label");
+    bindLab.textContent = "bindParagraphs (optional, PDF override body)";
+    const bindIn = document.createElement("input");
+    bindIn.type = "text";
+    bindIn.value = el.bindParagraphs || "";
+    bindIn.placeholder = "$.bodyParagraphs";
+    bindIn.addEventListener("change", () => {
+      if (canvasTools) canvasTools.pushHistory();
+      el.bindParagraphs = bindIn.value.trim() || undefined;
+      renderAll();
+    });
+    bindLab.appendChild(bindIn);
+    insp.appendChild(bindLab);
+
+    const fsLab = document.createElement("label");
+    fsLab.textContent = "fontSize";
+    const fsIn = document.createElement("input");
+    fsIn.type = "number";
+    fsIn.step = "0.5";
+    fsIn.value = String((el.chrome && el.chrome.fontSize) || 11);
+    fsIn.addEventListener("change", () => {
+      if (canvasTools) canvasTools.pushHistory();
+      el.chrome = el.chrome || {};
+      el.chrome.fontSize = Number(fsIn.value) || 11;
+      renderAll();
+    });
+    fsLab.appendChild(fsIn);
+    insp.appendChild(fsLab);
+
+    const spaceLab = document.createElement("label");
+    spaceLab.textContent = "paragraph spacing (rowHeightMm)";
+    const spaceIn = document.createElement("input");
+    spaceIn.type = "number";
+    spaceIn.step = "0.5";
+    spaceIn.value = String((el.chrome && el.chrome.rowHeightMm) || 3.5);
+    spaceIn.addEventListener("change", () => {
+      if (canvasTools) canvasTools.pushHistory();
+      el.chrome = el.chrome || {};
+      el.chrome.rowHeightMm = Number(spaceIn.value) || 3.5;
+      renderAll();
+    });
+    spaceLab.appendChild(spaceIn);
+    insp.appendChild(spaceLab);
+
+    const head = document.createElement("p");
+    head.innerHTML = "<strong>Paragraphs</strong>";
+    insp.appendChild(head);
+
+    if (!Array.isArray(el.paragraphs)) el.paragraphs = [];
+
+    el.paragraphs.forEach((para, idx) => {
+      const box = document.createElement("div");
+      box.className = "box-text-item-edit narrative-para-edit";
+
+      const ta = document.createElement("textarea");
+      ta.rows = 3;
+      ta.value = para.text || "";
+      ta.placeholder = "ข้อความย่อหน้า…";
+      ta.addEventListener("change", () => {
+        if (canvasTools) canvasTools.pushHistory();
+        para.text = ta.value;
+        renderAll();
+      });
+      box.appendChild(ta);
+
+      const row = document.createElement("div");
+      row.className = "col-row";
+
+      const roleSel = document.createElement("select");
+      roleSel.title = "role";
+      ["body", "title", "note"].forEach((r) => {
+        const o = document.createElement("option");
+        o.value = r;
+        o.textContent = r;
+        if (String(para.role || "body") === r) o.selected = true;
+        roleSel.appendChild(o);
+      });
+      roleSel.addEventListener("change", () => {
+        if (canvasTools) canvasTools.pushHistory();
+        para.role = roleSel.value === "body" ? undefined : roleSel.value;
+        renderAll();
+      });
+      row.appendChild(roleSel);
+
+      const alignSel = document.createElement("select");
+      alignSel.title = "align";
+      ["left", "center", "right"].forEach((a) => {
+        const o = document.createElement("option");
+        o.value = a;
+        o.textContent = a;
+        if (String(para.align || "left") === a) o.selected = true;
+        alignSel.appendChild(o);
+      });
+      alignSel.addEventListener("change", () => {
+        if (canvasTools) canvasTools.pushHistory();
+        para.align = alignSel.value;
+        renderAll();
+      });
+      row.appendChild(alignSel);
+
+      const subLab = document.createElement("label");
+      subLab.className = "inline-check";
+      const subCb = document.createElement("input");
+      subCb.type = "checkbox";
+      subCb.checked = !!para.sub;
+      subCb.addEventListener("change", () => {
+        if (canvasTools) canvasTools.pushHistory();
+        para.sub = subCb.checked;
+        renderAll();
+      });
+      subLab.appendChild(subCb);
+      subLab.appendChild(document.createTextNode(" sub"));
+      row.appendChild(subLab);
+
+      const up = document.createElement("button");
+      up.type = "button";
+      up.textContent = "↑";
+      up.title = "Move up";
+      up.disabled = idx === 0;
+      up.addEventListener("click", () => {
+        if (idx === 0) return;
+        if (canvasTools) canvasTools.pushHistory();
+        const tmp = el.paragraphs[idx - 1];
+        el.paragraphs[idx - 1] = el.paragraphs[idx];
+        el.paragraphs[idx] = tmp;
+        renderAll();
+      });
+      row.appendChild(up);
+
+      const down = document.createElement("button");
+      down.type = "button";
+      down.textContent = "↓";
+      down.title = "Move down";
+      down.disabled = idx >= el.paragraphs.length - 1;
+      down.addEventListener("click", () => {
+        if (idx >= el.paragraphs.length - 1) return;
+        if (canvasTools) canvasTools.pushHistory();
+        const tmp = el.paragraphs[idx + 1];
+        el.paragraphs[idx + 1] = el.paragraphs[idx];
+        el.paragraphs[idx] = tmp;
+        renderAll();
+      });
+      row.appendChild(down);
+
+      const del = document.createElement("button");
+      del.type = "button";
+      del.textContent = "✕";
+      del.title = "Remove";
+      del.addEventListener("click", () => {
+        if (canvasTools) canvasTools.pushHistory();
+        el.paragraphs.splice(idx, 1);
+        renderAll();
+      });
+      row.appendChild(del);
+
+      box.appendChild(row);
+      insp.appendChild(box);
+    });
+
+    const add = document.createElement("button");
+    add.type = "button";
+    add.textContent = "+ ย่อหน้า";
+    add.addEventListener("click", () => {
+      if (canvasTools) canvasTools.pushHistory();
+      el.paragraphs.push({ text: "ย่อหน้าใหม่", sub: false, align: "left" });
+      renderAll();
+    });
+    insp.appendChild(add);
   }
 
   function soapColWidths(chrome) {
@@ -3217,6 +3467,9 @@
     }
     if (el.type === "box-text") {
       renderBoxTextInspector(insp, el);
+    }
+    if (el.type === "narrative") {
+      renderNarrativeInspector(insp, el);
     }
     if (el.type === "page-of") {
       renderPageOfInspector(insp, el);
@@ -5064,6 +5317,33 @@
     renderAll();
   }
 
+  function addNarrative() {
+    ensureElements();
+    promoteToDesignerIfNeeded();
+    if (canvasTools) canvasTools.pushHistory();
+    const m = pageMetrics();
+    const id = "narr_" + Math.random().toString(36).slice(2, 7);
+    const el = {
+      id,
+      type: "narrative",
+      band: "content",
+      place: "below",
+      box: { xMm: 0, yMm: 0, wMm: m.contentW, hMm: 40 },
+      paragraphs: [
+        { text: "หัวข้อเอกสาร", role: "title", align: "center", sub: false },
+        { text: "ย่อหน้าแรก — แก้ข้อความได้ใน Inspector", align: "left", sub: false },
+      ],
+      chrome: { border: "thin", fontSize: 11, rowHeightMm: 3.5 },
+    };
+    stateRef.draft.layout.elements.push(el);
+    stateRef.draft.manifest.layoutMode = "designer";
+    setSingleSelection(id);
+    stateRef.selectedKey = null;
+    reflowElements();
+    renderAll();
+    setStatusRef("Inserted narrative (Word-lite). Save pack to persist.", "ok");
+  }
+
   function addPageOf() {
     ensureElements();
     promoteToDesignerIfNeeded();
@@ -5164,6 +5444,7 @@
     saveLibraryFragment,
     deleteLibraryFragment,
     addBoxText,
+    addNarrative,
     addPageOf,
     addFragmentPrompt,
     insertFragment,
@@ -5235,6 +5516,8 @@
     if (boxBtn) boxBtn.addEventListener("click", () => addBoxText());
     const boxInner = document.getElementById("btnAddBoxTextInner");
     if (boxInner) boxInner.addEventListener("click", () => addBoxText({ inner: true }));
+    const narrBtn = document.getElementById("btnAddNarrative");
+    if (narrBtn) narrBtn.addEventListener("click", () => addNarrative());
     const pageOfBtn = document.getElementById("btnAddPageOf");
     if (pageOfBtn) pageOfBtn.addEventListener("click", () => addPageOf());
     const fragBtn = document.getElementById("btnAddFragment");

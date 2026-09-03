@@ -84,7 +84,7 @@ public static class AbsoluteDenseWidgetHost
             return TryComposeChecklistTextNotes(container, canvas);
 
         if (string.Equals(widgetId, HprpWidgetIds.ClinicalConsentNarrative, StringComparison.OrdinalIgnoreCase))
-            return TryComposeConsentNarrative(container, canvas);
+            return TryComposeConsentNarrative(container, canvas, widget);
 
         return false;
     }
@@ -120,11 +120,14 @@ public static class AbsoluteDenseWidgetHost
         return true;
     }
 
-    private static bool TryComposeConsentNarrative(IContainer container, AbsoluteCanvasViewModel canvas)
+    private static bool TryComposeConsentNarrative(
+        IContainer container,
+        AbsoluteCanvasViewModel canvas,
+        HprpAbsoluteWidget widget)
     {
         var vm = canvas.BoundModel as ConsentReportViewModel
             ?? new ConsentReportViewModel { Title = canvas.Title };
-        ConsentReportComposer.ComposeDenseNarrative(container, vm);
+        ConsentReportComposer.ComposeDenseNarrative(container, vm, widget.Chrome?.ContentMode);
         return true;
     }
 

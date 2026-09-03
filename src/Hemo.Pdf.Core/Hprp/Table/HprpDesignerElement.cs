@@ -190,6 +190,20 @@ public sealed class HprpDesignerElement
     [JsonPropertyName("columnHeadersBind")]
     public string? ColumnHeadersBind { get; init; }
 
+    /// <summary>
+    /// Pack-owned paragraphs for <c>narrative</c> (Studio Word-lite editor).
+    /// Used when <see cref="BindParagraphs"/> is empty or data has no rows.
+    /// </summary>
+    [JsonPropertyName("paragraphs")]
+    public IReadOnlyList<HprpNarrativeParagraph>? Paragraphs { get; init; }
+
+    /// <summary>
+    /// Optional JSON path to paragraph array e.g. <c>$.bodyParagraphs</c>
+    /// (<c>{ text, sub }</c>). When present and non-empty, overrides pack paragraphs for PDF.
+    /// </summary>
+    [JsonPropertyName("bindParagraphs")]
+    public string? BindParagraphs { get; init; }
+
     /// <summary>Maps designer <c>data-grid</c> onto a composition layout node for <see cref="HprpBinder"/>.</summary>
     public HprpLayoutNode ToLayoutNode() => new()
     {
@@ -234,5 +248,7 @@ public sealed class HprpDesignerElement
         BindRows = BindRows,
         ColumnHeaders = ColumnHeaders,
         ColumnHeadersBind = ColumnHeadersBind,
+        Paragraphs = Paragraphs,
+        BindParagraphs = BindParagraphs,
     };
 }
