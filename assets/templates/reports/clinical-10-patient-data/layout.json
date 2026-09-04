@@ -48,41 +48,41 @@
           "segments": [
             {
               "kind": "options",
-              "label": "เน€เธเธจ",
+              "label": "เพศ",
               "bind": "$.demographics.gender",
               "flex": 1.1,
               "align": "left",
               "options": [
                 {
-                  "value": "เธเธฒเธข",
-                  "label": "เธเธฒเธข",
+                  "value": "ชาย",
+                  "label": "ชาย",
                   "match": [
                     "M",
                     "Male",
-                    "เธเธฒเธข"
+                    "ชาย"
                   ]
                 },
                 {
-                  "value": "เธซเธเธดเธ",
-                  "label": "เธซเธเธดเธ",
+                  "value": "หญิง",
+                  "label": "หญิง",
                   "match": [
                     "F",
                     "Female",
-                    "เธซเธเธดเธ"
+                    "หญิง"
                   ]
                 }
               ]
             },
             {
               "kind": "text",
-              "label": "เธงเธฑเธเน€เธเธดเธ”",
+              "label": "วันเกิด",
               "bind": "$.demographics.birthDate",
               "flex": 1.1,
               "blankLine": true
             },
             {
               "kind": "options",
-              "label": "เธเธฃเธธเนเธเน€เธฅเธทเธญเธ”",
+              "label": "กรุ๊ปเลือด",
               "bind": "$.demographics.bloodType",
               "flex": 1.6,
               "wrap": true,
@@ -90,49 +90,49 @@
               "options": [
                 {
                   "value": "A",
-                  "label": "เน€เธญ",
+                  "label": "เอ",
                   "match": [
                     "A",
                     "A+",
                     "A-",
-                    "เน€เธญ"
+                    "เอ"
                   ]
                 },
                 {
                   "value": "B",
-                  "label": "เธเธต",
+                  "label": "บี",
                   "match": [
                     "B",
                     "B+",
                     "B-",
-                    "เธเธต"
+                    "บี"
                   ]
                 },
                 {
                   "value": "O",
-                  "label": "เนเธญ",
+                  "label": "โอ",
                   "match": [
                     "O",
                     "O+",
                     "O-",
-                    "เนเธญ"
+                    "โอ"
                   ]
                 },
                 {
                   "value": "AB",
-                  "label": "เน€เธญเธเธต",
+                  "label": "เอบี",
                   "match": [
                     "AB",
                     "AB+",
                     "AB-",
-                    "เน€เธญเธเธต"
+                    "เอบี"
                   ]
                 }
               ]
             },
             {
               "kind": "text",
-              "label": "เนเธ—เธฃ",
+              "label": "โทร",
               "bind": "$.demographics.telephone",
               "flex": 1,
               "blankLine": true
@@ -158,21 +158,21 @@
           "segments": [
             {
               "kind": "text",
-              "label": "เน€เธฅเธเธเธฑเธ•เธฃ",
+              "label": "เลขบัตร",
               "bind": "$.demographics.identityNo",
               "flex": 1.4,
               "blankLine": true
             },
             {
               "kind": "text",
-              "label": "เธชเธดเธ—เธเธด",
+              "label": "สิทธิ",
               "bind": "$.demographics.coverage",
               "flex": 1,
               "blankLine": true
             },
             {
               "kind": "text",
-              "label": "เนเธญเธเธเธฒเธ",
+              "label": "โอนจาก",
               "bind": "$.demographics.transferFrom",
               "flex": 1.4,
               "blankLine": true
@@ -198,7 +198,7 @@
           "segments": [
             {
               "kind": "text",
-              "label": "เธ—เธตเนเธญเธขเธนเน",
+              "label": "ที่อยู่",
               "bind": "$.demographics.address",
               "flex": 1,
               "blankLine": true
@@ -224,7 +224,7 @@
           "segments": [
             {
               "kind": "text",
-              "label": "เธเธฃเธฐเธงเธฑเธ•เธดเธเธฒเธฃเนเธเนเธขเธฒ",
+              "label": "ประวัติการแพ้ยา",
               "bind": "$.demographics.allergies",
               "flex": 1,
               "blankLine": true
@@ -250,7 +250,7 @@
           "segments": [
             {
               "kind": "text",
-              "label": "เนเธฃเธเธเธฃเธฐเธเธณเธ•เธฑเธง",
+              "label": "โรคประจำตัว",
               "bind": "$.demographics.underlying",
               "flex": 1,
               "blankLine": true
@@ -276,21 +276,21 @@
           "segments": [
             {
               "kind": "text",
-              "label": "เธชเธฒเน€เธซเธ•เธธเนเธฃเธเนเธ•",
+              "label": "สาเหตุโรคไต",
               "bind": "$.dialysis.causeOfKidneyDisease",
               "flex": 1.4,
               "blankLine": true
             },
             {
               "kind": "text",
-              "label": "เน€เธฃเธดเนเธกเธเธญเธเธเธฃเธฑเนเธเนเธฃเธ",
+              "label": "เริ่มฟอกครั้งแรก",
               "bind": "$.dialysis.firstHd",
               "flex": 1,
               "blankLine": true
             },
             {
               "kind": "text",
-              "label": "เธเธญเธเธ—เธตเนเธเธฅเธดเธเธดเธเธเธฃเธฑเนเธเนเธฃเธ",
+              "label": "ฟอกที่คลินิกครั้งแรก",
               "bind": "$.dialysis.firstHdHere",
               "flex": 1.2,
               "blankLine": true
@@ -313,7 +313,7 @@
           "type": "box-text",
           "band": "content",
           "place": "below",
-          "text": "เธเธฃเธฐเธงเธฑเธ•เธดเธเธฒเธฃเธ—เธณเน€เธชเนเธเน€เธฅเธทเธญเธ”เธชเธณเธซเธฃเธฑเธเธเธญเธเน€เธฅเธทเธญเธ”",
+          "text": "ประวัติการทำเส้นเลือดสำหรับฟอกเลือด",
           "align": "left",
           "box": {
             "xMm": 0,
@@ -363,7 +363,7 @@
           "segments": [
             {
               "kind": "text",
-              "label": "เธซเธกเธฒเธขเน€เธซเธ•เธธ",
+              "label": "หมายเหตุ",
               "bind": "$.demographics.note",
               "flex": 1,
               "blankLine": true
