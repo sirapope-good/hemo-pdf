@@ -121,6 +121,7 @@ public static class DesignerPageComposer
 
     /// <summary>
     /// Outer section frame only — children are already expanded as sibling paintables by flow.
+    /// Must fill the layer box; an empty bordered container collapses and looks like stray edge ticks.
     /// </summary>
     private static void DrawGroupFrame(IContainer container, HprpDesignerElement element)
     {
@@ -130,7 +131,9 @@ public static class DesignerPageComposer
 
         container
             .Border(bw)
-            .BorderColor(Colors.Black);
+            .BorderColor(Colors.Black)
+            .ExtendHorizontal()
+            .ExtendVertical();
     }
 
     private static void DrawDataGrid(

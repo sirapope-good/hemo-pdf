@@ -107,15 +107,6 @@
     if (isGroup(e)) {
       const gx = originX + (Number(e.box.xMm) || 0);
       const gy = originY + (Number(e.box.yMm) || 0);
-      items.push({
-        kind: "group-frame",
-        el: e,
-        xMm: gx,
-        yMm: gy,
-        wMm: e.box.wMm,
-        hMm: e.box.hMm,
-        outsideMargin: !!outsideMargin,
-      });
       const kids = e.children || [];
       kids.forEach((child, idx) => {
         items.push({
@@ -141,6 +132,16 @@
             outsideMargin: !!outsideMargin,
           });
         }
+      });
+      // Frame after children — matches PDF paint order (stroke on top of fills).
+      items.push({
+        kind: "group-frame",
+        el: e,
+        xMm: gx,
+        yMm: gy,
+        wMm: e.box.wMm,
+        hMm: e.box.hMm,
+        outsideMargin: !!outsideMargin,
       });
       return items;
     }

@@ -154,6 +154,8 @@ public static class HprpDesignerFlow
     /// Emit paintables: groups expand to children (page-absolute).
     /// When the group has a visible <c>chrome.border</c>, the group itself is also emitted
     /// so PDF can draw an outer frame while children keep <c>border: none</c>.
+    /// Frame is appended <b>after</b> children so paint order keeps the stroke on top
+    /// (otherwise child white fills cover the border and leave broken edge fragments in row gaps).
     /// </summary>
     private static void AppendExpanded(
         HprpDesignerElement e,
@@ -165,6 +167,11 @@ public static class HprpDesignerFlow
         {
             var gx = originX + e.Box.XMm;
             var gy = originY + e.Box.YMm;
+
+            foreach (var child in e.Children ?? [])
+                AppendExpanded(child, gx, gy, pageEls);
+
+            // After children — DesignerPageComposer paints layers in list order.
             if (HasPrintBorder(e.Chrome))
             {
                 pageEls.Add(e.WithBox(new HprpDesignerBox
@@ -176,8 +183,6 @@ public static class HprpDesignerFlow
                 }));
             }
 
-            foreach (var child in e.Children ?? [])
-                AppendExpanded(child, gx, gy, pageEls);
             return;
         }
 

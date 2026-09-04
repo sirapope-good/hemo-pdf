@@ -51,14 +51,13 @@ public class HprpDesignerGroupFrameTests
             marginLeftMm: 8);
 
         var page0 = Assert.Single(flow.Pages);
-        Assert.Contains(
-            page0.Elements,
-            e => string.Equals(e.Type, HprpDesignerElementTypes.Group, StringComparison.OrdinalIgnoreCase)
-                && e.Id == "frame");
-        Assert.Contains(
-            page0.Elements,
-            e => string.Equals(e.Type, HprpDesignerElementTypes.FieldRow, StringComparison.OrdinalIgnoreCase)
-                && e.Id == "r1");
+        var frameIndex = page0.Elements.ToList().FindIndex(e =>
+            string.Equals(e.Type, HprpDesignerElementTypes.Group, StringComparison.OrdinalIgnoreCase)
+            && e.Id == "frame");
+        var childIndex = page0.Elements.ToList().FindIndex(e => e.Id == "r1");
+        Assert.True(frameIndex >= 0, "group frame should be emitted");
+        Assert.True(childIndex >= 0, "child should be emitted");
+        Assert.True(frameIndex > childIndex, "frame must paint after children so border is not covered");
     }
 
     [Fact]

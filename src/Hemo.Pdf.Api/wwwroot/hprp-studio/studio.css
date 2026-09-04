@@ -270,10 +270,13 @@ button.tb-icon {
   cursor: pointer;
 }
 
+/* Stroke above child fills (same as PDF paint order); clicks pass through to children */
 .designer-group-frame.print-border {
   border: 1.5px solid #222;
   border-radius: 0;
-  z-index: 0;
+  z-index: 4;
+  pointer-events: none;
+  cursor: default;
 }
 
 .designer-group-frame.selected {
