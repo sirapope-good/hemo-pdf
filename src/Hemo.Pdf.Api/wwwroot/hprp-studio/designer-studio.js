@@ -1618,11 +1618,20 @@
     const sum = weights.reduce((a, b) => a + b, 0) || 1;
     const bodyRowCount = rows.length;
     const boxPx = Math.max(0, Number(boxHeightMm) || 0) * scale;
-    let headerPx = Math.max(4, (boxPx / (bodyRowCount + 1)) || 4);
-    let slotPx = Math.max(3, headerPx);
-    if (boxPx > 0) {
-      headerPx = Math.max(4, boxPx / (bodyRowCount + 1));
-      slotPx = headerPx;
+    const chromeRowMm = el.chrome && Number(el.chrome.rowHeightMm);
+    let headerPx;
+    let slotPx;
+    if (chromeRowMm > 0 && chromeRowMm <= 200) {
+      const fixedPx = Math.max(3, chromeRowMm * scale);
+      headerPx = fixedPx;
+      slotPx = fixedPx;
+    } else {
+      headerPx = Math.max(4, (boxPx / (bodyRowCount + 1)) || 4);
+      slotPx = Math.max(3, headerPx);
+      if (boxPx > 0) {
+        headerPx = Math.max(4, boxPx / (bodyRowCount + 1));
+        slotPx = headerPx;
+      }
     }
 
     const table = document.createElement("table");

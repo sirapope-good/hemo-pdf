@@ -30,6 +30,7 @@
         "headerFill": "$branding.sectionHeaderBackground",
         "border": "thin",
         "fontSize": 7,
+        "rowHeightMm": 5.2,
         "columnWidths": ["3.2", "2.2", "1.6", "*", "*", "*", "*", "*"]
       }
     }

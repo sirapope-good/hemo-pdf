@@ -126,9 +126,12 @@ public static class DesignerPageComposer
             return;
         }
 
-        var rowHeightMm = ClinicalDefaultComposer.BudgetRowHeightForTable(
-            grid.Rows.Count + 1,
-            element.Box.HMm);
+        var chromeRowH = element.Chrome?.RowHeightMm;
+        var rowHeightMm = chromeRowH is > 0 and <= 200
+            ? chromeRowH.Value
+            : ClinicalDefaultComposer.BudgetRowHeightForTable(
+                grid.Rows.Count + 1,
+                element.Box.HMm);
         var drawn = ClinicalDefaultComposer.ApplyRowHeightToGrid(grid, rowHeightMm);
         ReportBlockPdfComposer.Compose(container, drawn, context);
     }

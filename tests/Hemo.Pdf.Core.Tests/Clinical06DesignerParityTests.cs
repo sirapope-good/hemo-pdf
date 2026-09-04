@@ -34,10 +34,20 @@ public class Clinical06DesignerParityTests
         Assert.Equal(HprpLayoutModes.Designer, package.Manifest.LayoutMode);
         Assert.Contains(
             package.Layout.Elements,
-            e => string.Equals(e.Type, HprpDesignerElementTypes.DataGrid, StringComparison.OrdinalIgnoreCase));
+            e => string.Equals(e.Type, HprpDesignerElementTypes.DataGrid, StringComparison.OrdinalIgnoreCase)
+                && e.Chrome?.RowHeightMm is > 0);
 
         var sample = HprpStudioSamplePayloads.TryLoad(templatesRoot, ClinicalReportCatalog.Medication);
         Assert.NotNull(sample);
+
+        Assert.True(sample.Value.TryGetProperty("rows", out var rowsEl) && rowsEl.ValueKind == JsonValueKind.Array);
+        Assert.True(rowsEl.GetArrayLength() >= 22 + 3, "sample should pad medication slots then footer rows");
+        var lastThree = rowsEl.EnumerateArray().TakeLast(3).Select(r => r[0].GetString()).ToArray();
+        Assert.Equal("Hemodialysis Nurse", lastThree[0]);
+        Assert.True(
+            lastThree[1] is "Nephrologist" or "Pharmacist",
+            "second signer label should be Nephrologist or Pharmacist");
+        Assert.StartsWith("**Review Med", lastThree[2]);
 
         var options = Options.Create(new HprpTemplateOptions
         {
@@ -69,12 +79,7 @@ public class Clinical06DesignerParityTests
     public async Task PackClinical06_WritesPackageFile()
     {
         var templatesRoot = HprpTestAssets.TemplatesRoot();
-        // Prefer repo packages/ (walk past test bin copies that also contain *.hprp).
-        var packages = Path.GetFullPath(Path.Combine(templatesRoot, "..", "..", "..", "..", "..", "packages"));
-        if (!Directory.Exists(packages) || !File.Exists(Path.Combine(packages, "clinical-07-lab.hprp")))
-        {
-            packages = Path.GetFullPath(Path.Combine(templatesRoot, "..", "..", "packages"));
-        }
+        var packages = FindRepoPackagesRoot(templatesRoot);
 
         Directory.CreateDirectory(packages);
         var options = Options.Create(new HprpTemplateOptions
@@ -90,6 +95,34 @@ public class Clinical06DesignerParityTests
         Assert.Single(packed);
         Assert.True(File.Exists(packed[0].OutputPath));
         Assert.EndsWith("clinical-06-medication.hprp", packed[0].OutputPath, StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static string FindRepoPackagesRoot(string templatesRoot)
+    {
+        var dir = new DirectoryInfo(templatesRoot);
+        DirectoryInfo? binFallback = null;
+        while (dir is not null)
+        {
+            var packages = Path.Combine(dir.FullName, "packages");
+            var hasClinical01 = File.Exists(Path.Combine(packages, "clinical-01-hct-epo.hprp"));
+            var hasClinical07 = File.Exists(Path.Combine(packages, "clinical-07-lab.hprp"));
+            if (hasClinical01 || hasClinical07)
+            {
+                var isUnderBin = packages.Contains(
+                    $"{Path.DirectorySeparatorChar}bin{Path.DirectorySeparatorChar}",
+                    StringComparison.OrdinalIgnoreCase);
+                if (!isUnderBin)
+                    return packages;
+                binFallback ??= new DirectoryInfo(packages);
+            }
+
+            dir = dir.Parent;
+        }
+
+        if (binFallback is not null)
+            return binFallback.FullName;
+
+        throw new DirectoryNotFoundException("repo packages/ folder not found from " + templatesRoot);
     }
 
     private static HprpPackage LoadClinical06Package(string templatesRoot)
