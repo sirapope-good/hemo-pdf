@@ -95,12 +95,18 @@ public class HprpRowBinderTests
     }
 
     [Fact]
-    public void Validator_AcceptsClinical10RowLayout()
+    public void Validator_AcceptsClinical10DesignerLayout()
     {
         var dir = HprpTestAssets.PackageDir(ClinicalReportCatalog.PatientData);
         var package = HprpPackageReader.ReadDirectory(dir);
         Assert.True(HprpValidator.Validate(package).IsValid, string.Join("\n", HprpValidator.Validate(package).Errors));
-        Assert.Contains(package.Layout.Body, n => n.Type == "row");
+        Assert.Equal(HprpLayoutModes.Designer, package.Manifest.LayoutMode);
+        Assert.Contains(
+            package.Layout.Elements,
+            e => string.Equals(e.Type, "data-grid", StringComparison.OrdinalIgnoreCase));
+        Assert.Contains(
+            package.Layout.Elements,
+            e => string.Equals(e.Type, "header", StringComparison.OrdinalIgnoreCase));
     }
 }
 
