@@ -1,8 +1,9 @@
 {
   "id": "clinical-11-admission",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "displayName": "Admission Note and History Review",
   "engineVersion": 1,
+  "layoutMode": "designer",
   "dataAdapter": "flatten-dto",
   "requiresSignature": false,
   "language": "th",

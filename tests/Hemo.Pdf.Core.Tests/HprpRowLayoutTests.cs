@@ -114,6 +114,29 @@ public class HprpRowBinderTests
             e => string.Equals(e.Type, "data-grid", StringComparison.OrdinalIgnoreCase));
     }
 
+    [Fact]
+    public void Validator_AcceptsClinical11DesignerLayout()
+    {
+        var dir = HprpTestAssets.PackageDir(ClinicalReportCatalog.Admission);
+        var package = HprpPackageReader.ReadDirectory(dir);
+        Assert.True(HprpValidator.Validate(package).IsValid, string.Join("\n", HprpValidator.Validate(package).Errors));
+        Assert.Equal(HprpLayoutModes.Designer, package.Manifest.LayoutMode);
+        Assert.Contains(
+            package.Layout.Elements,
+            e => string.Equals(e.Type, "header", StringComparison.OrdinalIgnoreCase));
+        Assert.Contains(
+            package.Layout.Elements,
+            e => string.Equals(e.Type, "field-row", StringComparison.OrdinalIgnoreCase));
+        Assert.Contains(
+            package.Layout.Elements,
+            e => string.Equals(e.Type, "data-grid", StringComparison.OrdinalIgnoreCase));
+        Assert.Contains(
+            package.Layout.Elements,
+            e => string.Equals(e.Type, "page-of", StringComparison.OrdinalIgnoreCase));
+        Assert.True(
+            package.Layout.Elements.Count(e => string.Equals(e.Type, "field-row", StringComparison.OrdinalIgnoreCase)) >= 20);
+    }
+
     private static IEnumerable<HprpDesignerElement> FlattenDesignerElements(IEnumerable<HprpDesignerElement> elements)
     {
         foreach (var e in elements)

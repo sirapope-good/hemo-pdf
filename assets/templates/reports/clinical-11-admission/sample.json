@@ -1,21 +1,159 @@
 {
-  "title": "Admission Note and History Review",
-  "reportDate": "26/08/2026",
+  "title": "บันทึกแรกรับและทบทวนประวัติประจำปี",
+  "reportDate": "04/09/2026",
   "patient": {
     "hn": "6512620",
     "name": "Sample Patient",
     "unit": "Hemodialysis Unit"
   },
+  "header": {
+    "logoBase64": null,
+    "patient": {
+      "name": "Sample Patient",
+      "hn": "6512620",
+      "identityNumber": "3101401131780",
+      "age": 55,
+      "allergies": ["ไม่มีแพ้ยา"],
+      "coverage": "สปสช.",
+      "diagnosis": "ESRD, DM, HT",
+      "underlying": "ESRD, DM, HT",
+      "hdPerWeek": "3"
+    },
+    "unit": { "id": -1, "fullName": "Hemodialysis Unit" },
+    "layoutContext": {
+      "reportSettings": { "showDateAndHdNo": false, "showHdPerWeek": true }
+    }
+  },
+  "record": {
+    "kind": "admission",
+    "yearBe": "2569"
+  },
+  "demographics": {
+    "gender": "ชาย",
+    "birthDate": "15/03/2514",
+    "occupation": "ค้าขาย",
+    "income": "15000",
+    "address": "Bangkok",
+    "telephone": "0812345678",
+    "emergencyName": "สมหญิง ตัวอย่าง",
+    "emergencyPhone": "0891112222",
+    "emergencyRelation": "คู่สมรส",
+    "coverage": "สปสช.",
+    "coverageOther": ""
+  },
+  "comorbid": {
+    "dm": "1",
+    "ht": "1",
+    "dlp": "",
+    "pad": "",
+    "cad": "",
+    "hf": "",
+    "stroke": "",
+    "cirrhosis": "",
+    "childPugh": "",
+    "emphysema": "",
+    "aneurysm": "",
+    "dementia": "",
+    "cancer": "",
+    "cancerType": "",
+    "other": "",
+    "otherText": ""
+  },
+  "history": {
+    "other": "ESRD on HD 3 ครั้ง/สัปดาห์"
+  },
+  "allergy": {
+    "hasAllergy": "none",
+    "drugName": ""
+  },
+  "exam": {
+    "general": "normal",
+    "generalNote": "",
+    "cv": "normal",
+    "cvNote": "",
+    "resp": "normal",
+    "respNote": "",
+    "abdomen": "normal",
+    "abdomenNote": "",
+    "neuro": "normal",
+    "neuroNote": "",
+    "other": "",
+    "otherNote": ""
+  },
+  "esrd": {
+    "firstAdmitDate": "01/02/2564",
+    "cause": {
+      "dn": "1",
+      "ht": "1",
+      "adpkd": "",
+      "obstructive": "",
+      "gn": "",
+      "gnBiopsy": "",
+      "gnPresumed": "",
+      "gnType": "",
+      "nephrotoxic": "",
+      "nsaid": "",
+      "herbal": "",
+      "chemo": "",
+      "contrast": "",
+      "heavyMetal": "",
+      "ctin": "",
+      "allograft": "",
+      "congenital": "",
+      "other": "",
+      "otherText": ""
+    }
+  },
+  "dialysis": {
+    "firstHdPlace": "Hospital A",
+    "firstHd": "12/01/2563",
+    "firstHdHere": "01/02/2564"
+  },
+  "access": {
+    "columnHeaders": [
+      "ชนิด",
+      "วันที่ทำ",
+      "วันที่เริ่มใช้",
+      "โรงพยาบาล",
+      "ปัญหา",
+      "วันที่หยุดใช้"
+    ],
+    "rows": [
+      ["AVF ขวา Forearm", "01/06/2562", "", "Ramathibodi", "", ""],
+      ["Perm Cath ซ้าย IJ", "15/01/2563", "", "Hospital A", "infection", "20/05/2563"],
+      ["", "", "", "", "", ""]
+    ]
+  },
+  "vaccines": {
+    "hbvHeaders": ["NO", "ว/ด/ป", "ชื่อยา"],
+    "hbvLeft": [
+      ["1", "10/01/2564", "Engerix-B"],
+      ["2", "10/02/2564", "Engerix-B"],
+      ["3", "10/07/2564", "Engerix-B"]
+    ],
+    "hbvRight": [
+      ["1", "", ""],
+      ["2", "", ""],
+      ["3", "", ""]
+    ],
+    "other": [
+      { "name": "Influenza", "date": "01/10/2568" },
+      { "name": "COVID-19", "date": "15/06/2568" },
+      { "name": "", "date": "" },
+      { "name": "", "date": "" },
+      { "name": "", "date": "" },
+      { "name": "", "date": "" }
+    ]
+  },
+  "medications": {
+    "current": "Amlodipine 5 mg, Folate, EPO"
+  },
+  "sign": {
+    "doctor": "",
+    "nurse": ""
+  },
   "fields": [
-    { "label": "Admit date", "value": "20/08/2026" },
-    { "label": "Discharge date", "value": "" },
-    { "label": "Chief complaint", "value": "Shortness of breath" },
-    { "label": "Present illness", "value": "Progressive dyspnea for 3 days" },
-    { "label": "Past history", "value": "ESRD on HD 3×/week" },
-    { "label": "Physical exam", "value": "BP 160/90, mild edema" },
-    { "label": "Assessment", "value": "Volume overload" },
-    { "label": "Plan", "value": "Extra HD session" }
-  ],
-  "columnHeaders": [],
-  "rows": []
+    { "label": "Admit date", "value": "01/02/2564" },
+    { "label": "Chief complaint", "value": "" }
+  ]
 }

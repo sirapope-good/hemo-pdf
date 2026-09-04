@@ -72,7 +72,7 @@ WYSIWYG path on branch `feat/hprp-table-designer` — **does not replace** compo
 
 **Narrative (Word-lite):** `type: "narrative"` with `paragraphs[]` (`text`, `sub`, `align`, `role: title|body|note`) and optional `bindParagraphs` (e.g. `$.bodyParagraphs`). Studio **Insert → Narrative** edits/reorders paragraphs; PDF draws via `ConfigurableNarrativeComposer`. Consent 08/09: dense `contentMode: intro|closing` + narrative body.
 
-**Field row (checkbox / fill-in):** `type: "field-row"` with `segments[]` — `kind: "options"` (always show choices; matching `bind` value gets `[✓]`, empty bind = all unchecked for blank forms) or `kind: "text"` (value or dotted blank line). Studio **Insert → Field row**; chrome `border` / `fontSize` / spacing via place + box height. Used by clinical-10 demographics.
+**Field row (checkbox / fill-in):** `type: "field-row"` with `segments[]` — `kind: "options"` (always show choices; matching `bind` value gets `[✓]`, empty bind = all unchecked for blank forms) or `kind: "text"` (value or dotted blank line). Studio **Insert → Field row**; chrome `border` / `fontSize` / spacing via place + box height. Used by clinical-10 demographics and clinical-11 admission (multi-page).
 
 **Section frame (outer border):** `type: "group"` with `chrome.border: thin|medium` draws a printable outer rectangle around children even when each child has `border: none`. Studio shows a solid frame when print border is on (dashed blue = layout guide only). Use Inspector **ห่อ selection เป็นกรอบนอก** on contiguous outer-row blocks. Max **24** children per group.
 

@@ -1,46 +1,2197 @@
 {
   "page": {
     "size": "A4",
-    "marginMm": 10
+    "orientation": "portrait",
+    "marginMm": 8,
+    "spacingMode": "custom",
+    "spacingMm": 0,
+    "spacingBelowMm": 0.4,
+    "spacingBesideMm": 1.2,
+    "border": "none"
   },
-  "body": [
+  "elements": [
     {
-      "type": "text",
-      "style": "title",
-      "bind": "$title"
+      "id": "hdr",
+      "type": "header",
+      "band": "header",
+      "preset": "clinical-header-thaiur",
+      "place": "below",
+      "box": {
+        "xMm": 0,
+        "yMm": 0,
+        "wMm": 194,
+        "hMm": 27
+      }
     },
     {
-      "type": "field-grid",
-      "columns": 2,
-      "fields": [
+      "id": "record-type",
+      "type": "field-row",
+      "band": "content",
+      "place": "below",
+      "segments": [
         {
-          "label": { "$label": "hn" },
-          "bind": "$.patient.hn"
+          "kind": "options",
+          "label": "",
+          "bind": "$.record.kind",
+          "flex": 1.35,
+          "align": "left",
+          "options": [
+            {
+              "value": "admission",
+              "label": "บันทึกแรกรับเข้าหน่วยไตเทียม"
+            }
+          ]
         },
         {
-          "label": { "$label": "patientName" },
-          "bind": "$.patient.name"
+          "kind": "options",
+          "label": "",
+          "bind": "$.record.kind",
+          "flex": 1.25,
+          "align": "left",
+          "options": [
+            {
+              "value": "annual",
+              "label": "บันทึกการเปลี่ยนแปลงรายปี"
+            }
+          ]
         },
         {
-          "label": { "$label": "unit" },
-          "bind": "$.patient.unit"
-        },
-        {
-          "label": { "$label": "reportDate" },
-          "bind": "$.reportDate"
+          "kind": "text",
+          "label": "พ.ศ.",
+          "bind": "$.record.yearBe",
+          "flex": 0.55,
+          "blankLine": true,
+          "align": "left"
         }
-      ]
+      ],
+      "box": {
+        "xMm": 0,
+        "yMm": 0,
+        "wMm": 194,
+        "hMm": 11
+      },
+      "chrome": {
+        "border": "thin",
+        "headerFill": "#eeeeee",
+        "fontSize": 8
+      }
     },
     {
-      "type": "key-value-table",
-      "bindRows": "$.fields",
-      "when": "$.fields.length > 0"
+      "id": "patient-name",
+      "type": "field-row",
+      "band": "content",
+      "place": "below",
+      "segments": [
+        {
+          "kind": "text",
+          "label": "ชื่อ-สกุล",
+          "bind": "$.header.patient.name",
+          "flex": 1,
+          "blankLine": true,
+          "align": "left"
+        }
+      ],
+      "box": {
+        "xMm": 0,
+        "yMm": 0,
+        "wMm": 194,
+        "hMm": 8
+      },
+      "chrome": {
+        "border": "none",
+        "headerFill": "#ffffff",
+        "fontSize": 8
+      }
     },
     {
+      "id": "s1-title",
+      "type": "box-text",
+      "band": "content",
+      "place": "below",
+      "text": "1. ข้อมูลพื้นฐาน",
+      "align": "left",
+      "box": {
+        "xMm": 0,
+        "yMm": 0,
+        "wMm": 194,
+        "hMm": 6.5
+      },
+      "chrome": {
+        "border": "none",
+        "headerFill": "#ffffff",
+        "fontSize": 9
+      }
+    },
+    {
+      "id": "dob-gender",
+      "type": "field-row",
+      "band": "content",
+      "place": "below",
+      "segments": [
+        {
+          "kind": "text",
+          "label": "วัน เดือน ปีเกิด (พ.ศ.)",
+          "bind": "$.demographics.birthDate",
+          "flex": 1.4,
+          "blankLine": true,
+          "align": "left"
+        },
+        {
+          "kind": "options",
+          "label": "เพศ",
+          "bind": "$.demographics.gender",
+          "flex": 1,
+          "align": "left",
+          "options": [
+            {
+              "value": "ชาย",
+              "label": "ชาย",
+              "match": [
+                "M",
+                "Male",
+                "ชาย"
+              ]
+            },
+            {
+              "value": "หญิง",
+              "label": "หญิง",
+              "match": [
+                "F",
+                "Female",
+                "หญิง"
+              ]
+            }
+          ]
+        }
+      ],
+      "box": {
+        "xMm": 0,
+        "yMm": 0,
+        "wMm": 194,
+        "hMm": 8
+      },
+      "chrome": {
+        "border": "none",
+        "headerFill": "#ffffff",
+        "fontSize": 8
+      }
+    },
+    {
+      "id": "coverage-1",
+      "type": "field-row",
+      "band": "content",
+      "place": "below",
+      "segments": [
+        {
+          "kind": "options",
+          "label": "สิทธิการรักษา",
+          "bind": "$.demographics.coverage",
+          "flex": 1,
+          "align": "left",
+          "options": [
+            {
+              "value": "สปสช.",
+              "label": "สปสช.",
+              "match": [
+                "UC",
+                "NHSO",
+                "สปสช."
+              ]
+            },
+            {
+              "value": "ประกันสังคม",
+              "label": "ประกันสังคม",
+              "match": [
+                "SSO",
+                "ประกันสังคม"
+              ]
+            },
+            {
+              "value": "เบิกตรงกรมบัญชีกลาง",
+              "label": "เบิกตรงกรมบัญชีกลาง",
+              "match": [
+                "CSMBS",
+                "เบิกตรง"
+              ]
+            }
+          ]
+        }
+      ],
+      "box": {
+        "xMm": 0,
+        "yMm": 0,
+        "wMm": 194,
+        "hMm": 8
+      },
+      "chrome": {
+        "border": "none",
+        "headerFill": "#ffffff",
+        "fontSize": 8
+      }
+    },
+    {
+      "id": "coverage-2",
+      "type": "field-row",
+      "band": "content",
+      "place": "below",
+      "segments": [
+        {
+          "kind": "options",
+          "label": "",
+          "bind": "$.demographics.coverage",
+          "flex": 1.4,
+          "align": "left",
+          "options": [
+            {
+              "value": "เบิกต้นสังกัดราชการ/รัฐวิสาหกิจ",
+              "label": "เบิกต้นสังกัดราชการ/รัฐวิสาหกิจ",
+              "match": [
+                "state",
+                "ต้นสังกัด"
+              ]
+            },
+            {
+              "value": "อื่นๆ",
+              "label": "อื่นๆ",
+              "match": [
+                "other",
+                "อื่นๆ"
+              ]
+            }
+          ]
+        },
+        {
+          "kind": "text",
+          "label": "",
+          "bind": "$.demographics.coverageOther",
+          "flex": 0.8,
+          "blankLine": true,
+          "align": "left"
+        }
+      ],
+      "box": {
+        "xMm": 0,
+        "yMm": 0,
+        "wMm": 194,
+        "hMm": 8
+      },
+      "chrome": {
+        "border": "none",
+        "headerFill": "#ffffff",
+        "fontSize": 8
+      }
+    },
+    {
+      "id": "occupation",
+      "type": "field-row",
+      "band": "content",
+      "place": "below",
+      "segments": [
+        {
+          "kind": "text",
+          "label": "อาชีพ",
+          "bind": "$.demographics.occupation",
+          "flex": 1.2,
+          "blankLine": true,
+          "align": "left"
+        },
+        {
+          "kind": "text",
+          "label": "รายได้",
+          "bind": "$.demographics.income",
+          "flex": 1,
+          "blankLine": true,
+          "align": "left"
+        },
+        {
+          "kind": "text",
+          "label": "บาท/เดือน",
+          "bind": "",
+          "flex": 0.45,
+          "blankLine": false,
+          "align": "left"
+        }
+      ],
+      "box": {
+        "xMm": 0,
+        "yMm": 0,
+        "wMm": 194,
+        "hMm": 8
+      },
+      "chrome": {
+        "border": "none",
+        "headerFill": "#ffffff",
+        "fontSize": 8
+      }
+    },
+    {
+      "id": "address",
+      "type": "field-row",
+      "band": "content",
+      "place": "below",
+      "segments": [
+        {
+          "kind": "text",
+          "label": "ที่อยู่ปัจจุบัน",
+          "bind": "$.demographics.address",
+          "flex": 1.6,
+          "blankLine": true,
+          "align": "left"
+        },
+        {
+          "kind": "text",
+          "label": "โทรศัพท์",
+          "bind": "$.demographics.telephone",
+          "flex": 0.7,
+          "blankLine": true,
+          "align": "left"
+        }
+      ],
+      "box": {
+        "xMm": 0,
+        "yMm": 0,
+        "wMm": 194,
+        "hMm": 8
+      },
+      "chrome": {
+        "border": "none",
+        "headerFill": "#ffffff",
+        "fontSize": 8
+      }
+    },
+    {
+      "id": "emergency",
+      "type": "field-row",
+      "band": "content",
+      "place": "below",
+      "segments": [
+        {
+          "kind": "text",
+          "label": "บุคคลที่สามารถติดต่อได้",
+          "bind": "$.demographics.emergencyName",
+          "flex": 1.2,
+          "blankLine": true,
+          "align": "left"
+        },
+        {
+          "kind": "text",
+          "label": "โทรศัพท์",
+          "bind": "$.demographics.emergencyPhone",
+          "flex": 0.7,
+          "blankLine": true,
+          "align": "left"
+        },
+        {
+          "kind": "text",
+          "label": "เกี่ยวข้องเป็น",
+          "bind": "$.demographics.emergencyRelation",
+          "flex": 0.8,
+          "blankLine": true,
+          "align": "left"
+        }
+      ],
+      "box": {
+        "xMm": 0,
+        "yMm": 0,
+        "wMm": 194,
+        "hMm": 8
+      },
+      "chrome": {
+        "border": "none",
+        "headerFill": "#ffffff",
+        "fontSize": 8
+      }
+    },
+    {
+      "id": "s2-title",
+      "type": "box-text",
+      "band": "content",
+      "place": "below",
+      "text": "2. ประวัติและการตรวจร่างกาย",
+      "align": "left",
+      "box": {
+        "xMm": 0,
+        "yMm": 0,
+        "wMm": 194,
+        "hMm": 6.5
+      },
+      "chrome": {
+        "border": "none",
+        "headerFill": "#ffffff",
+        "fontSize": 9
+      }
+    },
+    {
+      "id": "comorbid-title",
+      "type": "box-text",
+      "band": "content",
+      "place": "below",
+      "text": "2.1 โรคร่วม",
+      "align": "left",
+      "box": {
+        "xMm": 0,
+        "yMm": 0,
+        "wMm": 194,
+        "hMm": 6
+      },
+      "chrome": {
+        "border": "none",
+        "headerFill": "#ffffff",
+        "fontSize": 9
+      }
+    },
+    {
+      "id": "comorbid-r1",
+      "type": "field-row",
+      "band": "content",
+      "place": "below",
+      "segments": [
+        {
+          "kind": "options",
+          "bind": "$.comorbid.dm",
+          "flex": 1,
+          "align": "left",
+          "options": [
+            {
+              "value": "1",
+              "label": "โรคเบาหวาน",
+              "match": [
+                "true",
+                "yes",
+                "Y"
+              ]
+            }
+          ]
+        },
+        {
+          "kind": "options",
+          "bind": "$.comorbid.ht",
+          "flex": 1,
+          "align": "left",
+          "options": [
+            {
+              "value": "1",
+              "label": "ความดันโลหิตสูง",
+              "match": [
+                "true",
+                "yes",
+                "Y"
+              ]
+            }
+          ]
+        },
+        {
+          "kind": "options",
+          "bind": "$.comorbid.dlp",
+          "flex": 1,
+          "align": "left",
+          "options": [
+            {
+              "value": "1",
+              "label": "ไขมันในเลือดสูง",
+              "match": [
+                "true",
+                "yes",
+                "Y"
+              ]
+            }
+          ]
+        },
+        {
+          "kind": "options",
+          "bind": "$.comorbid.pad",
+          "flex": 1,
+          "align": "left",
+          "options": [
+            {
+              "value": "1",
+              "label": "โรคหลอดเลือดแดงส่วนปลาย",
+              "match": [
+                "true",
+                "yes",
+                "Y"
+              ]
+            }
+          ]
+        }
+      ],
+      "box": {
+        "xMm": 0,
+        "yMm": 0,
+        "wMm": 194,
+        "hMm": 8
+      },
+      "chrome": {
+        "border": "none",
+        "headerFill": "#ffffff",
+        "fontSize": 8
+      }
+    },
+    {
+      "id": "comorbid-r2",
+      "type": "field-row",
+      "band": "content",
+      "place": "below",
+      "segments": [
+        {
+          "kind": "options",
+          "bind": "$.comorbid.cad",
+          "flex": 1.15,
+          "align": "left",
+          "options": [
+            {
+              "value": "1",
+              "label": "โรคหลอดเลือดหัวใจตีบ/MI",
+              "match": [
+                "true",
+                "yes",
+                "Y"
+              ]
+            }
+          ]
+        },
+        {
+          "kind": "options",
+          "bind": "$.comorbid.hf",
+          "flex": 0.85,
+          "align": "left",
+          "options": [
+            {
+              "value": "1",
+              "label": "หัวใจวาย",
+              "match": [
+                "true",
+                "yes",
+                "Y"
+              ]
+            }
+          ]
+        },
+        {
+          "kind": "options",
+          "bind": "$.comorbid.stroke",
+          "flex": 1,
+          "align": "left",
+          "options": [
+            {
+              "value": "1",
+              "label": "โรคหลอดเลือดสมอง",
+              "match": [
+                "true",
+                "yes",
+                "Y"
+              ]
+            }
+          ]
+        },
+        {
+          "kind": "options",
+          "bind": "$.comorbid.cirrhosis",
+          "flex": 0.7,
+          "align": "left",
+          "options": [
+            {
+              "value": "1",
+              "label": "ตับแข็ง",
+              "match": [
+                "true",
+                "yes",
+                "Y"
+              ]
+            }
+          ]
+        },
+        {
+          "kind": "text",
+          "label": "Child-Pugh",
+          "bind": "$.comorbid.childPugh",
+          "flex": 0.7,
+          "blankLine": true,
+          "align": "left"
+        }
+      ],
+      "box": {
+        "xMm": 0,
+        "yMm": 0,
+        "wMm": 194,
+        "hMm": 8
+      },
+      "chrome": {
+        "border": "none",
+        "headerFill": "#ffffff",
+        "fontSize": 8
+      }
+    },
+    {
+      "id": "comorbid-r3",
+      "type": "field-row",
+      "band": "content",
+      "place": "below",
+      "segments": [
+        {
+          "kind": "options",
+          "bind": "$.comorbid.emphysema",
+          "flex": 0.95,
+          "align": "left",
+          "options": [
+            {
+              "value": "1",
+              "label": "ถุงลมโป่งพอง",
+              "match": [
+                "true",
+                "yes",
+                "Y"
+              ]
+            }
+          ]
+        },
+        {
+          "kind": "options",
+          "bind": "$.comorbid.aneurysm",
+          "flex": 1.05,
+          "align": "left",
+          "options": [
+            {
+              "value": "1",
+              "label": "Aortic aneurysm",
+              "match": [
+                "true",
+                "yes",
+                "Y"
+              ]
+            }
+          ]
+        },
+        {
+          "kind": "options",
+          "bind": "$.comorbid.dementia",
+          "flex": 1,
+          "align": "left",
+          "options": [
+            {
+              "value": "1",
+              "label": "ภาวะสมองเสื่อม",
+              "match": [
+                "true",
+                "yes",
+                "Y"
+              ]
+            }
+          ]
+        },
+        {
+          "kind": "options",
+          "bind": "$.comorbid.cancer",
+          "flex": 0.75,
+          "align": "left",
+          "options": [
+            {
+              "value": "1",
+              "label": "โรคมะเร็ง",
+              "match": [
+                "true",
+                "yes",
+                "Y"
+              ]
+            }
+          ]
+        },
+        {
+          "kind": "text",
+          "label": "ชนิด",
+          "bind": "$.comorbid.cancerType",
+          "flex": 0.7,
+          "blankLine": true,
+          "align": "left"
+        }
+      ],
+      "box": {
+        "xMm": 0,
+        "yMm": 0,
+        "wMm": 194,
+        "hMm": 8
+      },
+      "chrome": {
+        "border": "none",
+        "headerFill": "#ffffff",
+        "fontSize": 8
+      }
+    },
+    {
+      "id": "comorbid-r4",
+      "type": "field-row",
+      "band": "content",
+      "place": "below",
+      "segments": [
+        {
+          "kind": "options",
+          "bind": "$.comorbid.other",
+          "flex": 0.45,
+          "align": "left",
+          "options": [
+            {
+              "value": "1",
+              "label": "อื่นๆ",
+              "match": [
+                "true",
+                "yes",
+                "Y"
+              ]
+            }
+          ]
+        },
+        {
+          "kind": "text",
+          "label": "",
+          "bind": "$.comorbid.otherText",
+          "flex": 1.55,
+          "blankLine": true,
+          "align": "left"
+        }
+      ],
+      "box": {
+        "xMm": 0,
+        "yMm": 0,
+        "wMm": 194,
+        "hMm": 8
+      },
+      "chrome": {
+        "border": "none",
+        "headerFill": "#ffffff",
+        "fontSize": 8
+      }
+    },
+    {
+      "id": "other-hx-title",
+      "type": "box-text",
+      "band": "content",
+      "place": "below",
+      "text": "2.2 ประวัติอื่นๆ",
+      "align": "left",
+      "box": {
+        "xMm": 0,
+        "yMm": 0,
+        "wMm": 194,
+        "hMm": 6
+      },
+      "chrome": {
+        "border": "none",
+        "headerFill": "#ffffff",
+        "fontSize": 9
+      }
+    },
+    {
+      "id": "other-hx",
+      "type": "field-row",
+      "band": "content",
+      "place": "below",
+      "segments": [
+        {
+          "kind": "text",
+          "label": "",
+          "bind": "$.history.other",
+          "flex": 1,
+          "blankLine": true,
+          "align": "left"
+        }
+      ],
+      "box": {
+        "xMm": 0,
+        "yMm": 0,
+        "wMm": 194,
+        "hMm": 16
+      },
+      "chrome": {
+        "border": "none",
+        "headerFill": "#ffffff",
+        "fontSize": 8
+      }
+    },
+    {
+      "id": "allergy",
+      "type": "field-row",
+      "band": "content",
+      "place": "below",
+      "segments": [
+        {
+          "kind": "options",
+          "label": "2.3 ประวัติแพ้ยา",
+          "bind": "$.allergy.hasAllergy",
+          "flex": 1.1,
+          "align": "left",
+          "options": [
+            {
+              "value": "none",
+              "label": "ไม่มี",
+              "match": [
+                "ไม่มี",
+                "none",
+                "NKA"
+              ]
+            },
+            {
+              "value": "yes",
+              "label": "มี",
+              "match": [
+                "มี",
+                "yes"
+              ]
+            }
+          ]
+        },
+        {
+          "kind": "text",
+          "label": "ชื่อยา",
+          "bind": "$.allergy.drugName",
+          "flex": 1.2,
+          "blankLine": true,
+          "align": "left"
+        }
+      ],
+      "box": {
+        "xMm": 0,
+        "yMm": 0,
+        "wMm": 194,
+        "hMm": 8
+      },
+      "chrome": {
+        "border": "none",
+        "headerFill": "#ffffff",
+        "fontSize": 8
+      }
+    },
+    {
+      "id": "pe-title",
+      "type": "box-text",
+      "band": "content",
+      "place": "below",
+      "text": "2.4 ตรวจร่างกาย",
+      "align": "left",
+      "box": {
+        "xMm": 0,
+        "yMm": 0,
+        "wMm": 194,
+        "hMm": 6
+      },
+      "chrome": {
+        "border": "none",
+        "headerFill": "#ffffff",
+        "fontSize": 9
+      }
+    },
+    {
+      "id": "pe-general",
+      "type": "field-row",
+      "band": "content",
+      "place": "below",
+      "segments": [
+        {
+          "kind": "text",
+          "label": "General appearance",
+          "bind": "",
+          "flex": 1.15,
+          "blankLine": false,
+          "align": "left"
+        },
+        {
+          "kind": "options",
+          "label": "",
+          "bind": "$.exam.general",
+          "flex": 1.35,
+          "align": "left",
+          "options": [
+            {
+              "value": "normal",
+              "label": "เกณฑ์ปกติ",
+              "match": [
+                "ปกติ",
+                "N"
+              ]
+            },
+            {
+              "value": "abnormal",
+              "label": "ผิดปกติ",
+              "match": [
+                "ผิดปกติ",
+                "Abn"
+              ]
+            }
+          ]
+        },
+        {
+          "kind": "text",
+          "label": "",
+          "bind": "$.exam.generalNote",
+          "flex": 1.5,
+          "blankLine": true,
+          "align": "left"
+        }
+      ],
+      "box": {
+        "xMm": 0,
+        "yMm": 0,
+        "wMm": 194,
+        "hMm": 7.5
+      },
+      "chrome": {
+        "border": "none",
+        "headerFill": "#ffffff",
+        "fontSize": 8
+      }
+    },
+    {
+      "id": "pe-cv",
+      "type": "field-row",
+      "band": "content",
+      "place": "below",
+      "segments": [
+        {
+          "kind": "text",
+          "label": "Cardiovascular",
+          "bind": "",
+          "flex": 1.15,
+          "blankLine": false,
+          "align": "left"
+        },
+        {
+          "kind": "options",
+          "label": "",
+          "bind": "$.exam.cv",
+          "flex": 1.35,
+          "align": "left",
+          "options": [
+            {
+              "value": "normal",
+              "label": "เกณฑ์ปกติ",
+              "match": [
+                "ปกติ",
+                "N"
+              ]
+            },
+            {
+              "value": "abnormal",
+              "label": "ผิดปกติ",
+              "match": [
+                "ผิดปกติ",
+                "Abn"
+              ]
+            }
+          ]
+        },
+        {
+          "kind": "text",
+          "label": "",
+          "bind": "$.exam.cvNote",
+          "flex": 1.5,
+          "blankLine": true,
+          "align": "left"
+        }
+      ],
+      "box": {
+        "xMm": 0,
+        "yMm": 0,
+        "wMm": 194,
+        "hMm": 7.5
+      },
+      "chrome": {
+        "border": "none",
+        "headerFill": "#ffffff",
+        "fontSize": 8
+      }
+    },
+    {
+      "id": "pe-resp",
+      "type": "field-row",
+      "band": "content",
+      "place": "below",
+      "segments": [
+        {
+          "kind": "text",
+          "label": "Respiratory",
+          "bind": "",
+          "flex": 1.15,
+          "blankLine": false,
+          "align": "left"
+        },
+        {
+          "kind": "options",
+          "label": "",
+          "bind": "$.exam.resp",
+          "flex": 1.35,
+          "align": "left",
+          "options": [
+            {
+              "value": "normal",
+              "label": "เกณฑ์ปกติ",
+              "match": [
+                "ปกติ",
+                "N"
+              ]
+            },
+            {
+              "value": "abnormal",
+              "label": "ผิดปกติ",
+              "match": [
+                "ผิดปกติ",
+                "Abn"
+              ]
+            }
+          ]
+        },
+        {
+          "kind": "text",
+          "label": "",
+          "bind": "$.exam.respNote",
+          "flex": 1.5,
+          "blankLine": true,
+          "align": "left"
+        }
+      ],
+      "box": {
+        "xMm": 0,
+        "yMm": 0,
+        "wMm": 194,
+        "hMm": 7.5
+      },
+      "chrome": {
+        "border": "none",
+        "headerFill": "#ffffff",
+        "fontSize": 8
+      }
+    },
+    {
+      "id": "pe-abd",
+      "type": "field-row",
+      "band": "content",
+      "place": "below",
+      "segments": [
+        {
+          "kind": "text",
+          "label": "Abdomen",
+          "bind": "",
+          "flex": 1.15,
+          "blankLine": false,
+          "align": "left"
+        },
+        {
+          "kind": "options",
+          "label": "",
+          "bind": "$.exam.abdomen",
+          "flex": 1.35,
+          "align": "left",
+          "options": [
+            {
+              "value": "normal",
+              "label": "เกณฑ์ปกติ",
+              "match": [
+                "ปกติ",
+                "N"
+              ]
+            },
+            {
+              "value": "abnormal",
+              "label": "ผิดปกติ",
+              "match": [
+                "ผิดปกติ",
+                "Abn"
+              ]
+            }
+          ]
+        },
+        {
+          "kind": "text",
+          "label": "",
+          "bind": "$.exam.abdomenNote",
+          "flex": 1.5,
+          "blankLine": true,
+          "align": "left"
+        }
+      ],
+      "box": {
+        "xMm": 0,
+        "yMm": 0,
+        "wMm": 194,
+        "hMm": 7.5
+      },
+      "chrome": {
+        "border": "none",
+        "headerFill": "#ffffff",
+        "fontSize": 8
+      }
+    },
+    {
+      "id": "pe-neuro",
+      "type": "field-row",
+      "band": "content",
+      "place": "below",
+      "segments": [
+        {
+          "kind": "text",
+          "label": "Nervous system",
+          "bind": "",
+          "flex": 1.15,
+          "blankLine": false,
+          "align": "left"
+        },
+        {
+          "kind": "options",
+          "label": "",
+          "bind": "$.exam.neuro",
+          "flex": 1.35,
+          "align": "left",
+          "options": [
+            {
+              "value": "normal",
+              "label": "เกณฑ์ปกติ",
+              "match": [
+                "ปกติ",
+                "N"
+              ]
+            },
+            {
+              "value": "abnormal",
+              "label": "ผิดปกติ",
+              "match": [
+                "ผิดปกติ",
+                "Abn"
+              ]
+            }
+          ]
+        },
+        {
+          "kind": "text",
+          "label": "",
+          "bind": "$.exam.neuroNote",
+          "flex": 1.5,
+          "blankLine": true,
+          "align": "left"
+        }
+      ],
+      "box": {
+        "xMm": 0,
+        "yMm": 0,
+        "wMm": 194,
+        "hMm": 7.5
+      },
+      "chrome": {
+        "border": "none",
+        "headerFill": "#ffffff",
+        "fontSize": 8
+      }
+    },
+    {
+      "id": "pe-other",
+      "type": "field-row",
+      "band": "content",
+      "place": "below",
+      "segments": [
+        {
+          "kind": "text",
+          "label": "Others",
+          "bind": "",
+          "flex": 1.15,
+          "blankLine": false,
+          "align": "left"
+        },
+        {
+          "kind": "options",
+          "label": "",
+          "bind": "$.exam.other",
+          "flex": 1.35,
+          "align": "left",
+          "options": [
+            {
+              "value": "normal",
+              "label": "เกณฑ์ปกติ",
+              "match": [
+                "ปกติ",
+                "N"
+              ]
+            },
+            {
+              "value": "abnormal",
+              "label": "ผิดปกติ",
+              "match": [
+                "ผิดปกติ",
+                "Abn"
+              ]
+            }
+          ]
+        },
+        {
+          "kind": "text",
+          "label": "",
+          "bind": "$.exam.otherNote",
+          "flex": 1.5,
+          "blankLine": true,
+          "align": "left"
+        }
+      ],
+      "box": {
+        "xMm": 0,
+        "yMm": 0,
+        "wMm": 194,
+        "hMm": 7.5
+      },
+      "chrome": {
+        "border": "none",
+        "headerFill": "#ffffff",
+        "fontSize": 8
+      }
+    },
+    {
+      "id": "s3-title",
+      "type": "box-text",
+      "band": "content",
+      "place": "below",
+      "text": "3. ข้อมูลของ ESRD",
+      "align": "left",
+      "box": {
+        "xMm": 0,
+        "yMm": 0,
+        "wMm": 194,
+        "hMm": 6.5
+      },
+      "chrome": {
+        "border": "none",
+        "headerFill": "#ffffff",
+        "fontSize": 9
+      }
+    },
+    {
+      "id": "admit-date",
+      "type": "field-row",
+      "band": "content",
+      "place": "below",
+      "segments": [
+        {
+          "kind": "text",
+          "label": "วันที่แรกรับเข้าหน่วยไตเทียม",
+          "bind": "$.esrd.firstAdmitDate",
+          "flex": 1,
+          "blankLine": true,
+          "align": "left"
+        }
+      ],
+      "box": {
+        "xMm": 0,
+        "yMm": 0,
+        "wMm": 194,
+        "hMm": 8
+      },
+      "chrome": {
+        "border": "none",
+        "headerFill": "#ffffff",
+        "fontSize": 8
+      }
+    },
+    {
+      "id": "cause-title",
+      "type": "box-text",
+      "band": "content",
+      "place": "below",
+      "text": "3.1 สาเหตุ ESRD",
+      "align": "left",
+      "box": {
+        "xMm": 0,
+        "yMm": 0,
+        "wMm": 194,
+        "hMm": 6
+      },
+      "chrome": {
+        "border": "none",
+        "headerFill": "#ffffff",
+        "fontSize": 9
+      }
+    },
+    {
+      "id": "cause-r1",
+      "type": "field-row",
+      "band": "content",
+      "place": "below",
+      "segments": [
+        {
+          "kind": "options",
+          "bind": "$.esrd.cause.dn",
+          "flex": 1,
+          "align": "left",
+          "options": [
+            {
+              "value": "1",
+              "label": "Diabetic nephropathy",
+              "match": [
+                "true",
+                "yes",
+                "Y"
+              ]
+            }
+          ]
+        },
+        {
+          "kind": "options",
+          "bind": "$.esrd.cause.ht",
+          "flex": 1,
+          "align": "left",
+          "options": [
+            {
+              "value": "1",
+              "label": "Hypertension",
+              "match": [
+                "true",
+                "yes",
+                "Y"
+              ]
+            }
+          ]
+        },
+        {
+          "kind": "options",
+          "bind": "$.esrd.cause.adpkd",
+          "flex": 1,
+          "align": "left",
+          "options": [
+            {
+              "value": "1",
+              "label": "ADPKD",
+              "match": [
+                "true",
+                "yes",
+                "Y"
+              ]
+            }
+          ]
+        },
+        {
+          "kind": "options",
+          "bind": "$.esrd.cause.obstructive",
+          "flex": 1,
+          "align": "left",
+          "options": [
+            {
+              "value": "1",
+              "label": "Obstructive uropathy",
+              "match": [
+                "true",
+                "yes",
+                "Y"
+              ]
+            }
+          ]
+        }
+      ],
+      "box": {
+        "xMm": 0,
+        "yMm": 0,
+        "wMm": 194,
+        "hMm": 8
+      },
+      "chrome": {
+        "border": "none",
+        "headerFill": "#ffffff",
+        "fontSize": 8
+      }
+    },
+    {
+      "id": "cause-r2",
+      "type": "field-row",
+      "band": "content",
+      "place": "below",
+      "segments": [
+        {
+          "kind": "options",
+          "bind": "$.esrd.cause.gn",
+          "flex": 1.15,
+          "align": "left",
+          "options": [
+            {
+              "value": "1",
+              "label": "Glomerulonephritis",
+              "match": [
+                "true",
+                "yes",
+                "Y"
+              ]
+            }
+          ]
+        },
+        {
+          "kind": "options",
+          "bind": "$.esrd.cause.gnBiopsy",
+          "flex": 0.85,
+          "align": "left",
+          "options": [
+            {
+              "value": "1",
+              "label": "biopsy-proven",
+              "match": [
+                "true",
+                "yes",
+                "Y"
+              ]
+            }
+          ]
+        },
+        {
+          "kind": "options",
+          "bind": "$.esrd.cause.gnPresumed",
+          "flex": 0.75,
+          "align": "left",
+          "options": [
+            {
+              "value": "1",
+              "label": "Presumed",
+              "match": [
+                "true",
+                "yes",
+                "Y"
+              ]
+            }
+          ]
+        },
+        {
+          "kind": "text",
+          "label": "ชนิดของ GN",
+          "bind": "$.esrd.cause.gnType",
+          "flex": 1.1,
+          "blankLine": true,
+          "align": "left"
+        }
+      ],
+      "box": {
+        "xMm": 0,
+        "yMm": 0,
+        "wMm": 194,
+        "hMm": 9
+      },
+      "chrome": {
+        "border": "none",
+        "headerFill": "#ffffff",
+        "fontSize": 8
+      }
+    },
+    {
+      "id": "cause-r3",
+      "type": "field-row",
+      "band": "content",
+      "place": "below",
+      "segments": [
+        {
+          "kind": "options",
+          "bind": "$.esrd.cause.nephrotoxic",
+          "flex": 1.1,
+          "align": "left",
+          "options": [
+            {
+              "value": "1",
+              "label": "ไตวายจากยาที่มีพิษต่อไต",
+              "match": [
+                "true",
+                "yes",
+                "Y"
+              ]
+            }
+          ]
+        },
+        {
+          "kind": "options",
+          "bind": "$.esrd.cause.nsaid",
+          "flex": 1.1,
+          "align": "left",
+          "options": [
+            {
+              "value": "1",
+              "label": "NSAIDs/COX-2 inhibitor",
+              "match": [
+                "true",
+                "yes",
+                "Y"
+              ]
+            }
+          ]
+        },
+        {
+          "kind": "options",
+          "bind": "$.esrd.cause.herbal",
+          "flex": 0.8,
+          "align": "left",
+          "options": [
+            {
+              "value": "1",
+              "label": "ยาสมุนไพร",
+              "match": [
+                "true",
+                "yes",
+                "Y"
+              ]
+            }
+          ]
+        }
+      ],
+      "box": {
+        "xMm": 0,
+        "yMm": 0,
+        "wMm": 194,
+        "hMm": 8
+      },
+      "chrome": {
+        "border": "none",
+        "headerFill": "#ffffff",
+        "fontSize": 8
+      }
+    },
+    {
+      "id": "cause-r4",
+      "type": "field-row",
+      "band": "content",
+      "place": "below",
+      "segments": [
+        {
+          "kind": "options",
+          "bind": "$.esrd.cause.chemo",
+          "flex": 1,
+          "align": "left",
+          "options": [
+            {
+              "value": "1",
+              "label": "ยาเคมีบำบัด",
+              "match": [
+                "true",
+                "yes",
+                "Y"
+              ]
+            }
+          ]
+        },
+        {
+          "kind": "options",
+          "bind": "$.esrd.cause.contrast",
+          "flex": 1,
+          "align": "left",
+          "options": [
+            {
+              "value": "1",
+              "label": "สารทึบรังสี",
+              "match": [
+                "true",
+                "yes",
+                "Y"
+              ]
+            }
+          ]
+        },
+        {
+          "kind": "options",
+          "bind": "$.esrd.cause.heavyMetal",
+          "flex": 1,
+          "align": "left",
+          "options": [
+            {
+              "value": "1",
+              "label": "โลหะหนัก",
+              "match": [
+                "true",
+                "yes",
+                "Y"
+              ]
+            }
+          ]
+        },
+        {
+          "kind": "options",
+          "bind": "$.esrd.cause.ctin",
+          "flex": 1,
+          "align": "left",
+          "options": [
+            {
+              "value": "1",
+              "label": "Chronic TIN",
+              "match": [
+                "true",
+                "yes",
+                "Y"
+              ]
+            }
+          ]
+        }
+      ],
+      "box": {
+        "xMm": 0,
+        "yMm": 0,
+        "wMm": 194,
+        "hMm": 8
+      },
+      "chrome": {
+        "border": "none",
+        "headerFill": "#ffffff",
+        "fontSize": 8
+      }
+    },
+    {
+      "id": "cause-r5",
+      "type": "field-row",
+      "band": "content",
+      "place": "below",
+      "segments": [
+        {
+          "kind": "options",
+          "bind": "$.esrd.cause.allograft",
+          "flex": 1.1,
+          "align": "left",
+          "options": [
+            {
+              "value": "1",
+              "label": "Allograft rejection",
+              "match": [
+                "true",
+                "yes",
+                "Y"
+              ]
+            }
+          ]
+        },
+        {
+          "kind": "options",
+          "bind": "$.esrd.cause.congenital",
+          "flex": 1.05,
+          "align": "left",
+          "options": [
+            {
+              "value": "1",
+              "label": "Congenital anomaly",
+              "match": [
+                "true",
+                "yes",
+                "Y"
+              ]
+            }
+          ]
+        },
+        {
+          "kind": "options",
+          "bind": "$.esrd.cause.other",
+          "flex": 0.5,
+          "align": "left",
+          "options": [
+            {
+              "value": "1",
+              "label": "อื่นๆ",
+              "match": [
+                "true",
+                "yes",
+                "Y"
+              ]
+            }
+          ]
+        },
+        {
+          "kind": "text",
+          "label": "",
+          "bind": "$.esrd.cause.otherText",
+          "flex": 1.1,
+          "blankLine": true,
+          "align": "left"
+        }
+      ],
+      "box": {
+        "xMm": 0,
+        "yMm": 0,
+        "wMm": 194,
+        "hMm": 8
+      },
+      "chrome": {
+        "border": "none",
+        "headerFill": "#ffffff",
+        "fontSize": 8
+      }
+    },
+    {
+      "id": "dialysis-title",
+      "type": "box-text",
+      "band": "content",
+      "place": "below",
+      "text": "ประวัติการรักษาด้วยเครื่องไตเทียม",
+      "align": "left",
+      "box": {
+        "xMm": 0,
+        "yMm": 0,
+        "wMm": 194,
+        "hMm": 6.5
+      },
+      "chrome": {
+        "border": "none",
+        "headerFill": "#ffffff",
+        "fontSize": 9
+      }
+    },
+    {
+      "id": "dialysis-first",
+      "type": "field-row",
+      "band": "content",
+      "place": "below",
+      "segments": [
+        {
+          "kind": "text",
+          "label": "เริ่มฟอกเลือดครั้งแรกที่",
+          "bind": "$.dialysis.firstHdPlace",
+          "flex": 1.3,
+          "blankLine": true,
+          "align": "left"
+        },
+        {
+          "kind": "text",
+          "label": "เมื่อ",
+          "bind": "$.dialysis.firstHd",
+          "flex": 0.8,
+          "blankLine": true,
+          "align": "left"
+        }
+      ],
+      "box": {
+        "xMm": 0,
+        "yMm": 0,
+        "wMm": 194,
+        "hMm": 8
+      },
+      "chrome": {
+        "border": "none",
+        "headerFill": "#ffffff",
+        "fontSize": 8
+      }
+    },
+    {
+      "id": "dialysis-clinic",
+      "type": "field-row",
+      "band": "content",
+      "place": "below",
+      "segments": [
+        {
+          "kind": "text",
+          "label": "ฟอกเลือดคลินิกครั้งแรกวันที่",
+          "bind": "$.dialysis.firstHdHere",
+          "flex": 1,
+          "blankLine": true,
+          "align": "left"
+        }
+      ],
+      "box": {
+        "xMm": 0,
+        "yMm": 0,
+        "wMm": 194,
+        "hMm": 8
+      },
+      "chrome": {
+        "border": "none",
+        "headerFill": "#ffffff",
+        "fontSize": 8
+      }
+    },
+    {
+      "id": "access-title",
+      "type": "box-text",
+      "band": "content",
+      "place": "below",
+      "text": "ประวัติการทำเส้นเลือดสำหรับฟอกเลือด",
+      "align": "left",
+      "box": {
+        "xMm": 0,
+        "yMm": 0,
+        "wMm": 194,
+        "hMm": 6.5
+      },
+      "chrome": {
+        "border": "none",
+        "headerFill": "#ffffff",
+        "fontSize": 9
+      }
+    },
+    {
+      "id": "access-grid",
       "type": "data-grid",
-      "columnHeadersBind": "$.columnHeaders",
-      "bindRows": "$.rows",
-      "when": "$.rows.length > 0"
+      "band": "content",
+      "place": "below",
+      "bindRows": "$.access.rows",
+      "columnHeadersBind": "$.access.columnHeaders",
+      "box": {
+        "xMm": 0,
+        "yMm": 0,
+        "wMm": 194,
+        "hMm": 36
+      },
+      "chrome": {
+        "fontSize": 7,
+        "border": "thin",
+        "headerFill": "$branding.sectionHeaderBackground",
+        "rowHeightMm": 7.2,
+        "columnWidths": [
+          "2.2",
+          "1.4",
+          "1.4",
+          "2",
+          "2.2",
+          "1.4"
+        ]
+      }
+    },
+    {
+      "id": "hbv-title",
+      "type": "box-text",
+      "band": "content",
+      "place": "below",
+      "text": "Hepatitis B Vaccine",
+      "align": "left",
+      "box": {
+        "xMm": 0,
+        "yMm": 0,
+        "wMm": 194,
+        "hMm": 6.5
+      },
+      "chrome": {
+        "border": "none",
+        "headerFill": "#ffffff",
+        "fontSize": 9
+      }
+    },
+    {
+      "id": "hbv-left",
+      "type": "data-grid",
+      "band": "content",
+      "place": "below",
+      "bindRows": "$.vaccines.hbvLeft",
+      "columnHeadersBind": "$.vaccines.hbvHeaders",
+      "box": {
+        "xMm": 0,
+        "yMm": 0,
+        "wMm": 96,
+        "hMm": 28
+      },
+      "chrome": {
+        "fontSize": 7,
+        "border": "thin",
+        "headerFill": "$branding.sectionHeaderBackground",
+        "rowHeightMm": 7,
+        "columnWidths": [
+          "0.6",
+          "1.2",
+          "2"
+        ]
+      },
+      "manualWidth": true
+    },
+    {
+      "id": "hbv-right",
+      "type": "data-grid",
+      "band": "content",
+      "place": "beside",
+      "bindRows": "$.vaccines.hbvRight",
+      "columnHeadersBind": "$.vaccines.hbvHeaders",
+      "box": {
+        "xMm": 0,
+        "yMm": 0,
+        "wMm": 96,
+        "hMm": 28
+      },
+      "chrome": {
+        "fontSize": 7,
+        "border": "thin",
+        "headerFill": "$branding.sectionHeaderBackground",
+        "rowHeightMm": 7,
+        "columnWidths": [
+          "0.6",
+          "1.2",
+          "2"
+        ]
+      },
+      "manualWidth": true
+    },
+    {
+      "id": "othervax-title",
+      "type": "box-text",
+      "band": "content",
+      "place": "below",
+      "text": "ประวัติการได้รับวัคซีนอื่นๆ",
+      "align": "left",
+      "box": {
+        "xMm": 0,
+        "yMm": 0,
+        "wMm": 194,
+        "hMm": 6.5
+      },
+      "chrome": {
+        "border": "none",
+        "headerFill": "#ffffff",
+        "fontSize": 9
+      }
+    },
+    {
+      "id": "othervax-r1",
+      "type": "field-row",
+      "band": "content",
+      "place": "below",
+      "segments": [
+        {
+          "kind": "text",
+          "label": "1.",
+          "bind": "$.vaccines.other[0].name",
+          "flex": 1.1,
+          "blankLine": true,
+          "align": "left"
+        },
+        {
+          "kind": "text",
+          "label": "วันที่",
+          "bind": "$.vaccines.other[0].date",
+          "flex": 0.7,
+          "blankLine": true,
+          "align": "left"
+        },
+        {
+          "kind": "text",
+          "label": "4.",
+          "bind": "$.vaccines.other[3].name",
+          "flex": 1.1,
+          "blankLine": true,
+          "align": "left"
+        },
+        {
+          "kind": "text",
+          "label": "วันที่",
+          "bind": "$.vaccines.other[3].date",
+          "flex": 0.7,
+          "blankLine": true,
+          "align": "left"
+        }
+      ],
+      "box": {
+        "xMm": 0,
+        "yMm": 0,
+        "wMm": 194,
+        "hMm": 8
+      },
+      "chrome": {
+        "border": "none",
+        "headerFill": "#ffffff",
+        "fontSize": 8
+      }
+    },
+    {
+      "id": "othervax-r2",
+      "type": "field-row",
+      "band": "content",
+      "place": "below",
+      "segments": [
+        {
+          "kind": "text",
+          "label": "2.",
+          "bind": "$.vaccines.other[1].name",
+          "flex": 1.1,
+          "blankLine": true,
+          "align": "left"
+        },
+        {
+          "kind": "text",
+          "label": "วันที่",
+          "bind": "$.vaccines.other[1].date",
+          "flex": 0.7,
+          "blankLine": true,
+          "align": "left"
+        },
+        {
+          "kind": "text",
+          "label": "5.",
+          "bind": "$.vaccines.other[4].name",
+          "flex": 1.1,
+          "blankLine": true,
+          "align": "left"
+        },
+        {
+          "kind": "text",
+          "label": "วันที่",
+          "bind": "$.vaccines.other[4].date",
+          "flex": 0.7,
+          "blankLine": true,
+          "align": "left"
+        }
+      ],
+      "box": {
+        "xMm": 0,
+        "yMm": 0,
+        "wMm": 194,
+        "hMm": 8
+      },
+      "chrome": {
+        "border": "none",
+        "headerFill": "#ffffff",
+        "fontSize": 8
+      }
+    },
+    {
+      "id": "othervax-r3",
+      "type": "field-row",
+      "band": "content",
+      "place": "below",
+      "segments": [
+        {
+          "kind": "text",
+          "label": "3.",
+          "bind": "$.vaccines.other[2].name",
+          "flex": 1.1,
+          "blankLine": true,
+          "align": "left"
+        },
+        {
+          "kind": "text",
+          "label": "วันที่",
+          "bind": "$.vaccines.other[2].date",
+          "flex": 0.7,
+          "blankLine": true,
+          "align": "left"
+        },
+        {
+          "kind": "text",
+          "label": "6.",
+          "bind": "$.vaccines.other[5].name",
+          "flex": 1.1,
+          "blankLine": true,
+          "align": "left"
+        },
+        {
+          "kind": "text",
+          "label": "วันที่",
+          "bind": "$.vaccines.other[5].date",
+          "flex": 0.7,
+          "blankLine": true,
+          "align": "left"
+        }
+      ],
+      "box": {
+        "xMm": 0,
+        "yMm": 0,
+        "wMm": 194,
+        "hMm": 8
+      },
+      "chrome": {
+        "border": "none",
+        "headerFill": "#ffffff",
+        "fontSize": 8
+      }
+    },
+    {
+      "id": "meds-title",
+      "type": "box-text",
+      "band": "content",
+      "place": "below",
+      "text": "ยาที่ใช้ประจำ",
+      "align": "left",
+      "box": {
+        "xMm": 0,
+        "yMm": 0,
+        "wMm": 194,
+        "hMm": 6.5
+      },
+      "chrome": {
+        "border": "none",
+        "headerFill": "#ffffff",
+        "fontSize": 9
+      }
+    },
+    {
+      "id": "meds",
+      "type": "field-row",
+      "band": "content",
+      "place": "below",
+      "segments": [
+        {
+          "kind": "text",
+          "label": "",
+          "bind": "$.medications.current",
+          "flex": 1,
+          "blankLine": true,
+          "align": "left"
+        }
+      ],
+      "box": {
+        "xMm": 0,
+        "yMm": 0,
+        "wMm": 194,
+        "hMm": 18
+      },
+      "chrome": {
+        "border": "none",
+        "headerFill": "#ffffff",
+        "fontSize": 8
+      }
+    },
+    {
+      "id": "signatures",
+      "type": "field-row",
+      "band": "content",
+      "place": "below",
+      "segments": [
+        {
+          "kind": "text",
+          "label": "แพทย์ผู้ตรวจ",
+          "bind": "$.sign.doctor",
+          "flex": 1,
+          "blankLine": true,
+          "align": "left"
+        },
+        {
+          "kind": "text",
+          "label": "พยาบาล",
+          "bind": "$.sign.nurse",
+          "flex": 1,
+          "blankLine": true,
+          "align": "left"
+        }
+      ],
+      "box": {
+        "xMm": 0,
+        "yMm": 0,
+        "wMm": 194,
+        "hMm": 16
+      },
+      "chrome": {
+        "border": "none",
+        "headerFill": "#ffffff",
+        "fontSize": 8
+      }
+    },
+    {
+      "id": "footnote",
+      "type": "box-text",
+      "band": "content",
+      "place": "below",
+      "text": "Please mark 'N/A' under the item that is not applicable.    IQAC-TUR-HD ; Revision 00 ; Issued Date 01/11/2023",
+      "align": "left",
+      "box": {
+        "xMm": 0,
+        "yMm": 0,
+        "wMm": 194,
+        "hMm": 7
+      },
+      "chrome": {
+        "border": "none",
+        "headerFill": "#ffffff",
+        "fontSize": 7
+      }
+    },
+    {
+      "id": "page-of",
+      "type": "page-of",
+      "band": "super-footer",
+      "place": "below",
+      "box": {
+        "xMm": 2,
+        "yMm": 292,
+        "wMm": 194,
+        "hMm": 5
+      },
+      "text": "{current} / {total}",
+      "align": "center",
+      "chrome": {
+        "border": "none",
+        "fontSize": 8
+      }
     }
   ]
 }
