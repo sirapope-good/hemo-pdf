@@ -97,6 +97,10 @@ public static class DesignerPageComposer
                 ConfigurableBoxTextComposer.Compose(container, element, vm.Data);
                 break;
 
+            case HprpDesignerElementTypes.FieldRow:
+                ConfigurableFieldRowComposer.Compose(container, element, vm.Data);
+                break;
+
             case HprpDesignerElementTypes.Narrative:
                 ConfigurableNarrativeComposer.Compose(container, element, vm.Data);
                 break;

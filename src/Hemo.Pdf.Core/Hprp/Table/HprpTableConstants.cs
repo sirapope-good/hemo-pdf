@@ -76,6 +76,12 @@ public static class HprpDesignerElementTypes
     /// </summary>
     public const string Narrative = "narrative";
 
+    /// <summary>
+    /// Form row with checkbox options and/or fill-in text (<c>segments[]</c>).
+    /// Selected option is derived from <c>bind</c> / segment bind; empty data → all unchecked (blank form).
+    /// </summary>
+    public const string FieldRow = "field-row";
+
     public static readonly IReadOnlySet<string> All = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
     {
         Header,
@@ -86,6 +92,7 @@ public static class HprpDesignerElementTypes
         Group,
         DataGrid,
         Narrative,
+        FieldRow,
     };
 }
 

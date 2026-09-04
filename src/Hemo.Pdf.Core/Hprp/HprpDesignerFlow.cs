@@ -372,7 +372,8 @@ public static class HprpDesignerFlow
         var type = e.Type?.Trim() ?? "";
         if (string.Equals(type, HprpDesignerElementTypes.BoxText, StringComparison.OrdinalIgnoreCase)
             || string.Equals(type, HprpDesignerElementTypes.PageOf, StringComparison.OrdinalIgnoreCase)
-            || string.Equals(type, HprpDesignerElementTypes.Narrative, StringComparison.OrdinalIgnoreCase))
+            || string.Equals(type, HprpDesignerElementTypes.Narrative, StringComparison.OrdinalIgnoreCase)
+            || string.Equals(type, HprpDesignerElementTypes.FieldRow, StringComparison.OrdinalIgnoreCase))
         {
             return MinBoxTextH;
         }

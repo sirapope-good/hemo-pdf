@@ -148,7 +148,13 @@ public sealed class HprpDesignerElement
     public IReadOnlyList<HprpBoxTextItem>? Items { get; init; }
 
     /// <summary>
-    /// Page band: <see cref="HprpDesignerBands"/> —
+    /// Segments for <see cref="HprpDesignerElementTypes.FieldRow"/>
+    /// (checkbox options and/or fill-in text).
+    /// </summary>
+    [JsonPropertyName("segments")]
+    public IReadOnlyList<HprpFieldRowSegment>? Segments { get; init; }
+
+    /// <summary>Page band: <see cref="HprpDesignerBands"/> —
     /// <c>super-header</c> / <c>header</c> / <c>content</c> (default) / <c>footer</c> / <c>super-footer</c>.
     /// Chrome bands repeat on each page; content flows and may create extra pages.
     /// </summary>
@@ -240,6 +246,7 @@ public sealed class HprpDesignerElement
         Text = Text,
         Bind = Bind,
         Items = Items,
+        Segments = Segments,
         Align = Align,
         Band = Band,
         Direction = Direction,

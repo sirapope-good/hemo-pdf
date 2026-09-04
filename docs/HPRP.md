@@ -72,6 +72,8 @@ WYSIWYG path on branch `feat/hprp-table-designer` — **does not replace** compo
 
 **Narrative (Word-lite):** `type: "narrative"` with `paragraphs[]` (`text`, `sub`, `align`, `role: title|body|note`) and optional `bindParagraphs` (e.g. `$.bodyParagraphs`). Studio **Insert → Narrative** edits/reorders paragraphs; PDF draws via `ConfigurableNarrativeComposer`. Consent 08/09: dense `contentMode: intro|closing` + narrative body.
 
+**Field row (checkbox / fill-in):** `type: "field-row"` with `segments[]` — `kind: "options"` (always show choices; matching `bind` value gets `[✓]`, empty bind = all unchecked for blank forms) or `kind: "text"` (value or dotted blank line). Studio **Insert → Field row**; chrome `border` / `fontSize` / spacing via place + box height. Used by clinical-10 demographics.
+
 **Preset library:** `assets/templates/presets/tables/{id}.json` — reusable table chrome + columns + row mode (`freedom` | `monthly` | `annual`). Studio API: `GET/PUT /api/hprp/presets/tables/{id}`.
 
 **Adapter schema (field mapper):** `assets/templates/adapters/{dataAdapterId}.schema.json` — `GET /api/hprp/adapters/{dataAdapterId}/schema` drives the Studio “Map field…” picker.

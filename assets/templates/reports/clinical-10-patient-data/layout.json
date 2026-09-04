@@ -20,73 +20,162 @@
     },
     {
       "id": "demo-row-1",
-      "type": "box-text",
+      "type": "field-row",
       "band": "content",
       "place": "below",
-      "items": [
-        { "label": "เพศ", "bind": "$.demographics.gender", "flex": 1, "align": "left" },
-        { "label": "วันเกิด", "bind": "$.demographics.birthDate", "flex": 1.2, "align": "left" },
-        { "label": "กรุ๊ปเลือด", "bind": "$.demographics.bloodType", "flex": 1, "align": "left" },
-        { "label": "โทร", "bind": "$.demographics.telephone", "flex": 1.2, "align": "left" }
+      "segments": [
+        {
+          "kind": "options",
+          "label": "เพศ",
+          "bind": "$.demographics.gender",
+          "flex": 1.1,
+          "align": "left",
+          "options": [
+            { "value": "ชาย", "label": "ชาย", "match": ["M", "Male", "ชาย"] },
+            { "value": "หญิง", "label": "หญิง", "match": ["F", "Female", "หญิง"] }
+          ]
+        },
+        {
+          "kind": "text",
+          "label": "วันเกิด",
+          "bind": "$.demographics.birthDate",
+          "flex": 1.1,
+          "blankLine": true
+        },
+        {
+          "kind": "options",
+          "label": "กรุ๊ปเลือด",
+          "bind": "$.demographics.bloodType",
+          "flex": 1.6,
+          "wrap": true,
+          "optionsPerLine": 4,
+          "options": [
+            { "value": "A", "label": "เอ", "match": ["A", "A+", "A-", "เอ"] },
+            { "value": "B", "label": "บี", "match": ["B", "B+", "B-", "บี"] },
+            { "value": "O", "label": "โอ", "match": ["O", "O+", "O-", "โอ"] },
+            { "value": "AB", "label": "เอบี", "match": ["AB", "AB+", "AB-", "เอบี"] }
+          ]
+        },
+        {
+          "kind": "text",
+          "label": "โทร",
+          "bind": "$.demographics.telephone",
+          "flex": 1,
+          "blankLine": true
+        }
       ],
-      "box": { "xMm": 0, "yMm": 0, "wMm": 194, "hMm": 7 },
+      "box": { "xMm": 0, "yMm": 0, "wMm": 194, "hMm": 8 },
       "chrome": { "border": "thin", "fontSize": 8, "headerFill": "#ffffff" }
     },
     {
       "id": "demo-row-2",
-      "type": "box-text",
+      "type": "field-row",
       "band": "content",
       "place": "below",
-      "items": [
-        { "label": "เลขบัตร", "bind": "$.demographics.identityNo", "flex": 1.4, "align": "left" },
-        { "label": "สิทธิ", "bind": "$.demographics.coverage", "flex": 1, "align": "left" },
-        { "label": "โอนจาก", "bind": "$.demographics.transferFrom", "flex": 1.4, "align": "left" }
+      "segments": [
+        {
+          "kind": "text",
+          "label": "เลขบัตร",
+          "bind": "$.demographics.identityNo",
+          "flex": 1.4,
+          "blankLine": true
+        },
+        {
+          "kind": "text",
+          "label": "สิทธิ",
+          "bind": "$.demographics.coverage",
+          "flex": 1,
+          "blankLine": true
+        },
+        {
+          "kind": "text",
+          "label": "โอนจาก",
+          "bind": "$.demographics.transferFrom",
+          "flex": 1.4,
+          "blankLine": true
+        }
       ],
       "box": { "xMm": 0, "yMm": 0, "wMm": 194, "hMm": 7 },
       "chrome": { "border": "thin", "fontSize": 8, "headerFill": "#ffffff" }
     },
     {
       "id": "address",
-      "type": "box-text",
+      "type": "field-row",
       "band": "content",
       "place": "below",
-      "items": [
-        { "label": "ที่อยู่", "bind": "$.demographics.address", "flex": 1, "align": "left" }
+      "segments": [
+        {
+          "kind": "text",
+          "label": "ที่อยู่",
+          "bind": "$.demographics.address",
+          "flex": 1,
+          "blankLine": true
+        }
       ],
       "box": { "xMm": 0, "yMm": 0, "wMm": 194, "hMm": 7 },
       "chrome": { "border": "thin", "fontSize": 8, "headerFill": "#ffffff" }
     },
     {
       "id": "allergy",
-      "type": "box-text",
+      "type": "field-row",
       "band": "content",
       "place": "below",
-      "items": [
-        { "label": "ประวัติการแพ้ยา", "bind": "$.demographics.allergies", "flex": 1, "align": "left" }
+      "segments": [
+        {
+          "kind": "text",
+          "label": "ประวัติการแพ้ยา",
+          "bind": "$.demographics.allergies",
+          "flex": 1,
+          "blankLine": true
+        }
       ],
       "box": { "xMm": 0, "yMm": 0, "wMm": 194, "hMm": 10 },
       "chrome": { "border": "thin", "fontSize": 8, "headerFill": "#ffffff" }
     },
     {
       "id": "underlying",
-      "type": "box-text",
+      "type": "field-row",
       "band": "content",
       "place": "below",
-      "items": [
-        { "label": "โรคประจำตัว", "bind": "$.demographics.underlying", "flex": 1, "align": "left" }
+      "segments": [
+        {
+          "kind": "text",
+          "label": "โรคประจำตัว",
+          "bind": "$.demographics.underlying",
+          "flex": 1,
+          "blankLine": true
+        }
       ],
       "box": { "xMm": 0, "yMm": 0, "wMm": 194, "hMm": 10 },
       "chrome": { "border": "thin", "fontSize": 8, "headerFill": "#ffffff" }
     },
     {
       "id": "dialysis-row",
-      "type": "box-text",
+      "type": "field-row",
       "band": "content",
       "place": "below",
-      "items": [
-        { "label": "สาเหตุโรคไต", "bind": "$.dialysis.causeOfKidneyDisease", "flex": 1.4, "align": "left" },
-        { "label": "เริ่มฟอกครั้งแรก", "bind": "$.dialysis.firstHd", "flex": 1, "align": "left" },
-        { "label": "ฟอกที่คลินิกครั้งแรก", "bind": "$.dialysis.firstHdHere", "flex": 1.2, "align": "left" }
+      "segments": [
+        {
+          "kind": "text",
+          "label": "สาเหตุโรคไต",
+          "bind": "$.dialysis.causeOfKidneyDisease",
+          "flex": 1.4,
+          "blankLine": true
+        },
+        {
+          "kind": "text",
+          "label": "เริ่มฟอกครั้งแรก",
+          "bind": "$.dialysis.firstHd",
+          "flex": 1,
+          "blankLine": true
+        },
+        {
+          "kind": "text",
+          "label": "ฟอกที่คลินิกครั้งแรก",
+          "bind": "$.dialysis.firstHdHere",
+          "flex": 1.2,
+          "blankLine": true
+        }
       ],
       "box": { "xMm": 0, "yMm": 0, "wMm": 194, "hMm": 8 },
       "chrome": { "border": "thin", "fontSize": 8, "headerFill": "#ffffff" }
@@ -119,11 +208,17 @@
     },
     {
       "id": "note",
-      "type": "box-text",
+      "type": "field-row",
       "band": "content",
       "place": "below",
-      "items": [
-        { "label": "หมายเหตุ", "bind": "$.demographics.note", "flex": 1, "align": "left" }
+      "segments": [
+        {
+          "kind": "text",
+          "label": "หมายเหตุ",
+          "bind": "$.demographics.note",
+          "flex": 1,
+          "blankLine": true
+        }
       ],
       "box": { "xMm": 0, "yMm": 0, "wMm": 194, "hMm": 12 },
       "chrome": { "border": "thin", "fontSize": 8, "headerFill": "#ffffff" }

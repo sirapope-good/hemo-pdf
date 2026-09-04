@@ -40,8 +40,9 @@ public class Clinical10DesignerParityTests
             e => string.Equals(e.Type, HprpDesignerElementTypes.DataGrid, StringComparison.OrdinalIgnoreCase));
         Assert.Contains(
             package.Layout.Elements,
-            e => string.Equals(e.Type, HprpDesignerElementTypes.BoxText, StringComparison.OrdinalIgnoreCase)
-                && e.Items?.Any(i => i.Bind?.Contains("demographics", StringComparison.OrdinalIgnoreCase) == true) == true);
+            e => string.Equals(e.Type, HprpDesignerElementTypes.FieldRow, StringComparison.OrdinalIgnoreCase)
+                && e.Segments?.Any(s =>
+                    string.Equals(s.Kind, HprpFieldRowSegmentKinds.Options, StringComparison.OrdinalIgnoreCase)) == true);
 
         var sample = HprpStudioSamplePayloads.TryLoad(templatesRoot, ClinicalReportCatalog.PatientData);
         Assert.NotNull(sample);

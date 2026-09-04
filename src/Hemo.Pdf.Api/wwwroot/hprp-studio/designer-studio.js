@@ -31,7 +31,7 @@
 
   function minHeightForElement(el) {
     const t = String(el && el.type || "").toLowerCase();
-    return t === "box-text" || t === "page-of" || t === "narrative" ? MIN_BOX_TEXT_H : MIN_BLOCK_H;
+    return t === "box-text" || t === "page-of" || t === "narrative" || t === "field-row" ? MIN_BOX_TEXT_H : MIN_BLOCK_H;
   }
 
   /** Locate element in top-level list or inside a group.children. */
@@ -1530,6 +1530,8 @@
           }
         } else if (el.type === "box-text") {
           body.appendChild(renderBoxTextHtml(el, sampleData, scale));
+        } else if (el.type === "field-row") {
+          body.appendChild(renderFieldRowHtml(el, sampleData, scale));
         } else if (el.type === "page-of") {
           body.appendChild(renderPageOfHtml(el, p + 1, flow.pageCount, scale));
         } else if (el.type === "header") {
@@ -3477,6 +3479,9 @@
     if (el.type === "box-text") {
       renderBoxTextInspector(insp, el);
     }
+    if (el.type === "field-row") {
+      renderFieldRowInspector(insp, el);
+    }
     if (el.type === "narrative") {
       renderNarrativeInspector(insp, el);
     }
@@ -3571,6 +3576,297 @@
       el.align === "left" ? "flex-start" : el.align === "right" ? "flex-end" : "center";
     root.textContent = resolveBoxText(el, data) || "\u00A0";
     return root;
+  }
+
+  function fieldOptionSelected(bound, opt) {
+    if (bound == null || String(bound).trim() === "") return false;
+    const raw = String(bound).trim().toLowerCase();
+    if (opt.value != null && String(opt.value).trim().toLowerCase() === raw) return true;
+    if (opt.label != null && String(opt.label).trim().toLowerCase() === raw) return true;
+    const match = Array.isArray(opt.match) ? opt.match : [];
+    return match.some((m) => m != null && String(m).trim().toLowerCase() === raw);
+  }
+
+  function resolveFieldSegmentValue(seg, data) {
+    if (seg.bind && data && global.HeaderLayoutEngine) {
+      const v = global.HeaderLayoutEngine.readAt(data, seg.bind);
+      if (v != null && String(v).trim() !== "") return String(v);
+    }
+    return seg.text && String(seg.text).trim() ? String(seg.text) : "";
+  }
+
+  function renderFieldRowHtml(el, data, scale) {
+    const root = document.createElement("div");
+    root.className = "cfg-field-row" + (borderOn(el.chrome) ? "" : " cfg-no-border");
+    const fill = (el.chrome && el.chrome.headerFill) || "#ffffff";
+    if (String(fill).indexOf("$") !== 0) root.style.background = fill;
+    else root.style.background = "#ffffff";
+    const fs = (el.chrome && el.chrome.fontSize) || 8;
+    root.style.fontSize = (fs * (scale / 2.5)).toFixed(1) + "px";
+    root.style.height = "100%";
+
+    const segments = Array.isArray(el.segments) ? el.segments : [];
+    if (!segments.length) {
+      root.textContent = "\u00A0";
+      return root;
+    }
+
+    segments.forEach((seg) => {
+      const cell = document.createElement("div");
+      cell.className = "cfg-field-row-seg";
+      const flex = seg.flex != null && Number(seg.flex) > 0 ? Number(seg.flex) : 1;
+      cell.style.flex = String(flex);
+      const align = String(seg.align || "left").toLowerCase();
+      cell.style.justifyContent =
+        align === "right" ? "flex-end" : align === "center" ? "center" : "flex-start";
+      cell.style.textAlign = align;
+
+      const kind = String(seg.kind || "text").toLowerCase();
+      if (kind === "options") {
+        if (seg.label) {
+          const lab = document.createElement("span");
+          lab.className = "cfg-box-text-label";
+          lab.textContent = String(seg.label).trimEnd() + " ";
+          cell.appendChild(lab);
+        }
+        const bound = resolveFieldSegmentValue(seg, data);
+        const opts = Array.isArray(seg.options) ? seg.options : [];
+        opts.forEach((opt, i) => {
+          const on = fieldOptionSelected(bound, opt || {});
+          const s = document.createElement("span");
+          s.className = on ? "cfg-box-text-value" : "cfg-box-text-label";
+          const label = (opt && (opt.label || opt.value)) || "";
+          s.textContent = (on ? "[✓] " : "[ ] ") + label + (i < opts.length - 1 ? "  " : "");
+          cell.appendChild(s);
+        });
+      } else {
+        if (seg.label) {
+          const lab = document.createElement("span");
+          lab.className = "cfg-box-text-label";
+          lab.textContent = String(seg.label).trimEnd() + " ";
+          cell.appendChild(lab);
+        }
+        const val = resolveFieldSegmentValue(seg, data);
+        const s = document.createElement("span");
+        if (val) {
+          s.className = "cfg-box-text-value";
+          s.textContent = val;
+        } else {
+          s.className = "cfg-box-text-label";
+          s.textContent = seg.blankLine === false ? "\u00A0" : "........................";
+        }
+        cell.appendChild(s);
+      }
+      if (!cell.childNodes.length) cell.textContent = "\u00A0";
+      root.appendChild(cell);
+    });
+    return root;
+  }
+
+  function renderFieldRowInspector(insp, el) {
+    const tip = document.createElement("p");
+    tip.className = "muted";
+    tip.textContent =
+      "Field row — segments เป็น options (checkbox) หรือ text (เส้นจุดเมื่อว่าง). ค่าว่าง = ฟอร์มเปล่า";
+    insp.appendChild(tip);
+
+    const fsLab = document.createElement("label");
+    fsLab.textContent = "fontSize";
+    const fsIn = document.createElement("input");
+    fsIn.type = "number";
+    fsIn.step = "0.5";
+    fsIn.value = String((el.chrome && el.chrome.fontSize) || 8);
+    fsIn.addEventListener("change", () => {
+      if (canvasTools) canvasTools.pushHistory();
+      el.chrome = el.chrome || {};
+      el.chrome.fontSize = Number(fsIn.value) || 8;
+      renderAll();
+    });
+    fsLab.appendChild(fsIn);
+    insp.appendChild(fsLab);
+
+    const borderLab = document.createElement("label");
+    borderLab.textContent = "border";
+    const borderSel = document.createElement("select");
+    ["thin", "none"].forEach((b) => {
+      const o = document.createElement("option");
+      o.value = b;
+      o.textContent = b;
+      if (String((el.chrome && el.chrome.border) || "thin") === b) o.selected = true;
+      borderSel.appendChild(o);
+    });
+    borderSel.addEventListener("change", () => {
+      if (canvasTools) canvasTools.pushHistory();
+      el.chrome = el.chrome || {};
+      el.chrome.border = borderSel.value;
+      renderAll();
+    });
+    borderLab.appendChild(borderSel);
+    insp.appendChild(borderLab);
+
+    const head = document.createElement("p");
+    head.innerHTML = "<strong>Segments</strong>";
+    insp.appendChild(head);
+    if (!Array.isArray(el.segments)) el.segments = [];
+
+    el.segments.forEach((seg, idx) => {
+      const box = document.createElement("div");
+      box.className = "box-text-item-edit";
+
+      const kindRow = document.createElement("div");
+      kindRow.className = "col-row";
+      const kindSel = document.createElement("select");
+      ["options", "text"].forEach((k) => {
+        const o = document.createElement("option");
+        o.value = k;
+        o.textContent = k;
+        if (String(seg.kind || "text") === k) o.selected = true;
+        kindSel.appendChild(o);
+      });
+      kindSel.title = "kind";
+      kindSel.addEventListener("change", () => {
+        if (canvasTools) canvasTools.pushHistory();
+        seg.kind = kindSel.value;
+        if (seg.kind === "options" && !Array.isArray(seg.options)) {
+          seg.options = [
+            { value: "ชาย", label: "ชาย", match: ["M", "Male", "ชาย"] },
+            { value: "หญิง", label: "หญิง", match: ["F", "Female", "หญิง"] },
+          ];
+        }
+        renderAll();
+      });
+      kindRow.appendChild(kindSel);
+
+      const labelIn = document.createElement("input");
+      labelIn.type = "text";
+      labelIn.placeholder = "label";
+      labelIn.value = seg.label || "";
+      labelIn.addEventListener("change", () => {
+        if (canvasTools) canvasTools.pushHistory();
+        seg.label = labelIn.value;
+        renderAll();
+      });
+      kindRow.appendChild(labelIn);
+
+      const bindIn = document.createElement("input");
+      bindIn.type = "text";
+      bindIn.placeholder = "bind $.demographics.gender";
+      bindIn.value = seg.bind || "";
+      bindIn.addEventListener("change", () => {
+        if (canvasTools) canvasTools.pushHistory();
+        seg.bind = bindIn.value.trim() || undefined;
+        renderAll();
+      });
+      kindRow.appendChild(bindIn);
+
+      const flexIn = document.createElement("input");
+      flexIn.type = "number";
+      flexIn.step = "0.1";
+      flexIn.placeholder = "flex";
+      flexIn.value = seg.flex != null ? String(seg.flex) : "1";
+      flexIn.addEventListener("change", () => {
+        if (canvasTools) canvasTools.pushHistory();
+        seg.flex = Number(flexIn.value) || 1;
+        renderAll();
+      });
+      kindRow.appendChild(flexIn);
+      box.appendChild(kindRow);
+
+      if (String(seg.kind || "text") === "options") {
+        const optLab = document.createElement("label");
+        optLab.textContent = "options (value|label|match,comma)";
+        const optTa = document.createElement("textarea");
+        optTa.rows = Math.max(2, (seg.options || []).length || 2);
+        optTa.value = (seg.options || [])
+          .map((o) => {
+            const match = Array.isArray(o.match) ? o.match.join(",") : "";
+            return [o.value || "", o.label || "", match].join("|");
+          })
+          .join("\n");
+        optTa.addEventListener("change", () => {
+          if (canvasTools) canvasTools.pushHistory();
+          seg.options = String(optTa.value || "")
+            .split("\n")
+            .map((line) => line.trim())
+            .filter(Boolean)
+            .map((line) => {
+              const [value, label, matchRaw] = line.split("|");
+              const match = (matchRaw || "")
+                .split(",")
+                .map((m) => m.trim())
+                .filter(Boolean);
+              return {
+                value: (value || "").trim(),
+                label: (label || value || "").trim(),
+                match: match.length ? match : undefined,
+              };
+            });
+          renderAll();
+        });
+        optLab.appendChild(optTa);
+        box.appendChild(optLab);
+      } else {
+        const blankLab = document.createElement("label");
+        blankLab.className = "chk-row";
+        const blankCk = document.createElement("input");
+        blankCk.type = "checkbox";
+        blankCk.checked = seg.blankLine !== false;
+        blankCk.addEventListener("change", () => {
+          if (canvasTools) canvasTools.pushHistory();
+          seg.blankLine = blankCk.checked;
+          renderAll();
+        });
+        blankLab.appendChild(blankCk);
+        blankLab.appendChild(document.createTextNode(" blankLine (dotted when empty)"));
+        box.appendChild(blankLab);
+      }
+
+      const del = document.createElement("button");
+      del.type = "button";
+      del.textContent = "Remove segment";
+      del.addEventListener("click", () => {
+        if (canvasTools) canvasTools.pushHistory();
+        el.segments.splice(idx, 1);
+        renderAll();
+      });
+      box.appendChild(del);
+      insp.appendChild(box);
+    });
+
+    const addOpts = document.createElement("button");
+    addOpts.type = "button";
+    addOpts.textContent = "+ Options segment";
+    addOpts.addEventListener("click", () => {
+      if (canvasTools) canvasTools.pushHistory();
+      el.segments.push({
+        kind: "options",
+        label: "เพศ",
+        bind: "$.demographics.gender",
+        flex: 1,
+        options: [
+          { value: "ชาย", label: "ชาย", match: ["M", "Male", "ชาย"] },
+          { value: "หญิง", label: "หญิง", match: ["F", "Female", "หญิง"] },
+        ],
+      });
+      renderAll();
+    });
+    insp.appendChild(addOpts);
+
+    const addText = document.createElement("button");
+    addText.type = "button";
+    addText.textContent = "+ Text segment";
+    addText.addEventListener("click", () => {
+      if (canvasTools) canvasTools.pushHistory();
+      el.segments.push({
+        kind: "text",
+        label: "วันเกิด",
+        bind: "$.demographics.birthDate",
+        flex: 1,
+        blankLine: true,
+      });
+      renderAll();
+    });
+    insp.appendChild(addText);
   }
 
   function formatPageOf(el, current, total) {
@@ -5326,6 +5622,52 @@
     renderAll();
   }
 
+  function addFieldRow(opts) {
+    const inner = !!(opts && opts.inner);
+    ensureElements();
+    promoteToDesignerIfNeeded();
+    const id = "frow_" + Math.random().toString(36).slice(2, 7);
+    const el = {
+      id,
+      type: "field-row",
+      band: "content",
+      place: "below",
+      box: { xMm: 0, yMm: 0, wMm: inner ? 100 : 206, hMm: 7 },
+      segments: [
+        {
+          kind: "options",
+          label: "เพศ",
+          bind: "$.demographics.gender",
+          flex: 1,
+          options: [
+            { value: "ชาย", label: "ชาย", match: ["M", "Male", "ชาย"] },
+            { value: "หญิง", label: "หญิง", match: ["F", "Female", "หญิง"] },
+          ],
+        },
+        {
+          kind: "text",
+          label: "วันเกิด",
+          bind: "$.demographics.birthDate",
+          flex: 1.2,
+          blankLine: true,
+        },
+      ],
+      chrome: { border: "thin", headerFill: "#ffffff", fontSize: 8 },
+    };
+    if (inner) {
+      insertElementInnerBelow(el);
+      return;
+    }
+    if (canvasTools) canvasTools.pushHistory();
+    stateRef.draft.layout.elements.push(el);
+    stateRef.draft.manifest.layoutMode = "designer";
+    setSingleSelection(id);
+    stateRef.selectedKey = null;
+    reflowElements();
+    renderAll();
+    setStatusRef("Inserted field-row (☑ options / fill-in). Save pack to persist.", "ok");
+  }
+
   function addNarrative() {
     ensureElements();
     promoteToDesignerIfNeeded();
@@ -5453,6 +5795,7 @@
     saveLibraryFragment,
     deleteLibraryFragment,
     addBoxText,
+    addFieldRow,
     addNarrative,
     addPageOf,
     addFragmentPrompt,
@@ -5525,6 +5868,8 @@
     if (boxBtn) boxBtn.addEventListener("click", () => addBoxText());
     const boxInner = document.getElementById("btnAddBoxTextInner");
     if (boxInner) boxInner.addEventListener("click", () => addBoxText({ inner: true }));
+    const fieldRowBtn = document.getElementById("btnAddFieldRow");
+    if (fieldRowBtn) fieldRowBtn.addEventListener("click", () => addFieldRow());
     const narrBtn = document.getElementById("btnAddNarrative");
     if (narrBtn) narrBtn.addEventListener("click", () => addNarrative());
     const pageOfBtn = document.getElementById("btnAddPageOf");

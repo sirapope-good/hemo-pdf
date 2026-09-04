@@ -196,7 +196,7 @@ public static class HprpValidator
 
             var type = el.Type?.Trim() ?? "";
             if (!Hprp.Table.HprpDesignerElementTypes.All.Contains(type))
-                errors.Add($"{path}.type must be header, config-table, box-text, page-of, dense, data-grid, narrative, or group.");
+                errors.Add($"{path}.type must be header, config-table, box-text, page-of, dense, data-grid, narrative, field-row, or group.");
 
             if (el.Box.WMm <= 0 || el.Box.HMm <= 0)
                 errors.Add($"{path}.box wMm/hMm must be > 0.");
@@ -232,6 +232,14 @@ public static class HprpValidator
 
                 if (hasItems)
                     ValidateBoxTextItems(el.Items!, path, errors);
+            }
+
+            if (string.Equals(type, Hprp.Table.HprpDesignerElementTypes.FieldRow, StringComparison.OrdinalIgnoreCase))
+            {
+                if (el.Segments is not { Count: > 0 })
+                    errors.Add($"{path} segments is required for field-row.");
+                else
+                    ValidateFieldRowSegments(el.Segments, path, errors);
             }
 
             if (string.Equals(type, Hprp.Table.HprpDesignerElementTypes.Dense, StringComparison.OrdinalIgnoreCase)
@@ -307,6 +315,13 @@ public static class HprpValidator
                 if (!hasItems && string.IsNullOrWhiteSpace(child.Text) && string.IsNullOrWhiteSpace(child.Bind))
                     errors.Add($"{cpath} text, bind, or items is required for box-text.");
             }
+            if (string.Equals(ctype, Hprp.Table.HprpDesignerElementTypes.FieldRow, StringComparison.OrdinalIgnoreCase))
+            {
+                if (child.Segments is not { Count: > 0 })
+                    errors.Add($"{cpath} segments is required for field-row.");
+                else
+                    ValidateFieldRowSegments(child.Segments, cpath, errors);
+            }
         }
     }
 
@@ -366,6 +381,44 @@ public static class HprpValidator
                 var a = align.Trim().ToLowerInvariant();
                 if (a is not ("left" or "center" or "right"))
                     errors.Add($"{itemPath}.align must be left, center, or right.");
+            }
+        }
+    }
+
+    private static void ValidateFieldRowSegments(
+        IReadOnlyList<Hprp.Table.HprpFieldRowSegment> segments,
+        string path,
+        List<string> errors)
+    {
+        for (var i = 0; i < segments.Count; i++)
+        {
+            var seg = segments[i];
+            var segPath = $"{path}.segments[{i}]";
+            var kind = (seg.Kind ?? Hprp.Table.HprpFieldRowSegmentKinds.Text).Trim().ToLowerInvariant();
+            if (kind is not (Hprp.Table.HprpFieldRowSegmentKinds.Options or Hprp.Table.HprpFieldRowSegmentKinds.Text))
+                errors.Add($"{segPath}.kind must be options or text.");
+
+            if (kind == Hprp.Table.HprpFieldRowSegmentKinds.Options)
+            {
+                if (seg.Options is not { Count: > 0 })
+                    errors.Add($"{segPath}.options is required for options kind.");
+                else
+                {
+                    for (var j = 0; j < seg.Options.Count; j++)
+                    {
+                        if (string.IsNullOrWhiteSpace(seg.Options[j].Value)
+                            && string.IsNullOrWhiteSpace(seg.Options[j].Label))
+                        {
+                            errors.Add($"{segPath}.options[{j}] needs value or label.");
+                        }
+                    }
+                }
+            }
+            else if (string.IsNullOrWhiteSpace(seg.Label)
+                     && string.IsNullOrWhiteSpace(seg.Bind)
+                     && string.IsNullOrWhiteSpace(seg.Text))
+            {
+                errors.Add($"{segPath} text segment needs label, bind, or text.");
             }
         }
     }
