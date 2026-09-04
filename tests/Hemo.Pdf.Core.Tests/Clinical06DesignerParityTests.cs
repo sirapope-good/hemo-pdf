@@ -41,13 +41,19 @@ public class Clinical06DesignerParityTests
         Assert.NotNull(sample);
 
         Assert.True(sample.Value.TryGetProperty("rows", out var rowsEl) && rowsEl.ValueKind == JsonValueKind.Array);
-        Assert.True(rowsEl.GetArrayLength() >= 22 + 3, "sample should pad medication slots then footer rows");
-        var lastThree = rowsEl.EnumerateArray().TakeLast(3).Select(r => r[0].GetString()).ToArray();
-        Assert.Equal("Hemodialysis Nurse", lastThree[0]);
+        Assert.True(rowsEl.GetArrayLength() >= 22 + 2, "sample should pad medication slots then Nurse/signer footer");
+        var lastTwo = rowsEl.EnumerateArray().TakeLast(2).Select(r => r[0].GetString()).ToArray();
+        Assert.Equal("Hemodialysis Nurse", lastTwo[0]);
         Assert.True(
-            lastThree[1] is "Nephrologist" or "Pharmacist",
+            lastTwo[1] is "Nephrologist" or "Pharmacist",
             "second signer label should be Nephrologist or Pharmacist");
-        Assert.StartsWith("**Review Med", lastThree[2]);
+        Assert.True(sample.Value.TryGetProperty("reviewNote", out var reviewEl));
+        Assert.StartsWith("**Review Med", reviewEl.GetString());
+        Assert.Contains(
+            package.Layout.Elements,
+            e => string.Equals(e.Type, HprpDesignerElementTypes.BoxText, StringComparison.OrdinalIgnoreCase)
+                && (e.Bind?.Contains("reviewNote", StringComparison.OrdinalIgnoreCase) == true
+                    || (e.Text?.Contains("Review Med", StringComparison.OrdinalIgnoreCase) == true)));
 
         var options = Options.Create(new HprpTemplateOptions
         {

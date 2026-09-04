@@ -58,8 +58,7 @@
     ["","","","","","","",""],
     ["","","","","","","",""],
     ["Hemodialysis Nurse", "Nurse A", "", "✓", "✓", "✓", "", "✓"],
-    ["Nephrologist", "Dr. B", "", "✓", "", "✓", "", ""],
-    ["**Review Med : Anti HT-DM-Heart-Other", "", "", "", "", "", "", ""]
+    ["Nephrologist", "Dr. B", "", "✓", "", "✓", "", ""]
   ],
   "reviewNote": "**Review Med : Anti HT-DM-Heart-Other"
 }

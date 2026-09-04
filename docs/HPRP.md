@@ -280,7 +280,7 @@ Optional on form `body` nodes (`data-grid`, `field-grid`, `key-value-table`) and
 | `columnWidths` | Relative weights (`*` = 1). Applied only when count matches columns |
 | `bandWeights` | SOAP S:O:A:P band weights (clinical-05) |
 
-Examples: `clinical-07-lab` (lab DATE matrix) and `clinical-06-medication` (Med History matrix: Medication / Frequency / Physician + 5 live dates with ✓/X; empty pad rows keep Nurse / second-signer / review at the bottom; `chrome.rowHeightMm` for compact rows). Pack after editing — runtime reads `packages/*.hprp` first.
+Examples: `clinical-07-lab` (lab DATE matrix) and `clinical-06-medication` (Med History matrix: Medication / Frequency / Physician + 5 live dates with ✓/X; empty pad rows keep Nurse / second-signer at the bottom; review note as separate `box-text` below the grid; `chrome.rowHeightMm` for compact rows). Pack after editing — runtime reads `packages/*.hprp` first.
 
 ### Hemosheet (`sections`)
 

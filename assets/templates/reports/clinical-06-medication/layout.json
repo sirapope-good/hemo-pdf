@@ -5,7 +5,7 @@
     "marginMm": 8,
     "spacingMode": "custom",
     "spacingMm": 0,
-    "spacingBelowMm": 0,
+    "spacingBelowMm": 1,
     "spacingBesideMm": 0,
     "border": "none"
   },
@@ -25,7 +25,7 @@
       "place": "below",
       "bindRows": "$.rows",
       "columnHeadersBind": "$.columnHeaders",
-      "box": { "xMm": 0, "yMm": 0, "wMm": 194, "hMm": 254 },
+      "box": { "xMm": 0, "yMm": 0, "wMm": 194, "hMm": 246 },
       "chrome": {
         "headerFill": "$branding.sectionHeaderBackground",
         "border": "thin",
@@ -33,6 +33,17 @@
         "rowHeightMm": 5.2,
         "columnWidths": ["3.2", "2.2", "1.6", "*", "*", "*", "*", "*"]
       }
+    },
+    {
+      "id": "review-note",
+      "type": "box-text",
+      "band": "content",
+      "place": "below",
+      "text": "**Review Med : Anti HT-DM-Heart-Other",
+      "bind": "$.reviewNote",
+      "align": "right",
+      "box": { "xMm": 0, "yMm": 0, "wMm": 194, "hMm": 6 },
+      "chrome": { "border": "none", "fontSize": 8 }
     }
   ]
 }
