@@ -1,22 +1,76 @@
 {
   "page": {
     "size": "A4",
-    "orientation": "landscape"
+    "orientation": "landscape",
+    "marginMm": 14,
+    "spacingMode": "custom",
+    "spacingMm": 2,
+    "spacingBelowMm": 2,
+    "spacingBesideMm": 1,
+    "border": "none"
   },
-  "body": [
+  "elements": [
     {
-      "widget": "clinical.checklist-patient"
+      "id": "hdr",
+      "type": "header",
+      "band": "header",
+      "preset": "clinical-header-thaiur",
+      "bottomMode": "checklist-patient",
+      "place": "below",
+      "box": { "xMm": 0, "yMm": 0, "wMm": 269, "hMm": 32.4 }
     },
     {
-      "widget": "clinical.checklist-grid",
+      "id": "report-code",
+      "type": "box-text",
+      "band": "super-header",
+      "place": "below",
+      "box": { "xMm": 200, "yMm": 2, "wMm": 69, "hMm": 5 },
+      "bind": "$.reportCodeValue",
+      "align": "right",
+      "chrome": { "border": "none", "headerFill": "#ffffff", "fontSize": 9 }
+    },
+    {
+      "id": "range",
+      "type": "box-text",
+      "band": "content",
+      "place": "below",
+      "box": { "xMm": 0, "yMm": 34.4, "wMm": 269, "hMm": 5 },
+      "bind": "$.rangeLabel",
+      "align": "center",
+      "chrome": { "border": "none", "headerFill": "#ffffff", "fontSize": 10 }
+    },
+    {
+      "id": "grid",
+      "type": "config-table",
+      "band": "content",
+      "presetId": "progress-note-checklist-matrix-v1",
+      "place": "below",
+      "box": { "xMm": 0, "yMm": 41.4, "wMm": 269, "hMm": 130 },
       "chrome": {
         "headerFill": "#E8EEF5",
         "border": "thin",
-        "fontSize": 9
+        "fontSize": 9,
+        "columnWidths": ["46mm", "*"]
       }
     },
     {
-      "widget": "clinical.checklist-text-notes"
+      "id": "text-notes",
+      "type": "dense",
+      "band": "content",
+      "widget": "clinical.checklist-text-notes",
+      "place": "below",
+      "omitWhenEmpty": "$.textNotes",
+      "box": { "xMm": 0, "yMm": 173.4, "wMm": 269, "hMm": 4 }
+    },
+    {
+      "id": "page-of",
+      "type": "page-of",
+      "band": "super-footer",
+      "place": "below",
+      "box": { "xMm": 14, "yMm": 202, "wMm": 269, "hMm": 5 },
+      "text": "Page {current} of {total}",
+      "align": "right",
+      "chrome": { "border": "none", "fontSize": 8 }
     }
   ]
 }

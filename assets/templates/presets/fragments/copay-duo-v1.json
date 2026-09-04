@@ -1,0 +1,42 @@
+{
+  "id": "copay-duo-v1",
+  "displayName": "Co-pay banner + NHSO/SSO",
+  "tags": ["clinical", "copay"],
+  "elements": [
+    {
+      "id": "copay-banner",
+      "type": "box-text",
+      "band": "content",
+      "place": "below",
+      "box": { "xMm": 0, "yMm": 0, "wMm": 206, "hMm": 5 },
+      "text": "ปริมาณยาที่มีสิทธิได้รับโดยไม่ต้องร่วมจ่าย",
+      "bind": "$.coPayCriteria.title",
+      "align": "center",
+      "chrome": {
+        "headerFill": "$branding.sectionHeaderBackground",
+        "border": "thin",
+        "fontSize": 7.5
+      }
+    },
+    {
+      "id": "copay-nhso",
+      "type": "config-table",
+      "band": "content",
+      "presetId": "copay-nhso-v1",
+      "place": "below",
+      "manualWidth": true,
+      "box": { "xMm": 0, "yMm": 0, "wMm": 78, "hMm": 27 },
+      "chrome": { "border": "thin", "headerFill": "$branding.sectionHeaderBackground" }
+    },
+    {
+      "id": "copay-sso",
+      "type": "config-table",
+      "band": "content",
+      "presetId": "copay-sso-v1",
+      "place": "beside",
+      "manualWidth": true,
+      "box": { "xMm": 0, "yMm": 0, "wMm": 127, "hMm": 27 },
+      "chrome": { "border": "thin", "headerFill": "$branding.sectionHeaderBackground" }
+    }
+  ]
+}

@@ -1,46 +1,387 @@
 {
   "page": {
     "size": "A4",
-    "marginMm": 10
+    "orientation": "portrait",
+    "marginMm": 8,
+    "spacingMode": "custom",
+    "spacingMm": 0,
+    "spacingBelowMm": 1.2,
+    "spacingBesideMm": 0,
+    "border": "none"
   },
-  "body": [
+  "elements": [
     {
-      "type": "text",
-      "style": "title",
-      "bind": "$title"
+      "id": "hdr",
+      "type": "header",
+      "band": "header",
+      "preset": "clinical-header-thaiur",
+      "place": "below",
+      "box": {
+        "xMm": 0,
+        "yMm": 0,
+        "wMm": 194,
+        "hMm": 27
+      }
     },
     {
-      "type": "field-grid",
-      "columns": 2,
-      "fields": [
+      "id": "body-frame",
+      "type": "group",
+      "direction": "column",
+      "band": "content",
+      "place": "below",
+      "box": {
+        "yMm": 0,
+        "hMm": 200,
+        "xMm": 0,
+        "wMm": 194
+      },
+      "chrome": {
+        "border": "thin",
+        "headerFill": "#ffffff"
+      },
+      "children": [
         {
-          "label": { "$label": "hn" },
-          "bind": "$.patient.hn"
+          "id": "demo-row-1",
+          "type": "field-row",
+          "band": "content",
+          "place": "below",
+          "segments": [
+            {
+              "kind": "options",
+              "label": "เพศ",
+              "bind": "$.demographics.gender",
+              "flex": 1.1,
+              "align": "left",
+              "options": [
+                {
+                  "value": "ชาย",
+                  "label": "ชาย",
+                  "match": [
+                    "M",
+                    "Male",
+                    "ชาย"
+                  ]
+                },
+                {
+                  "value": "หญิง",
+                  "label": "หญิง",
+                  "match": [
+                    "F",
+                    "Female",
+                    "หญิง"
+                  ]
+                }
+              ]
+            },
+            {
+              "kind": "text",
+              "label": "วันเกิด",
+              "bind": "$.demographics.birthDate",
+              "flex": 1.1,
+              "blankLine": true
+            },
+            {
+              "kind": "options",
+              "label": "กรุ๊ปเลือด",
+              "bind": "$.demographics.bloodType",
+              "flex": 1.6,
+              "wrap": true,
+              "optionsPerLine": 4,
+              "options": [
+                {
+                  "value": "A",
+                  "label": "เอ",
+                  "match": [
+                    "A",
+                    "A+",
+                    "A-",
+                    "เอ"
+                  ]
+                },
+                {
+                  "value": "B",
+                  "label": "บี",
+                  "match": [
+                    "B",
+                    "B+",
+                    "B-",
+                    "บี"
+                  ]
+                },
+                {
+                  "value": "O",
+                  "label": "โอ",
+                  "match": [
+                    "O",
+                    "O+",
+                    "O-",
+                    "โอ"
+                  ]
+                },
+                {
+                  "value": "AB",
+                  "label": "เอบี",
+                  "match": [
+                    "AB",
+                    "AB+",
+                    "AB-",
+                    "เอบี"
+                  ]
+                }
+              ]
+            },
+            {
+              "kind": "text",
+              "label": "โทร",
+              "bind": "$.demographics.telephone",
+              "flex": 1,
+              "blankLine": true
+            }
+          ],
+          "box": {
+            "xMm": 0,
+            "yMm": 0,
+            "wMm": 194,
+            "hMm": 8
+          },
+          "chrome": {
+            "border": "none",
+            "headerFill": "#ffffff",
+            "fontSize": 8
+          }
         },
         {
-          "label": { "$label": "patientName" },
-          "bind": "$.patient.name"
+          "id": "demo-row-2",
+          "type": "field-row",
+          "band": "content",
+          "place": "below",
+          "segments": [
+            {
+              "kind": "text",
+              "label": "เลขบัตร",
+              "bind": "$.demographics.identityNo",
+              "flex": 1.4,
+              "blankLine": true
+            },
+            {
+              "kind": "text",
+              "label": "สิทธิ",
+              "bind": "$.demographics.coverage",
+              "flex": 1,
+              "blankLine": true
+            },
+            {
+              "kind": "text",
+              "label": "โอนจาก",
+              "bind": "$.demographics.transferFrom",
+              "flex": 1.4,
+              "blankLine": true
+            }
+          ],
+          "box": {
+            "xMm": 0,
+            "yMm": 0,
+            "wMm": 194,
+            "hMm": 7
+          },
+          "chrome": {
+            "border": "none",
+            "headerFill": "#ffffff",
+            "fontSize": 8
+          }
         },
         {
-          "label": { "$label": "unit" },
-          "bind": "$.patient.unit"
+          "id": "address",
+          "type": "field-row",
+          "band": "content",
+          "place": "below",
+          "segments": [
+            {
+              "kind": "text",
+              "label": "ที่อยู่",
+              "bind": "$.demographics.address",
+              "flex": 1,
+              "blankLine": true
+            }
+          ],
+          "box": {
+            "xMm": 0,
+            "yMm": 0,
+            "wMm": 194,
+            "hMm": 7
+          },
+          "chrome": {
+            "border": "none",
+            "headerFill": "#ffffff",
+            "fontSize": 8
+          }
         },
         {
-          "label": { "$label": "reportDate" },
-          "bind": "$.reportDate"
+          "id": "allergy",
+          "type": "field-row",
+          "band": "content",
+          "place": "below",
+          "segments": [
+            {
+              "kind": "text",
+              "label": "ประวัติการแพ้ยา",
+              "bind": "$.demographics.allergies",
+              "flex": 1,
+              "blankLine": true
+            }
+          ],
+          "box": {
+            "xMm": 0,
+            "yMm": 0,
+            "wMm": 194,
+            "hMm": 10
+          },
+          "chrome": {
+            "border": "none",
+            "headerFill": "#ffffff",
+            "fontSize": 8
+          }
+        },
+        {
+          "id": "underlying",
+          "type": "field-row",
+          "band": "content",
+          "place": "below",
+          "segments": [
+            {
+              "kind": "text",
+              "label": "โรคประจำตัว",
+              "bind": "$.demographics.underlying",
+              "flex": 1,
+              "blankLine": true
+            }
+          ],
+          "box": {
+            "xMm": 0,
+            "yMm": 0,
+            "wMm": 194,
+            "hMm": 10
+          },
+          "chrome": {
+            "border": "none",
+            "headerFill": "#ffffff",
+            "fontSize": 8
+          }
+        },
+        {
+          "id": "dialysis-row",
+          "type": "field-row",
+          "band": "content",
+          "place": "below",
+          "segments": [
+            {
+              "kind": "text",
+              "label": "สาเหตุโรคไต",
+              "bind": "$.dialysis.causeOfKidneyDisease",
+              "flex": 1.4,
+              "blankLine": true
+            },
+            {
+              "kind": "text",
+              "label": "เริ่มฟอกครั้งแรก",
+              "bind": "$.dialysis.firstHd",
+              "flex": 1,
+              "blankLine": true
+            },
+            {
+              "kind": "text",
+              "label": "ฟอกที่คลินิกครั้งแรก",
+              "bind": "$.dialysis.firstHdHere",
+              "flex": 1.2,
+              "blankLine": true
+            }
+          ],
+          "box": {
+            "xMm": 0,
+            "yMm": 0,
+            "wMm": 194,
+            "hMm": 8
+          },
+          "chrome": {
+            "border": "none",
+            "headerFill": "#ffffff",
+            "fontSize": 8
+          }
+        },
+        {
+          "id": "access-title",
+          "type": "box-text",
+          "band": "content",
+          "place": "below",
+          "text": "ประวัติการทำเส้นเลือดสำหรับฟอกเลือด",
+          "align": "left",
+          "box": {
+            "xMm": 0,
+            "yMm": 0,
+            "wMm": 194,
+            "hMm": 6
+          },
+          "chrome": {
+            "border": "none",
+            "headerFill": "#ffffff",
+            "fontSize": 9
+          }
+        },
+        {
+          "id": "access-grid",
+          "type": "data-grid",
+          "band": "content",
+          "place": "below",
+          "bindRows": "$.rows",
+          "columnHeadersBind": "$.columnHeaders",
+          "box": {
+            "xMm": 0,
+            "yMm": 0,
+            "wMm": 194,
+            "hMm": 42
+          },
+          "chrome": {
+            "fontSize": 7,
+            "border": "none",
+            "headerFill": "$branding.sectionHeaderBackground",
+            "rowHeightMm": 8,
+            "columnWidths": [
+              "2.2",
+              "1.4",
+              "1.4",
+              "2",
+              "2.2",
+              "1.4"
+            ]
+          }
+        },
+        {
+          "id": "note",
+          "type": "field-row",
+          "band": "content",
+          "place": "below",
+          "segments": [
+            {
+              "kind": "text",
+              "label": "หมายเหตุ",
+              "bind": "$.demographics.note",
+              "flex": 1,
+              "blankLine": true
+            }
+          ],
+          "box": {
+            "xMm": 0,
+            "yMm": 0,
+            "wMm": 194,
+            "hMm": 12
+          },
+          "chrome": {
+            "border": "none",
+            "headerFill": "#ffffff",
+            "fontSize": 8
+          }
         }
       ]
-    },
-    {
-      "type": "key-value-table",
-      "bindRows": "$.fields",
-      "when": "$.fields.length > 0"
-    },
-    {
-      "type": "data-grid",
-      "columnHeadersBind": "$.columnHeaders",
-      "bindRows": "$.rows",
-      "when": "$.rows.length > 0"
     }
   ]
 }

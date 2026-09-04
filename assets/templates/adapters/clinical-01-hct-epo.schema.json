@@ -1,0 +1,40 @@
+{
+  "dataAdapter": "clinical-01-hct-epo",
+  "displayName": "Clinical-01 Hct/EPO",
+  "fields": [
+    { "path": "title", "label": "Title", "type": "string" },
+    { "path": "year", "label": "Year", "type": "number" },
+    {
+      "path": "header",
+      "label": "Header",
+      "type": "object",
+      "children": [
+        { "path": "header.patient.name", "label": "Patient name", "type": "string" },
+        { "path": "header.patient.hn", "label": "HN", "type": "string" }
+      ]
+    },
+    {
+      "path": "months",
+      "label": "Months",
+      "type": "array",
+      "children": [
+        { "path": "months[].monthLabel", "label": "Month label", "type": "string" },
+        {
+          "path": "months[].entries",
+          "label": "Entries",
+          "type": "array",
+          "children": [
+            { "path": "months[].entries[].dayLabel", "label": "Day label", "type": "string" },
+            { "path": "months[].entries[].hb", "label": "Hb", "type": "string" },
+            { "path": "months[].entries[].hct", "label": "Hct", "type": "string" },
+            { "path": "months[].entries[].labIsHistorical", "label": "Lab historical", "type": "boolean" },
+            { "path": "months[].entries[].epoName", "label": "EPO name", "type": "string" },
+            { "path": "months[].entries[].frequencyText", "label": "Frequency", "type": "string" },
+            { "path": "months[].entries[].injectionDate", "label": "Injection date", "type": "string" },
+            { "path": "months[].entries[].remarks", "label": "Remarks", "type": "string" }
+          ]
+        }
+      ]
+    }
+  ]
+}

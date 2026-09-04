@@ -1,5 +1,6 @@
 using System.Text.Json;
 using Hemo.Pdf.Core.Context;
+using Hemo.Pdf.Core.Hprp.Table;
 using Hemo.Pdf.Core.Models.Preview;
 
 namespace Hemo.Pdf.Core.Hprp;
@@ -73,9 +74,18 @@ public static class HprpBinder
             "data-grid" => BindDataGrid(node, data, labels),
             "patient-info" => BindPatientInfo(node, data, labels, context),
             "signature" => BindSignature(context),
+            "row" => BindRow(node, data, labels, context),
+            "column-stack" => BindColumnStack(node, data, labels, context),
             _ => null,
         };
     }
+
+    /// <summary>Binds a designer <c>data-grid</c> element into a <see cref="DataGridReportBlock"/>.</summary>
+    public static DataGridReportBlock? BindDesignerDataGrid(
+        HprpDesignerElement element,
+        JsonElement? data,
+        IReadOnlyDictionary<string, string> labels) =>
+        BindDataGrid(element.ToLayoutNode(), data, labels);
 
     private static ReportBlock? BindWidget(
         HprpLayoutNode node,
@@ -119,6 +129,7 @@ public static class HprpBinder
         || string.Equals(widget, HprpWidgetIds.ClinicalHctEpoCopay, StringComparison.OrdinalIgnoreCase)
         || string.Equals(widget, HprpWidgetIds.ClinicalEpoDrugTable, StringComparison.OrdinalIgnoreCase)
         || string.Equals(widget, HprpWidgetIds.ClinicalSoapTable, StringComparison.OrdinalIgnoreCase)
+        || string.Equals(widget, HprpWidgetIds.ClinicalPrescriptionColumns, StringComparison.OrdinalIgnoreCase)
         || string.Equals(widget, HprpWidgetIds.ClinicalChecklistPatient, StringComparison.OrdinalIgnoreCase)
         || string.Equals(widget, HprpWidgetIds.ClinicalChecklistGrid, StringComparison.OrdinalIgnoreCase)
         || string.Equals(widget, HprpWidgetIds.ClinicalChecklistTextNotes, StringComparison.OrdinalIgnoreCase)
@@ -137,6 +148,92 @@ public static class HprpBinder
                 ?? ResolveBind(node.Bind, data, context)
                 ?? "",
             Style = string.IsNullOrWhiteSpace(node.Style) ? "body" : node.Style!,
+            Chrome = node.Chrome,
+            Box = node.Box,
+        };
+    }
+
+    private static SectionRowReportBlock? BindRow(
+        HprpLayoutNode node,
+        JsonElement? data,
+        IReadOnlyDictionary<string, string> labels,
+        PdfReportContext? context)
+    {
+        var cells = node.Cells ?? [];
+        if (cells.Count == 0)
+            return null;
+
+        var blocks = new List<ReportBlock>();
+        var widths = new List<string>();
+        foreach (var cell in cells)
+        {
+            var child = BindCell(cell, data, labels, context);
+            if (child is null)
+                continue;
+            blocks.Add(child);
+            widths.Add(string.IsNullOrWhiteSpace(cell.Width) ? "*" : cell.Width.Trim());
+        }
+
+        if (blocks.Count == 0)
+            return null;
+
+        return new SectionRowReportBlock
+        {
+            Columns = blocks.Count,
+            Blocks = blocks,
+            ColumnWidths = widths,
+            GapMm = node.GapMm,
+            Box = node.Box,
+        };
+    }
+
+    private static ReportBlock? BindCell(
+        HprpCellNode cell,
+        JsonElement? data,
+        IReadOnlyDictionary<string, string> labels,
+        PdfReportContext? context)
+    {
+        var bound = new List<ReportBlock>();
+        foreach (var child in cell.Nodes)
+        {
+            if (!HprpWhen.MatchesDto(child.When, data))
+                continue;
+            var block = BindNode(child, data, labels, context);
+            if (block is not null)
+                bound.Add(block);
+        }
+
+        if (bound.Count == 0)
+            return null;
+        if (bound.Count == 1)
+            return bound[0];
+
+        return new ColumnStackReportBlock { Blocks = bound, Box = null };
+    }
+
+    private static ColumnStackReportBlock? BindColumnStack(
+        HprpLayoutNode node,
+        JsonElement? data,
+        IReadOnlyDictionary<string, string> labels,
+        PdfReportContext? context)
+    {
+        var bound = new List<ReportBlock>();
+        foreach (var child in node.Nodes ?? [])
+        {
+            if (!HprpWhen.MatchesDto(child.When, data))
+                continue;
+            var block = BindNode(child, data, labels, context);
+            if (block is not null)
+                bound.Add(block);
+        }
+
+        if (bound.Count == 0)
+            return null;
+
+        return new ColumnStackReportBlock
+        {
+            Blocks = bound,
+            Box = node.Box,
         };
     }
 
@@ -175,6 +272,7 @@ public static class HprpBinder
             Title = ResolveText(node.Title, data, labels, context),
             Rows = rows,
             Chrome = node.Chrome,
+            Box = node.Box,
         };
     }
 
@@ -240,6 +338,7 @@ public static class HprpBinder
             Columns = node.Columns <= 0 ? 2 : node.Columns,
             Fields = fields,
             Chrome = node.Chrome,
+            Box = node.Box,
         };
     }
 
@@ -264,12 +363,22 @@ public static class HprpBinder
             }
         }
 
+        headers = HprpDataGridColumnPlan.NormalizeLabColumnHeaders(headers).ToList();
+
         var rows = new List<IReadOnlyList<string>>();
         foreach (var item in table.Value.EnumerateArray())
         {
             if (item.ValueKind == JsonValueKind.Array)
             {
                 rows.Add(item.EnumerateArray().Select(cell => HprpJsonPath.AsString(cell) ?? "").ToList());
+                continue;
+            }
+
+            if (item.ValueKind == JsonValueKind.String)
+            {
+                if (headers.Count == 0)
+                    headers = [""];
+                rows.Add([item.GetString() ?? ""]);
                 continue;
             }
 
@@ -283,7 +392,7 @@ public static class HprpBinder
                 item.TryGetProperty(h, out var cell) ? HprpJsonPath.AsString(cell) ?? "" : "").ToList());
         }
 
-        var weights = HprpChrome.ParseColumnWeights(node.Chrome?.ColumnWidths, headers.Count);
+        var weights = HprpDataGridColumnPlan.Resolve(node.Chrome?.ColumnWidths, headers.Count);
         return new DataGridReportBlock
         {
             Title = ResolveText(node.Title, data, labels, null),
@@ -291,6 +400,7 @@ public static class HprpBinder
             ColumnWeights = weights,
             Rows = rows,
             Chrome = node.Chrome,
+            Box = node.Box,
         };
     }
 
@@ -316,6 +426,7 @@ public static class HprpBinder
         {
             Title = ResolveText(node.Title, data, labels, context),
             Columns = [column],
+            Box = node.Box,
         };
     }
 

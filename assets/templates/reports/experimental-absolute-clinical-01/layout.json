@@ -1,0 +1,47 @@
+{
+  "page": {
+    "size": "A4",
+    "orientation": "portrait",
+    "marginMm": 2
+  },
+  "widgets": [
+    {
+      "id": "w_header",
+      "type": "dense",
+      "widget": "thaiur.header",
+      "xMm": 0,
+      "yMm": 0,
+      "wMm": 206,
+      "hMm": 27,
+      "zIndex": 1
+    },
+    {
+      "id": "w_annual",
+      "type": "dense",
+      "widget": "clinical.hct-epo-annual-table",
+      "xMm": 0,
+      "yMm": 29,
+      "wMm": 206,
+      "hMm": 228,
+      "zIndex": 2,
+      "chrome": {
+        "headerFill": "$branding.sectionHeaderBackground",
+        "border": "thin"
+      }
+    },
+    {
+      "id": "w_copay",
+      "type": "dense",
+      "widget": "clinical.hct-epo-copay",
+      "xMm": 0,
+      "yMm": 259,
+      "wMm": 206,
+      "hMm": 34,
+      "zIndex": 3,
+      "chrome": {
+        "headerFill": "$branding.sectionHeaderBackground",
+        "border": "thin"
+      }
+    }
+  ]
+}

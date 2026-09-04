@@ -17,6 +17,19 @@ public sealed class HprpLayout
     /// <summary>Hemosheet (and similar) widget plan — interpreted by the C# planner.</summary>
     [JsonPropertyName("sections")]
     public IReadOnlyList<HprpSectionNode> Sections { get; init; } = [];
+
+    /// <summary>
+    /// Freeform widgets for <see cref="HprpLayoutModes.Absolute"/> (legacy).
+    /// Ignored by composition / designer composers.
+    /// </summary>
+    [JsonPropertyName("widgets")]
+    public IReadOnlyList<HprpAbsoluteWidget> Widgets { get; init; } = [];
+
+    /// <summary>
+    /// Designer canvas elements for <see cref="HprpLayoutModes.Designer"/>.
+    /// </summary>
+    [JsonPropertyName("elements")]
+    public IReadOnlyList<Hprp.Table.HprpDesignerElement> Elements { get; init; } = [];
 }
 
 public sealed class HprpPage
@@ -24,8 +37,45 @@ public sealed class HprpPage
     [JsonPropertyName("size")]
     public string Size { get; init; } = "A4";
 
+    /// <summary>Uniform margin (mm) when <see cref="Margin"/> sides are omitted. Includes 0.</summary>
     [JsonPropertyName("marginMm")]
     public float? MarginMm { get; init; }
+
+    [JsonPropertyName("margin")]
+    public HprpSides? Margin { get; init; }
+
+    /// <summary>
+    /// Block gap mode: <see cref="HprpSpacingModes"/> —
+    /// <c>margin</c> / <c>custom</c> (default) / <c>none</c>.
+    /// </summary>
+    [JsonPropertyName("spacingMode")]
+    public string? SpacingMode { get; init; }
+
+    /// <summary>
+    /// Custom gap (mm) for both directions when side overrides are omitted.
+    /// Used when <see cref="SpacingMode"/> is <c>custom</c> or omitted.
+    /// </summary>
+    [JsonPropertyName("spacingMm")]
+    public float? SpacingMm { get; init; }
+
+    /// <summary>Custom vertical gap between stacked rows (overrides <see cref="SpacingMm"/>).</summary>
+    [JsonPropertyName("spacingBelowMm")]
+    public float? SpacingBelowMm { get; init; }
+
+    /// <summary>Custom horizontal gap between beside blocks (overrides <see cref="SpacingMm"/>).</summary>
+    [JsonPropertyName("spacingBesideMm")]
+    public float? SpacingBesideMm { get; init; }
+
+    [JsonPropertyName("fontSize")]
+    public float? FontSize { get; init; }
+
+    /// <summary><c>portrait</c> (default) or <c>landscape</c>.</summary>
+    [JsonPropertyName("orientation")]
+    public string? Orientation { get; init; }
+
+    /// <summary>Page frame border: <c>none</c> or <c>thin</c>.</summary>
+    [JsonPropertyName("border")]
+    public string? Border { get; init; }
 }
 
 public sealed class HprpLayoutNode
@@ -85,6 +135,29 @@ public sealed class HprpLayoutNode
     /// </summary>
     [JsonPropertyName("columnPlan")]
     public IReadOnlyList<HprpColumnPlanItem>? ColumnPlan { get; init; }
+
+    [JsonPropertyName("box")]
+    public HprpNodeBox? Box { get; init; }
+
+    [JsonPropertyName("gapMm")]
+    public float? GapMm { get; init; }
+
+    /// <summary>Cells for <c>type: row</c>.</summary>
+    [JsonPropertyName("cells")]
+    public IReadOnlyList<HprpCellNode>? Cells { get; init; }
+
+    /// <summary>Child nodes for <c>type: column-stack</c> (or implicit stack inside a cell).</summary>
+    [JsonPropertyName("nodes")]
+    public IReadOnlyList<HprpLayoutNode>? Nodes { get; init; }
+}
+
+public sealed class HprpCellNode
+{
+    [JsonPropertyName("width")]
+    public string? Width { get; init; }
+
+    [JsonPropertyName("nodes")]
+    public IReadOnlyList<HprpLayoutNode> Nodes { get; init; } = [];
 }
 
 public sealed class HprpColumnPlanItem

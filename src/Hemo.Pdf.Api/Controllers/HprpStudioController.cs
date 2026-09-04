@@ -2,6 +2,7 @@ using Hemo.Pdf.Application.Hprp;
 using Hemo.Pdf.Core.Abstractions;
 using Hemo.Pdf.Core.Exceptions;
 using Hemo.Pdf.Core.Hprp;
+using Hemo.Pdf.Core.Hprp.Table;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.RateLimiting;
@@ -19,23 +20,197 @@ public sealed class HprpStudioController : ControllerBase
     private readonly ITenantContextAccessor _tenant;
     private readonly HprpTemplateOptions _options;
     private readonly HprpStudioPreviewService _preview;
+    private readonly HprpTablePresetStore _presets;
+    private readonly HprpHeaderPresetStore _headerPresets;
+    private readonly HprpFragmentPresetStore _fragmentPresets;
+    private readonly HprpAdapterSchemaStore _adapterSchemas;
 
     public HprpStudioController(
         HprpPackService pack,
         IHprpTemplateStore store,
         ITenantContextAccessor tenant,
         IOptions<HprpTemplateOptions> options,
-        HprpStudioPreviewService preview)
+        HprpStudioPreviewService preview,
+        HprpTablePresetStore presets,
+        HprpHeaderPresetStore headerPresets,
+        HprpFragmentPresetStore fragmentPresets,
+        HprpAdapterSchemaStore adapterSchemas)
     {
         _pack = pack;
         _store = store;
         _tenant = tenant;
         _options = options.Value;
         _preview = preview;
+        _presets = presets;
+        _headerPresets = headerPresets;
+        _fragmentPresets = fragmentPresets;
+        _adapterSchemas = adapterSchemas;
     }
 
     [HttpGet("catalog")]
-    public IActionResult Catalog() => Ok(HprpStudioCatalog.Describe());
+    public IActionResult Catalog() =>
+        Ok(HprpStudioCatalog.Describe(_presets, _headerPresets, _adapterSchemas, _fragmentPresets));
+
+    [HttpGet("presets/tables")]
+    public IActionResult ListTablePresets() => Ok(_presets.ListAll());
+
+    [HttpGet("presets/tables/{presetId}")]
+    public IActionResult GetTablePreset(string presetId)
+    {
+        var preset = _presets.TryGet(presetId);
+        return preset is null ? NotFound() : Ok(preset);
+    }
+
+    [HttpPut("presets/tables/{presetId}")]
+    [EnableRateLimiting("PdfGeneration")]
+    public async Task<IActionResult> SaveTablePreset(
+        string presetId,
+        [FromBody] HprpTablePreset body,
+        CancellationToken cancellationToken)
+    {
+        EnsureWritesEnabled();
+        if (!string.Equals(body.Id, presetId, StringComparison.OrdinalIgnoreCase))
+            throw new PdfGenerationBadRequestException("preset id must match URL.");
+        await _presets.SaveAsync(body, cancellationToken);
+        var saved = _presets.TryGet(presetId) ?? body;
+        return Ok(new
+        {
+            preset = saved,
+            outputPath = Path.Combine(_presets.LibraryRoot, presetId.Trim() + ".json"),
+        });
+    }
+
+    [HttpDelete("presets/tables/{presetId}")]
+    [EnableRateLimiting("PdfGeneration")]
+    public IActionResult DeleteTablePreset(string presetId)
+    {
+        EnsureWritesEnabled();
+        var result = _presets.DeleteLibrary(presetId);
+        if (result.IsNotFound)
+            return NotFound(new { error = result.Message, id = result.Id });
+        if (result.IsSeedOnly)
+            throw new PdfGenerationBadRequestException(result.Message ?? "Cannot delete seed table.");
+
+        return Ok(new
+        {
+            id = result.Id,
+            deletedPath = result.DeletedPath,
+            fellBackToSeed = result.FellBackToSeed,
+            message = result.Message,
+        });
+    }
+
+    [HttpGet("presets/headers")]
+    public IActionResult ListHeaderPresets() => Ok(_headerPresets.ListAll());
+
+    [HttpGet("presets/headers/{presetId}")]
+    public IActionResult GetHeaderPreset(string presetId)
+    {
+        var preset = _headerPresets.TryGet(presetId);
+        return preset is null ? NotFound() : Ok(preset);
+    }
+
+    [HttpPut("presets/headers/{presetId}")]
+    [EnableRateLimiting("PdfGeneration")]
+    public async Task<IActionResult> SaveHeaderPreset(
+        string presetId,
+        [FromBody] Hemo.Pdf.Core.Hprp.Header.HprpHeaderPreset body,
+        CancellationToken cancellationToken)
+    {
+        EnsureWritesEnabled();
+        var canonical = HprpHeaderPresetStore.CanonicalId(presetId);
+        var bodyCanonical = HprpHeaderPresetStore.CanonicalId(
+            string.IsNullOrWhiteSpace(body.Id) ? presetId : body.Id);
+        if (!string.Equals(bodyCanonical, canonical, StringComparison.OrdinalIgnoreCase))
+            throw new PdfGenerationBadRequestException("preset id must match URL.");
+
+        await _headerPresets.SaveAsync(body, cancellationToken);
+        var saved = _headerPresets.TryGet(canonical) ?? body;
+        return Ok(new
+        {
+            preset = saved,
+            outputPath = Path.Combine(_headerPresets.LibraryRoot, canonical + ".json"),
+        });
+    }
+
+    [HttpDelete("presets/headers/{presetId}")]
+    [EnableRateLimiting("PdfGeneration")]
+    public IActionResult DeleteHeaderPreset(string presetId)
+    {
+        EnsureWritesEnabled();
+        var result = _headerPresets.DeleteLibrary(presetId);
+        if (result.IsNotFound)
+            return NotFound(new { error = result.Message, id = result.Id });
+        if (result.IsSeedOnly)
+            throw new PdfGenerationBadRequestException(result.Message ?? "Cannot delete seed header.");
+
+        return Ok(new
+        {
+            id = result.Id,
+            deletedPath = result.DeletedPath,
+            fellBackToSeed = result.FellBackToSeed,
+            message = result.Message,
+        });
+    }
+
+    [HttpGet("presets/fragments")]
+    public IActionResult ListFragmentPresets() => Ok(_fragmentPresets.ListAll());
+
+    [HttpGet("presets/fragments/{presetId}")]
+    public IActionResult GetFragmentPreset(string presetId)
+    {
+        var preset = _fragmentPresets.TryGet(presetId);
+        return preset is null ? NotFound() : Ok(preset);
+    }
+
+    [HttpPut("presets/fragments/{presetId}")]
+    [EnableRateLimiting("PdfGeneration")]
+    public async Task<IActionResult> SaveFragmentPreset(
+        string presetId,
+        [FromBody] HprpFragmentPreset body,
+        CancellationToken cancellationToken)
+    {
+        EnsureWritesEnabled();
+        if (!string.Equals(body.Id, presetId, StringComparison.OrdinalIgnoreCase))
+            throw new PdfGenerationBadRequestException("preset id must match URL.");
+        var errors = HprpFragmentValidator.Validate(body);
+        if (errors.Count > 0)
+            return BadRequest(new { errors });
+        await _fragmentPresets.SaveAsync(body, cancellationToken);
+        var saved = _fragmentPresets.TryGet(presetId) ?? body;
+        return Ok(new
+        {
+            preset = saved,
+            outputPath = Path.Combine(_fragmentPresets.LibraryRoot, presetId.Trim() + ".json"),
+        });
+    }
+
+    [HttpDelete("presets/fragments/{presetId}")]
+    [EnableRateLimiting("PdfGeneration")]
+    public IActionResult DeleteFragmentPreset(string presetId)
+    {
+        EnsureWritesEnabled();
+        var result = _fragmentPresets.DeleteLibrary(presetId);
+        if (result.IsNotFound)
+            return NotFound(new { error = result.Message, id = result.Id });
+        if (result.IsSeedOnly)
+            throw new PdfGenerationBadRequestException(result.Message ?? "Cannot delete seed fragment.");
+
+        return Ok(new
+        {
+            id = result.Id,
+            deletedPath = result.DeletedPath,
+            fellBackToSeed = result.FellBackToSeed,
+            message = result.Message,
+        });
+    }
+
+    [HttpGet("adapters/{dataAdapterId}/schema")]
+    public IActionResult GetAdapterSchema(string dataAdapterId)
+    {
+        var schema = _adapterSchemas.TryGet(dataAdapterId);
+        return schema is null ? NotFound() : Ok(schema);
+    }
 
     [HttpGet("packages")]
     public IActionResult List()
@@ -112,8 +287,29 @@ public sealed class HprpStudioController : ControllerBase
         {
             id = string.IsNullOrEmpty(s) ? "default" : s,
             scenario = s,
-            label = string.IsNullOrEmpty(s) ? "Full HD mock (print-shaped)" : s.ToUpperInvariant(),
+            label = string.IsNullOrEmpty(s)
+                ? "Full HD mock (print-shaped)"
+                : string.Equals(s, "empty", StringComparison.OrdinalIgnoreCase)
+                    ? "Empty grid (no mock)"
+                    : s.ToUpperInvariant(),
         }));
+    }
+
+    [HttpGet("packages/{templateId}/sample-data")]
+    public IActionResult GetSampleData(
+        string templateId,
+        [FromQuery] string? variant,
+        [FromQuery] string? scenario)
+    {
+        var sample = HprpStudioSamplePayloads.TryLoad(
+            _pack.TemplatesRoot,
+            templateId,
+            variant,
+            scenario);
+        if (sample is null)
+            return NotFound();
+
+        return Ok(sample.Value);
     }
 
     [HttpPost("preview")]

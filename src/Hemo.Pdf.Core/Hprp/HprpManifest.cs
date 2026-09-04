@@ -37,6 +37,12 @@ public sealed class HprpManifest
     [JsonPropertyName("language")]
     public string? Language { get; init; }
 
+    /// <summary>
+    /// <c>composition</c> (default), <c>designer</c> (config-table canvas), or legacy <c>absolute</c>.
+    /// </summary>
+    [JsonPropertyName("layoutMode")]
+    public string? LayoutMode { get; init; }
+
     /// <summary>Optional FE menu / picker / parameter metadata.</summary>
     [JsonPropertyName("ui")]
     public HprpManifestUi? Ui { get; init; }

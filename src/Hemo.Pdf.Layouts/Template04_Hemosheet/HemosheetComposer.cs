@@ -6,6 +6,7 @@ using Hemo.Pdf.Core.Models.Hemosheet;
 using Hemo.Pdf.Layouts.Base;
 using Hemo.Pdf.Layouts.Clinical;
 using Hemo.Pdf.Layouts.Hemosheet;
+using Hemo.Pdf.Layouts.Hprp;
 using Hemo.Pdf.Layouts.Template04_Hemosheet.Default;
 using Hemo.Pdf.Layouts.Template04_Hemosheet.ThaiUr;
 using Hemo.Pdf.Rendering;
@@ -58,27 +59,22 @@ public sealed class HemosheetComposer : BaseReportComposer<HemosheetReportViewMo
         // ThaiUr → purple dense form; Default → CICM dense form; Rama → block planner.
         if (kind is ClinicalLayoutKind.ThaiUrForm or ClinicalLayoutKind.DefaultForm)
         {
-            var margin = kind == ClinicalLayoutKind.ThaiUrForm
-                ? HemosheetThaiUrStyle.PageMarginMm
-                : HemosheetDefaultStyle.PageMarginMm;
+            var fallback = kind == ClinicalLayoutKind.ThaiUrForm
+                ? HprpPageFallback.Uniform(HemosheetThaiUrStyle.PageMarginMm)
+                : HprpPageFallback.Uniform(HemosheetDefaultStyle.PageMarginMm);
+            var page = HprpPageLayout.FromPackage(package, fallback);
 
-            return new QuestLayout
-            {
-                MarginMillimeters = margin,
-                MarginTop = margin,
-                MarginBottom = margin,
-                MarginLeft = margin,
-                MarginRight = margin,
-                Header = null,
-                Content = c =>
+            return HprpQuestPages.Create(
+                page,
+                header: null,
+                content: c =>
                 {
                     if (kind == ClinicalLayoutKind.ThaiUrForm)
                         _thaiUrForm.Compose(c, viewModel, context, package);
                     else
                         _defaultForm.Compose(c, viewModel, context, package);
                 },
-                Footer = null,
-            };
+                footer: null);
         }
 
         return base.Compose(dataModel, context);

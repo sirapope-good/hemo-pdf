@@ -21,4 +21,7 @@ public sealed class PdfReportContext
     /// resolve from this instead of the disk store.
     /// </summary>
     public HprpPackage? LayoutPackage { get; init; }
+
+    /// <summary>Optional page default body font from <c>layout.page.fontSize</c>.</summary>
+    public float? DefaultFontSize { get; init; }
 }

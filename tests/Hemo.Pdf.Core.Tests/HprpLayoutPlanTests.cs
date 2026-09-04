@@ -103,11 +103,12 @@ public class HprpLayoutPlanTests
                 HprpWidgetIds.ClinicalHctEpoCopay,
                 HprpWidgetIds.ClinicalEpoDrugTable,
                 HprpWidgetIds.ClinicalSoapTable,
+                HprpWidgetIds.ClinicalPrescriptionColumns,
                 HprpWidgetIds.ClinicalConsentNarrative,
             ]);
 
         var blocks = HprpBinder.Bind(package, data: null);
-        Assert.Equal(5, blocks.Count);
+        Assert.Equal(6, blocks.Count);
         Assert.All(blocks, b => Assert.IsType<Hemo.Pdf.Core.Models.Preview.TextReportBlock>(b));
     }
 

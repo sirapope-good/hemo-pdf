@@ -1,17 +1,50 @@
 {
   "page": {
-    "size": "A4"
+    "size": "A4",
+    "orientation": "portrait",
+    "marginMm": 2,
+    "spacingMode": "custom",
+    "spacingMm": 2,
+    "spacingBelowMm": 2,
+    "spacingBesideMm": 1,
+    "border": "none"
   },
-  "header": {
-    "widget": "thaiur.header"
-  },
-  "body": [
+  "elements": [
     {
-      "widget": "clinical.soap-table",
+      "id": "hdr",
+      "type": "header",
+      "band": "header",
+      "preset": "clinical-header-thaiur",
+      "place": "below",
+      "box": { "xMm": 0, "yMm": 0, "wMm": 206, "hMm": 27 }
+    },
+    {
+      "id": "soap",
+      "type": "config-table",
+      "band": "content",
+      "presetId": "progress-note-soap-v1",
+      "place": "below",
+      "box": { "xMm": 0, "yMm": 29, "wMm": 206, "hMm": 255 },
       "chrome": {
-        "columnWidths": ["18mm", "2.4", "1.1", "1.1"],
+        "border": "thin",
+        "headerFill": "$branding.sectionHeaderBackground",
         "bandWeights": [1, 2.5, 1, 1]
-      }
+      },
+      "bindings": [
+        { "path": "sessions[].dateLabel", "column": "date", "context": "freedom-row" },
+        { "path": "sessions[].orderForOneDay", "column": "orderOneDay", "context": "freedom-row" },
+        { "path": "sessions[].orderForContinuation", "column": "orderContinuation", "context": "freedom-row" }
+      ]
+    },
+    {
+      "id": "page-of",
+      "type": "page-of",
+      "band": "super-footer",
+      "place": "below",
+      "box": { "xMm": 2, "yMm": 292, "wMm": 206, "hMm": 5 },
+      "text": "{current} / {total}",
+      "align": "center",
+      "chrome": { "border": "none", "fontSize": 8 }
     }
   ]
 }

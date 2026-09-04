@@ -1,12 +1,14 @@
 {
   "id": "clinical-05-progress-note",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "displayName": "Hemodialysis Progress note",
   "engineVersion": 1,
+  "layoutMode": "designer",
   "dataAdapter": "clinical-05-progress-note",
   "requiresSignature": true,
   "language": "th",
   "ui": {
+    "profileLabel": "SOAP",
     "entryMode": "patientMonth",
     "menuGroup": "clinical",
     "sortOrder": 50,

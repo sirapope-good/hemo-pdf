@@ -1,9 +1,9 @@
 namespace Hemo.Pdf.Core.Models.Clinical;
 
-/// <summary>View model for clinical-05 monthly checklist (Doctor progress note report, landscape).</summary>
+/// <summary>View model for clinical-05 monthly checklist (Hemodialysis Progress note, landscape).</summary>
 public sealed class Clinical05ProgressNoteChecklistReportViewModel
 {
-    public string Title { get; init; } = "Doctor progress note report";
+    public string Title { get; init; } = "Hemodialysis Progress note";
 
     public string ReportCode { get; init; } = "DOC-PROG-NOTE-RP-001";
 

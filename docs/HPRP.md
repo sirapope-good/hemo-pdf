@@ -37,13 +37,101 @@ assets/templates/
 
 Changing `layout.json` / labels in the unpacked folder does **not** require a C# rebuild, but **does not affect runtime** until you pack again (packed files win). Rebuild C# only when adding a widget id or a new `layoutKind`.
 
-Open **HPRP Studio** at `http://localhost:5090/` or `http://localhost:5090/hprp-studio/` (Development). Use Bearer `dev` with mock auth. Writes require `HemoPdf:EnableHprpStudioWrite=true`.
+Open **HPRP Studio** (Visual Designer) at `http://localhost:5090/` or `http://localhost:5090/hprp-studio/` (Development). Use Bearer `dev` with mock auth. Writes require `HemoPdf:EnableHprpStudioWrite=true`.
 
-| Studio button | Writes |
-|---------------|--------|
-| **Save and pack** | JSON in the editor → `packages/{id}.hprp` |
+### Experimental: `layoutMode: absolute`
+
+Spike path (QuestPDF freeform mm) — **does not replace** composition packs.
+
+| | Composition (default) | Absolute (experimental) |
+|--|--|--|
+| Manifest | omit `layoutMode` or `composition` | `layoutMode: "absolute"` |
+| Layout | `body` / `sections` | `widgets[]` with `xMm` `yMm` `wMm` `hMm` |
+| Studio | tree + Page canvas (reorder) | Absolute canvas drag/resize in mm |
+| PDF | existing composers | `AbsoluteCanvasComposer` (QuestPDF Layers) |
+| Sample | clinical-* packs | `experimental-absolute-demo`, `experimental-absolute-clinical-01` |
+
+Composition clinical packs remain the production path. Absolute is for exploring a true page designer; delete the branch / ignore the demo package if the spike is abandoned.
+
+**Dense widgets on absolute canvas (clinical-01 first):** use `type: "dense"` + `widget: "thaiur.header" | "clinical.hct-epo-annual-table" | "clinical.hct-epo-copay"`. Optional `chrome` / `columnPlan` match composition layout nodes. Annual table row height is budgeted from the placed `hMm` box so the same widget scales across layouts. Set `dataAdapter: "clinical-01-hct-epo"` (or place any clinical-01 dense widget) so preview binds real Hct/EPO sample data.
+
+### Designer: `layoutMode: designer` (configurable table)
+
+WYSIWYG path on branch `feat/hprp-table-designer` — **does not replace** composition packs until merge.
+
+| | Composition (default) | Designer |
+|--|--|--|
+| Manifest | omit `layoutMode` or `composition` | `layoutMode: "designer"` |
+| Layout | `body` / `sections` | `elements[]` with `box` mm + `type: config-table` |
+| Studio | tree + Page canvas + Preview pane | **3-column**: palette · HTML canvas · inspector (no preview pane) |
+| Table | fixed C# widget (`clinical.hct-epo-annual-table`) | preset `hct-epo-annual-v1` + bindings + column overrides |
+| PDF | section composers | shared `HprpTableLayoutEngine` → `ConfigurableTableComposer` |
+| Sample pack | `clinical-01-hct-epo` | `clinical-01-hct-epo` / `clinical-02-epo-drug` / `clinical-05-progress-note` (+ checklist) |
+
+**Dense on designer canvas (clinical-05):** SOAP keeps `type: "dense"` + `widget: "clinical.soap-table"` (nested S/O/A/P pixels stay in C#). Checklist uses dense `clinical.checklist-patient` / `clinical.checklist-grid` / `clinical.checklist-text-notes` plus box-text title band. Row height for SOAP is budgeted from the placed `hMm` box (~2 session rows).
+
+**Narrative (Word-lite):** `type: "narrative"` with `paragraphs[]` (`text`, `sub`, `align`, `role: title|body|note`) and optional `bindParagraphs` (e.g. `$.bodyParagraphs`). Studio **Insert → Narrative** edits/reorders paragraphs; PDF draws via `ConfigurableNarrativeComposer`. Consent 08/09: dense `contentMode: intro|closing` + narrative body.
+
+**Field row (checkbox / fill-in):** `type: "field-row"` with `segments[]` — `kind: "options"` (always show choices; matching `bind` value gets `[✓]`, empty bind = all unchecked for blank forms) or `kind: "text"` (value or dotted blank line). Studio **Insert → Field row**; chrome `border` / `fontSize` / spacing via place + box height. Used by clinical-10 demographics and clinical-11 admission (multi-page).
+
+**Section frame (outer border):** `type: "group"` with `chrome.border: thin|medium` draws a printable outer rectangle around children even when each child has `border: none`. Studio shows a solid frame when print border is on (dashed blue = layout guide only). Use Inspector **ห่อ selection เป็นกรอบนอก** on contiguous outer-row blocks. Max **24** children per group.
+
+**Preset library:** `assets/templates/presets/tables/{id}.json` — reusable table chrome + columns + row mode (`freedom` | `monthly` | `annual`). Studio API: `GET/PUT /api/hprp/presets/tables/{id}`.
+
+**Adapter schema (field mapper):** `assets/templates/adapters/{dataAdapterId}.schema.json` — `GET /api/hprp/adapters/{dataAdapterId}/schema` drives the Studio “Map field…” picker.
+
+**config-table element:**
+
+```json
+{
+  "id": "annual",
+  "type": "config-table",
+  "presetId": "hct-epo-annual-v1",
+  "box": { "xMm": 0, "yMm": 29, "wMm": 206, "hMm": 228 },
+  "bindings": [
+    { "path": "months[].monthLabel", "column": "month", "context": "group-label" },
+    { "path": "months[].entries[].hb", "column": "hb", "context": "entry" }
+  ],
+  "columnOverrides": []
+}
+```
+
+Studio canvas renders HTML via `table-layout-engine.js` (same rules as C#). **Download PDF** calls `POST /api/hprp/preview` (QuestPDF verify only — no live preview iframe in designer mode).
+
+See also: [HPRP-TABLE-DESIGNER-BRANCH.md](./HPRP-TABLE-DESIGNER-BRANCH.md) for branch-isolated breaking changes.
+
+### Visual Designer (MVP)
+
+Studio is still a **composition editor** (not freeform x/y). The **Page canvas** shows A4 flow cards for `layout.body` **and** `layout.sections` (hemosheet / SOAP / dense clinical). Dense widgets are opaque cards — reorder and edit chrome/labels only; inner pixels stay in C#.
+
+| Surface | Role |
+|---------|------|
+| **Palette** | Human-readable titles + widget id; groups Clinical widgets / Hemosheet sections / Body blocks |
+| **Structure tree** | Page → Labels → nodes; Up/Down/Remove; Place beside (body only) |
+| **Page canvas** | Visual A4 sheet; click to select; drag to reorder siblings |
+| **Inspector** | Page / Labels / node chrome; dense note when a C# widget is selected |
+| **Preview / Download PDF** | Same `POST /api/hprp/preview` QuestPDF bytes (fidelity 100%) |
+| **Import / Export .hprp** | Client ZIP (`manifest.json` + `layout.json` + `labels.*.json`); validate via API before apply/download |
+
+Hemosheet **Place beside stays off** — sections remain a vertical stack.
+
+| Studio button | Writes / action |
+|---------------|-----------------|
+| **Save and pack** | Editor draft → `packages/{id}.hprp` |
 | **Pack this from disk** | `assets/templates/reports/{id}/` → that `.hprp`, then reloads the editor |
 | **Pack all from disk** | every unpacked report folder → `packages/` |
+| **Export .hprp** | Download validated draft ZIP (does not write server disk) |
+| **Import .hprp** | Load ZIP into editor after validate; use Save and pack to persist |
+| **Download PDF** | Same bytes as the Preview iframe |
+
+#### Manual smoke checklist (Designer)
+
+1. Open a **designer** package (e.g. `clinical-01-hct-epo`, `clinical-05-progress-note`) and a **composition** package (e.g. `clinical-03-hemodialysis-record` / `clinical-04-prescription`).
+2. Confirm Page canvas lists the same nodes as the structure tree; reorder → Preview PDF updates.
+3. **Download PDF** — file opens and matches the Preview iframe.
+4. **Export .hprp** → **Import .hprp** the same file → draft restores; Validate OK.
+5. Open **Labels** in Designer, change a string → Preview updates (no JSON mode).
+6. Select a dense widget (SOAP / hemosheet section) — inspector shows the C# dense note; Place beside is absent on sections.
 
 Pixels still live in C# (`HctEpoAnnualTableSection`, hemosheet section renderers, `ReportBlock` types). `.hprp` controls **which** widgets run, **order**, **labels**, extra form **blocks**, and catalog `ui` — not QuestPDF drawing code inside a dense widget.
 
@@ -128,16 +216,57 @@ Nodes use `type` = existing `ReportBlock`:
 
 | `type` | Purpose |
 |--------|---------|
-| `text` | Title / subtitle / paragraph (`style`: `title`, `subtitle`, `body`) |
-| `field-grid` | Label/value columns (`fields[]`, `columns`) |
+| `text` | Title / subtitle / paragraph (`style`: `title`, `subtitle`, `body`). Optional `chrome.fontSize` overrides the token. |
+| `field-grid` | Label/value **grid** (`fields[]`, integer `columns`, per-field `columnSpan`) |
 | `key-value-table` | Two-column rows; `appendFlatten: true` adds scalar DTO keys |
 | `data-grid` | Tabular data via `bindRows` (JSONPath to array) |
 | `patient-info` | Patient header block |
 | `signature` | Signature slots from request context |
+| `row` | Place child `cells[]` **on the same line**. Cell `width`: `*` / `40%` / `32mm`. Nested `nodes[]` stack inside a cell. |
+| `column-stack` | Vertical stack of `nodes[]` (also implied when a cell has more than one node) |
 
 Bind with JSONPath (`$.patient.hn`) or special binds: `$title`, `$subtitle`, `$flatten`.
 
 `when` on a node: JSONPath expression (e.g. `"$.rows.length > 0"`) or omitted (= always show).
+
+### `page`
+
+Optional. **Omitted fields keep the composer C# defaults** (hemosheet 2mm, form `ReportPageLayout` 2/4mm). When set, Studio/PDF use the file.
+
+| Field | Meaning |
+|-------|---------|
+| `size` | `A4` (default) |
+| `marginMm` | Uniform margin (mm) for all sides |
+| `margin` | `{ top, right, bottom, left }` — named sides override shorthand |
+| `spacingMm` | Gap between stacked body blocks. On **clinical-05**, also the gap under the repeating `thaiur.header` before the SOAP table (0 = flush). |
+| `fontSize` | Default body data font for primitive blocks |
+
+Per-node `box.marginMm` / `box.paddingMm`: number, `[v,h]`, `[t,r,b,l]`, or named sides.
+
+### Three meanings of “column”
+
+| Where | What it changes | Studio control |
+|-------|-----------------|----------------|
+| `field-grid.columns` | How many label/value **cells per grid row** | Integer stepper + `columnSpan` |
+| `columnPlan` / hemosheet `columns` | **Table data** columns (HCT/EPO, dialysis headers) | Add/remove/reorder in inspector |
+| `row.cells[].width` | Side-by-side **blocks** | Place beside / cell width `*` `40%` `32mm` |
+
+Dense widgets (SOAP, consent intro/signatures, most hemosheet sections) still own inner pixels in C#. Body paragraphs for consent use designer `narrative`. Chrome / recipe knobs only.
+
+Studio is a **constraint / flow editor** with a visual **Page canvas** (`Page → Flow → Row/Cell → Block`), not a free absolute canvas. Do not promise extra SOAP/consent columns in the UI unless the recipe already has `columnPlan`.
+
+### File knobs vs C# rebuild
+
+| Driven by `.hprp` / Studio (pack, no compile) | Needs a C# widget / recipe change |
+|-----------------------------------------------|-----------------------------------|
+| Page `margin` / `spacingMm` / `fontSize` when the file sets them | Inner pixels of SOAP, HCT/EPO tables, consent intro/signatures (C#) |
+| Per-node `box`, `chrome.fontSize`, labels, bind paths | New widget ids, new `layoutKind` |
+| `row` / `column-stack` around form blocks and allowed widgets | Hemosheet **section order** as a free grid; Place beside between hemosheet sections |
+| `field-grid.columns`, `columnPlan` / dialysis `columns` when the recipe already lists them | Bind fields inside HCT tables outside the C# formula |
+
+**Page margin:** omitted → composer C# default (hemosheet 2mm, forms 2/4mm). Set in the file → used. Forms that already wrote `marginMm: 10` or `8` start applying that value after pack.
+
+**Hemosheet (`sections[]`):** Page inspector still applies. Place beside is **off** — vertical section order stays C#. Do not treat hemosheet as a free layout.
 
 ### `chrome` (table appearance)
 
@@ -148,10 +277,14 @@ Optional on form `body` nodes (`data-grid`, `field-grid`, `key-value-table`) and
 | `headerFill` | `#RRGGBB` or `$branding.sectionHeaderBackground` |
 | `border` | `none` / `thin` (default) / `medium` |
 | `fontSize` | Data and column-header font size |
-| `rowHeightMm` | Min row height (`data-grid`) |
+| `headerHeightMm` | Column-header bar height (SOAP / dense tables that read it) |
+| `headerAlign` | `top` / `middle` (default) / `bottom` — label vertical align in the header bar |
+| `headerPaddingMm` | Uniform inset inside the header cell |
+| `rowHeightMm` | Min row height (`data-grid`) / body row height (SOAP) |
 | `columnWidths` | Relative weights (`*` = 1). Applied only when count matches columns |
+| `bandWeights` | SOAP S:O:A:P band weights (clinical-05) |
 
-Example: `clinical-07-lab` `data-grid`. Pack after editing — runtime reads `packages/*.hprp` first.
+Examples: `clinical-07-lab` (lab DATE matrix) and `clinical-06-medication` (Med History matrix: Medication / Frequency / Physician + 5 live dates with ✓/X; empty pad rows keep Nurse / second-signer at the bottom; review note as separate `box-text` below the grid; `chrome.rowHeightMm` for compact rows). Pack after editing — runtime reads `packages/*.hprp` first.
 
 ### Hemosheet (`sections`)
 
@@ -181,8 +314,9 @@ JSON schema: `assets/templates/schema/hprp-layout.schema.json`
 | **clinical-01** | Section order (`header`+`body`) + labels + extra form blocks — pixels of dense widgets stay in C# sections |
 | **clinical-02** | Same; `clinical.epo-drug-table` includes meta band (not a separate widget yet) |
 | **clinical-05** | `layout.header` → repeating page header; `layout.body` → SOAP + extra form blocks |
-| **clinical-08/09** | `layout.header` + `clinical.consent-narrative` body + extra form blocks; narrative internals stay C# |
-| **clinical-04 / 06 / 10–16** | Trusted `report-data` via `ClinicalFormReportDataService` + HPRP `$.fields` / `$.rows` |
+| **clinical-08/09** | `layoutMode: designer` — `clinical-header-thaiur` + dense intro/closing (`contentMode`) + Word-lite `narrative` for body paragraphs |
+| **clinical-04** | ThaiUr header + doctor-prescription style body (`$.dialysisFields` / med lines) via `Clinical04PrescriptionReportDataService` |
+| **clinical-06 / 10–16** | Trusted `report-data` via `ClinicalFormReportDataService` + HPRP `$.fields` / `$.rows` |
 | **clinical-07** | Dedicated lab matrix endpoint (unchanged) |
 
 Tenant override can reorder widgets that the allow-list understands (e.g. clinical-01 co-pay above annual table) and insert form blocks without rebuilding the engine.

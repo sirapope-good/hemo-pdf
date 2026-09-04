@@ -1,10 +1,13 @@
 using System.Text.Json;
+using Hemo.Pdf.Application.Hprp;
+using Hemo.Pdf.Core.Abstractions;
 using Hemo.Pdf.Core.Constants;
 using Hemo.Pdf.Core.Context;
 using Hemo.Pdf.Core.Hprp;
 using Hemo.Pdf.Core.Models;
 using Hemo.Pdf.Layouts.Clinical.Clinical01_HctEpo;
 using Hemo.Pdf.Rendering;
+using Microsoft.Extensions.Options;
 using QuestPDF.Infrastructure;
 
 namespace Hemo.Pdf.Core.Tests;
@@ -202,7 +205,7 @@ public class Clinical01HctEpoSmokeTests
 
         var renderer = new Clinical01HctEpoReportRenderer(
             new Clinical01HctEpoDataProvider(),
-            new Clinical01HctEpoComposer(store),
+            new Clinical01HctEpoComposer(store, CreatePresetCatalog()),
             new QuestPdfRenderer());
 
         var context = new PdfReportContext
@@ -241,7 +244,7 @@ public class Clinical01HctEpoSmokeTests
 
         var renderer = new Clinical01HctEpoReportRenderer(
             new Clinical01HctEpoDataProvider(),
-            new Clinical01HctEpoComposer(store),
+            new Clinical01HctEpoComposer(store, CreatePresetCatalog()),
             new QuestPdfRenderer());
 
         var context = new PdfReportContext
@@ -266,5 +269,15 @@ public class Clinical01HctEpoSmokeTests
 
         Assert.True(rowH >= 12f, $"expected month row ≥ 12mm, got {rowH}");
         Assert.True(rowH < 30f, $"expected month row < 30mm, got {rowH}");
+    }
+
+    private static IHprpTablePresetCatalog CreatePresetCatalog()
+    {
+        var options = Options.Create(new HprpTemplateOptions
+        {
+            RootPath = HprpTestAssets.TemplatesRoot(),
+            PackagesRootPath = Path.Combine(HprpTestAssets.TemplatesRoot(), "_no-packages"),
+        });
+        return new HprpTablePresetCatalog(new HprpTablePresetStore(options));
     }
 }

@@ -1,8 +1,9 @@
 {
   "id": "clinical-08-consent-th",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "displayName": "Treatment Consent (TH)",
   "engineVersion": 1,
+  "layoutMode": "designer",
   "dataAdapter": "consent",
   "requiresSignature": false,
   "language": "th",

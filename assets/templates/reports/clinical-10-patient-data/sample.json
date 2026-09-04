@@ -1,23 +1,65 @@
 {
   "title": "Patient Data Record",
-  "reportDate": "26/08/2026",
+  "reportDate": "04/09/2026",
   "patient": {
     "hn": "6512620",
     "name": "Sample Patient",
     "unit": "Hemodialysis Unit"
   },
-  "fields": [
-    { "label": "Gender", "value": "M" },
-    { "label": "Birth date", "value": "15/03/1971" },
-    { "label": "Identity No", "value": "3101401131780" },
-    { "label": "Coverage", "value": "สปสช." },
-    { "label": "Blood group", "value": "O+" },
-    { "label": "Underlying", "value": "DM / HT" },
-    { "label": "Cause of kidney disease", "value": "Diabetic nephropathy" },
-    { "label": "First dialysis", "value": "12/01/2020" },
-    { "label": "Allergies", "value": "ไม่มีแพ้ยา" },
-    { "label": "Note", "value": "Sample patient demographics for Studio" }
+  "header": {
+    "logoBase64": null,
+    "patient": {
+      "name": "Sample Patient",
+      "hn": "6512620",
+      "identityNumber": "3101401131780",
+      "age": 55,
+      "allergies": ["ไม่มีแพ้ยา"],
+      "coverage": "สปสช.",
+      "diagnosis": "ESRD, DM, HT",
+      "underlying": "ESRD, DM, HT",
+      "hdPerWeek": "3"
+    },
+    "unit": { "id": -1, "fullName": "Hemodialysis Unit" },
+    "layoutContext": {
+      "reportSettings": { "showDateAndHdNo": false, "showHdPerWeek": true }
+    }
+  },
+  "demographics": {
+    "gender": "ชาย",
+    "birthDate": "15/03/1971",
+    "identityNo": "3101401131780",
+    "bloodType": "O+",
+    "telephone": "0812345678",
+    "address": "Bangkok",
+    "coverage": "สปสช.",
+    "allergies": "ไม่มีแพ้ยา",
+    "underlying": "ESRD, DM, HT",
+    "transferFrom": "Hospital A",
+    "note": "Sample patient demographics for Studio"
+  },
+  "dialysis": {
+    "causeOfKidneyDisease": "Diabetic nephropathy",
+    "kidneyState": "Both",
+    "firstHd": "12/01/2020",
+    "firstHdHere": "01/02/2021",
+    "status": "Active"
+  },
+  "columnHeaders": [
+    "ชนิด",
+    "วันที่ทำ",
+    "วันที่เริ่มใช้",
+    "โรงพยาบาล",
+    "ปัญหา",
+    "วันที่หยุดใช้"
   ],
-  "columnHeaders": [],
-  "rows": []
+  "rows": [
+    ["AVF ขวา Forearm", "01/06/2019", "", "Ramathibodi", "", ""],
+    ["Perm Cath ซ้าย IJ", "15/01/2020", "", "Hospital A", "infection", "20/05/2020"],
+    ["", "", "", "", "", ""]
+  ],
+  "fields": [
+    { "label": "Gender", "value": "ชาย" },
+    { "label": "Birth date", "value": "15/03/1971" },
+    { "label": "Coverage", "value": "สปสช." }
+  ]
 }

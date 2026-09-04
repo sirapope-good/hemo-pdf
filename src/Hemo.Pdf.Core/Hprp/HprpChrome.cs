@@ -5,6 +5,13 @@ using System.Text.Json.Serialization;
 
 namespace Hemo.Pdf.Core.Hprp;
 
+public enum HprpHeaderAlign
+{
+    Middle,
+    Top,
+    Bottom,
+}
+
 /// <summary>
 /// File-driven table chrome for primitive blocks and hemosheet section nodes.
 /// Omitted fields keep engine / branding defaults.
@@ -36,6 +43,25 @@ public sealed class HprpChrome
     /// </summary>
     [JsonPropertyName("bandWeights")]
     public IReadOnlyList<float>? BandWeights { get; init; }
+
+    /// <summary>Table column-header bar height (mm). Omitted = widget default.</summary>
+    [JsonPropertyName("headerHeightMm")]
+    public float? HeaderHeightMm { get; init; }
+
+    /// <summary><c>top</c>, <c>middle</c> (default), or <c>bottom</c> for header label vertical align.</summary>
+    [JsonPropertyName("headerAlign")]
+    public string? HeaderAlign { get; init; }
+
+    /// <summary>Uniform inset inside the header cell (mm). Omitted = 0.</summary>
+    [JsonPropertyName("headerPaddingMm")]
+    public float? HeaderPaddingMm { get; init; }
+
+    /// <summary>
+    /// Consent dense slice: <c>full</c> (default), <c>intro</c> (title + fill-in),
+    /// or <c>closing</c> (signatures). Body paragraphs live in designer <c>narrative</c>.
+    /// </summary>
+    [JsonPropertyName("contentMode")]
+    public string? ContentMode { get; init; }
 
     public static string ResolveHeaderFill(
         HprpChrome? chrome,
@@ -161,12 +187,51 @@ public sealed class HprpChrome
         if (chrome.RowHeightMm is <= 0 or > 200)
             errors.Add($"{path}.rowHeightMm must be between 0 and 200.");
 
+        if (chrome.HeaderHeightMm is <= 0 or > HprpBox.MaxMm)
+            errors.Add($"{path}.headerHeightMm must be between 0 and {HprpBox.MaxMm}.");
+
+        var align = chrome.HeaderAlign?.Trim().ToLowerInvariant();
+        if (!string.IsNullOrWhiteSpace(align)
+            && align is not ("top" or "middle" or "bottom"))
+        {
+            errors.Add($"{path}.headerAlign must be top, middle, or bottom.");
+        }
+
+        if (chrome.HeaderPaddingMm is < 0 or > HprpBox.MaxMm)
+            errors.Add($"{path}.headerPaddingMm must be between 0 and {HprpBox.MaxMm}.");
+
+        var contentMode = chrome.ContentMode?.Trim().ToLowerInvariant();
+        if (!string.IsNullOrWhiteSpace(contentMode)
+            && contentMode is not ("full" or "intro" or "closing"))
+        {
+            errors.Add($"{path}.contentMode must be full, intro, or closing.");
+        }
+
         if (chrome.BandWeights is { Count: > 0 } bands)
         {
             if (bands.Any(w => w <= 0 || float.IsNaN(w) || float.IsInfinity(w)))
                 errors.Add($"{path}.bandWeights must be positive finite numbers.");
         }
     }
+
+    public static float ResolveHeaderHeightMm(HprpChrome? chrome, float fallback) =>
+        chrome?.HeaderHeightMm is > 0 and <= HprpBox.MaxMm
+            ? chrome.HeaderHeightMm.Value
+            : fallback;
+
+    /// <summary>Omitted / unknown → middle (engine default).</summary>
+    public static HprpHeaderAlign ResolveHeaderAlign(HprpChrome? chrome) =>
+        chrome?.HeaderAlign?.Trim().ToLowerInvariant() switch
+        {
+            "top" => HprpHeaderAlign.Top,
+            "bottom" => HprpHeaderAlign.Bottom,
+            _ => HprpHeaderAlign.Middle,
+        };
+
+    public static float ResolveHeaderPaddingMm(HprpChrome? chrome) =>
+        chrome?.HeaderPaddingMm is >= 0 and <= HprpBox.MaxMm
+            ? chrome.HeaderPaddingMm.Value
+            : 0f;
 
     /// <summary>
     /// Parses mixed constant-mm / relative column tokens.
@@ -202,6 +267,75 @@ public sealed class HprpChrome
         return parsed;
     }
 
+    /// <summary>
+    /// Row cell widths: <c>32mm</c> constant, <c>40%</c> relative (percent weight),
+    /// <c>*</c> remaining relative (100 − sum of percents, or 1 when no percents).
+    /// </summary>
+    public static IReadOnlyList<(bool ConstantMm, float Value)> ParseRowCellWidths(IReadOnlyList<string>? widths)
+    {
+        if (widths is null || widths.Count == 0)
+            return [];
+
+        var parsed = new List<(bool ConstantMm, float Value, bool Percent)>(widths.Count);
+        var percentSum = 0f;
+        var starCount = 0;
+        foreach (var raw in widths)
+        {
+            var token = raw?.Trim() ?? "";
+            if (token.Length == 0)
+                return [];
+
+            if (token == "*")
+            {
+                parsed.Add((false, 1f, false));
+                starCount++;
+                continue;
+            }
+
+            var constant = token.EndsWith("mm", StringComparison.OrdinalIgnoreCase);
+            var percent = !constant && token.EndsWith("%", StringComparison.OrdinalIgnoreCase);
+            if (constant)
+                token = token[..^2].Trim();
+            else if (percent)
+                token = token[..^1].Trim();
+
+            if (!float.TryParse(token, NumberStyles.Float, CultureInfo.InvariantCulture, out var value)
+                || value <= 0)
+            {
+                return [];
+            }
+
+            if (percent)
+                percentSum += value;
+
+            parsed.Add((constant, value, percent));
+        }
+
+        var starWeight = starCount > 0
+            ? Math.Max(100f - percentSum, 1f) / starCount
+            : 1f;
+
+        var result = new List<(bool ConstantMm, float Value)>(parsed.Count);
+        foreach (var (constant, value, percent) in parsed)
+        {
+            if (constant)
+            {
+                result.Add((true, value));
+                continue;
+            }
+
+            if (percent)
+            {
+                result.Add((false, value));
+                continue;
+            }
+
+            result.Add((false, starWeight));
+        }
+
+        return result;
+    }
+
     public static IReadOnlyList<float> ResolveBandWeights(
         IReadOnlyList<float>? configured,
         IReadOnlyList<float> defaults)
@@ -213,5 +347,30 @@ public sealed class HprpChrome
             return defaults;
 
         return configured;
+    }
+
+    /// <summary>
+    /// Overlay element chrome onto preset chrome; null overlay fields keep the base value.
+    /// </summary>
+    public static HprpChrome? Merge(HprpChrome? bas, HprpChrome? overlay)
+    {
+        if (overlay is null)
+            return bas;
+        if (bas is null)
+            return overlay;
+
+        return new HprpChrome
+        {
+            HeaderFill = overlay.HeaderFill ?? bas.HeaderFill,
+            Border = overlay.Border ?? bas.Border,
+            FontSize = overlay.FontSize ?? bas.FontSize,
+            RowHeightMm = overlay.RowHeightMm ?? bas.RowHeightMm,
+            ColumnWidths = overlay.ColumnWidths ?? bas.ColumnWidths,
+            BandWeights = overlay.BandWeights ?? bas.BandWeights,
+            HeaderHeightMm = overlay.HeaderHeightMm ?? bas.HeaderHeightMm,
+            HeaderAlign = overlay.HeaderAlign ?? bas.HeaderAlign,
+            HeaderPaddingMm = overlay.HeaderPaddingMm ?? bas.HeaderPaddingMm,
+            ContentMode = overlay.ContentMode ?? bas.ContentMode,
+        };
     }
 }

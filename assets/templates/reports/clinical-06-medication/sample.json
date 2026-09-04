@@ -1,19 +1,64 @@
 {
   "title": "Medication Record",
-  "reportDate": "26/08/2026",
+  "reportDate": "03/09/2026",
   "patient": {
     "hn": "6512620",
     "name": "Sample Patient",
     "unit": "Hemodialysis Unit"
   },
-  "fields": [
-    { "label": "Prescriptions", "value": "3" },
-    { "label": "Active / no expiry yet", "value": "2" }
+  "header": {
+    "logoBase64": null,
+    "patient": {
+      "name": "Sample Patient",
+      "hn": "6512620",
+      "identityNumber": "3101401131780",
+      "age": 55,
+      "allergies": ["ไม่มีแพ้ยา"],
+      "coverage": "สปสช.",
+      "diagnosis": "ESRD",
+      "underlying": "ESRD",
+      "hdPerWeek": "3"
+    },
+    "unit": { "id": -1, "fullName": "Hemodialysis Unit" },
+    "layoutContext": {
+      "reportSettings": { "showDateAndHdNo": false, "showHdPerWeek": true }
+    }
+  },
+  "columnHeaders": [
+    "Medication",
+    "Frequency",
+    "Physician",
+    "01 Aug",
+    "25 Jul",
+    "18 Jul",
+    "11 Jul",
+    "04 Jul"
   ],
-  "columnHeaders": ["Medicine", "Dose", "Frequency", "Start", "Expire", "Route", "Note"],
   "rows": [
-    ["Eprex 4000", "4000 U", "2", "01/08/2026", "", "SC", ""],
-    ["Calcium carbonate", "1000 mg", "3", "01/07/2026", "31/12/2026", "PO", "with meal"],
-    ["Folic acid", "5 mg", "1", "01/06/2026", "01/06/2026", "PO", "expired sample"]
-  ]
+    ["Eprex 4000 IU", "1 x TIW (SC)", "Dr. Somchai", "✓", "✓", "✓", "", "✓"],
+    ["Venofer 100 mg", "1 x QW IV", "Dr. Somchai", "✓", "", "✓", "X", ""],
+    ["Calcium carbonate 1000 mg", "2 x TID PO with meal", "Dr. Anong", "✓", "✓", "", "✓", "✓"],
+    ["","","","","","","",""],
+    ["","","","","","","",""],
+    ["","","","","","","",""],
+    ["","","","","","","",""],
+    ["","","","","","","",""],
+    ["","","","","","","",""],
+    ["","","","","","","",""],
+    ["","","","","","","",""],
+    ["","","","","","","",""],
+    ["","","","","","","",""],
+    ["","","","","","","",""],
+    ["","","","","","","",""],
+    ["","","","","","","",""],
+    ["","","","","","","",""],
+    ["","","","","","","",""],
+    ["","","","","","","",""],
+    ["","","","","","","",""],
+    ["","","","","","","",""],
+    ["","","","","","","",""],
+    ["Hemodialysis Nurse", "Nurse A", "", "✓", "✓", "✓", "", "✓"],
+    ["Nephrologist", "Dr. B", "", "✓", "", "✓", "", ""]
+  ],
+  "reviewNote": "**Review Med : Anti HT-DM-Heart-Other"
 }

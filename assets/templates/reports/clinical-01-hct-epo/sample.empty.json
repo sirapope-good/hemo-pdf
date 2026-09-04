@@ -1,0 +1,22 @@
+{
+  "title": "Hemodialysis Review Hct and EPO",
+  "year": 2023,
+  "header": {
+    "logoBase64": null,
+    "patient": {
+      "name": "",
+      "hn": "",
+      "identityNumber": "",
+      "age": null,
+      "allergies": [],
+      "coverage": "",
+      "diagnosis": "",
+      "underlying": ""
+    },
+    "unit": { "id": -1, "fullName": "" },
+    "layoutContext": {
+      "reportSettings": { "showDateAndHdNo": false, "showHdPerWeek": true }
+    }
+  },
+  "months": []
+}

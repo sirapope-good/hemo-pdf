@@ -33,18 +33,27 @@ public class HprpPackRepoPackagesTests
 
     private static string FindRepoPackagesRoot(string templatesRoot)
     {
+        // Prefer the solution packages/ (has clinical-01), never the test bin copy.
         var dir = new DirectoryInfo(templatesRoot);
+        DirectoryInfo? binFallback = null;
         while (dir is not null)
         {
             var packages = Path.Combine(dir.FullName, "packages");
-            if (File.Exists(Path.Combine(packages, "clinical-01-hct-epo.hprp"))
-                || File.Exists(Path.Combine(packages, "clinical-03-hemodialysis-record.thaiur.hprp")))
+            var hasClinical01 = File.Exists(Path.Combine(packages, "clinical-01-hct-epo.hprp"));
+            var hasClinical03 = File.Exists(Path.Combine(packages, "clinical-03-hemodialysis-record.thaiur.hprp"));
+            if (hasClinical01 || hasClinical03)
             {
-                return packages;
+                var isUnderBin = packages.Contains($"{Path.DirectorySeparatorChar}bin{Path.DirectorySeparatorChar}", StringComparison.OrdinalIgnoreCase);
+                if (!isUnderBin)
+                    return packages;
+                binFallback ??= new DirectoryInfo(packages);
             }
 
             dir = dir.Parent;
         }
+
+        if (binFallback is not null)
+            return binFallback.FullName;
 
         throw new DirectoryNotFoundException("repo packages/ folder not found from " + templatesRoot);
     }

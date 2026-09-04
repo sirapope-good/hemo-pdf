@@ -26,7 +26,7 @@ public sealed class DataGridSection : IContentSection
         var chrome = grid.Chrome;
         var border = HprpChrome.ResolveBorderWidth(chrome);
         var headerFill = HprpChrome.ResolveHeaderFill(chrome, context, PdfSectionMetrics.SectionHeaderBackground);
-        var fontSize = HprpChrome.ResolveFontSize(chrome, PdfStyleDefaults.Body.DataFontSize);
+        var fontSize = HprpChrome.ResolveFontSize(chrome, context.DefaultFontSize ?? PdfStyleDefaults.Body.DataFontSize);
         var rowHeightMm = chrome?.RowHeightMm;
 
         container.Border(border).Table(table =>
@@ -55,37 +55,43 @@ public sealed class DataGridSection : IContentSection
 
                 foreach (var columnHeader in grid.ColumnHeaders)
                 {
-                    var headerCell = header.Cell().Border(border).Background(headerFill);
+                    var headerCell = header.Cell().Border(border);
                     if (rowHeightMm is > 0)
                         headerCell = headerCell.Height(rowHeightMm.Value, Unit.Millimetre);
                     headerCell.Padding(PdfSectionMetrics.CellPadding)
                         .Text(columnHeader)
-                        .FontFamily(PdfStyleDefaults.Body.SectionTitleFontFamily)
-                        .FontSize(fontSize)
-                        .SemiBold();
+                        .FontFamily(PdfStyleDefaults.Body.DataFontFamily)
+                        .FontSize(fontSize);
                 }
             });
 
             foreach (var row in grid.Rows)
             {
                 var sectionBand = DataGridRows.IsSectionBand(row);
+                if (sectionBand)
+                {
+                    var bandCell = table.Cell().ColumnSpan((uint)columnCount).Border(border).Background(headerFill);
+                    if (rowHeightMm is > 0)
+                        bandCell = bandCell.Height(rowHeightMm.Value, Unit.Millimetre);
+                    bandCell.Padding(PdfSectionMetrics.CellPadding)
+                        .Text(row[0] ?? "")
+                        .FontFamily(PdfStyleDefaults.Body.SectionTitleFontFamily)
+                        .FontSize(fontSize)
+                        .SemiBold();
+                    continue;
+                }
+
                 for (var i = 0; i < columnCount; i++)
                 {
                     var value = i < row.Count ? row[i] : null;
                     var cell = table.Cell().Border(border);
-                    if (sectionBand)
-                        cell = cell.Background(headerFill);
                     if (rowHeightMm is > 0)
                         cell = cell.Height(rowHeightMm.Value, Unit.Millimetre);
                     cell = cell.Padding(PdfSectionMetrics.CellPadding);
 
-                    var text = cell.Text(sectionBand || value is not null ? value ?? "" : DataGridRows.DisplayCell(value));
-                    text.FontFamily(sectionBand
-                            ? PdfStyleDefaults.Body.SectionTitleFontFamily
-                            : PdfStyleDefaults.Body.DataFontFamily)
+                    var text = cell.Text(value is not null ? value : DataGridRows.DisplayCell(value));
+                    text.FontFamily(PdfStyleDefaults.Body.DataFontFamily)
                         .FontSize(fontSize);
-                    if (sectionBand)
-                        text.SemiBold();
                 }
             }
         });
@@ -98,13 +104,6 @@ public sealed class DataGridSection : IContentSection
             return grid.ColumnWeights;
         }
 
-        if (columnCount <= 0)
-        {
-            return [];
-        }
-
-        var weights = Enumerable.Repeat(1f, columnCount).ToArray();
-        weights[0] = 3f;
-        return weights;
+        return HprpDataGridColumnPlan.Resolve(grid.Chrome?.ColumnWidths, columnCount);
     }
 }

@@ -15,6 +15,24 @@
   "patientGender": "M",
   "expiryMonths": 6,
   "signedDate": { "day": "17", "month": "August", "year": "2026" },
+  "header": {
+    "logoBase64": null,
+    "patient": {
+      "name": "Draco Malfoy",
+      "hn": "184706",
+      "identityNumber": "3120600881117",
+      "age": 31,
+      "allergies": ["No known drug allergy"],
+      "coverage": "Social Security",
+      "diagnosis": "-",
+      "underlying": "-",
+      "hdPerWeek": null
+    },
+    "unit": { "id": -1, "fullName": "Hemodialysis Unit" },
+    "layoutContext": {
+      "reportSettings": { "showDateAndHdNo": false, "showHdPerWeek": false }
+    }
+  },
   "bodyParagraphs": [
     { "text": "I acknowledge that I have been informed and understand hemodialysis treatment as follows:", "sub": false },
     { "text": "1. Hemodialysis removes waste products and excess fluid from the body.", "sub": false },

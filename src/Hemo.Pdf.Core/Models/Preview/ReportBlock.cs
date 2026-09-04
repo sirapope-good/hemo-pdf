@@ -17,7 +17,11 @@ namespace Hemo.Pdf.Core.Models.Preview;
 [JsonDerivedType(typeof(PrePostHdNotesReportBlock), "pre-post-hd-notes")]
 [JsonDerivedType(typeof(SignatureReportBlock), "signature")]
 [JsonDerivedType(typeof(TextReportBlock), "text")]
-public abstract class ReportBlock;
+public abstract class ReportBlock
+{
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public HprpNodeBox? Box { get; init; }
+}
 
 public sealed class PatientInfoReportBlock : ReportBlock
 {
@@ -75,6 +79,7 @@ public sealed class TextReportBlock : ReportBlock
     public string? Title { get; init; }
     public string Content { get; init; } = "";
     public string Style { get; init; } = "body";
+    public HprpChrome? Chrome { get; init; }
 }
 
 public sealed class FieldGridReportBlock : ReportBlock
@@ -113,6 +118,8 @@ public sealed class SectionRowReportBlock : ReportBlock
 {
     public int Columns { get; init; } = 2;
     public IReadOnlyList<ReportBlock> Blocks { get; init; } = [];
+    public IReadOnlyList<string>? ColumnWidths { get; init; }
+    public float? GapMm { get; init; }
 }
 
 public sealed class ChecklistClusterReportBlock : ReportBlock

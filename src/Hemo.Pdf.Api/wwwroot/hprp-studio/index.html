@@ -3,18 +3,30 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>HPRP Studio</title>
-  <link rel="stylesheet" href="/hprp-studio/studio.css" />
+  <title>HPRP Studio — Table Designer</title>
+  <link rel="stylesheet" href="/hprp-studio/studio.css?v=ux-polish-18" />
 </head>
-<body class="mode-designer">
+<body class="mode-designer mode-wysiwyg">
   <header class="top">
-    <div>
-      <h1>HPRP Studio</h1>
-      <p class="muted">เรียง <code>layout.body</code> หรือ <code>layout.sections</code> (hemosheet) แล้วแก้ chrome / คอลัมน์ใน inspector</p>
-    </div>
+    <a class="top-brand" href="/hprp-studio/" aria-label="HPRP Studio">
+      <svg class="top-logo" width="140" height="52" viewBox="0 0 658 243" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="HPRP Studio">
+        <rect width="62" height="243" fill="currentColor"/>
+        <rect x="80" width="62" height="243" fill="currentColor"/>
+        <rect x="298" width="62" height="243" fill="currentColor"/>
+        <path d="M234.5 0C269.57 0 298 28.4299 298 63.5C298 98.5701 269.57 127 234.5 127H167V0H234.5ZM203 35V92H233.5C249.24 92 262 79.2401 262 63.5C262 47.7599 249.24 35 233.5 35H203Z" fill="currentColor"/>
+        <path d="M552.5 0C587.57 0 616 28.4299 616 63.5C616 98.5701 587.57 127 552.5 127H485V0H552.5ZM521 35V92H551.5C567.24 92 580 79.2401 580 63.5C580 47.7599 567.24 35 551.5 35H521Z" fill="currentColor"/>
+        <path d="M329 0H396.5C431.57 0 460 28.4299 460 63.5V63.5C460 98.5701 431.57 127 396.5 127H329V0Z" fill="currentColor"/>
+        <rect x="130" width="12" height="243" fill="currentColor"/>
+        <path d="M359 126H423L512 243H448L359 126Z" fill="currentColor"/>
+        <rect x="167" width="12" height="243" fill="currentColor"/>
+        <rect x="485" width="12" height="243" fill="currentColor"/>
+        <rect y="128" width="13" height="658" transform="rotate(-90 0 128)" fill="currentColor"/>
+        <circle cx="643" cy="153" r="15" fill="currentColor"/>
+      </svg>
+    </a>
     <div class="top-right">
       <div class="mode-toggle" role="group" aria-label="Editor mode">
-        <button type="button" id="btnModeDesigner" class="active">Designer</button>
+        <button type="button" id="btnModeDesigner" class="active">Canvas</button>
         <button type="button" id="btnModeJson">JSON</button>
       </div>
       <div class="auth">
@@ -27,13 +39,49 @@
   <main class="layout">
     <aside class="pane packages">
       <div class="pane-head">
-        <strong>Packages</strong>
-        <button id="btnReload" type="button">Reload</button>
+        <div class="side-tabs" role="tablist" aria-label="Left pane">
+          <button type="button" class="side-tab active" data-side="packages">Packages</button>
+          <button type="button" class="side-tab" data-side="library">Library</button>
+        </div>
+        <button id="btnReload" type="button" class="tb-icon" title="Reload lists">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M21 12a9 9 0 1 1-2.6-6.3"/><path d="M21 3v6h-6"/></svg>
+        </button>
       </div>
-      <div class="actions">
-        <button id="btnPackAll" type="button" title="Read every report folder and write packages/*.hprp">Pack all from disk</button>
+      <div id="packagesPanel">
+        <div class="actions package-actions pane-action-row">
+          <button id="btnImport" type="button" class="primary" title="Load a .hprp into the editor (validate first)">Import</button>
+          <button id="btnExport" type="button" disabled title="Download draft as .hprp after validate">Export</button>
+          <input type="file" id="fileImportHprp" accept=".hprp,.zip" class="hidden" />
+          <div class="tb-menu" data-menu="packages-more">
+            <button type="button" class="tb-menu-btn" title="More package actions" aria-label="More">⋯</button>
+            <div class="tb-menu-panel" role="menu">
+              <button id="btnPackAll" type="button" role="menuitem" title="Read every report folder and write packages/*.hprp">Pack all from disk</button>
+            </div>
+          </div>
+        </div>
+        <ul id="packageList" class="list"></ul>
       </div>
-      <ul id="packageList" class="list"></ul>
+      <div id="libraryPanel" class="hidden">
+        <div class="lib-subtabs" role="tablist" aria-label="Library kinds">
+          <button type="button" class="lib-subtab active" data-lib="headers">Headers</button>
+          <button type="button" class="lib-subtab" data-lib="tables">Tables</button>
+          <button type="button" class="lib-subtab" data-lib="fragments">Fragments</button>
+        </div>
+        <input id="libraryFilter" type="search" placeholder="filter id / tag…" class="lib-filter" />
+        <ul id="libraryList" class="list lib-list"></ul>
+        <div class="actions lib-actions pane-action-row">
+          <button id="btnLibEdit" type="button" class="primary" title="Open selected item alone on canvas">Edit</button>
+          <button id="btnLibInsert" type="button" title="Insert into open pack">Insert</button>
+          <div class="tb-menu" data-menu="library-more">
+            <button type="button" class="tb-menu-btn" title="More library actions" aria-label="More">⋯</button>
+            <div class="tb-menu-panel" role="menu">
+              <button id="btnLibSaveSelection" type="button" role="menuitem" title="Save selected canvas element(s) as library item">Save from selection</button>
+              <button id="btnLibDelete" type="button" role="menuitem" title="Delete packages/library/{kind}/{id}.json (not seed)">Delete</button>
+            </div>
+          </div>
+        </div>
+        <p class="muted lib-hint">คลิก item → แก้บน canvas · Shift+คลิกหลายชิ้น → Add to library · Save/Delete ที่ packages/library/</p>
+      </div>
     </aside>
 
     <section class="pane designer-col" id="designerPane">
@@ -46,40 +94,99 @@
         </div>
       </div>
       <div id="denseFormHint" class="dense-hint hidden" role="note"></div>
-      <div class="designer-split">
-        <div class="subpane">
-          <div class="subhead">Palette</div>
-          <div id="palette" class="palette"></div>
+      <div class="designer-split designer-only" id="designerStudioPane">
+        <div class="subpane page-canvas-pane designer-canvas-pane">
+          <div class="subhead">Page canvas (WYSIWYG)</div>
+          <div class="designer-canvas-toolbar-host">
+            <div class="canvas-toolbar" role="toolbar" aria-label="Canvas tools">
+              <div class="tb-group" aria-label="View">
+                <span class="tb-group-label">View</span>
+                <button id="btnCanvasUndo" type="button" class="tb-icon" title="Undo (Ctrl+Z)" disabled>
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M9 14 4 9l5-5"/><path d="M4 9h10a5 5 0 0 1 0 10h-2"/></svg>
+                </button>
+                <button id="btnCanvasRedo" type="button" class="tb-icon" title="Redo (Ctrl+Y)" disabled>
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="m15 14 5-5-5-5"/><path d="M20 9H10a5 5 0 0 0 0 10h2"/></svg>
+                </button>
+                <span class="canvas-tools-sep"></span>
+                <button id="btnCanvasZoomOut" type="button" class="tb-icon" title="Zoom out">−</button>
+                <span id="canvasZoomLabel" class="canvas-zoom-label">100%</span>
+                <button id="btnCanvasZoomIn" type="button" class="tb-icon" title="Zoom in">+</button>
+                <button id="btnCanvasZoomFit" type="button" title="Zoom 100%">Fit</button>
+              </div>
+
+              <span class="canvas-tools-sep"></span>
+
+              <div class="tb-menu" data-menu="insert">
+                <button type="button" class="tb-menu-btn" title="Insert elements">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>
+                  Insert
+                  <span class="tb-caret" aria-hidden="true">▾</span>
+                </button>
+                <div class="tb-menu-panel" role="menu">
+                  <button id="btnAddHeader" type="button" role="menuitem" title="Add header from catalog (recovery if deleted)">Header</button>
+                  <button id="btnAddConfigTable" type="button" role="menuitem" title="Add configurable table (outer row)">Table</button>
+                  <button id="btnAddDataGrid" type="button" role="menuitem" title="Add bound lab matrix (data-grid)">Data grid</button>
+                  <button id="btnAddBoxText" type="button" role="menuitem" title="Add box text banner (outer row)">Box text</button>
+                  <button id="btnAddFieldRow" type="button" role="menuitem" title="Add checkbox options / fill-in field row">Field row</button>
+                  <button id="btnAddNarrative" type="button" role="menuitem" title="Add Word-lite paragraphs (narrative)">Narrative</button>
+                  <button id="btnAddFragment" type="button" role="menuitem" title="Insert multi-element fragment (e.g. co-pay)">Fragment</button>
+                  <button id="btnAddPageOf" type="button" role="menuitem" title="Add page number (super-footer)">Page of</button>
+                  <hr class="tb-menu-sep" />
+                  <button id="btnAddConfigTableInner" type="button" role="menuitem" title="Stack under selected column (inner section, max 4)">Table · inner below</button>
+                  <button id="btnAddBoxTextInner" type="button" role="menuitem" title="Stack under selected column (inner section, max 4)">Box text · inner below</button>
+                </div>
+              </div>
+
+              <div class="tb-group" aria-label="Library">
+                <button id="btnAddToLibrary" type="button" class="primary" title="Save selection to Library (Shift+click multi → Fragment)">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>
+                  Add to library
+                </button>
+              </div>
+
+              <div class="tb-group" aria-label="Export">
+                <button id="btnDesignerDownloadPdf" type="button" disabled title="QuestPDF verify">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6M12 18v-6M9 15l3 3 3-3"/></svg>
+                  PDF
+                </button>
+              </div>
+
+              <label class="preview-opt">Sample
+                <select id="designerSampleScenario" title="Mock payload scenario">
+                  <option value="">default</option>
+                </select>
+              </label>
+            </div>
+            <p class="canvas-tools-hint muted" title="Shift+click to multi-select · Zoom: buttons / Ctrl± / Ctrl+0 · Undo: Ctrl+Z">Shift+คลิกหลายชิ้น · Ctrl± zoom · Ctrl+Z undo</p>
+          </div>
+          <div id="designerOverflowBanner" class="designer-overflow-banner hidden" role="status"></div>
+          <div id="designerCanvas" class="page-canvas-scroll" tabindex="0" aria-label="Designer WYSIWYG canvas"></div>
         </div>
-        <div class="subpane">
-          <div class="subhead" id="orderListTitle">Body order</div>
-          <ul id="bodyList" class="node-list"></ul>
-        </div>
+      </div>
+      <!-- Legacy DOM hooks kept hidden so studio.js does not throw; not shown in Canvas mode -->
+      <div class="hidden" aria-hidden="true">
+        <div id="palette"></div>
+        <ul id="bodyList"></ul>
+        <div id="pageCanvas"></div>
+        <div id="absolutePalette"></div>
+        <div id="absoluteSheet"></div>
+        <select id="sampleScenario"><option value="">default</option></select>
+        <input id="previewEntityId" type="text" />
+        <button id="btnPreview" type="button"></button>
+        <button id="btnDownloadPdf" type="button"></button>
+        <iframe id="previewFrame" src="about:blank" title="unused"></iframe>
       </div>
     </section>
 
     <section class="pane inspector-col" id="inspectorPane">
-      <div class="pane-head"><strong>Inspector</strong></div>
-      <div id="inspector" class="inspector"><p class="muted">เลือกบล็อกในรายการ</p></div>
-    </section>
-
-    <section class="pane preview-col" id="previewPane">
       <div class="pane-head">
-        <strong>Preview</strong>
-        <div class="actions preview-toolbar">
-          <label class="preview-opt">Sample
-            <select id="sampleScenario" title="Mock payload scenario">
-              <option value="">Full HD mock</option>
-            </select>
-          </label>
-          <label class="preview-opt">EntityId
-            <input id="previewEntityId" type="text" placeholder="hemosheet GUID" autocomplete="off" title="ถ้าใส่ จะดึง report-data จริงเหมือน /api/pdf/generate" />
-          </label>
-          <button id="btnPreview" type="button" disabled>Refresh PDF</button>
+        <strong>Inspector</strong>
+        <div class="actions">
+          <button id="btnPage" type="button">Page</button>
+          <button id="btnLabels" type="button" disabled title="Edit labels dictionary for current language">Labels</button>
         </div>
       </div>
-      <p id="previewParityHint" class="muted preview-parity-hint">พรีวิวใช้ renderer เดียวกับพิมพ์จริง — Sample = mock ครบเคส / EntityId = ข้อมูลจริงจาก Web.Api</p>
-      <iframe id="previewFrame" src="about:blank" title="PDF preview"></iframe>
+      <div id="inspector" class="inspector"><p class="muted">เปิด package แล้วคลิกตารางบน canvas เพื่อแก้คอลัมน์ / row mode / field map</p></div>
     </section>
 
     <section class="pane editor json-col" id="jsonPane">
@@ -102,6 +209,20 @@
 
   <pre id="status" class="status" role="status"></pre>
 
-  <script src="/hprp-studio/studio.js"></script>
+  <div id="studioBusyOverlay" class="studio-busy-overlay hidden" aria-hidden="true">
+    <div class="studio-busy-card" role="status" aria-live="polite">
+      <div class="studio-spinner" aria-hidden="true"></div>
+      <span class="studio-busy-label">Loading…</span>
+    </div>
+  </div>
+
+  <script src="/hprp-studio/vendor/jszip.min.js"></script>
+  <script src="/hprp-studio/studio-ui.js?v=ux-polish-4"></script>
+  <script src="/hprp-studio/table-layout-engine.js?v=ux-polish-9"></script>
+  <script src="/hprp-studio/header-layout-engine.js?v=ux-polish-18"></script>
+  <script src="/hprp-studio/designer-canvas-tools.js?v=ux-polish-4"></script>
+  <script src="/hprp-studio/designer-studio.js?v=ux-polish-18"></script>
+  <script src="/hprp-studio/library-studio.js?v=ux-polish-5"></script>
+  <script src="/hprp-studio/studio.js?v=ux-polish-5"></script>
 </body>
 </html>

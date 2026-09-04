@@ -1,16 +1,87 @@
 {
   "page": {
-    "size": "A4"
+    "size": "A4",
+    "orientation": "portrait",
+    "marginMm": 2,
+    "spacingMode": "custom",
+    "spacingMm": 0,
+    "spacingBelowMm": 0.1,
+    "spacingBesideMm": 1,
+    "border": "none"
   },
-  "header": {
-    "widget": "thaiur.header"
-  },
-  "body": [
+  "elements": [
     {
-      "widget": "clinical.hct-epo-annual-table"
+      "id": "hdr",
+      "type": "header",
+      "band": "header",
+      "preset": "clinical-header-thaiur",
+      "place": "below",
+      "box": { "xMm": 0, "yMm": 0, "wMm": 206, "hMm": 27 }
     },
     {
-      "widget": "clinical.hct-epo-copay"
+      "id": "annual",
+      "type": "config-table",
+      "band": "content",
+      "presetId": "hct-epo-annual-v1",
+      "place": "below",
+      "box": { "xMm": 0, "yMm": 29, "wMm": 206, "hMm": 230 },
+      "chrome": { "border": "thin", "headerFill": "$branding.sectionHeaderBackground" },
+      "bindings": [
+        { "path": "months[].monthLabel", "column": "month", "context": "group-label" },
+        { "path": "months[].entries[].dayLabel", "column": "day", "context": "entry" },
+        { "path": "months[].entries[].hb", "column": "hb", "context": "entry" },
+        { "path": "months[].entries[].hct", "column": "hct", "context": "entry" },
+        { "path": "months[].entries[].epoName", "column": "epoName", "context": "entry" },
+        { "path": "months[].entries[].frequencyText", "column": "frequencyText", "context": "entry" },
+        { "path": "months[].entries[].injectionDate", "column": "injectionDate", "context": "entry" },
+        { "path": "months[].entries[].remarks", "column": "remarks", "context": "entry" },
+        { "path": "months[].entries[].labIsHistorical", "column": "lab", "context": "lab-historical" }
+      ]
+    },
+    {
+      "id": "copay-banner",
+      "type": "box-text",
+      "band": "content",
+      "place": "below",
+      "box": { "xMm": 0, "yMm": 259, "wMm": 206, "hMm": 5 },
+      "text": "ปริมาณยาที่มีสิทธิได้รับโดยไม่ต้องร่วมจ่าย",
+      "bind": "$.coPayCriteria.title",
+      "align": "center",
+      "chrome": {
+        "headerFill": "$branding.sectionHeaderBackground",
+        "border": "thin",
+        "fontSize": 7.5
+      }
+    },
+    {
+      "id": "copay-nhso",
+      "type": "config-table",
+      "band": "content",
+      "presetId": "copay-nhso-v1",
+      "place": "below",
+      "manualWidth": true,
+      "box": { "xMm": 0, "yMm": 266, "wMm": 78, "hMm": 27 },
+      "chrome": { "border": "thin", "headerFill": "$branding.sectionHeaderBackground" }
+    },
+    {
+      "id": "copay-sso",
+      "type": "config-table",
+      "band": "content",
+      "presetId": "copay-sso-v1",
+      "place": "beside",
+      "manualWidth": true,
+      "box": { "xMm": 80, "yMm": 266, "wMm": 127, "hMm": 27 },
+      "chrome": { "border": "thin", "headerFill": "$branding.sectionHeaderBackground" }
+    },
+    {
+      "id": "page-of",
+      "type": "page-of",
+      "band": "super-footer",
+      "place": "below",
+      "box": { "xMm": 2, "yMm": 292, "wMm": 206, "hMm": 5 },
+      "text": "{current} / {total}",
+      "align": "center",
+      "chrome": { "border": "none", "fontSize": 8 }
     }
   ]
 }

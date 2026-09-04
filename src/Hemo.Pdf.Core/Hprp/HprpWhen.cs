@@ -53,7 +53,8 @@ public static class HprpWhen
             "<" => TryDecimal(left, out var l) && TryDecimal(comparison.Right, out var r) && l < r,
             "<=" => TryDecimal(left, out var l) && TryDecimal(comparison.Right, out var r) && l <= r,
             "!=" => !string.Equals(left, comparison.Right, StringComparison.OrdinalIgnoreCase),
-            "==" => string.Equals(left, comparison.Right, StringComparison.OrdinalIgnoreCase),
+            "==" => string.Equals(left, comparison.Right, StringComparison.OrdinalIgnoreCase)
+                || (TryDecimal(left, out var eqL) && TryDecimal(comparison.Right, out var eqR) && eqL == eqR),
             _ => HprpJsonPath.IsTruthy(selected),
         };
     }

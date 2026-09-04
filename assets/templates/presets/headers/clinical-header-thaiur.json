@@ -1,0 +1,49 @@
+{
+  "id": "clinical-header-thaiur",
+  "displayName": "Clinical header ThaiUr",
+  "tags": ["clinical", "thaiur"],
+  "titleRowHeightMm": 21.6,
+  "bottomRowHeightMm": 5.4,
+  "showDateAndHdNo": false,
+  "showHdPerWeek": true,
+  "bottomMode": "diagnosis",
+  "columns": [
+    { "id": "logo", "kind": "logo", "widthMm": 48, "bind": "$.header.logoBase64" },
+    { "id": "title", "kind": "title", "weight": 2, "bind": "$.title" },
+    { "id": "meta", "kind": "meta", "widthMm": 70 }
+  ],
+  "metaLines": [
+    { "id": "name", "label": "Name", "bind": "$.header.patient.name" },
+    { "id": "cn", "label": "CN", "bind": "$.header.patient.hn", "label2": "Age", "bind2": "$.header.patient.age" },
+    { "id": "coverage", "label": "Coverage", "bind": "$.header.patient.coverage" },
+    { "id": "id", "label": "ID Card NO.", "bind": "$.header.patient.identityNumber" }
+  ],
+  "bottomFields": [
+    { "id": "diagnosis", "label": "Diagnosis", "bind": "$.header.patient.diagnosis", "weight": 1.8 },
+    { "id": "allergy", "label": "Drug Allergy", "bind": "$.header.patient.allergies", "weight": 1.1 },
+    { "id": "hd", "label": "HD", "bind": "$.header.patient.hdPerWeek", "weight": 0.55, "whenHdPerWeek": true },
+    { "id": "twk", "label": "T/Wk", "bind": "", "weight": 0.01, "whenHdPerWeek": true }
+  ],
+  "bottomFieldSets": {
+    "diagnosis": {
+      "heightMm": 5.4,
+      "fields": [
+        { "id": "diagnosis", "label": "Diagnosis", "bind": "$.header.patient.diagnosis", "weight": 1.8, "row": 0 },
+        { "id": "allergy", "label": "Drug Allergy", "bind": "$.header.patient.allergies", "weight": 1.1, "row": 0 },
+        { "id": "hd", "label": "HD", "bind": "$.header.patient.hdPerWeek", "weight": 0.55, "whenHdPerWeek": true, "row": 0 },
+        { "id": "twk", "label": "T/Wk", "bind": "", "weight": 0.01, "whenHdPerWeek": true, "row": 0 }
+      ]
+    },
+    "checklist-patient": {
+      "heightMm": 10.8,
+      "fields": [
+        { "id": "dob", "label": "DOB", "bind": "$.patient.birthDateLabel", "weight": 1.4, "row": 0 },
+        { "id": "sessions", "label": "Sessions/wk", "bind": "$.patient.sessionsPerWeekLabel", "weight": 1.2, "row": 0 },
+        { "id": "days", "label": "Dialysis days", "bind": "$.patient.dialysisDays", "weight": 1.1, "row": 1 },
+        { "id": "mode", "label": "Mode", "bind": "$.patient.dialysisMode", "weight": 0.8, "row": 1 },
+        { "id": "underlying", "label": "Underlying", "bind": "$.patient.underlying", "weight": 1.3, "row": 1 }
+      ]
+    }
+  },
+  "chrome": { "border": "thin" }
+}

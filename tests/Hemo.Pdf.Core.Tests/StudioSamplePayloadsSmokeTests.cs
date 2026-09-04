@@ -93,33 +93,59 @@ public class StudioSamplePayloadsSmokeTests
 
         if (string.Equals(engine, ClinicalReportCatalog.HctEpo, StringComparison.OrdinalIgnoreCase))
         {
+            var presets = new HprpTablePresetCatalog(new HprpTablePresetStore(Options.Create(new HprpTemplateOptions
+            {
+                RootPath = HprpTestAssets.TemplatesRoot(),
+                PackagesRootPath = Path.Combine(HprpTestAssets.TemplatesRoot(), "_no-packages"),
+            })));
             return new Clinical01HctEpoReportRenderer(
                 new Clinical01HctEpoDataProvider(),
-                new Clinical01HctEpoComposer(store),
+                new Clinical01HctEpoComposer(store, presets),
                 quest).RenderReportAsync(context, CancellationToken.None);
         }
 
         if (string.Equals(engine, ClinicalReportCatalog.EpoDrug, StringComparison.OrdinalIgnoreCase))
         {
+            var opt = Options.Create(new HprpTemplateOptions
+            {
+                RootPath = HprpTestAssets.TemplatesRoot(),
+                PackagesRootPath = Path.Combine(HprpTestAssets.TemplatesRoot(), "_no-packages"),
+            });
+            var presets = new HprpTablePresetCatalog(new HprpTablePresetStore(opt));
+            var headers = new HprpHeaderPresetCatalog(new HprpHeaderPresetStore(opt));
             return new Clinical02EpoDrugReportRenderer(
                 new Clinical02EpoDrugDataProvider(),
-                new Clinical02EpoDrugComposer(store),
+                new Clinical02EpoDrugComposer(store, presets, headers),
                 quest).RenderReportAsync(context, CancellationToken.None);
         }
 
         if (string.Equals(engine, ClinicalReportCatalog.ProgressNote, StringComparison.OrdinalIgnoreCase))
         {
+            var opt = Options.Create(new HprpTemplateOptions
+            {
+                RootPath = HprpTestAssets.TemplatesRoot(),
+                PackagesRootPath = Path.Combine(HprpTestAssets.TemplatesRoot(), "_no-packages"),
+            });
+            var presets = new HprpTablePresetCatalog(new HprpTablePresetStore(opt));
+            var headers = new HprpHeaderPresetCatalog(new HprpHeaderPresetStore(opt));
             return new Clinical05ProgressNoteReportRenderer(
                 new Clinical05ProgressNoteDataProvider(),
-                new Clinical05ProgressNoteComposer(store),
+                new Clinical05ProgressNoteComposer(store, presets, headers),
                 quest).RenderReportAsync(context, CancellationToken.None);
         }
 
         if (string.Equals(engine, ClinicalReportCatalog.ProgressNoteChecklist, StringComparison.OrdinalIgnoreCase))
         {
+            var opt = Options.Create(new HprpTemplateOptions
+            {
+                RootPath = HprpTestAssets.TemplatesRoot(),
+                PackagesRootPath = Path.Combine(HprpTestAssets.TemplatesRoot(), "_no-packages"),
+            });
+            var presets = new HprpTablePresetCatalog(new HprpTablePresetStore(opt));
+            var headers = new HprpHeaderPresetCatalog(new HprpHeaderPresetStore(opt));
             return new Clinical05ProgressNoteChecklistReportRenderer(
                 new Clinical05ProgressNoteChecklistDataProvider(),
-                new Clinical05ProgressNoteChecklistComposer(store),
+                new Clinical05ProgressNoteChecklistComposer(store, presets, headers),
                 quest).RenderReportAsync(context, CancellationToken.None);
         }
 

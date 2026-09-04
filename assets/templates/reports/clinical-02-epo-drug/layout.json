@@ -1,16 +1,117 @@
 {
   "page": {
-    "size": "A4"
+    "size": "A4",
+    "orientation": "portrait",
+    "marginMm": 2,
+    "spacingMode": "custom",
+    "spacingMm": 0,
+    "spacingBelowMm": 0.1,
+    "spacingBesideMm": 1,
+    "border": "none"
   },
-  "header": {
-    "widget": "thaiur.header"
-  },
-  "body": [
+  "elements": [
     {
-      "widget": "clinical.epo-drug-table"
+      "id": "hdr",
+      "type": "header",
+      "band": "header",
+      "preset": "clinical-header-thaiur",
+      "place": "below",
+      "box": { "xMm": 0, "yMm": 0, "wMm": 206, "hMm": 27 }
     },
     {
-      "widget": "clinical.hct-epo-copay"
+      "id": "meta",
+      "type": "box-text",
+      "band": "content",
+      "place": "below",
+      "box": { "xMm": 0, "yMm": 29, "wMm": 206, "hMm": 8 },
+      "chrome": {
+        "border": "thin",
+        "headerFill": "#ffffff",
+        "fontSize": 8
+      },
+      "items": [
+        {
+          "label": "เดือน",
+          "bind": "$.meta.monthLabel",
+          "label2": "พ.ศ.",
+          "bind2": "$.meta.yearBe",
+          "align": "left",
+          "flex": 1.2
+        },
+        {
+          "label": "ยา EPO",
+          "bind": "$.meta.epoName",
+          "align": "left",
+          "flex": 1.4
+        },
+        {
+          "label": "เข็ม/สัปดาห์",
+          "bind": "$.meta.needlesPerWeek",
+          "align": "right",
+          "flex": 0.9
+        }
+      ]
+    },
+    {
+      "id": "injections",
+      "type": "config-table",
+      "band": "content",
+      "presetId": "epo-drug-injections-v1",
+      "place": "below",
+      "box": { "xMm": 0, "yMm": 39, "wMm": 206, "hMm": 218 },
+      "chrome": { "border": "thin", "headerFill": "$branding.sectionHeaderBackground" },
+      "bindings": [
+        { "path": "rows[].dateLabel", "column": "date", "context": "freedom-row" },
+        { "path": "rows[].doseIndex", "column": "dose", "context": "freedom-row" },
+        { "path": "rows[].stickerText", "column": "sticker", "context": "freedom-row" },
+        { "path": "rows[].nurseName", "column": "nurse", "context": "freedom-row" },
+        { "path": "rows[].remarks", "column": "remarks", "context": "freedom-row" }
+      ]
+    },
+    {
+      "id": "copay-banner",
+      "type": "box-text",
+      "band": "content",
+      "place": "below",
+      "box": { "xMm": 0, "yMm": 259, "wMm": 206, "hMm": 5 },
+      "text": "ปริมาณยาที่มีสิทธิได้รับโดยไม่ต้องร่วมจ่าย",
+      "bind": "$.coPayCriteria.title",
+      "align": "center",
+      "chrome": {
+        "headerFill": "$branding.sectionHeaderBackground",
+        "border": "thin",
+        "fontSize": 7.5
+      }
+    },
+    {
+      "id": "copay-nhso",
+      "type": "config-table",
+      "band": "content",
+      "presetId": "copay-nhso-v1",
+      "place": "below",
+      "manualWidth": true,
+      "box": { "xMm": 0, "yMm": 266, "wMm": 78, "hMm": 27 },
+      "chrome": { "border": "thin", "headerFill": "$branding.sectionHeaderBackground" }
+    },
+    {
+      "id": "copay-sso",
+      "type": "config-table",
+      "band": "content",
+      "presetId": "copay-sso-v1",
+      "place": "beside",
+      "manualWidth": true,
+      "box": { "xMm": 80, "yMm": 266, "wMm": 127, "hMm": 27 },
+      "chrome": { "border": "thin", "headerFill": "$branding.sectionHeaderBackground" }
+    },
+    {
+      "id": "page-of",
+      "type": "page-of",
+      "band": "super-footer",
+      "place": "below",
+      "box": { "xMm": 2, "yMm": 292, "wMm": 206, "hMm": 5 },
+      "text": "{current} / {total}",
+      "align": "center",
+      "chrome": { "border": "none", "fontSize": 8 }
     }
   ]
 }

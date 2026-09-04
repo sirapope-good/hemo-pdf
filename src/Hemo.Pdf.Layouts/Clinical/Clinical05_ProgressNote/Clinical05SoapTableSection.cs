@@ -81,10 +81,16 @@ public sealed class Clinical05SoapTableSection
 
             t.Header(header =>
             {
-                HeaderCell(header, HprpLabels.Get(labels, "colDate", "DATE"), border, headerFill);
-                HeaderCell(header, HprpLabels.Get(labels, "colProgress", "PROGRESS NOTE"), border, headerFill);
-                HeaderCell(header, HprpLabels.Get(labels, "colOrderOneDay", "ORDER FOR ONE DAY"), border, headerFill);
-                HeaderCell(header, HprpLabels.Get(labels, "colOrderContinuation", "ORDER FOR CONTINUATION"), border, headerFill);
+                var headerHeightMm = HprpChrome.ResolveHeaderHeightMm(
+                    chrome,
+                    HemosheetThaiUrStyle.HeaderBarHeightMm);
+                var headerAlign = HprpChrome.ResolveHeaderAlign(chrome);
+                var headerPaddingMm = HprpChrome.ResolveHeaderPaddingMm(chrome);
+                var headerFont = chrome?.FontSize is > 0 and < 48 ? chrome.FontSize : null;
+                HeaderCell(header, HprpLabels.Get(labels, "colDate", "DATE"), border, headerFill, headerHeightMm, headerAlign, headerPaddingMm, headerFont);
+                HeaderCell(header, HprpLabels.Get(labels, "colProgress", "PROGRESS NOTE"), border, headerFill, headerHeightMm, headerAlign, headerPaddingMm, headerFont);
+                HeaderCell(header, HprpLabels.Get(labels, "colOrderOneDay", "ORDER FOR ONE DAY"), border, headerFill, headerHeightMm, headerAlign, headerPaddingMm, headerFont);
+                HeaderCell(header, HprpLabels.Get(labels, "colOrderContinuation", "ORDER FOR CONTINUATION"), border, headerFill, headerHeightMm, headerAlign, headerPaddingMm, headerFont);
             });
 
             var rows = vm.Sessions ?? [];
@@ -100,16 +106,39 @@ public sealed class Clinical05SoapTableSection
         });
     }
 
-    private static void HeaderCell(TableCellDescriptor t, string text, float border, string headerFill)
+    private static void HeaderCell(
+        TableCellDescriptor t,
+        string text,
+        float border,
+        string headerFill,
+        float heightMm,
+        HprpHeaderAlign align,
+        float paddingMm,
+        float? fontSize)
     {
+        // MinHeight (not Height): exact Height + label taller than the bar throws
+        // DocumentLayoutException and Studio keeps the previous PDF.
         t.Cell()
             .Border(border)
             .Background(headerFill)
-            .Height(HemosheetThaiUrStyle.HeaderBarHeightMm, Mm)
-            .AlignMiddle()
-            .AlignCenter()
-            .Text(text)
-            .Style(ThaiUrText.Bold);
+            .MinHeight(heightMm, Mm)
+            .Element(inner =>
+            {
+                IContainer box = inner;
+                if (paddingMm > 0)
+                    box = box.Padding(paddingMm, Mm);
+
+                box = align switch
+                {
+                    HprpHeaderAlign.Top => box.AlignTop(),
+                    HprpHeaderAlign.Bottom => box.AlignBottom(),
+                    _ => box.AlignMiddle(),
+                };
+
+                var span = box.AlignCenter().Text(text).Style(ThaiUrText.Bold);
+                if (fontSize is > 0)
+                    span.FontSize(fontSize.Value);
+            });
     }
 
     private static void DateCell(IContainer c, string? dateLabel, float heightMm, float border)
@@ -133,7 +162,8 @@ public sealed class Clinical05SoapTableSection
             .Style(ThaiUrText.Base);
     }
 
-    private static void SoapCell(
+    /// <summary>Nested S/O/A/P progress cell used by composition and config-table <c>soap-progress</c>.</summary>
+    public static void ComposeProgressCell(
         IContainer c,
         Clinical05SoapSession? row,
         float heightMm,
@@ -180,6 +210,14 @@ public sealed class Clinical05SoapTableSection
                 col.Item().Height(pMm, Mm).AlignTop().Element(band => SoapBand(band, "P", row?.Plan));
             });
     }
+
+    private static void SoapCell(
+        IContainer c,
+        Clinical05SoapSession? row,
+        float heightMm,
+        float border,
+        IReadOnlyList<float> bandWeights) =>
+        ComposeProgressCell(c, row, heightMm, border, bandWeights);
 
     private static void SoapBand(IContainer c, string letter, string? value)
     {

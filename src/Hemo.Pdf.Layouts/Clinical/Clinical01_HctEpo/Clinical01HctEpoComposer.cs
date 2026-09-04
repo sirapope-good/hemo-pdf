@@ -1,7 +1,11 @@
+using System.Text.Json;
 using Hemo.Pdf.Core.Abstractions;
 using Hemo.Pdf.Core.Context;
 using Hemo.Pdf.Core.Hprp;
+using Hemo.Pdf.Core.Models;
 using Hemo.Pdf.Core.Models.Clinical;
+using Hemo.Pdf.Layouts.Absolute;
+using Hemo.Pdf.Layouts.Designer;
 using Hemo.Pdf.Layouts.Hprp;
 using Hemo.Pdf.Rendering;
 using Hemo.Pdf.Sections.ThaiUr;
@@ -31,35 +35,62 @@ public sealed class Clinical01HctEpoComposer : ILayoutComposer
     private readonly HctEpoAnnualTableSection _annualTable = new();
     private readonly HctEpoCoPayCriteriaSection _coPayCriteria = new();
     private readonly IHprpTemplateStore? _templates;
+    private readonly IHprpTablePresetCatalog? _presets;
+    private readonly IHprpHeaderPresetCatalog? _headerPresets;
 
-    public Clinical01HctEpoComposer(IHprpTemplateStore? templates = null)
+    public Clinical01HctEpoComposer(
+        IHprpTemplateStore? templates = null,
+        IHprpTablePresetCatalog? presets = null,
+        IHprpHeaderPresetCatalog? headerPresets = null)
     {
         _templates = templates;
+        _presets = presets;
+        _headerPresets = headerPresets;
     }
 
     public object Compose(object dataModel, PdfReportContext context)
     {
         var vm = (HctEpoReportViewModel)dataModel;
-        var margin = HemosheetThaiUrStyle.PageMarginMm;
-        var monthRowHeightMm = BudgetMonthRowHeightMm(vm.CoPayCriteria);
-        var labels = HprpLabelResolver.Resolve(_templates, context);
         var package = HprpLayoutPlan.TryGetPackage(_templates, context);
+
+        // Designer canvas: config-table + mm elements.
+        if (package is not null && HprpLayoutModes.IsDesigner(package.Manifest))
+        {
+            JsonElement? data = context.Data is System.Text.Json.JsonElement je ? je : null;
+            var designerVm = DesignerCanvasViewModel.FromPackage(
+                package,
+                data,
+                HprpLabelResolver.Resolve(_templates, context),
+                _presets?.LoadAll(),
+                _headerPresets?.LoadAll());
+            return DesignerPageComposer.Compose(designerVm, context);
+        }
+
+        // Absolute clinical-01 packs reuse dense section composers via mm placement.
+        if (package is not null && HprpLayoutModes.IsAbsolute(package.Manifest))
+        {
+            var absolute = AbsoluteCanvasViewModel.FromPackage(
+                package,
+                vm,
+                HprpLabelResolver.Resolve(_templates, context));
+            return AbsoluteCanvasComposer.Compose(absolute, context);
+        }
+
+        var page = HprpPageLayout.FromPackage(
+            package,
+            HprpPageFallback.Uniform(HemosheetThaiUrStyle.PageMarginMm, SectionSpacingMm));
+        var monthRowHeightMm = BudgetMonthRowHeightMm(vm.CoPayCriteria, page.Vertical);
+        var labels = HprpLabelResolver.Resolve(_templates, context);
         var nodes = HprpLayoutPlan.ResolveNodes(
             package,
             HprpClinicalWidgetSets.Clinical01DefaultOrder,
             HprpClinicalWidgetSets.Clinical01Allowed);
 
-        return new QuestLayout
-        {
-            MarginMillimeters = margin,
-            MarginTop = margin,
-            MarginBottom = margin,
-            MarginLeft = margin,
-            MarginRight = margin,
-            Header = null,
-            Content = c => ComposeContent(c, vm, monthRowHeightMm, labels, nodes, context),
-            Footer = null,
-        };
+        return HprpQuestPages.Create(
+            page,
+            header: null,
+            content: c => ComposeContent(c, vm, monthRowHeightMm, labels, nodes, context, page.SpacingMm),
+            footer: null);
     }
 
     private void ComposeContent(
@@ -68,7 +99,8 @@ public sealed class Clinical01HctEpoComposer : ILayoutComposer
         float monthRowHeightMm,
         IReadOnlyDictionary<string, string> labels,
         IReadOnlyList<HprpLayoutNode> nodes,
-        PdfReportContext context)
+        PdfReportContext context,
+        float spacingMm)
     {
         var handlers = new Dictionary<string, Action<IContainer, HprpLayoutNode>>(StringComparer.OrdinalIgnoreCase)
         {
@@ -81,7 +113,7 @@ public sealed class Clinical01HctEpoComposer : ILayoutComposer
 
         container.Column(col =>
         {
-            col.Spacing(SectionSpacingMm);
+            col.Spacing(spacingMm);
             HprpWidgetDispatch.ComposeColumn(
                 col,
                 nodes,
@@ -94,10 +126,11 @@ public sealed class Clinical01HctEpoComposer : ILayoutComposer
     /// Divide leftover A4 content height across 12 month rows so the co-pay block
     /// sits flush above the page-number footer.
     /// </summary>
-    internal static float BudgetMonthRowHeightMm(HctEpoCoPayCriteria criteria)
+    internal static float BudgetMonthRowHeightMm(HctEpoCoPayCriteria criteria, float verticalMarginMm = -1)
     {
+        var margin = verticalMarginMm >= 0 ? verticalMarginMm : 2f * HemosheetThaiUrStyle.PageMarginMm;
         var pageContentMm = A4HeightMm
-            - 2f * HemosheetThaiUrStyle.PageMarginMm
+            - margin
             - PageNumberFooterMm;
 
         // ShowDateAndHdNo = false → title band + single diagnosis/allergy row.

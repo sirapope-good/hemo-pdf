@@ -45,7 +45,7 @@ public sealed class KeyValueTableSection : IContentSection
 
         var border = HprpChrome.ResolveBorderWidth(chrome);
         var headerFill = HprpChrome.ResolveHeaderFill(chrome, context, PdfSectionMetrics.SectionHeaderBackground);
-        var fontSize = HprpChrome.ResolveFontSize(chrome, PdfStyleDefaults.Body.DataFontSize);
+        var fontSize = HprpChrome.ResolveFontSize(chrome, context.DefaultFontSize ?? PdfStyleDefaults.Body.DataFontSize);
         var weights = HprpChrome.ParseColumnWeights(chrome?.ColumnWidths, 2);
 
         container.Border(border).Table(table =>

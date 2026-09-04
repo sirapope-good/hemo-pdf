@@ -61,6 +61,13 @@ public sealed class HprpWidgetRecipe
     [JsonPropertyName("labelKeys")]
     public IReadOnlyList<string> LabelKeys { get; init; } = [];
 
+    /// <summary>
+    /// When true, Studio absolute palette can place this dense widget as
+    /// <c>type: dense</c> + <c>widget</c> id (mm box; pixels stay in C#).
+    /// </summary>
+    [JsonPropertyName("absoluteCapable")]
+    public bool AbsoluteCapable { get; init; }
+
     public bool AllowsBind(string? bind)
     {
         if (string.IsNullOrWhiteSpace(bind))
@@ -111,6 +118,7 @@ public static class HprpWidgetRecipes
             Kind = HprpWidgetRecipe.KindDense,
             Slot = HprpWidgetRecipe.SlotBody,
             AllowedOn = [ClinicalReportCatalog.HctEpo],
+            AbsoluteCapable = true,
             BindFields = binds,
             DefaultColumnPlan =
             [
@@ -137,6 +145,7 @@ public static class HprpWidgetRecipes
         Kind = HprpWidgetRecipe.KindDense,
         Slot = HprpWidgetRecipe.SlotBody,
         AllowedOn = [ClinicalReportCatalog.HctEpo, ClinicalReportCatalog.EpoDrug],
+        AbsoluteCapable = true,
         ChromeDefaults = new HprpChrome
         {
             HeaderFill = HprpChrome.BrandingHeaderFill,
@@ -185,10 +194,12 @@ public static class HprpWidgetRecipes
                 Id = HprpWidgetIds.ThaiUrHeader,
                 Kind = HprpWidgetRecipe.KindDense,
                 Slot = HprpWidgetRecipe.SlotBody,
+                AbsoluteCapable = true,
                 AllowedOn =
                 [
                     ClinicalReportCatalog.HctEpo,
                     ClinicalReportCatalog.EpoDrug,
+                    ClinicalReportCatalog.Prescription,
                     ClinicalReportCatalog.ProgressNote,
                     ClinicalReportCatalog.ConsentTh,
                     ClinicalReportCatalog.ConsentEn,
@@ -217,10 +228,38 @@ public static class HprpWidgetRecipes
                     "chrome.headerFill",
                     "chrome.border",
                     "chrome.fontSize",
+                    "chrome.headerHeightMm",
+                    "chrome.headerAlign",
+                    "chrome.headerPaddingMm",
                     "chrome.rowHeightMm",
                     "chrome.columnWidths",
                     "chrome.bandWeights",
                     "when",
+                ],
+            },
+            new()
+            {
+                Id = HprpWidgetIds.ClinicalPrescriptionColumns,
+                Kind = HprpWidgetRecipe.KindDense,
+                Slot = HprpWidgetRecipe.SlotBody,
+                AllowedOn = [ClinicalReportCatalog.Prescription],
+                InspectorFields =
+                [
+                    "chrome.headerFill",
+                    "chrome.border",
+                    "chrome.fontSize",
+                    "chrome.headerHeightMm",
+                    "when",
+                ],
+                LabelKeys =
+                [
+                    "colDateTime",
+                    "colPrescription",
+                    "colPhysiciansOrder",
+                    "sectionMedPresc",
+                    "sectionMedHist",
+                    "doctorSignatureBlank",
+                    "doctorSignatureNamed",
                 ],
             },
             new()
@@ -308,12 +347,14 @@ public static class HprpWidgetRecipes
                 AllowedOn = [],
                 InspectorFields = type switch
                 {
-                    "key-value-table" => ["title", "rows", "chrome.headerFill", "chrome.border", "when"],
-                    "field-grid" => ["title", "fields", "columns", "chrome.headerFill", "when"],
-                    "data-grid" => ["title", "bindRows", "columnHeaders", "chrome.headerFill", "when"],
-                    "text" => ["title", "content", "bind", "style", "when"],
+                    "key-value-table" => ["title", "rows", "chrome.headerFill", "chrome.border", "chrome.fontSize", "when"],
+                    "field-grid" => ["title", "fields", "columns", "chrome.headerFill", "chrome.fontSize", "when"],
+                    "data-grid" => ["title", "bindRows", "columnHeaders", "chrome.headerFill", "chrome.fontSize", "when"],
+                    "text" => ["title", "content", "bind", "style", "chrome.fontSize", "when"],
                     "signature" => ["title", "when"],
                     "patient-info" => ["when"],
+                    "row" => ["gapMm", "when"],
+                    "column-stack" => ["when"],
                     _ => ["title", "when"],
                 },
             })

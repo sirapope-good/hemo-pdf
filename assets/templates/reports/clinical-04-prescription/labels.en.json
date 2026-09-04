@@ -1,7 +1,13 @@
 {
-  "hn": "HN",
-  "patientName": "Patient name",
-  "unit": "Unit",
-  "reportDate": "Report date",
-  "title": "Hemodialysis Prescription"
+  "colDateTime": "Date / Time",
+  "colPrescription": "Prescription / Review of Treatment",
+  "colPhysiciansOrder": "Physicians Order",
+  "sectionMedPresc": "Medication",
+  "sectionMedHist": "Medication History",
+  "doctorSignatureBlank": "(MD/ ........................................)",
+  "doctorSignatureNamed": "(MD/ {0})",
+  "sectionHemo": "Hemodialysis Prescription",
+  "sectionDoctorInfo": "Doctor Prescription Info",
+  "doctorName": "Doctor Name:",
+  "doctorUpdated": "Updated:"
 }

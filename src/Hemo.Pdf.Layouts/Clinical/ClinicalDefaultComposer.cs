@@ -3,7 +3,10 @@ using Hemo.Pdf.Core.Context;
 using Hemo.Pdf.Core.Hprp;
 using Hemo.Pdf.Core.Models;
 using Hemo.Pdf.Core.Models.Preview;
+using Hemo.Pdf.Layouts.Absolute;
+using Hemo.Pdf.Layouts.Designer;
 using Hemo.Pdf.Layouts.Base;
+using Hemo.Pdf.Layouts.Hprp;
 using Hemo.Pdf.Rendering;
 using Hemo.Pdf.Sections.Abstractions;
 using Hemo.Pdf.Sections.Content;
@@ -29,23 +32,25 @@ public sealed class ClinicalDefaultComposer : BaseReportComposer<HprpBoundViewMo
 
     public override object Compose(object dataModel, PdfReportContext context)
     {
+        if (dataModel is DesignerCanvasViewModel designer)
+            return DesignerPageComposer.Compose(designer, context);
+
+        if (dataModel is AbsoluteCanvasViewModel absolute)
+            return AbsoluteCanvasComposer.Compose(absolute, context);
+
         var viewModel = (HprpBoundViewModel)dataModel;
         if (!viewModel.UseThaiUrHeader)
             return base.Compose(dataModel, context);
 
         PrepareContext(context, viewModel);
-        var margin = HemosheetThaiUrStyle.PageMarginMm;
-        return new QuestLayout
-        {
-            MarginMillimeters = margin,
-            MarginTop = margin,
-            MarginBottom = margin,
-            MarginLeft = margin,
-            MarginRight = margin,
-            Header = null,
-            Footer = null,
-            Content = c => ComposeThaiUrContent(c, viewModel, context),
-        };
+        var page = HprpPageLayout.FromPackage(
+            context.LayoutPackage,
+            HprpPageFallback.Uniform(HemosheetThaiUrStyle.PageMarginMm, ThaiUrSectionSpacingMm));
+        return HprpQuestPages.Create(
+            page,
+            header: null,
+            content: c => ComposeThaiUrContent(c, viewModel, context, page),
+            footer: null);
     }
 
     protected override void ComposeContent(
@@ -53,26 +58,29 @@ public sealed class ClinicalDefaultComposer : BaseReportComposer<HprpBoundViewMo
         HprpBoundViewModel viewModel,
         PdfReportContext context)
     {
-        ComposeBody(container, viewModel, context, includeThaiUrHeader: false);
+        var page = HprpPageLayout.FromPackage(context.LayoutPackage, ReportPageFallback);
+        ComposeBody(container, viewModel, context, includeThaiUrHeader: false, page);
     }
 
     private static void ComposeThaiUrContent(
         IContainer container,
         HprpBoundViewModel viewModel,
-        PdfReportContext context)
+        PdfReportContext context,
+        HprpResolvedPage page)
     {
-        ComposeBody(container, viewModel, context, includeThaiUrHeader: true);
+        ComposeBody(container, viewModel, context, includeThaiUrHeader: true, page);
     }
 
     private static void ComposeBody(
         IContainer container,
         HprpBoundViewModel viewModel,
         PdfReportContext context,
-        bool includeThaiUrHeader)
+        bool includeThaiUrHeader,
+        HprpResolvedPage page)
     {
         container.Column(col =>
         {
-            col.Spacing(includeThaiUrHeader ? ThaiUrSectionSpacingMm : 6);
+            col.Spacing(page.SpacingMm);
 
             if (includeThaiUrHeader)
             {
@@ -82,26 +90,39 @@ public sealed class ClinicalDefaultComposer : BaseReportComposer<HprpBoundViewMo
 
             foreach (var block in viewModel.Blocks)
             {
-                var drawn = includeThaiUrHeader ? WithPageFillRowHeight(block) : block;
+                var drawn = includeThaiUrHeader ? WithPageFillRowHeight(block, page) : block;
                 col.Item().Element(c => ReportBlockPdfComposer.Compose(c, drawn, context));
             }
         });
     }
 
-    private static ReportBlock WithPageFillRowHeight(ReportBlock block)
+    private static ReportBlock WithPageFillRowHeight(ReportBlock block, HprpResolvedPage page)
     {
         if (block is not DataGridReportBlock grid || grid.Rows.Count == 0)
             return block;
 
-        var rowHeightMm = BudgetLabRowHeightMm(grid.Rows.Count + 1);
-        return new DataGridReportBlock
+        var rowHeightMm = BudgetLabRowHeightMm(grid.Rows.Count + 1, page.Vertical);
+        return ApplyRowHeightToGrid(grid, rowHeightMm);
+    }
+
+    internal static DataGridReportBlock ApplyRowHeightToGrid(DataGridReportBlock grid, float rowHeightMm) =>
+        new()
         {
             Title = grid.Title,
             Columns = grid.Columns,
             ColumnWeights = grid.ColumnWeights,
             Rows = grid.Rows,
             Chrome = WithRowHeight(grid.Chrome, rowHeightMm),
+            Box = grid.Box,
         };
+
+    /// <summary>Splits available height across header + body rows (designer content box or composition band).</summary>
+    internal static float BudgetRowHeightForTable(int tableRowCount, float availableHeightMm)
+    {
+        if (tableRowCount <= 0)
+            return MinLabRowHeightMm;
+
+        return Math.Max(availableHeightMm / tableRowCount, MinLabRowHeightMm);
     }
 
     private static HprpChrome WithRowHeight(HprpChrome? chrome, float rowHeightMm) =>
@@ -112,24 +133,23 @@ public sealed class ClinicalDefaultComposer : BaseReportComposer<HprpBoundViewMo
             FontSize = chrome?.FontSize,
             RowHeightMm = rowHeightMm,
             ColumnWidths = chrome?.ColumnWidths,
+            BandWeights = chrome?.BandWeights,
         };
 
     /// <summary>
     /// Split leftover A4 height across DATE header + body rows so a blank lab form
     /// sits flush at the bottom of the page.
     /// </summary>
-    internal static float BudgetLabRowHeightMm(int tableRowCount)
+    internal static float BudgetLabRowHeightMm(int tableRowCount, float verticalMarginMm = -1)
     {
-        var pageContentMm = A4HeightMm - 2f * HemosheetThaiUrStyle.PageMarginMm;
+        var margin = verticalMarginMm >= 0 ? verticalMarginMm : 2f * HemosheetThaiUrStyle.PageMarginMm;
+        var pageContentMm = A4HeightMm - margin;
         var headerMm = HemosheetThaiUrStyle.TitleHeightMm + HemosheetThaiUrStyle.MetaRowHeightMm;
         var availableMm = pageContentMm
             - headerMm
             - ThaiUrSectionSpacingMm
             - LayoutSafetyMm;
 
-        if (tableRowCount <= 0)
-            return MinLabRowHeightMm;
-
-        return Math.Max(availableMm / tableRowCount, MinLabRowHeightMm);
+        return BudgetRowHeightForTable(tableRowCount, availableMm);
     }
 }

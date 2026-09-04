@@ -15,6 +15,24 @@
   "patientGender": "M",
   "expiryMonths": 6,
   "signedDate": { "day": "17", "month": "สิงหาคม", "year": "2569" },
+  "header": {
+    "logoBase64": null,
+    "patient": {
+      "name": "เดรโก มัลฟอย",
+      "hn": "184706",
+      "identityNumber": "3120600881117",
+      "age": 31,
+      "allergies": ["ไม่มีแพ้ยา"],
+      "coverage": "Social Security",
+      "diagnosis": "-",
+      "underlying": "-",
+      "hdPerWeek": null
+    },
+    "unit": { "id": -1, "fullName": "Hemodialysis Unit" },
+    "layoutContext": {
+      "reportSettings": { "showDateAndHdNo": false, "showHdPerWeek": false }
+    }
+  },
   "bodyParagraphs": [
     { "text": "ข้าพเจ้าได้รับทราบและเข้าใจถึงวิธีการรักษาโดยการฟอกเลือดด้วยเครื่องไตเทียม ดังต่อไปนี้", "sub": false },
     { "text": "1. การฟอกเลือดด้วยเครื่องไตเทียม เป็นการกำจัดของเสียและน้ำส่วนเกินออกจากร่างกาย", "sub": false },

@@ -7,6 +7,8 @@ using Hemo.Pdf.Core.Hprp;
 using Hemo.Pdf.Core.Models;
 using Hemo.Pdf.Core.Models.Hemosheet;
 using Hemo.Pdf.Core.Models.Preview;
+using Hemo.Pdf.Layouts.Absolute;
+using Hemo.Pdf.Layouts.Clinical.Clinical01_HctEpo;
 using Hemo.Pdf.Sections.Preview;
 
 namespace Hemo.Pdf.Layouts.Clinical;
@@ -20,6 +22,9 @@ public sealed class ClinicalDefaultDataProvider : IReportDataProvider
     };
 
     private readonly IHprpTemplateStore? _templates;
+    private readonly Clinical01HctEpoDataProvider _clinical01;
+    private readonly IHprpTablePresetCatalog? _presets;
+    private readonly IHprpHeaderPresetCatalog? _headerPresets;
 
     public ClinicalDefaultDataProvider()
         : this(null)
@@ -27,17 +32,36 @@ public sealed class ClinicalDefaultDataProvider : IReportDataProvider
     }
 
     public ClinicalDefaultDataProvider(IHprpTemplateStore? templates)
+        : this(templates, new Clinical01HctEpoDataProvider(), null, null)
     {
-        _templates = templates;
     }
 
-    public Task<object> GetDataAsync(PdfReportContext context, CancellationToken cancellationToken)
+    public ClinicalDefaultDataProvider(
+        IHprpTemplateStore? templates,
+        Clinical01HctEpoDataProvider clinical01,
+        IHprpTablePresetCatalog? presets = null,
+        IHprpHeaderPresetCatalog? headerPresets = null)
+    {
+        _templates = templates;
+        _clinical01 = clinical01;
+        _presets = presets;
+        _headerPresets = headerPresets;
+    }
+
+    public async Task<object> GetDataAsync(PdfReportContext context, CancellationToken cancellationToken)
     {
         cancellationToken.ThrowIfCancellationRequested();
 
-        var package = _templates?.TryGetCached(
-            context.TenantCode,
-            ClinicalReportCatalog.ResolveEngineTemplateId(context.ReportTemplateId));
+        var package = context.LayoutPackage
+            ?? _templates?.TryGetCached(
+                context.TenantCode,
+                ClinicalReportCatalog.ResolveEngineTemplateId(context.ReportTemplateId));
+
+        if (package is not null && HprpLayoutModes.IsDesigner(package.Manifest))
+            return BuildDesignerAsync(context, package);
+
+        if (package is not null && HprpLayoutModes.IsAbsolute(package.Manifest))
+            return await BuildAbsoluteAsync(context, package, cancellationToken);
 
         var title = ResolveTitle(context, package);
         if (package is not null && package.Layout.Body.Count > 0)
@@ -47,7 +71,7 @@ public sealed class ClinicalDefaultDataProvider : IReportDataProvider
                 HprpWidgetIds.ThaiUrHeader,
                 StringComparison.OrdinalIgnoreCase);
 
-            return Task.FromResult<object>(new HprpBoundViewModel
+            return new HprpBoundViewModel
             {
                 Title = title,
                 Subtitle = context.Metadata.Subtitle
@@ -56,11 +80,50 @@ public sealed class ClinicalDefaultDataProvider : IReportDataProvider
                 SectionHeaderFill = HprpChrome.FirstFileHeaderFillFromLayout(package.Layout),
                 UseThaiUrHeader = useThaiUrHeader,
                 Header = useThaiUrHeader ? ReadThaiUrHeader(context.Data) : null,
-            });
+            };
         }
 
-        return Task.FromResult<object>(BuildFallback(context, title));
+        return BuildFallback(context, title);
     }
+
+    private object BuildDesignerAsync(PdfReportContext context, HprpPackage package)
+    {
+        JsonElement? data = context.Data is JsonElement je && je.ValueKind == JsonValueKind.Object ? je : null;
+        return DesignerCanvasViewModel.FromPackage(
+            package,
+            data,
+            package.GetLabels(package.Manifest.Language),
+            _presets?.LoadAll(),
+            _headerPresets?.LoadAll());
+    }
+
+    private async Task<object> BuildAbsoluteAsync(
+        PdfReportContext context,
+        HprpPackage package,
+        CancellationToken cancellationToken)
+    {
+        object? bound = null;
+        var adapter = package.Manifest.DataAdapter;
+
+        if (string.Equals(adapter, HprpDataAdapterIds.Clinical01HctEpo, StringComparison.OrdinalIgnoreCase)
+            || AbsoluteUsesClinical01Widgets(package))
+        {
+            bound = await _clinical01.GetDataAsync(context, cancellationToken);
+        }
+
+        return AbsoluteCanvasViewModel.FromPackage(
+            package,
+            bound,
+            package.GetLabels(package.Manifest.Language));
+    }
+
+    private static bool AbsoluteUsesClinical01Widgets(HprpPackage package) =>
+        package.Layout.Widgets.Any(w =>
+        {
+            var id = w.ResolveDenseWidgetId();
+            return !string.IsNullOrWhiteSpace(id)
+                && AbsoluteDenseWidgetHost.Clinical01WidgetIds.Contains(id);
+        });
 
     private static HemosheetReportViewModel ReadThaiUrHeader(JsonElement? data)
     {

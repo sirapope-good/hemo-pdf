@@ -1,0 +1,16 @@
+{
+  "id": "progress-note-checklist-notes-v1",
+  "displayName": "Progress note checklist · text notes",
+  "tags": ["clinical", "progress-note", "checklist"],
+  "elements": [
+    {
+      "id": "text-notes",
+      "type": "dense",
+      "band": "content",
+      "widget": "clinical.checklist-text-notes",
+      "place": "below",
+      "omitWhenEmpty": "$.textNotes",
+      "box": { "xMm": 0, "yMm": 0, "wMm": 269, "hMm": 24 }
+    }
+  ]
+}

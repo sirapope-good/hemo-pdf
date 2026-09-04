@@ -1,8 +1,9 @@
 {
   "id": "clinical-10-patient-data",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "displayName": "Patient Data Record",
   "engineVersion": 1,
+  "layoutMode": "designer",
   "dataAdapter": "flatten-dto",
   "requiresSignature": false,
   "language": "th",

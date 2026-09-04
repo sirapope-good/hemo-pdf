@@ -1,0 +1,24 @@
+{
+  "id": "hct-epo-annual-v1",
+  "displayName": "Annual month grid (3 slots)",
+  "rowMode": "annual",
+  "groupCount": 12,
+  "slotsPerGroup": 3,
+  "dateColumns": {
+    "monthWeight": 0.45,
+    "dayWeight": 1.35,
+    "dateHeaderLabelKey": "colDate"
+  },
+  "columns": [
+    { "id": "hb", "labelKey": "colHb", "title": "Hb(g/dL)", "weight": 1.0, "center": true, "isLab": true },
+    { "id": "hct", "labelKey": "colHct", "title": "Hct(%)", "weight": 1.0, "center": true, "isLab": true },
+    { "id": "epoName", "labelKey": "colEpo", "title": "EPO", "weight": 1.8, "center": false, "isLab": false },
+    { "id": "frequencyText", "labelKey": "colFrequency", "title": "จำนวนเข็ม/Wk", "weight": 1.8, "center": false, "isLab": false },
+    { "id": "injectionDate", "labelKey": "colInjectDay", "title": "วันฉีด", "weight": 1.2, "center": true, "isLab": false },
+    { "id": "remarks", "labelKey": "colRemarks", "title": "หมายเหตุ", "weight": 1.4, "center": false, "isLab": false }
+  ],
+  "chrome": {
+    "headerFill": "$branding.sectionHeaderBackground",
+    "border": "thin"
+  }
+}

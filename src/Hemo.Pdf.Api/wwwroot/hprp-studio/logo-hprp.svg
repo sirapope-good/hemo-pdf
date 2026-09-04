@@ -1,0 +1,14 @@
+<svg width="658" height="243" viewBox="0 0 658 243" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+  <rect width="62" height="243" fill="currentColor"/>
+  <rect x="80" width="62" height="243" fill="currentColor"/>
+  <rect x="298" width="62" height="243" fill="currentColor"/>
+  <path d="M234.5 0C269.57 0 298 28.4299 298 63.5C298 98.5701 269.57 127 234.5 127H167V0H234.5ZM203 35V92H233.5C249.24 92 262 79.2401 262 63.5C262 47.7599 249.24 35 233.5 35H203Z" fill="currentColor"/>
+  <path d="M552.5 0C587.57 0 616 28.4299 616 63.5C616 98.5701 587.57 127 552.5 127H485V0H552.5ZM521 35V92H551.5C567.24 92 580 79.2401 580 63.5C580 47.7599 567.24 35 551.5 35H521Z" fill="currentColor"/>
+  <path d="M329 0H396.5C431.57 0 460 28.4299 460 63.5V63.5C460 98.5701 431.57 127 396.5 127H329V0Z" fill="currentColor"/>
+  <rect x="130" width="12" height="243" fill="currentColor"/>
+  <path d="M359 126H423L512 243H448L359 126Z" fill="currentColor"/>
+  <rect x="167" width="12" height="243" fill="currentColor"/>
+  <rect x="485" width="12" height="243" fill="currentColor"/>
+  <rect y="128" width="13" height="658" transform="rotate(-90 0 128)" fill="currentColor"/>
+  <circle cx="643" cy="153" r="15" fill="currentColor"/>
+</svg>

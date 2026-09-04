@@ -1,7 +1,10 @@
+using System.Text.Json;
 using Hemo.Pdf.Core.Abstractions;
 using Hemo.Pdf.Core.Context;
 using Hemo.Pdf.Core.Hprp;
+using Hemo.Pdf.Core.Models;
 using Hemo.Pdf.Core.Models.Clinical;
+using Hemo.Pdf.Layouts.Designer;
 using Hemo.Pdf.Layouts.Hprp;
 using Hemo.Pdf.Rendering;
 using Hemo.Pdf.Sections;
@@ -15,27 +18,56 @@ namespace Hemo.Pdf.Layouts.Clinical.Clinical08_Consent;
 
 /// <summary>
 /// Consent under the shared ThaiUr header + narrative content frame
-/// (<see cref="NarrativeLayout"/>). Header/body widgets come from <c>.hprp</c>;
-/// narrative internals stay C# (intro / paragraphs / signatures).
+/// (<see cref="NarrativeLayout"/>). Designer packs use
+/// <see cref="DesignerPageComposer"/> (header + dense intro/closing + Word-lite
+/// <c>narrative</c> for body paragraphs). Intro / signatures stay C#.
 /// </summary>
 public sealed class ConsentReportComposer : ILayoutComposer
 {
     private const string Ellipsis = "...";
     private const float LineHeight = NarrativeLayout.LineHeight;
     private readonly IHprpTemplateStore? _templates;
+    private readonly IHprpTablePresetCatalog? _presets;
+    private readonly IHprpHeaderPresetCatalog? _headerPresets;
 
     public ConsentReportComposer(IHprpTemplateStore? templates = null)
+        : this(templates, null, null)
+    {
+    }
+
+    public ConsentReportComposer(
+        IHprpTemplateStore? templates,
+        IHprpTablePresetCatalog? presets,
+        IHprpHeaderPresetCatalog? headerPresets)
     {
         _templates = templates;
+        _presets = presets;
+        _headerPresets = headerPresets;
     }
 
     public object Compose(object dataModel, PdfReportContext context)
     {
         var vm = (ConsentReportViewModel)dataModel;
-        var margin = HemosheetThaiUrStyle.PageMarginMm;
+        var package = HprpLayoutPlan.TryGetPackage(_templates, context);
+
+        if (package is not null && HprpLayoutModes.IsDesigner(package.Manifest))
+        {
+            JsonElement? data = context.Data is JsonElement je ? je : null;
+            var designerVm = DesignerCanvasViewModel.FromPackage(
+                package,
+                data,
+                HprpLabelResolver.Resolve(_templates, context, vm.Language),
+                _presets?.LoadAll(),
+                _headerPresets?.LoadAll(),
+                boundModel: vm);
+            return DesignerPageComposer.Compose(designerVm, context);
+        }
+
+        var page = HprpPageLayout.FromPackage(
+            package,
+            HprpPageFallback.Uniform(HemosheetThaiUrStyle.PageMarginMm));
         var overlay = HprpLabelResolver.Resolve(_templates, context, vm.Language);
         var labels = ConsentReportLabels.For(vm.Language, overlay);
-        var package = HprpLayoutPlan.TryGetPackage(_templates, context);
         var headerWidget = HprpLayoutPlan.ResolveHeaderWidget(
             package,
             HprpWidgetIds.ThaiUrHeader,
@@ -46,17 +78,29 @@ public sealed class ConsentReportComposer : ILayoutComposer
             HprpClinicalWidgetSets.ConsentBodyAllowed,
             includeHeader: false);
 
-        return new QuestLayout
-        {
-            MarginMillimeters = margin,
-            MarginTop = margin,
-            MarginBottom = margin,
-            MarginLeft = margin,
-            MarginRight = margin,
-            Header = null,
-            Content = c => ComposeContent(c, vm, labels, overlay, headerWidget, bodyNodes, context),
-            Footer = null,
-        };
+        return HprpQuestPages.Create(
+            page,
+            header: null,
+            content: c => ComposeContent(c, vm, labels, overlay, headerWidget, bodyNodes, context),
+            footer: null);
+    }
+
+    /// <summary>
+    /// Dense designer / absolute host entry — framed consent chrome (no page header).
+    /// <paramref name="contentMode"/>: <c>full</c> (default), <c>intro</c>, or <c>closing</c>.
+    /// Body paragraphs belong on a designer <c>narrative</c> element when mode is not full.
+    /// </summary>
+    public static void ComposeDenseNarrative(
+        IContainer container,
+        ConsentReportViewModel vm,
+        string? contentMode = null)
+    {
+        var labels = ConsentReportLabels.For(vm.Language);
+        var isTreatment = !string.Equals(vm.Type, "PDPA", StringComparison.OrdinalIgnoreCase);
+        var isEn = string.Equals(vm.Language, "en", StringComparison.OrdinalIgnoreCase);
+        var bodyFont = isEn ? 10.5f : 11f;
+        var mode = (contentMode ?? "full").Trim().ToLowerInvariant();
+        NarrativeLayout.Frame(container, c => ComposeFramedBody(c, vm, labels, isTreatment, bodyFont, mode));
     }
 
     private static void ComposeContent(
@@ -111,25 +155,39 @@ public sealed class ConsentReportComposer : ILayoutComposer
         ConsentReportViewModel vm,
         ConsentReportLabels labels,
         bool isTreatment,
-        float bodyFont)
+        float bodyFont,
+        string mode = "full")
     {
+        var includeIntro = mode is "full" or "intro";
+        var includeBody = mode is "full";
+        var includeClosing = mode is "full" or "closing";
+
         container.Column(col =>
         {
             col.Spacing(0);
-            col.Item().Element(c => ComposeDocumentTitle(c, vm.Title));
 
-            if (isTreatment)
+            if (includeIntro)
             {
-                col.Item().PaddingTop(10).Element(c => ComposeTreatmentIntro(c, vm, labels, bodyFont));
-            }
-            else
-            {
-                col.Item().PaddingTop(10).Element(c => ComposePdpaIntro(c, vm, labels, bodyFont));
+                col.Item().Element(c => ComposeDocumentTitle(c, vm.Title));
+
+                if (isTreatment)
+                {
+                    col.Item().PaddingTop(10).Element(c => ComposeTreatmentIntro(c, vm, labels, bodyFont));
+                }
+                else
+                {
+                    col.Item().PaddingTop(10).Element(c => ComposePdpaIntro(c, vm, labels, bodyFont));
+                }
             }
 
-            col.Item().PaddingTop(10).Element(c => ComposeBody(c, vm, bodyFont));
-            col.Item().PaddingTop(16).ShowEntire().Element(c =>
-                ComposeClosing(c, vm, labels, isTreatment));
+            if (includeBody)
+                col.Item().PaddingTop(10).Element(c => ComposeBody(c, vm, bodyFont));
+
+            if (includeClosing)
+            {
+                col.Item().PaddingTop(includeIntro || includeBody ? 16 : 0).ShowEntire().Element(c =>
+                    ComposeClosing(c, vm, labels, isTreatment));
+            }
         });
     }
 

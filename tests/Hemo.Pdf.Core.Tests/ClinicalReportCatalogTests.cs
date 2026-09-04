@@ -9,7 +9,7 @@ public class ClinicalReportCatalogTests
     [Fact]
     public void All_ContainsSixteenReports()
     {
-        Assert.Equal(16, ClinicalReportCatalog.All.Count);
+        Assert.Equal(17, ClinicalReportCatalog.All.Count);
     }
 
     [Theory]
@@ -65,6 +65,7 @@ public class ClinicalReportCatalogTests
     [Theory]
     [InlineData(ClinicalReportCatalog.HctEpo, true)]
     [InlineData(ClinicalReportCatalog.EpoDrug, true)]
+    [InlineData(ClinicalReportCatalog.Prescription, true)]
     [InlineData(ClinicalReportCatalog.ProgressNote, true)]
     [InlineData("medicine-preparation-round", true)]
     [InlineData(ClinicalReportCatalog.ConsentTh, true)]

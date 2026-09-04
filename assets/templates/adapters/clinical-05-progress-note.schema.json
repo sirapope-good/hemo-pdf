@@ -1,0 +1,30 @@
+{
+  "dataAdapter": "clinical-05-progress-note",
+  "displayName": "Clinical-05 Progress note (SOAP)",
+  "fields": [
+    { "path": "title", "label": "Title", "type": "string" },
+    { "path": "monthKey", "label": "Month key", "type": "string" },
+    {
+      "path": "header",
+      "label": "Header",
+      "type": "object",
+      "children": [
+        { "path": "header.patient.name", "label": "Patient name", "type": "string" },
+        { "path": "header.patient.hn", "label": "HN", "type": "string" }
+      ]
+    },
+    {
+      "path": "sessions",
+      "label": "Sessions",
+      "type": "array",
+      "children": [
+        { "path": "sessions[].dateLabel", "label": "Date", "type": "string" },
+        { "path": "sessions[].subjective", "label": "Subjective", "type": "string" },
+        { "path": "sessions[].assessment", "label": "Assessment", "type": "string" },
+        { "path": "sessions[].plan", "label": "Plan", "type": "string" },
+        { "path": "sessions[].orderForOneDay", "label": "Order one day", "type": "string" },
+        { "path": "sessions[].orderForContinuation", "label": "Order continuation", "type": "string" }
+      ]
+    }
+  ]
+}

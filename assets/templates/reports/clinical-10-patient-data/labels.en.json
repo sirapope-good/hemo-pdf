@@ -3,5 +3,6 @@
   "patientName": "Patient name",
   "unit": "Unit",
   "reportDate": "Report date",
-  "title": "Patient Data Record"
+  "title": "Patient Data Record",
+  "footerNote": "Notes / signature"
 }

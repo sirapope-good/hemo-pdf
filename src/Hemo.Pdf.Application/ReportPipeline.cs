@@ -31,6 +31,9 @@ internal static class ReportPipeline
             Parameters = request.Parameters ?? new Dictionary<string, object?>(),
             Metadata = BuildMetadata(request, branding, templateDefinition),
             LayoutPackage = layoutPackage,
+            DefaultFontSize = layoutPackage?.Layout.Page.FontSize is > 0 and < 48
+                ? layoutPackage.Layout.Page.FontSize
+                : null,
         };
     }
 

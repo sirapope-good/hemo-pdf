@@ -4,6 +4,7 @@ using Hemo.Pdf.Core.Hprp;
 using Hemo.Pdf.Layouts.Clinical;
 using Hemo.Pdf.Layouts.Clinical.Clinical01_HctEpo;
 using Hemo.Pdf.Layouts.Clinical.Clinical02_EpoDrug;
+using Hemo.Pdf.Layouts.Clinical.Clinical04_Prescription;
 using Hemo.Pdf.Layouts.Clinical.Clinical05_ProgressNote;
 using Hemo.Pdf.Layouts.Clinical.Clinical08_Consent;
 using Hemo.Pdf.Layouts.Hemosheet;
@@ -46,6 +47,10 @@ public static class TemplateRegistration
         services.AddScoped<Clinical02EpoDrugDataProvider>();
         services.AddScoped<Clinical02EpoDrugComposer>();
         services.AddScoped<Clinical02EpoDrugReportRenderer>();
+
+        services.AddScoped<Clinical04PrescriptionDataProvider>();
+        services.AddScoped<Clinical04PrescriptionComposer>();
+        services.AddScoped<Clinical04PrescriptionReportRenderer>();
 
         services.AddScoped<Clinical05ProgressNoteDataProvider>();
         services.AddScoped<Clinical05ProgressNoteComposer>();
