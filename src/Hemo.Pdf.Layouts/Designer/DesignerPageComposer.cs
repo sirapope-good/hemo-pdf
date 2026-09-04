@@ -112,7 +112,25 @@ public static class DesignerPageComposer
             case HprpDesignerElementTypes.Dense:
                 DrawDense(container, element, vm);
                 break;
+
+            case HprpDesignerElementTypes.Group:
+                DrawGroupFrame(container, element);
+                break;
         }
+    }
+
+    /// <summary>
+    /// Outer section frame only — children are already expanded as sibling paintables by flow.
+    /// </summary>
+    private static void DrawGroupFrame(IContainer container, HprpDesignerElement element)
+    {
+        var bw = HprpChrome.ResolveBorderWidth(element.Chrome);
+        if (bw <= 0)
+            return;
+
+        container
+            .Border(bw)
+            .BorderColor(Colors.Black);
     }
 
     private static void DrawDataGrid(

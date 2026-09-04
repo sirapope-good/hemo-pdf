@@ -151,7 +151,9 @@ public static class HprpDesignerFlow
     }
 
     /// <summary>
-    /// Emit paintables: groups expand to children (page-absolute); group chrome is Studio-only.
+    /// Emit paintables: groups expand to children (page-absolute).
+    /// When the group has a visible <c>chrome.border</c>, the group itself is also emitted
+    /// so PDF can draw an outer frame while children keep <c>border: none</c>.
     /// </summary>
     private static void AppendExpanded(
         HprpDesignerElement e,
@@ -163,6 +165,17 @@ public static class HprpDesignerFlow
         {
             var gx = originX + e.Box.XMm;
             var gy = originY + e.Box.YMm;
+            if (HasPrintBorder(e.Chrome))
+            {
+                pageEls.Add(e.WithBox(new HprpDesignerBox
+                {
+                    XMm = gx,
+                    YMm = gy,
+                    WMm = e.Box.WMm,
+                    HMm = e.Box.HMm,
+                }));
+            }
+
             foreach (var child in e.Children ?? [])
                 AppendExpanded(child, gx, gy, pageEls);
             return;
@@ -175,6 +188,12 @@ public static class HprpDesignerFlow
             WMm = e.Box.WMm,
             HMm = e.Box.HMm,
         }));
+    }
+
+    private static bool HasPrintBorder(HprpChrome? chrome)
+    {
+        var b = chrome?.Border?.Trim().ToLowerInvariant();
+        return !string.IsNullOrEmpty(b) && b is not "none";
     }
 
     private static List<HprpDesignerElement> FilterBand(

@@ -74,6 +74,8 @@ WYSIWYG path on branch `feat/hprp-table-designer` — **does not replace** compo
 
 **Field row (checkbox / fill-in):** `type: "field-row"` with `segments[]` — `kind: "options"` (always show choices; matching `bind` value gets `[✓]`, empty bind = all unchecked for blank forms) or `kind: "text"` (value or dotted blank line). Studio **Insert → Field row**; chrome `border` / `fontSize` / spacing via place + box height. Used by clinical-10 demographics.
 
+**Section frame (outer border):** `type: "group"` with `chrome.border: thin|medium` draws a printable outer rectangle around children even when each child has `border: none`. Studio shows a solid frame when print border is on (dashed blue = layout guide only). Use Inspector **ห่อ selection เป็นกรอบนอก** on contiguous outer-row blocks. Max **24** children per group.
+
 **Preset library:** `assets/templates/presets/tables/{id}.json` — reusable table chrome + columns + row mode (`freedom` | `monthly` | `annual`). Studio API: `GET/PUT /api/hprp/presets/tables/{id}`.
 
 **Adapter schema (field mapper):** `assets/templates/adapters/{dataAdapterId}.schema.json` — `GET /api/hprp/adapters/{dataAdapterId}/schema` drives the Studio “Map field…” picker.

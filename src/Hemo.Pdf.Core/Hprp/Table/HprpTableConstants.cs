@@ -96,11 +96,14 @@ public static class HprpDesignerElementTypes
     };
 }
 
-/// <summary>Soft/hard limits for designer <c>type: group</c> column stacks.</summary>
+/// <summary>Soft/hard limits for designer <c>type: group</c> column stacks / section frames.</summary>
 public static class HprpDesignerGroupLimits
 {
-    /// <summary>Max children in one column stack (inner section).</summary>
-    public const int MaxChildren = 4;
+    /// <summary>
+    /// Max children in one column stack.
+    /// Higher than the old inner-section cap so a bordered section frame can hold a full form block.
+    /// </summary>
+    public const int MaxChildren = 24;
 
     public const string DirectionColumn = "column";
 }

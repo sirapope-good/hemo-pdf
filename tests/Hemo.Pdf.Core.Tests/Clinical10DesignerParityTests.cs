@@ -34,15 +34,18 @@ public class Clinical10DesignerParityTests
         Assert.Equal(HprpLayoutModes.Designer, package.Manifest.LayoutMode);
         Assert.Contains(
             package.Layout.Elements,
+            e => string.Equals(e.Type, HprpDesignerElementTypes.Group, StringComparison.OrdinalIgnoreCase)
+                && string.Equals(e.Chrome?.Border, "thin", StringComparison.OrdinalIgnoreCase)
+                && e.Children?.Any(c =>
+                    string.Equals(c.Type, HprpDesignerElementTypes.FieldRow, StringComparison.OrdinalIgnoreCase)
+                    && c.Segments?.Any(s =>
+                        string.Equals(s.Kind, HprpFieldRowSegmentKinds.Options, StringComparison.OrdinalIgnoreCase)) == true) == true);
+        Assert.Contains(
+            package.Layout.Elements,
             e => string.Equals(e.Type, HprpDesignerElementTypes.Header, StringComparison.OrdinalIgnoreCase));
         Assert.Contains(
-            package.Layout.Elements,
+            FlattenDesigner(package.Layout.Elements),
             e => string.Equals(e.Type, HprpDesignerElementTypes.DataGrid, StringComparison.OrdinalIgnoreCase));
-        Assert.Contains(
-            package.Layout.Elements,
-            e => string.Equals(e.Type, HprpDesignerElementTypes.FieldRow, StringComparison.OrdinalIgnoreCase)
-                && e.Segments?.Any(s =>
-                    string.Equals(s.Kind, HprpFieldRowSegmentKinds.Options, StringComparison.OrdinalIgnoreCase)) == true);
 
         var sample = HprpStudioSamplePayloads.TryLoad(templatesRoot, ClinicalReportCatalog.PatientData);
         Assert.NotNull(sample);
@@ -148,6 +151,19 @@ public class Clinical10DesignerParityTests
                     HprpJson.Options)!,
             },
         };
+    }
+
+    private static IEnumerable<HprpDesignerElement> FlattenDesigner(IEnumerable<HprpDesignerElement> elements)
+    {
+        foreach (var e in elements)
+        {
+            yield return e;
+            if (e.Children is { Count: > 0 } kids)
+            {
+                foreach (var c in FlattenDesigner(kids))
+                    yield return c;
+            }
+        }
     }
 
     private static ClinicalDefaultReportRenderer CreateDesignerRenderer(

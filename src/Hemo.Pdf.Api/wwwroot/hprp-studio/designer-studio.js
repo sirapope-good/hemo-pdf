@@ -13,7 +13,7 @@
   const MIN_BOX_TEXT_H = 4;
   const MIN_COL_WEIGHT = 0.25;
   /** Max children in one column stack (inner section). */
-  const MAX_GROUP_CHILDREN = 4;
+  const MAX_GROUP_CHILDREN = 24;
 
   function isGroup(el) {
     return String(el && el.type || "").toLowerCase() === "group";
@@ -1405,13 +1405,26 @@
       (flow.pages[p] || []).forEach((item, index) => {
         if (item.kind === "group-frame") {
           const frame = document.createElement("div");
-          frame.className = "designer-group-frame";
+          const printBorder = borderOn(item.el && item.el.chrome);
+          frame.className =
+            "designer-group-frame" +
+            (printBorder ? " print-border" : "") +
+            (isElementSelected(item.el.id) ? " selected" : "");
           frame.style.left = item.xMm * scale + "px";
           frame.style.top = item.yMm * scale + "px";
           frame.style.width = item.wMm * scale + "px";
           frame.style.height = item.hMm * scale + "px";
           frame.dataset.groupId = item.el.id;
-          frame.title = "Column stack · " + (item.el.children || []).length + " items";
+          frame.dataset.elementId = item.el.id;
+          frame.title = printBorder
+            ? "Section frame (พิมพ์กรอบนอก) · " + (item.el.children || []).length + " items — คลิกเพื่อแก้ขอบ"
+            : "Column stack · " + (item.el.children || []).length + " items — เปิดเส้นขอบที่ Inspector เพื่อพิมพ์กรอบนอก";
+          frame.addEventListener("click", (e) => {
+            e.stopPropagation();
+            stateRef.selectedKey = null;
+            setSingleSelection(item.el.id);
+            renderAll();
+          });
           sheet.appendChild(frame);
           return;
         }
@@ -3328,6 +3341,7 @@
         wMm: Number(selected.box && selected.box.wMm) || 80,
         hMm: Number(selected.box && selected.box.hMm) || 40,
       },
+      chrome: { border: "none" },
       children: [selected, newEl],
     };
     selected.place = "below";
@@ -3337,6 +3351,83 @@
     reflowElements();
     renderAll();
     if (setStatusRef) setStatusRef("สร้าง column stack + แทรก inner below", "ok");
+  }
+
+  /**
+   * Wrap current multi/single selection into a bordered group (outer print frame).
+   * Child chrome.border is forced to none so only the outer frame shows.
+   */
+  function wrapSelectionInFrame() {
+    ensureElements();
+    promoteToDesignerIfNeeded();
+    const ids = getSelectedIdsInLayoutOrder();
+    if (!ids.length) {
+      if (setStatusRef) setStatusRef("เลือกอย่างน้อย 1 block ก่อนห่อกรอบ", "err");
+      return;
+    }
+
+    const roots = stateRef.draft.layout.elements || [];
+    const picked = [];
+    const indexes = [];
+    for (let i = 0; i < ids.length; i++) {
+      const loc = findElementLocation(ids[i]);
+      if (!loc || loc.parent) {
+        if (setStatusRef)
+          setStatusRef("ห่อกรอบได้เฉพาะแถวนอก (ยังไม่รองรับชิ้นใน stack ซ้อน)", "err");
+        return;
+      }
+      if (isGroup(loc.el)) {
+        if (setStatusRef) setStatusRef("เลือก leaf blocks — อย่าเลือก group ซ้อน", "err");
+        return;
+      }
+      picked.push(loc.el);
+      indexes.push(loc.index);
+    }
+    if (picked.length > MAX_GROUP_CHILDREN) {
+      if (setStatusRef) setStatusRef("เกิน max " + MAX_GROUP_CHILDREN + " ชิ้นต่อกรอบ", "err");
+      return;
+    }
+
+    indexes.sort((a, b) => a - b);
+    for (let i = 1; i < indexes.length; i++) {
+      if (indexes[i] !== indexes[i - 1] + 1) {
+        if (setStatusRef) setStatusRef("เลือกบล็อกติดกันในแถวนอกเท่านั้น", "err");
+        return;
+      }
+    }
+
+    if (canvasTools) canvasTools.pushHistory();
+    const start = indexes[0];
+    const band = resolveBand(picked[0]) || "content";
+    const groupId = "frame_" + Math.random().toString(36).slice(2, 7);
+    const children = picked.map((el) => {
+      el.chrome = el.chrome || {};
+      el.chrome.border = "none";
+      el.place = "below";
+      return el;
+    });
+    const group = {
+      id: groupId,
+      type: "group",
+      direction: "column",
+      band,
+      place: "below",
+      box: {
+        xMm: 0,
+        yMm: 0,
+        wMm: Number(picked[0].box && picked[0].box.wMm) || 194,
+        hMm: 40,
+      },
+      chrome: { border: "thin", headerFill: "#ffffff" },
+      children,
+    };
+    roots.splice(start, picked.length, group);
+    setSingleSelection(groupId);
+    stateRef.draft.manifest.layoutMode = "designer";
+    reflowElements();
+    renderAll();
+    if (setStatusRef)
+      setStatusRef("ห่อ " + picked.length + " ชิ้นในกรอบนอก (group.chrome.border=thin)", "ok");
   }
 
   function renderInspector() {
@@ -3439,8 +3530,31 @@
       renderAll();
     });
     borderLab.appendChild(borderCb);
-    borderLab.appendChild(document.createTextNode(" เส้นขอบ block"));
+    borderLab.appendChild(
+      document.createTextNode(
+        el.type === "group" ? " กรอบนอก section (พิมพ์ได้ — ลูกปิดขอบเองได้)" : " เส้นขอบ block"
+      )
+    );
     insp.appendChild(borderLab);
+
+    if (el.type === "group") {
+      const gHint = document.createElement("p");
+      gHint.className = "muted";
+      gHint.textContent =
+        "Group = กรอบห่อลูก " +
+        ((el.children && el.children.length) || 0) +
+        " ชิ้น · เปิดเส้นขอบตรงนี้เพื่อตีกรอบนอกสุดแม้ลูกเป็น border:none";
+      insp.appendChild(gHint);
+    }
+
+    const wrapBtn = document.createElement("button");
+    wrapBtn.type = "button";
+    wrapBtn.textContent = "ห่อ selection เป็นกรอบนอก (frame)";
+    wrapBtn.title = "สร้าง group ขอบ thin รอบชิ้นที่เลือก และปิดขอบลูก";
+    wrapBtn.addEventListener("click", () => {
+      wrapSelectionInFrame();
+    });
+    insp.appendChild(wrapBtn);
 
     const fitBtn = document.createElement("button");
     fitBtn.type = "button";

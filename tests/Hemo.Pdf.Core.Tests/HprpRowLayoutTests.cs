@@ -1,6 +1,7 @@
 using System.Text.Json;
 using Hemo.Pdf.Core.Constants;
 using Hemo.Pdf.Core.Hprp;
+using Hemo.Pdf.Core.Hprp.Table;
 using Hemo.Pdf.Core.Models.Preview;
 using Hemo.Pdf.Layouts.Hprp;
 
@@ -103,10 +104,27 @@ public class HprpRowBinderTests
         Assert.Equal(HprpLayoutModes.Designer, package.Manifest.LayoutMode);
         Assert.Contains(
             package.Layout.Elements,
-            e => string.Equals(e.Type, "data-grid", StringComparison.OrdinalIgnoreCase));
+            e => string.Equals(e.Type, "header", StringComparison.OrdinalIgnoreCase));
         Assert.Contains(
             package.Layout.Elements,
-            e => string.Equals(e.Type, "header", StringComparison.OrdinalIgnoreCase));
+            e => string.Equals(e.Type, "group", StringComparison.OrdinalIgnoreCase)
+                && string.Equals(e.Chrome?.Border, "thin", StringComparison.OrdinalIgnoreCase));
+        Assert.Contains(
+            FlattenDesignerElements(package.Layout.Elements),
+            e => string.Equals(e.Type, "data-grid", StringComparison.OrdinalIgnoreCase));
+    }
+
+    private static IEnumerable<HprpDesignerElement> FlattenDesignerElements(IEnumerable<HprpDesignerElement> elements)
+    {
+        foreach (var e in elements)
+        {
+            yield return e;
+            if (e.Children is { Count: > 0 } kids)
+            {
+                foreach (var c in FlattenDesignerElements(kids))
+                    yield return c;
+            }
+        }
     }
 }
 
